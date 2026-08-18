@@ -42,6 +42,29 @@ async function validateEmbeddedCss(filePath) {
   }
 }
 
+async function validateDynamicMarkup() {
+  const home = await readFile(join(siteDir, "index.html"), "utf8");
+  const viewer = await readFile(join(siteDir, "u", "index.html"), "utf8");
+
+  if (!/<input id="username" type="text"\b/.test(home)) {
+    throw new Error("Generator username input must declare type=text");
+  }
+  if (!/<a id="openMap" class="button" href="\.\/u\/" target="_blank" rel="noopener">/.test(home)) {
+    throw new Error("Generator interactive-map anchor must have a safe default href and rel=noopener");
+  }
+
+  const sourceLessImages = [...home.matchAll(/<img\b[^>]*>/gi)].filter((match) => !/\bsrc\s*=/.test(match[0]));
+  if (sourceLessImages.length !== 1 || !/\bid="preview"/.test(sourceLessImages[0][0]) || !/\balt=/.test(sourceLessImages[0][0])) {
+    throw new Error("Only the JS-populated preview image may omit src, and it must retain alt text");
+  }
+
+  for (const [name, html] of [["generator", home], ["viewer", viewer]]) {
+    if (/script-src[^;]*'unsafe-inline'/.test(html)) {
+      throw new Error(`${name} CSP must not allow unsafe-inline scripts`);
+    }
+  }
+}
+
 function mockElement(id) {
   return {
     id,
@@ -100,7 +123,8 @@ async function generateWorkflowFixture() {
   await writeFile(join(validatorDir, "generated-project-map.yml"), `${workflow}\n`);
 }
 
+await validateDynamicMarkup();
 await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateEmbeddedCss(join(siteDir, "u", "index.html"));
 await generateWorkflowFixture();
-console.log("Generated Pages CSS and browser installer runtime validated.");
+console.log("Generated Pages markup, CSS and browser installer runtime validated.");
