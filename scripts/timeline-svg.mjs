@@ -5,8 +5,8 @@ function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function statusOf(repo) { return repo.archived ? "archived" : repo.fork ? "fork" : "original"; }
 function palette(theme) {
   return theme === "light"
-    ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", grid: "#d7deea", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
-    : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", grid: "#283449", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
+    ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", grid: "#d7deea", group: "#376fbd", lane: "#eef3f9", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
+    : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", grid: "#283449", group: "#6aa7ff", lane: "#0b1220", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
 }
 function dateMs(repo) {
   const value = repo.createdAt || repo.updatedAt;
@@ -36,37 +36,48 @@ export function renderTimelineSvg(graph, theme, width, height) {
   const span = Math.max(30 * 86400000, maxDateRaw - minDate);
   const min = minDate - span * 0.025;
   const max = maxDateRaw + span * 0.04;
-  const left = 126; const right = width - 22; const top = 30; const bottom = height - 48;
+  const left = 146; const right = width - 22; const top = 34; const bottom = height - 48;
   const laneHeight = Math.max(34, (bottom - top) / Math.max(1, groups.length));
   const xFor = (time) => left + ((time - min) / Math.max(1, max - min)) * (right - left);
   const yForGroup = (index) => top + laneHeight * (index + 0.5);
   const pieces = [];
 
+  groups.forEach((group, groupIndex) => {
+    if (groupIndex % 2 === 0) {
+      pieces.push(`<rect x="${left}" y="${(top + laneHeight * groupIndex).toFixed(1)}" width="${(right - left).toFixed(1)}" height="${laneHeight.toFixed(1)}" fill="${colors.lane}" opacity="0.45"/>`);
+    }
+  });
+
   for (const tick of yearTicks(min, max)) {
     if (tick < min || tick > max) continue;
     const x = xFor(tick);
-    pieces.push(`<line x1="${x.toFixed(1)}" y1="${top}" x2="${x.toFixed(1)}" y2="${bottom}" stroke="${colors.grid}" stroke-width="1"/><text x="${(x + 4).toFixed(1)}" y="${top - 8}" fill="${colors.muted}" font-size="9.5">${new Date(tick).getUTCFullYear()}</text>`);
+    pieces.push(`<line x1="${x.toFixed(1)}" y1="${top - 4}" x2="${x.toFixed(1)}" y2="${bottom}" stroke="${colors.grid}" stroke-width="1"/><text x="${(x + 4).toFixed(1)}" y="${top - 10}" fill="${colors.muted}" font-size="10" font-weight="650">${new Date(tick).getUTCFullYear()}</text>`);
   }
 
   const occupied = [];
   groups.forEach((group, groupIndex) => {
     const y = yForGroup(groupIndex);
-    pieces.push(`<line x1="${left}" y1="${y.toFixed(1)}" x2="${right}" y2="${y.toFixed(1)}" stroke="${colors.grid}" stroke-width="1" opacity="0.7"/><text x="${left - 8}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" fill="${colors.muted}" font-size="9.5" font-weight="600">${esc(group.label.length > 20 ? `${group.label.slice(0, 19)}…` : group.label)}</text>`);
     const members = groupMembers(group, repos).sort((a, b) => dateMs(a) - dateMs(b));
+    const groupLabel = group.label.length > 19 ? `${group.label.slice(0, 18)}…` : group.label;
+    pieces.push(`<line x1="${left}" y1="${y.toFixed(1)}" x2="${right}" y2="${y.toFixed(1)}" stroke="${colors.grid}" stroke-width="1" opacity="0.72"/>`);
+    pieces.push(`<text x="${left - 10}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" fill="${colors.fg}" font-size="9.7" font-weight="650">${esc(groupLabel)}</text>`);
+    pieces.push(`<text x="${left - 10}" y="${(y + 15).toFixed(1)}" text-anchor="end" fill="${colors.muted}" font-size="8.2">${members.length} repo${members.length === 1 ? "" : "s"}</text>`);
     members.forEach((repo, repoIndex) => {
       const x = xFor(dateMs(repo));
       const jitter = ((repoIndex % 3) - 1) * 7;
       const cy = y + jitter;
       const color = colors[statusOf(repo)];
-      pieces.push(`<g><title>${esc(repo.label)} · ${esc((repo.createdAt || repo.updatedAt || "").slice(0, 10))}</title><circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${repo.archived ? 4.2 : 4.6}" fill="${color}" opacity="${repo.archived ? "0.72" : repo.fork ? "0.82" : "0.96"}"${repo.archived ? ` stroke="${color}" stroke-width="1.2" stroke-dasharray="2 2"` : ""}/>`);
+      pieces.push(`<g><title>${esc(repo.label)} · ${esc((repo.createdAt || repo.updatedAt || "").slice(0, 10))}</title><circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${repo.archived ? 4.2 : 4.8}" fill="${color}" opacity="${repo.archived ? "0.72" : repo.fork ? "0.82" : "0.96"}"${repo.archived ? ` stroke="${color}" stroke-width="1.2" stroke-dasharray="2 2"` : ""}/>`);
       const important = (repo.stars ?? 0) > 0 || members.length <= 8;
       if (important) {
         const label = repo.label.length > 18 ? `${repo.label.slice(0, 17)}…` : repo.label;
         const w = labelWidth(label);
-        const box = { left: x - w / 2, right: x + w / 2, top: cy + 7, bottom: cy + 20 };
-        if (box.left >= left && box.right <= right && box.bottom <= bottom + 20 && !occupied.some((other) => overlaps(box, other, 3))) {
+        const above = repoIndex % 2 === 1;
+        const labelY = above ? cy - 18 : cy + 16;
+        const box = { left: x - w / 2, right: x + w / 2, top: labelY - 9, bottom: labelY + 4 };
+        if (box.left >= left && box.right <= right && box.top >= top - 2 && box.bottom <= bottom + 16 && !occupied.some((other) => overlaps(box, other, 3))) {
           occupied.push(box);
-          pieces.push(`<text x="${x.toFixed(1)}" y="${(cy + 16).toFixed(1)}" text-anchor="middle" fill="${colors.fg}" font-size="9">${esc(label)}</text>`);
+          pieces.push(`<text x="${x.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle" fill="${colors.fg}" font-size="9">${esc(label)}</text>`);
         }
       }
       pieces.push(`</g>`);
