@@ -47,6 +47,12 @@ function labelFor(repo, width) {
   return label.length <= maxChars ? label : `${label.slice(0, Math.max(3, maxChars - 1))}…`;
 }
 
+function groupLabel(label, width) {
+  const maxChars = Math.max(2, Math.floor((width - 12) / 5.4));
+  const text = String(label || "");
+  return text.length <= maxChars ? text : `${text.slice(0, Math.max(1, maxChars - 1))}…`;
+}
+
 export function renderTreemapSvg(graph, theme, width, height) {
   const colors = palette(theme);
   const groups = graph.nodes.filter((node) => node.type === "group");
@@ -66,10 +72,12 @@ export function renderTreemapSvg(graph, theme, width, height) {
     const { box, group, members } = bundle;
     const inset = 4;
     pieces.push(`<rect x="${box.x.toFixed(1)}" y="${box.y.toFixed(1)}" width="${Math.max(0, box.width).toFixed(1)}" height="${Math.max(0, box.height).toFixed(1)}" rx="8" fill="${colors.panel}" stroke="${colors.group}" stroke-width="1.2"/>`);
-    if (box.width >= 74 && box.height >= 34) {
-      pieces.push(`<text x="${(box.x + 8).toFixed(1)}" y="${(box.y + 17).toFixed(1)}" fill="${colors.fg}" font-size="11" font-weight="700">${esc(group.label)}</text>`);
+    if (box.width >= 30 && box.height >= 24) {
+      const compact = box.width < 74 || box.height < 34;
+      pieces.push(`<text x="${(box.x + (compact ? 5 : 8)).toFixed(1)}" y="${(box.y + (compact ? 13 : 17)).toFixed(1)}" fill="${colors.fg}" font-size="${compact ? 8.2 : 11}" font-weight="700">${esc(groupLabel(group.label, box.width))}</text>`);
     }
-    const inner = { x: box.x + inset, y: box.y + 24, width: Math.max(0, box.width - inset * 2), height: Math.max(0, box.height - 28) };
+    const header = box.height >= 34 ? 24 : 17;
+    const inner = { x: box.x + inset, y: box.y + header, width: Math.max(0, box.width - inset * 2), height: Math.max(0, box.height - header - 4) };
     if (inner.width < 12 || inner.height < 12) continue;
     const repoBoxes = slice(members.map((repo) => ({ repo, weight: repoWeight(repo) })), inner, inner.width < inner.height);
     for (const item of repoBoxes) {
