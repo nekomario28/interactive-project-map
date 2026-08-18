@@ -1,5 +1,5 @@
-import { boolParam, intParam } from "./params";
-import { normalizeUsername } from "./hosted-options";
+import { boolParam, intParam } from "./params.ts";
+import { normalizeUsername } from "./hosted-options.ts";
 
 const CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // actions/checkout v7.0.1
 const UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"; // actions/upload-artifact v7.0.1
