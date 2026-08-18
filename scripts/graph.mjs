@@ -24,7 +24,7 @@ function classify(repo) {
   }
   if (best) return { id: best.id, label: best.label };
   const language = repo.language || "Other";
-  return { id: `lang-${languageGroupKey(language)}`, label: `${language} Projects` };
+  return { id: `lang-${languageGroupKey(language)}`, label: language };
 }
 
 export function buildGraph(username, repos, includeForks, includeArchived) {
