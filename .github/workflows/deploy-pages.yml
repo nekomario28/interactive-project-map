@@ -7,6 +7,7 @@ on:
       - ".github/workflows/deploy-pages.yml"
       - "config/**"
       - "scripts/**"
+      - "tests/**"
       - "package.json"
   schedule:
     - cron: "41 1,13 * * *"
@@ -35,8 +36,8 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Validate scripts
-        run: npm run check:pages
+      - name: Validate Pages code
+        run: npm run check:pages && npm test
 
       - name: Generate graph JSON, SVG and viewer
         env:
