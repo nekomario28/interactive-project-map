@@ -3,7 +3,7 @@ const CHECKOUT_SHA='3d3c42e5aac5ba805825da76410c181273ba90b1';
 const UPLOAD_SHA='043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
 const DOWNLOAD_SHA='3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
 const PROJECT_MAP_ACTION_REF='__PROJECT_MAP_ACTION_REF__';
-const STYLE_VALUES=new Set(['galaxy','obsidian','tree']);
+const STYLE_VALUES=new Set(['radial','galaxy','obsidian','tree']);
 const form=document.getElementById('form');
 const usernameInput=document.getElementById('username');
 const themeInput=document.getElementById('theme');
@@ -38,7 +38,8 @@ function values(){
 function urls(v){
   const owner=encodeURIComponent(v.username);
   const raw='https://raw.githubusercontent.com/'+owner+'/'+owner+'/HEAD/project-map';
-  const viewer=new URL(v.style==='tree'?'tree/':'u/',new URL('./',location.href));
+  const route=v.style==='tree'?'tree/':v.style==='radial'?'radial/':'u/';
+  const viewer=new URL(route,new URL('./',location.href));
   viewer.searchParams.set('username',v.username);
   viewer.searchParams.set('style',v.style);
   return{svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()};
