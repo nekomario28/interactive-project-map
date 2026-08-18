@@ -29,13 +29,17 @@ jobs:
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
+          style: obsidian
           max_repos: "1"
           forks: "false"
           archived: "false"
           output_dir: .tmp/project-map
 
       - name: Check action outputs
-        run: test -s .tmp/project-map/galaxy.svg && test -s .tmp/project-map/graph.json
+        run: |
+          test -s .tmp/project-map/galaxy.svg
+          test -s .tmp/project-map/graph.json
+          grep -q "Obsidian-style map" .tmp/project-map/galaxy.svg
 
       - name: Verify
         run: npm run verify
