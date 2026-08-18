@@ -70,7 +70,7 @@ function viewerBody() {
       <a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>
     </aside>
 
-    <div class="legend" aria-label="Map legend">
+    <div class="legend">
       <span><i class="owner"></i>Owner</span>
       <span><i class="group"></i>Category</span>
       <span><i class="original"></i>Original</span>
