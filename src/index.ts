@@ -1,10 +1,10 @@
 import { renderHome } from "./home";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
-import { renderViewer } from "./html";
 import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
+import { renderViewer } from "./viewer";
 
 function corsHeaders(extra: Record<string, string> = {}): Headers {
   return new Headers({
