@@ -4,10 +4,11 @@ Turn a GitHub user's public repositories into a project map with:
 
 - a static SVG for GitHub profile READMEs
 - static `graph.json` owned by each user
-- a shared interactive map with search, details, pan, zoom, drag, pinch, and repository links
-- **Radial Tree (Classic)**, **Galaxy**, **Obsidian-like**, and **Tree** presentation presets
+- interactive viewers with search, details, pan, zoom, pinch, and repository links
+- **Radial Tree (Classic)**, **Galaxy**, **Obsidian-like**, **Tree**, **Treemap**, **Timeline**, and **Cluster / Bubble** presentation presets
+- visual example cards in the public generator so users can compare styles before generating setup
 - explicit colors for original repositories, forks, and archived repositories
-- label-aware spacing and collision culling so dense maps remain readable
+- label-aware spacing/collision culling for graph and timeline views
 - a zero-backend public generator hosted on GitHub Pages
 - an optional Cloudflare Worker API for experiments/fallback use
 
@@ -23,18 +24,18 @@ USERNAME/USERNAME profile repository
 project-map/galaxy.svg
 project-map/graph.json
         ↓
-GitHub profile README ──click──> github.io universal viewer
+GitHub profile README ──click──> github.io viewer
                                   ↓
                     raw.githubusercontent.com
                                   ↓
               USERNAME/USERNAME/HEAD/project-map/graph.json
 ```
 
-Normal README views and normal interactive-map views do **not** call the GitHub REST API. The REST API is used only when the user's scheduled Action refreshes repository metadata.
+Normal README views and interactive-map views do **not** call the GitHub REST API. The REST API is used only when the user's scheduled Action refreshes repository metadata.
 
 ## Map styles
 
-The generator shows a visual example card for every preset. Clicking a card selects the matching style before generating the workflow and README embed.
+The generator shows a visual example card for every preset. Clicking a card selects that style before generating the workflow and README embed.
 
 ### Radial Tree (Classic)
 
@@ -42,7 +43,7 @@ The generator shows a visual example card for every preset. Clicking a card sele
 https://nekomario28.github.io/interactive-project-map/radial/?username=USERNAME&style=radial
 ```
 
-Radial Tree preserves the classic layout from the original project map: owner at the center, categories on a middle ring, and repositories around the outside. It is compact and works well inside a profile-sized 740×420 SVG. This is the default so existing workflows that do not specify `style` keep the classic presentation.
+The current/main classic layout: owner at the center, categories on a middle ring, and repositories around the outside. It is compact and works well inside a profile-sized 740×420 SVG. **This remains the default** so existing workflows that do not specify `style` keep their presentation after the feature is merged.
 
 ### Galaxy
 
@@ -50,7 +51,7 @@ Radial Tree preserves the classic layout from the original project map: owner at
 https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy
 ```
 
-Galaxy places categories in semantic sectors around one owner-centered map and distributes repositories over multiple radial lanes. Lane capacity is based on estimated label width, and the interactive renderer performs a second screen-space label collision pass while drawing.
+Galaxy places categories in semantic sectors and distributes repositories over multiple radial lanes. Lane capacity is derived from label width and radius; a second screen-space collision pass suppresses labels that would overlap.
 
 ### Obsidian-like
 
@@ -58,7 +59,7 @@ Galaxy places categories in semantic sectors around one owner-centered map and d
 https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=obsidian
 ```
 
-Obsidian-like uses a neutral native-looking dark workspace and a deterministic force-directed layout based on center, repel, link, and collision forces. It is inspired by graph-view tools without copying product assets or UI verbatim.
+Obsidian-like uses a restrained desktop graph-tool appearance and a deterministic force-directed layout with center, repel, link, and collision forces. It is inspired by graph-view interaction patterns without copying product assets or UI verbatim.
 
 ### Tree
 
@@ -66,18 +67,42 @@ Obsidian-like uses a neutral native-looking dark workspace and a deterministic f
 https://nekomario28.github.io/interactive-project-map/tree/?username=USERNAME&style=tree
 ```
 
-Tree renders an explicit top-down `Owner → Category → Repository` hierarchy. It allocates horizontal space by subtree size and wraps dense categories into additional rows, making hierarchy the easiest of the four presets to read immediately.
+Tree renders an explicit top-down `Owner → Category → Repository` hierarchy. It allocates horizontal space by subtree size and wraps dense categories into additional rows.
 
-All styles preserve the same semantics:
+### Treemap
+
+```text
+https://nekomario28.github.io/interactive-project-map/treemap/?username=USERNAME&style=treemap
+```
+
+Treemap gives each category a region and packs repository tiles inside it. Repository stars have a deliberately weak influence on tile area, so the view shows both portfolio composition and relative emphasis without allowing a single popular repository to dominate the whole map. Small tiles omit text instead of overlapping it; details remain available in the interactive viewer.
+
+### Timeline
+
+```text
+https://nekomario28.github.io/interactive-project-map/timeline/?username=USERNAME&style=timeline
+```
+
+Timeline places repositories on category lanes using their GitHub creation date. `graph.json` now stores `createdAt` in addition to `updatedAt`. Existing older graph files remain viewable: the Timeline viewer falls back to `updatedAt` until the user's Action regenerates the graph.
+
+### Cluster / Bubble
+
+```text
+https://nekomario28.github.io/interactive-project-map/cluster/?username=USERNAME&style=cluster
+```
+
+Cluster / Bubble gives each category a large boundary and packs its repositories inside. It is intended for large 100–300 repository collections where the important question is **which domains contain the most work and how dense each domain is**, rather than showing every edge explicitly.
+
+All styles preserve the same repository semantics:
 
 - **Original** repositories use the primary repository color.
 - **Forks** use a distinct fork color.
-- **Archived** repositories use a distinct archived color plus an outer dashed ring.
-- Owner, category, and relation edges have their own visual roles.
+- **Archived** repositories use a distinct archived color and an additional dashed treatment.
+- Owner/category/relation elements use separate visual roles where the visualization includes them.
 
-The interactive viewers provide search, a repository details panel, drag, pan, wheel/pinch zoom, Fit/Reset controls, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`).
+The interactive viewers provide search, a repository details panel, pan, wheel/pinch zoom, Fit/Reset controls, repository opening, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`). Graph layouts also retain node dragging where applicable.
 
-Potential future views are intentionally not added to the main selector yet. The strongest candidates are **Timeline** for project history, **Treemap** for compact portfolio comparison, and **Cluster/Bubble** for large repository collections.
+Lower-priority future experiments include **Sunburst**, **Matrix / Heatmap**, and **Sankey**. They are intentionally not added to the main selector yet because their information value overlaps more heavily with the seven presets above.
 
 ## Public URLs
 
@@ -87,7 +112,7 @@ After GitHub Pages is enabled for this repository, the default project-site URL 
 https://nekomario28.github.io/interactive-project-map/
 ```
 
-The viewers use query parameters rather than dynamic server routes, which works with static GitHub Pages hosting.
+The viewers use query parameters and static directories rather than dynamic server routes, which works with GitHub Pages hosting.
 
 ## User installation
 
@@ -99,10 +124,10 @@ Open:
 https://nekomario28.github.io/interactive-project-map/
 ```
 
-Enter your GitHub username, compare the four visual example cards, and choose:
+Enter your GitHub username, compare the visual example cards, and choose:
 
 - dark/light static SVG theme
-- Radial Tree (Classic), Galaxy, Obsidian-like, or Tree map style
+- one of the seven map styles
 - maximum repository count
 - whether forks are included
 - whether archived repositories are included
@@ -162,7 +187,7 @@ The workflow also runs on a schedule. If repository data did not change, the gen
 
 The generated snippet links the static SVG to the interactive viewer for the selected style.
 
-## How the static viewer works
+## How the static viewers work
 
 The GitHub Pages viewers read:
 
@@ -194,7 +219,7 @@ The root `action.yml` supports:
 | `github_token` | required | token used to read public repository metadata |
 | `username` | caller owner | GitHub user to visualize |
 | `theme` | `dark` | static SVG theme: `dark` or `light` |
-| `style` | `radial` | `radial`, `galaxy`, `obsidian`, or `tree` |
+| `style` | `radial` | `radial`, `galaxy`, `obsidian`, `tree`, `treemap`, `timeline`, or `cluster` |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
@@ -212,7 +237,7 @@ For `nekomario28/interactive-project-map`, enable Pages once:
 
 The upstream repository deploys Pages automatically. Forks remain opt-in: a fork can set repository variable `ENABLE_GITHUB_PAGES=true` after enabling GitHub Pages.
 
-The Pages workflow builds only static files. There is no scheduled central repository-data rebuild anymore; user data is refreshed by each user's own profile-repository Action.
+The Pages workflow builds only static files. There is no scheduled central repository-data rebuild; user data is refreshed by each user's own profile-repository Action.
 
 Local build:
 
@@ -248,19 +273,20 @@ Verification includes:
 
 - TypeScript type checking
 - Wrangler Worker dry-run
-- Node 24 Action syntax checks
+- Node 24 Action/rendering syntax checks
 - Pages generator/viewer syntax checks
 - HTML-Validate on emitted HTML
 - ESLint on emitted browser JavaScript
 - Stylelint on emitted CSS
 - actionlint on repository workflows and the workflow generated by the browser installer
-- dense SVG label-overlap tests for Radial Tree, Galaxy, Obsidian-like, and Tree styles
+- dense SVG label-overlap tests for graph/timeline styles
+- Treemap bounds/coverage tests
 - repository grouping/query/pagination tests
-- static Action generation tests
+- static Action generation tests, including `createdAt` preservation
 - install-workflow permission tests
 - static graph validation tests
 
-The repository CI also invokes the local `action.yml` without a `style` input and verifies that the backward-compatible Radial Tree SVG is generated.
+The repository CI also invokes the local `action.yml` **without a `style` input** and verifies that the backward-compatible Radial Tree SVG is generated.
 
 ## License
 
