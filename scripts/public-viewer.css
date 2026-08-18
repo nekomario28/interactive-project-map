@@ -259,6 +259,10 @@ body[data-map-style="obsidian"] .legend {
   text-decoration: none;
 }
 
+.details [hidden] {
+  display: none;
+}
+
 .details a:hover {
   text-decoration: underline;
 }
@@ -423,6 +427,10 @@ kbd {
     width: min(292px, calc(100% - 18px));
     max-height: 40%;
     padding: 12px;
+  }
+
+  .details:not(.has-selection) {
+    display: none;
   }
 
   .legend {
