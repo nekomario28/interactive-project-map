@@ -19,7 +19,7 @@ inputs:
   style:
     description: Map presentation preset (radial, galaxy, obsidian, or tree).
     required: false
-    default: galaxy
+    default: radial
   max_repos:
     description: Maximum eligible repositories to include (1-300).
     required: false
