@@ -45,6 +45,7 @@ jobs:
         run: npm run verify
 
       - name: Install Playwright browsers
+        timeout-minutes: 8
         run: npx playwright install --with-deps chromium webkit
 
       - name: Chromium browser E2E
