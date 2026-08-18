@@ -29,7 +29,7 @@ jobs:
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          max_repos: "3"
+          max_repos: "60"
           forks: "true"
           archived: "false"
           output_dir: .tmp/project-map
@@ -43,3 +43,14 @@ jobs:
 
       - name: Verify
         run: npm run verify
+
+      - name: Render ten-preset comparison
+        run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
+
+      - name: Upload preset comparison
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: preset-comparison
+          path: .tmp/preset-comparison
+          if-no-files-found: error
+          retention-days: 3
