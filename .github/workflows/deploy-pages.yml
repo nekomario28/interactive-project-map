@@ -5,12 +5,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/deploy-pages.yml"
-      - "config/**"
+      - "action.yml"
       - "scripts/**"
       - "tests/**"
       - "package.json"
-  schedule:
-    - cron: "41 1,13 * * *"
   workflow_dispatch:
 
 permissions:
@@ -25,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ vars.ENABLE_GITHUB_PAGES == 'true' }}
+    if: ${{ github.repository == 'nekomario28/interactive-project-map' || vars.ENABLE_GITHUB_PAGES == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,18 +38,17 @@ jobs:
       - name: Validate Pages code
         run: npm run check:pages && npm test
 
-      - name: Generate graph JSON, SVG and viewer
-        env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_MAP_GITHUB_TOKEN || github.token }}
+      - name: Build static generator and universal viewer
         run: npm run build:pages
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site
+          include-hidden-files: true
 
   deploy:
     needs: build
