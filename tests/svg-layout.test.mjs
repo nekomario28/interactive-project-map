@@ -20,7 +20,7 @@ function denseGraph() {
   return { owner: "example", generatedAt: "2026-08-18T00:00:00Z", repositoryCount: repositories.length, groupCount: groups.length, nodes, edges };
 }
 function repositoryLabelBoxes(svg) {
-  const boxes=[]; const pattern=/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+" font-size="([\d.]+)"[^>]*>(long-project-name-[^<]+)<\/text>/g;
+  const boxes=[]; const pattern=/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+" font-size="([\d.]+)"[^>]*>(long-project-name[^<]+)<\/text>/g;
   for(const match of svg.matchAll(pattern)){const x=Number(match[1]),y=Number(match[2]),fontSize=Number(match[3]),label=match[4],width=Math.min(190,12+label.length*fontSize*.58);boxes.push({label,left:x-width/2,right:x+width/2,top:y,bottom:y+fontSize+6});}return boxes;
 }
 function overlaps(a,b,padding=2){return!(a.right+padding<b.left||b.right+padding<a.left||a.bottom+padding<b.top||b.bottom+padding<a.top);}
