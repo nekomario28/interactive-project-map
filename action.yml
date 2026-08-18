@@ -5,6 +5,9 @@ description: Generate a static galaxy SVG and graph JSON from a GitHub user's pu
 author: nekomario28
 
 inputs:
+  github_token:
+    description: GitHub token used only to read public repository metadata. Give this job contents:read only.
+    required: true
   username:
     description: GitHub username to visualize. Defaults to the caller repository owner.
     required: false
@@ -41,28 +44,12 @@ inputs:
 outputs:
   svg-path:
     description: Relative path to the generated SVG.
-    value: ${{ steps.generate.outputs.svg-path }}
   graph-path:
     description: Relative path to the generated graph JSON.
-    value: ${{ steps.generate.outputs.graph-path }}
 
 runs:
-  using: composite
-  steps:
-    - id: generate
-      name: Generate static project map
-      shell: bash
-      env:
-        PROJECT_MAP_USERNAME: ${{ inputs.username }}
-        PROJECT_MAP_THEME: ${{ inputs.theme }}
-        PROJECT_MAP_MAX_REPOS: ${{ inputs.max_repos }}
-        PROJECT_MAP_FORKS: ${{ inputs.forks }}
-        PROJECT_MAP_ARCHIVED: ${{ inputs.archived }}
-        PROJECT_MAP_WIDTH: ${{ inputs.width }}
-        PROJECT_MAP_HEIGHT: ${{ inputs.height }}
-        PROJECT_MAP_OUTPUT_DIR: ${{ inputs.output_dir }}
-        GITHUB_TOKEN: ${{ github.token }}
-      run: node "$GITHUB_ACTION_PATH/scripts/action.mjs"
+  using: node24
+  main: scripts/action.mjs
 
 branding:
   icon: share-2
