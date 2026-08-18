@@ -39,29 +39,38 @@ const GROUP_RULES: GroupRule[] = [
   },
 ];
 
-function slugify(value: string): string {
+function normalizeSearch(value: string): string {
   return value
     .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "other";
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .trim();
+}
+
+function languageGroupKey(language: string): string {
+  let key = "";
+  for (const char of language.toLowerCase()) {
+    if (/[a-z0-9]/.test(char)) {
+      key += char;
+    } else {
+      key += `-u${char.codePointAt(0)?.toString(16) ?? "0"}-`;
+    }
+  }
+  return key.replace(/-+/g, "-").replace(/^-|-$/g, "") || "other";
 }
 
 function searchableText(repo: GitHubRepo): string {
-  return [
+  return normalizeSearch([
     repo.name,
     repo.description ?? "",
     repo.language ?? "",
     ...(repo.topics ?? []),
-  ]
-    .join(" ")
-    .toLowerCase();
+  ].join(" "));
 }
 
 function keywordMatches(text: string, keyword: string): boolean {
-  if (keyword.length > 3 || keyword.includes("-")) return text.includes(keyword);
-  const tokens = new Set(text.split(/[^a-z0-9+#.]+/g).filter(Boolean));
-  return tokens.has(keyword);
+  const needle = normalizeSearch(keyword);
+  if (!needle) return false;
+  return ` ${text} `.includes(` ${needle} `);
 }
 
 function classify(repo: GitHubRepo): { id: string; label: string } {
@@ -82,7 +91,7 @@ function classify(repo: GitHubRepo): { id: string; label: string } {
 
   if (best) return { id: best.id, label: best.label };
   const language = repo.language || "Other";
-  return { id: `lang-${slugify(language)}`, label: `${language} Projects` };
+  return { id: `lang-${languageGroupKey(language)}`, label: `${language} Projects` };
 }
 
 export function buildGraph(

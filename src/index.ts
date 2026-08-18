@@ -1,6 +1,7 @@
 import { buildGraph } from "./graph";
 import { fetchPublicRepos } from "./github";
 import { renderHome, renderViewer } from "./html";
+import { boolParam, intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
 
@@ -13,18 +14,6 @@ function corsHeaders(extra: Record<string, string> = {}): Headers {
     "Access-Control-Allow-Headers": "Content-Type",
     ...extra,
   });
-}
-
-function intParam(url: URL, key: string, fallback: number, min: number, max: number): number {
-  const raw = Number(url.searchParams.get(key));
-  if (!Number.isFinite(raw)) return fallback;
-  return Math.max(min, Math.min(max, Math.round(raw)));
-}
-
-function boolParam(url: URL, key: string, fallback: boolean): boolean {
-  const raw = url.searchParams.get(key);
-  if (raw == null) return fallback;
-  return ["1", "true", "yes", "on"].includes(raw.toLowerCase());
 }
 
 function usernameFrom(url: URL): string {
@@ -45,7 +34,13 @@ async function graphFromRequest(request: Request, env: Env) {
 
 function errorResponse(error: unknown): Response {
   const message = error instanceof Error ? error.message : "Unknown error";
-  const status = message.includes("not found") ? 404 : message.includes("rate limit") ? 429 : 400;
+  let status = 500;
+
+  if (message.includes("Invalid GitHub username") || error instanceof URIError) status = 400;
+  else if (message.includes("not found")) status = 404;
+  else if (message.includes("rate limit")) status = 429;
+  else if (message.startsWith("GitHub API returned")) status = 502;
+
   return Response.json({ error: message }, { status, headers: corsHeaders({ "Cache-Control": "no-store" }) });
 }
 
