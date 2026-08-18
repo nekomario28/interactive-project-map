@@ -5,7 +5,8 @@ Turn a GitHub user's public repositories into a project map with:
 - a static SVG for GitHub profile READMEs
 - static `graph.json` owned by each user
 - a shared interactive map with search, details, pan, zoom, drag, pinch, and repository links
-- **Galaxy** and **Obsidian-like** presentation presets
+- **Galaxy**, **Obsidian-like**, and **Tree** presentation presets
+- an on-site visual preset gallery so users can see the layout idea before generating anything
 - explicit colors for original repositories, forks, and archived repositories
 - label-aware spacing and collision culling so dense maps remain readable
 - a zero-backend public generator hosted on GitHub Pages
@@ -17,13 +18,13 @@ The public frontend is a **static GitHub Pages application**. Repository metadat
 
 ```text
 https://nekomario28.github.io/interactive-project-map/
-        ↓ generate setup
+        ↓ choose style + generate setup
 USERNAME/USERNAME profile repository
         ↓ scheduled GitHub Action
 project-map/galaxy.svg
 project-map/graph.json
         ↓
-GitHub profile README ──click──> github.io universal viewer
+GitHub profile README ──click──> github.io interactive viewer
                                   ↓
                     raw.githubusercontent.com
                                   ↓
@@ -34,7 +35,7 @@ Normal README views and normal interactive-map views do **not** call the GitHub 
 
 ## Map styles
 
-The same `graph.json` can be viewed with either presentation preset.
+The generator shows a compact visual example for every preset before setup generation. The same `graph.json` drives every interactive style; only the presentation changes.
 
 ### Galaxy
 
@@ -52,14 +53,37 @@ https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style
 
 Obsidian-like uses a neutral native-looking dark workspace and a deterministic force-directed layout based on center, repel, link, and collision forces. It is inspired by the interaction model of graph-view tools without copying Obsidian assets or product UI verbatim.
 
-Both styles preserve the same semantics:
+### Tree
+
+```text
+https://nekomario28.github.io/interactive-project-map/tree/?username=USERNAME&style=tree
+```
+
+Tree makes the hierarchy explicit:
+
+```text
+Owner
+├── Category A
+│   ├── Repository
+│   ├── Repository
+│   └── Repository
+├── Category B
+│   ├── Repository
+│   └── Repository
+└── Category C
+    └── Repository
+```
+
+The static renderer allocates horizontal space by subtree size and wraps repositories into rows when a category is dense. Repository labels still use collision-aware placement, so text is hidden rather than rendered on top of other text when the available SVG area cannot fit every label.
+
+All styles preserve the same semantics:
 
 - **Original** repositories use the primary repository color.
 - **Forks** use a distinct fork color.
 - **Archived** repositories use a distinct archived color plus an outer dashed ring.
 - Owner, category, and relation edges have their own visual roles.
 
-The viewer also provides search, a repository details panel, drag, pan, wheel/pinch zoom, Fit/Reset controls, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`).
+The viewers also provide search, a repository details panel, drag, pan, wheel/pinch zoom, Fit/Reset controls, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`). Galaxy and Obsidian-like switch live inside the shared viewer; selecting Tree routes to the dedicated hierarchical viewer, and selecting Galaxy/Obsidian-like there routes back without changing the underlying static data.
 
 ## Public URLs
 
@@ -69,13 +93,20 @@ After GitHub Pages is enabled for this repository, the default project-site URL 
 https://nekomario28.github.io/interactive-project-map/
 ```
 
-The universal viewer uses query parameters rather than a dynamic server route:
+Galaxy and Obsidian-like use:
 
 ```text
 https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy
+https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=obsidian
 ```
 
-That works with static GitHub Pages hosting and avoids one generated viewer directory per user.
+Tree uses:
+
+```text
+https://nekomario28.github.io/interactive-project-map/tree/?username=USERNAME&style=tree
+```
+
+All routes remain static GitHub Pages pages.
 
 ## User installation
 
@@ -87,10 +118,10 @@ Open:
 https://nekomario28.github.io/interactive-project-map/
 ```
 
-Enter your GitHub username and choose:
+Choose one of the visual preview cards, then enter your GitHub username and configure:
 
 - dark/light static SVG theme
-- Galaxy or Obsidian-like map style
+- Galaxy, Obsidian-like, or Tree map style
 - maximum repository count
 - whether forks are included
 - whether archived repositories are included
@@ -142,6 +173,8 @@ project-map/
 └── graph.json
 ```
 
+`galaxy.svg` is retained as the stable output filename for backward compatibility even when the selected style is Obsidian-like or Tree.
+
 The workflow also runs on a schedule. If repository data did not change, the generator preserves the previous timestamp so no meaningless daily commit is created.
 
 ### 4. Add the generated embed to README.md
@@ -160,11 +193,11 @@ The generated snippet is equivalent to:
 </p>
 ```
 
-The profile serves the SVG directly from the user's own repository. Clicking it opens the shared interactive viewer.
+For Tree, the generated link points to `/tree/?username=USERNAME&style=tree` instead. The profile serves the SVG directly from the user's own repository.
 
 ## How the static viewer works
 
-The GitHub Pages viewer reads:
+The GitHub Pages viewers read:
 
 ```text
 https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/graph.json
@@ -194,7 +227,7 @@ The root `action.yml` supports:
 | `github_token` | required | token used to read public repository metadata |
 | `username` | caller owner | GitHub user to visualize |
 | `theme` | `dark` | static SVG theme: `dark` or `light` |
-| `style` | `galaxy` | `galaxy` or `obsidian` |
+| `style` | `galaxy` | `galaxy`, `obsidian`, or `tree` |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
@@ -219,9 +252,14 @@ site/
 ├── .nojekyll
 ├── index.html
 ├── app.js
+├── presets.css
 ├── viewer.js
+├── tree-router.js
+├── tree-viewer.js
 ├── viewer.css
-└── u/
+├── u/
+│   └── index.html
+└── tree/
     └── index.html
 ```
 
@@ -277,19 +315,19 @@ Verification includes:
 
 - TypeScript type checking
 - Wrangler Worker dry-run
-- Node 24 Action syntax checks
-- Pages generator/viewer syntax checks
+- Node 24 Action and Tree SVG syntax checks
+- Pages generator/viewer/tree-viewer syntax checks
 - HTML-Validate on emitted HTML
 - ESLint on emitted browser JavaScript
-- Stylelint on emitted CSS
+- Stylelint on emitted CSS, including the preset gallery
 - actionlint on repository workflows and the workflow generated by the browser installer
-- dense SVG label-overlap tests for Galaxy and Obsidian-like styles
+- dense SVG label-overlap tests for Galaxy, Obsidian-like, and Tree styles
 - repository grouping/query/pagination tests
 - static Action generation tests
 - install-workflow permission tests
 - static graph validation tests
 
-The repository CI also invokes the local `action.yml` with `contents:read`, requests the Obsidian-like preset, and verifies that a real styled SVG and graph JSON are generated.
+The repository CI also invokes the local `action.yml` with `contents:read`, requests the Tree preset against real public repository metadata, and verifies that a real Tree SVG and graph JSON are generated.
 
 ## License
 
