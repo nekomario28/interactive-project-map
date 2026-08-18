@@ -1,9 +1,11 @@
 import { buildGraph } from "./graph";
 import { fetchPublicRepos } from "./github";
+import { graphCacheRequest, normalizeUsername, type GraphRequestOptions } from "./hosted-options";
 import { boolParam, intParam } from "./params";
 import type { Env, GalaxyGraph } from "./types";
 
-const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+export { normalizeUsername } from "./hosted-options";
+
 const GRAPH_CACHE_SECONDS = 900;
 
 type CacheStorageWithDefault = CacheStorage & { default: Cache };
@@ -12,20 +14,7 @@ export interface WorkerContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 
-export interface GraphRequestOptions {
-  username: string;
-  maxRepos: number;
-  includeForks: boolean;
-  includeArchived: boolean;
-}
-
 export type GraphCacheStatus = "HIT" | "MISS";
-
-export function normalizeUsername(value: string): string {
-  const username = value.trim().toLowerCase();
-  if (!USERNAME_RE.test(username)) throw new Error("Invalid GitHub username");
-  return username;
-}
 
 export function graphOptionsFromUrl(url: URL): GraphRequestOptions {
   return {
@@ -34,15 +23,6 @@ export function graphOptionsFromUrl(url: URL): GraphRequestOptions {
     includeForks: boolParam(url, "forks", true),
     includeArchived: boolParam(url, "archived", false),
   };
-}
-
-export function graphCacheRequest(origin: string, options: GraphRequestOptions): Request {
-  const url = new URL("/__cache/graph", origin);
-  url.searchParams.set("username", options.username);
-  url.searchParams.set("max_repos", String(options.maxRepos));
-  url.searchParams.set("forks", String(options.includeForks));
-  url.searchParams.set("archived", String(options.includeArchived));
-  return new Request(url.toString(), { method: "GET" });
 }
 
 function clientAddress(request: Request): string {
