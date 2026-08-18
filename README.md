@@ -58,7 +58,7 @@ Galaxy places categories in semantic sectors around one owner-centered map and d
 https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=obsidian
 ```
 
-Obsidian-like uses a neutral native-looking dark workspace and a deterministic force-directed layout based on center, repel, link, and collision forces. It is inspired by the interaction model of graph-view tools without copying Obsidian assets or product UI verbatim.
+Obsidian-like uses a neutral native-looking dark workspace and a deterministic force-directed layout based on center, repel, link, and collision forces. It is inspired by graph-view tools without copying product assets or UI verbatim.
 
 ### Tree
 
@@ -77,7 +77,7 @@ All styles preserve the same semantics:
 
 The interactive viewers provide search, a repository details panel, drag, pan, wheel/pinch zoom, Fit/Reset controls, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`).
 
-Potential future views are intentionally not added to the main selector yet. The strongest candidates are **Timeline** for project history, **Treemap** for compact portfolio comparison, and **Cluster/Bubble** for large repository collections. They require different visual semantics rather than another cosmetic variation of the existing graph layouts.
+Potential future views are intentionally not added to the main selector yet. The strongest candidates are **Timeline** for project history, **Treemap** for compact portfolio comparison, and **Cluster/Bubble** for large repository collections.
 
 ## Public URLs
 
