@@ -6,44 +6,20 @@ import stylelint from "stylelint";
 const root = process.cwd();
 const siteDir = join(root, "site");
 const validatorDir = join(root, ".tmp", "validator");
-const STYLES = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster"];
-const DEDICATED = ["radial", "tree", "treemap", "timeline", "cluster"];
+const STYLES = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst"];
+const DEDICATED = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst"];
 const cssRules = {
-  "at-rule-no-unknown": true,
-  "block-no-empty": true,
-  "color-no-invalid-hex": true,
-  "declaration-block-no-duplicate-properties": true,
-  "declaration-property-value-no-unknown": true,
-  "function-calc-no-unspaced-operator": true,
-  "function-linear-gradient-no-nonstandard-direction": true,
-  "media-feature-name-no-unknown": true,
-  "no-duplicate-selectors": true,
-  "property-no-unknown": true,
-  "selector-pseudo-class-no-unknown": true,
-  "selector-pseudo-element-no-unknown": true,
-  "selector-type-no-unknown": true,
-  "string-no-newline": true,
-  "unit-no-unknown": true
+  "at-rule-no-unknown": true, "block-no-empty": true, "color-no-invalid-hex": true,
+  "declaration-block-no-duplicate-properties": true, "declaration-property-value-no-unknown": true,
+  "function-calc-no-unspaced-operator": true, "function-linear-gradient-no-nonstandard-direction": true,
+  "media-feature-name-no-unknown": true, "no-duplicate-selectors": true, "property-no-unknown": true,
+  "selector-pseudo-class-no-unknown": true, "selector-pseudo-element-no-unknown": true,
+  "selector-type-no-unknown": true, "string-no-newline": true, "unit-no-unknown": true
 };
-async function lintCss(code, label) {
-  const result = await stylelint.lint({ code, config: { rules: cssRules }, formatter: "string" });
-  if (result.errored) throw new Error(`${label} failed Stylelint:\n${result.report}`);
-}
-async function validateEmbeddedCss(filePath) {
-  const html = await readFile(filePath, "utf8");
-  const blocks = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gi)];
-  if (!blocks.length) throw new Error(`${filePath}: expected at least one <style> block`);
-  for (let index = 0; index < blocks.length; index += 1) await lintCss(blocks[index][1], `${filePath} <style> #${index + 1}`);
-}
+async function lintCss(code, label) { const result = await stylelint.lint({ code, config: { rules: cssRules }, formatter: "string" }); if (result.errored) throw new Error(`${label} failed Stylelint:\n${result.report}`); }
+async function validateEmbeddedCss(filePath) { const html = await readFile(filePath, "utf8"); const blocks = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gi)]; if (!blocks.length) throw new Error(`${filePath}: expected at least one <style> block`); for (let index = 0; index < blocks.length; index += 1) await lintCss(blocks[index][1], `${filePath} <style> #${index + 1}`); }
 async function validateExternalCss(filePath) { await lintCss(await readFile(filePath, "utf8"), filePath); }
-function requireStyles(html, name) {
-  let cursor = -1;
-  for (const style of STYLES) {
-    const next = html.indexOf(`value="${style}"`, cursor + 1);
-    if (next < 0) throw new Error(`${name} is missing ${style} style option`);
-    cursor = next;
-  }
-}
+function requireStyles(html, name) { let cursor = -1; for (const style of STYLES) { const next = html.indexOf(`value="${style}"`, cursor + 1); if (next < 0) throw new Error(`${name} is missing ${style} style option`); cursor = next; } }
 async function validateDynamicMarkup() {
   const home = await readFile(join(siteDir, "index.html"), "utf8");
   const pages = [["viewer", await readFile(join(siteDir, "u", "index.html"), "utf8")]];
@@ -70,23 +46,16 @@ async function validateDynamicMarkup() {
   }
   if (/script-src[^;]*'unsafe-inline'/.test(home)) throw new Error("generator CSP must not allow unsafe-inline scripts");
 }
-function mockElement(id) {
-  return { id, value: id === "maxRepos" ? "100" : id === "theme" ? "dark" : id === "mapStyle" ? "radial" : "", checked: id === "forks", textContent: "", href: "", src: "", dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {}, select() {}, setAttribute() {} };
-}
+function mockElement(id) { return { id, value: id === "maxRepos" ? "100" : id === "theme" ? "dark" : id === "mapStyle" ? "radial" : "", checked: id === "forks", textContent: "", href: "", src: "", dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {}, select() {}, setAttribute() {} }; }
 async function generateWorkflowFixture() {
   const appJs = await readFile(join(siteDir, "app.js"), "utf8");
   const elements = new Map();
-  const context = {
-    document: { getElementById(id) { if (!elements.has(id)) elements.set(id, mockElement(id)); return elements.get(id); }, querySelectorAll() { return []; }, execCommand() { return true; } },
-    navigator: { clipboard: { async writeText() {} } },
-    location: { href: "https://nekomario28.github.io/interactive-project-map/" },
-    history: { replaceState() {} }, URL, Set, setTimeout() {}, console
-  };
+  const context = { document: { getElementById(id) { if (!elements.has(id)) elements.set(id, mockElement(id)); return elements.get(id); }, querySelectorAll() { return []; }, execCommand() { return true; } }, navigator: { clipboard: { async writeText() {} } }, location: { href: "https://nekomario28.github.io/interactive-project-map/" }, history: { replaceState() {} }, URL, Set, setTimeout() {}, console };
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
-  const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'cluster',maxRepos:100,forks:true,archived:false})", context);
+  const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'sunburst',maxRepos:100,forks:true,archived:false})", context);
   if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map@")) throw new Error("Generated installer workflow is incomplete");
-  if (!workflow.includes("style: cluster")) throw new Error("Generated installer workflow must preserve Cluster style");
+  if (!workflow.includes("style: sunburst")) throw new Error("Generated installer workflow must preserve Sunburst style");
   if (workflow.includes("__PROJECT_MAP_ACTION_REF__")) throw new Error("Generated installer workflow still contains placeholder");
   await mkdir(validatorDir, { recursive: true });
   await writeFile(join(validatorDir, "generated-project-map.yml"), `${workflow}\n`);
@@ -96,4 +65,4 @@ await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateExternalCss(join(siteDir, "viewer.css"));
 await validateExternalCss(join(siteDir, "presets.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS, seven style presets and browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, eight style presets and browser installer runtime validated.");
