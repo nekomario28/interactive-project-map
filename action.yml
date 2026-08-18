@@ -1,6 +1,6 @@
 name: Generate Interactive Project Map
 
-description: Generate a static galaxy SVG and graph JSON from a GitHub user's public repositories.
+description: Generate a static project-map SVG and graph JSON from a GitHub user's public repositories.
 
 author: nekomario28
 
@@ -16,6 +16,10 @@ inputs:
     description: SVG theme (dark or light).
     required: false
     default: dark
+  style:
+    description: Map presentation preset (galaxy or obsidian).
+    required: false
+    default: galaxy
   max_repos:
     description: Maximum eligible repositories to include (1-300).
     required: false
