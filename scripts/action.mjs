@@ -9,9 +9,10 @@ import { renderRadialTreeSvg } from "./radial-svg.mjs";
 import { renderTreemapSvg } from "./treemap-svg.mjs";
 import { renderTimelineSvg } from "./timeline-svg.mjs";
 import { renderClusterSvg } from "./cluster-svg.mjs";
+import { renderSunburstSvg } from "./sunburst-svg.mjs";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const STYLE_VALUES = new Set(["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster"]);
+const STYLE_VALUES = new Set(["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst"]);
 function input(env, name, legacyName) { return env[`INPUT_${name}`] ?? (legacyName ? env[legacyName] : undefined); }
 function boundedInt(value, fallback, min, max) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.max(min, Math.min(max, Math.round(parsed))) : fallback; }
 function boolValue(value, fallback) {
@@ -33,9 +34,7 @@ export function actionConfigFromEnv(env = process.env) {
   if (!USERNAME_RE.test(username)) throw new Error("Invalid GitHub username");
   const theme = input(env, "THEME", "PROJECT_MAP_THEME") === "light" ? "light" : "dark";
   return {
-    username,
-    theme,
-    style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")),
+    username, theme, style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")),
     maxRepos: boundedInt(input(env, "MAX_REPOS", "PROJECT_MAP_MAX_REPOS"), 100, 1, 300),
     includeForks: boolValue(input(env, "FORKS", "PROJECT_MAP_FORKS"), true),
     includeArchived: boolValue(input(env, "ARCHIVED", "PROJECT_MAP_ARCHIVED"), false),
@@ -57,6 +56,7 @@ function renderForStyle(graph, config) {
   if (config.style === "treemap") return renderTreemapSvg(graph, config.theme, config.width, config.height);
   if (config.style === "timeline") return renderTimelineSvg(graph, config.theme, config.width, config.height);
   if (config.style === "cluster") return renderClusterSvg(graph, config.theme, config.width, config.height);
+  if (config.style === "sunburst") return renderSunburstSvg(graph, config.theme, config.width, config.height);
   return renderGalaxySvg(graph, config.theme, config.width, config.height, config.style);
 }
 export async function generateStaticMap(config, options = {}) {
