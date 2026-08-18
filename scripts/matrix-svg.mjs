@@ -7,6 +7,12 @@ function palette(theme) {
     ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", grid: "#d3dae6", heat: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
     : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", grid: "#2a374b", heat: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
 }
+const LANGUAGE_LABELS = new Map([["Rich Text Format", "RTF"], ["Jupyter Notebook", "Jupyter"], ["Visual Basic .NET", "VB.NET"]]);
+function languageLabel(language) {
+  const alias = LANGUAGE_LABELS.get(language);
+  if (alias) return alias;
+  return language.length > 12 ? `${language.slice(0, 11)}…` : language;
+}
 function languageColumns(repos, maxColumns = 7) {
   const counts = new Map();
   for (const repo of repos) counts.set(repo.language || "Other", (counts.get(repo.language || "Other") || 0) + 1);
@@ -52,8 +58,7 @@ export function renderMatrixSvg(graph, theme, width, height) {
 
   columns.forEach((language, index) => {
     const x = left + cellWidth * (index + 0.5);
-    const label = language.length > 12 ? `${language.slice(0, 11)}…` : language;
-    pieces.push(`<text x="${x.toFixed(1)}" y="${top - 13}" text-anchor="middle" fill="${colors.muted}" font-size="9.5" font-weight="600">${esc(label)}</text>`);
+    pieces.push(`<text x="${x.toFixed(1)}" y="${top - 13}" text-anchor="middle" fill="${colors.muted}" font-size="9.5" font-weight="600">${esc(languageLabel(language))}</text>`);
   });
 
   rows.forEach((row, rowIndex) => {
