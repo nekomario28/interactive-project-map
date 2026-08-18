@@ -3,7 +3,8 @@ import test from "node:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { buildPagesApp, renderPagesHome, renderPagesViewer } from "../scripts/pages-app.mjs";
+import { renderPagesHome, renderPagesViewer } from "../scripts/pages-app.mjs";
+import { buildPublicPages, PUBLIC_ACTION_REF } from "../scripts/build-public-pages.mjs";
 
 test("Pages generator emits distributed static installation URLs and isolated permissions", () => {
   const html = renderPagesHome();
@@ -27,14 +28,16 @@ test("universal Pages viewer reads only the user's static graph in the normal pa
   assert.doesNotMatch(html, /api\.github\.com/);
 });
 
-test("Pages build produces a root generator and query-driven universal viewer", async () => {
+test("public Pages build pins the reusable Action and produces the universal app", async () => {
   const dir = await mkdtemp(join(tmpdir(), "project-map-pages-"));
   try {
-    await buildPagesApp(dir);
+    await buildPublicPages(dir);
     const home = await readFile(join(dir, "index.html"), "utf8");
     const viewer = await readFile(join(dir, "u", "index.html"), "utf8");
     const noJekyll = await readFile(join(dir, ".nojekyll"), "utf8");
     assert.match(home, /Create your map/);
+    assert.match(home, new RegExp(`nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`));
+    assert.doesNotMatch(home, /nekomario28\/interactive-project-map@v1/);
     assert.match(viewer, /Interactive Project Map/);
     assert.equal(noJekyll, "\n");
   } finally {
