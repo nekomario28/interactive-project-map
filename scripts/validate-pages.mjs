@@ -6,8 +6,8 @@ import stylelint from "stylelint";
 const root = process.cwd();
 const siteDir = join(root, "site");
 const validatorDir = join(root, ".tmp", "validator");
-const STYLES = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst"];
-const DEDICATED = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst"];
+const STYLES = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+const DEDICATED = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const cssRules = {
   "at-rule-no-unknown": true, "block-no-empty": true, "color-no-invalid-hex": true,
   "declaration-block-no-duplicate-properties": true, "declaration-property-value-no-unknown": true,
@@ -53,9 +53,9 @@ async function generateWorkflowFixture() {
   const context = { document: { getElementById(id) { if (!elements.has(id)) elements.set(id, mockElement(id)); return elements.get(id); }, querySelectorAll() { return []; }, execCommand() { return true; } }, navigator: { clipboard: { async writeText() {} } }, location: { href: "https://nekomario28.github.io/interactive-project-map/" }, history: { replaceState() {} }, URL, Set, setTimeout() {}, console };
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
-  const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'sunburst',maxRepos:100,forks:true,archived:false})", context);
+  const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'sankey',maxRepos:100,forks:true,archived:false})", context);
   if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map@")) throw new Error("Generated installer workflow is incomplete");
-  if (!workflow.includes("style: sunburst")) throw new Error("Generated installer workflow must preserve Sunburst style");
+  if (!workflow.includes("style: sankey")) throw new Error("Generated installer workflow must preserve Sankey style");
   if (workflow.includes("__PROJECT_MAP_ACTION_REF__")) throw new Error("Generated installer workflow still contains placeholder");
   await mkdir(validatorDir, { recursive: true });
   await writeFile(join(validatorDir, "generated-project-map.yml"), `${workflow}\n`);
@@ -65,4 +65,4 @@ await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateExternalCss(join(siteDir, "viewer.css"));
 await validateExternalCss(join(siteDir, "presets.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS, eight style presets and browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, ten style presets and browser installer runtime validated.");
