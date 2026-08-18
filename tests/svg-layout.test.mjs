@@ -6,6 +6,7 @@ import { renderTreeSvg } from "../scripts/tree-svg.mjs";
 import { renderTreemapSvg } from "../scripts/treemap-svg.mjs";
 import { renderTimelineSvg } from "../scripts/timeline-svg.mjs";
 import { renderClusterSvg } from "../scripts/cluster-svg.mjs";
+import { renderSunburstSvg } from "../scripts/sunburst-svg.mjs";
 
 function denseGraph() {
   const groups = Array.from({ length: 4 }, (_, index) => ({ id: `group:g${index}`, label: `Dense category ${index + 1}`, type: "group", repositoryCount: 7 }));
@@ -27,4 +28,7 @@ function repositoryLabelBoxes(svg) {
 function overlaps(a,b,padding=2){return!(a.right+padding<b.left||b.right+padding<a.left||a.bottom+padding<b.top||b.bottom+padding<a.top);}
 const renderers={radial:(g)=>renderRadialTreeSvg(g,"dark",740,420),galaxy:(g)=>renderGalaxySvg(g,"dark",740,420,"galaxy"),obsidian:(g)=>renderGalaxySvg(g,"dark",740,420,"obsidian"),tree:(g)=>renderTreeSvg(g,"dark",740,420),timeline:(g)=>renderTimelineSvg(g,"dark",740,420),cluster:(g)=>renderClusterSvg(g,"dark",740,420)};
 for(const[style,render]of Object.entries(renderers))test(`${style} SVG keeps dense repository labels readable`,()=>{const svg=render(denseGraph()),boxes=repositoryLabelBoxes(svg);assert.ok(boxes.length>=5,`${style} should retain several repository labels`);for(let first=0;first<boxes.length;first+=1)for(let second=first+1;second<boxes.length;second+=1)assert.equal(overlaps(boxes[first],boxes[second]),false,`${style} labels overlap: ${boxes[first].label} / ${boxes[second].label}`);assert.match(svg,/>Original<\/text>/);assert.match(svg,/>Fork<\/text>/);assert.match(svg,/>Archived<\/text>/);});
+
 test("treemap SVG keeps dense repositories bounded in non-overlapping category tiles",()=>{const svg=renderTreemapSvg(denseGraph(),"dark",740,420);assert.match(svg,/aria-label="Treemap of example/);assert.match(svg,/Treemap · 28 projects/);assert.match(svg,/>Original<\/text>/);assert.match(svg,/>Fork<\/text>/);assert.match(svg,/>Archived<\/text>/);assert.doesNotMatch(svg,/NaN|Infinity|width="-/);assert.equal([...svg.matchAll(/<title>long-project-name-/g)].length,28);});
+
+test("sunburst SVG gives every dense repository one bounded outer segment",()=>{const svg=renderSunburstSvg(denseGraph(),"dark",740,420);assert.match(svg,/aria-label="Sunburst of example/);assert.match(svg,/Sunburst · 28 projects/);assert.doesNotMatch(svg,/NaN|Infinity/);assert.equal([...svg.matchAll(/<title>long-project-name-/g)].length,28);assert.match(svg,/>Original<\/text>/);assert.match(svg,/>Fork<\/text>/);assert.match(svg,/>Archived<\/text>/);});
