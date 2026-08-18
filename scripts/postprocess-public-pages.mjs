@@ -70,7 +70,9 @@ async function htmlFiles(dir) {
 export async function postprocessPublicPages(outputDir = resolve(process.cwd(), "site")) {
   for (const path of await htmlFiles(outputDir)) {
     const source = await readFile(path, "utf8");
-    const cleaned = source.replace(/;?\s*frame-ancestors\s+'none'/g, "");
+    const cleaned = source
+      .replace(/;?\s*frame-ancestors\s+'none'/g, "")
+      .replace(/style-src\s+'self'(?!\s+'unsafe-inline')/g, "style-src 'self' 'unsafe-inline'");
     if (cleaned !== source) await writeFile(path, cleaned);
   }
 
