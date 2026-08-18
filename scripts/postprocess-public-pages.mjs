@@ -2,6 +2,9 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+export const PUBLIC_ACTION_REF = "2f36693be8abe27e7db755d90042dbcde9a52bf5";
+const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
+
 const MOBILE_FIX = `
 
 /* Emitted-site mobile hardening: keep the viewer inside narrow viewports. */
@@ -79,12 +82,20 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
   const cssPath = join(outputDir, "viewer.css");
   const css = await readFile(cssPath, "utf8");
   if (!css.includes("Emitted-site mobile hardening")) await writeFile(cssPath, css + MOBILE_FIX);
+
+  const appPath = join(outputDir, "app.js");
+  const app = await readFile(appPath, "utf8");
+  if (!app.includes(BUILDER_ACTION_REF) && !app.includes(PUBLIC_ACTION_REF)) throw new Error("Emitted app.js does not contain the expected installer Action ref");
+  const promotedApp = app.replaceAll(BUILDER_ACTION_REF, PUBLIC_ACTION_REF);
+  if (!promotedApp.includes(PUBLIC_ACTION_REF) || promotedApp.includes(BUILDER_ACTION_REF)) throw new Error("Could not promote emitted installer Action ref");
+  if (promotedApp !== app) await writeFile(appPath, promotedApp);
 }
 
 async function main() {
   const outputDir = resolve(process.argv[2] || join(process.cwd(), "site"));
   await postprocessPublicPages(outputDir);
   console.log(`Postprocessed public Pages output in ${outputDir}`);
+  console.log(`Published installer Action ref: ${PUBLIC_ACTION_REF}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
