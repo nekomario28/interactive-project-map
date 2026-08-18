@@ -5,9 +5,10 @@ import { fetchPublicRepos } from "./github.mjs";
 import { buildGraph } from "./graph.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
 import { renderTreeSvg } from "./tree-svg.mjs";
+import { renderRadialTreeSvg } from "./radial-svg.mjs";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const STYLE_VALUES = new Set(["galaxy", "obsidian", "tree"]);
+const STYLE_VALUES = new Set(["radial", "galaxy", "obsidian", "tree"]);
 
 function input(env, name, legacyName) {
   return env[`INPUT_${name}`] ?? (legacyName ? env[legacyName] : undefined);
@@ -99,7 +100,9 @@ export async function generateStaticMap(config, options = {}) {
   await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
   const svg = config.style === "tree"
     ? renderTreeSvg(graph, config.theme, config.width, config.height)
-    : renderGalaxySvg(graph, config.theme, config.width, config.height, config.style);
+    : config.style === "radial"
+      ? renderRadialTreeSvg(graph, config.theme, config.width, config.height)
+      : renderGalaxySvg(graph, config.theme, config.width, config.height, config.style);
   await writeFile(resolve(cwd, svgPath), svg);
   return { graphPath, svgPath, graph };
 }
