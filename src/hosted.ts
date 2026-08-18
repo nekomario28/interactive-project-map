@@ -2,12 +2,16 @@ import { buildGraph } from "./graph";
 import { fetchPublicRepos } from "./github";
 import { graphCacheRequest, normalizeUsername, type GraphRequestOptions } from "./hosted-options";
 import { boolParam, intParam } from "./params";
+import { fetchStaticProfileGraph } from "./static-graph";
 import type { Env, GalaxyGraph } from "./types";
 
 export { normalizeUsername } from "./hosted-options";
 
 const GRAPH_CACHE_SECONDS = 900;
-const inflightGraphs = new Map<string, Promise<GalaxyGraph>>();
+
+export type GraphSource = "STATIC" | "GITHUB";
+type LoadedGraph = { graph: GalaxyGraph; source: GraphSource };
+const inflightGraphs = new Map<string, Promise<LoadedGraph>>();
 
 type CacheStorageWithDefault = CacheStorage & { default: Cache };
 
@@ -40,35 +44,57 @@ async function enforceLimiter(
   if (!success) throw new Error(message);
 }
 
+function cacheResponse(loaded: LoadedGraph): Response {
+  return Response.json(loaded.graph, {
+    headers: {
+      "Cache-Control": `public, max-age=${GRAPH_CACHE_SECONDS}`,
+      "X-Project-Map-Source": loaded.source,
+    },
+  });
+}
+
 export async function getGraph(
   request: Request,
   env: Env,
   ctx: WorkerContext,
-): Promise<{ graph: GalaxyGraph; cacheStatus: GraphCacheStatus }> {
+): Promise<{ graph: GalaxyGraph; cacheStatus: GraphCacheStatus; source: GraphSource }> {
   const url = new URL(request.url);
   const options = graphOptionsFromUrl(url);
+  const preferStatic = boolParam(url, "static", false);
   const address = clientAddress(request);
 
   await enforceLimiter(env.API_RATE_LIMITER, `client:${address}`, "Hosted service rate limit reached");
 
   const cache = (caches as CacheStorageWithDefault).default;
-  const cacheKey = graphCacheRequest(url.origin, options);
+  const cacheKey = graphCacheRequest(url.origin, options, preferStatic ? "profile" : "dynamic");
   const cached = await cache.match(cacheKey);
 
   if (cached) {
+    const source: GraphSource = cached.headers.get("X-Project-Map-Source") === "STATIC" ? "STATIC" : "GITHUB";
     return {
       graph: await cached.json() as GalaxyGraph,
       cacheStatus: "HIT",
+      source,
     };
   }
 
   const inflightKey = cacheKey.url;
   const existing = inflightGraphs.get(inflightKey);
   if (existing) {
-    return { graph: await existing, cacheStatus: "COALESCED" };
+    const loaded = await existing;
+    return { ...loaded, cacheStatus: "COALESCED" };
   }
 
-  const loadGraph = (async () => {
+  const loadGraph = (async (): Promise<LoadedGraph> => {
+    if (preferStatic) {
+      const staticGraph = await fetchStaticProfileGraph(options.username);
+      if (staticGraph) {
+        const loaded: LoadedGraph = { graph: staticGraph, source: "STATIC" };
+        ctx.waitUntil(cache.put(cacheKey, cacheResponse(loaded)));
+        return loaded;
+      }
+    }
+
     await enforceLimiter(env.UPSTREAM_RATE_LIMITER, `client:${address}`, "Too many uncached GitHub lookups");
     await enforceLimiter(env.GLOBAL_UPSTREAM_RATE_LIMITER, "github-upstream", "Hosted service is busy. Try again shortly.");
 
@@ -76,18 +102,18 @@ export async function getGraph(
       includeForks: options.includeForks,
       includeArchived: options.includeArchived,
     });
-    const graph = buildGraph(options.username, repos, options.includeForks, options.includeArchived);
-    const cacheResponse = Response.json(graph, {
-      headers: { "Cache-Control": `public, max-age=${GRAPH_CACHE_SECONDS}` },
-    });
-
-    ctx.waitUntil(cache.put(cacheKey, cacheResponse));
-    return graph;
+    const loaded: LoadedGraph = {
+      graph: buildGraph(options.username, repos, options.includeForks, options.includeArchived),
+      source: "GITHUB",
+    };
+    ctx.waitUntil(cache.put(cacheKey, cacheResponse(loaded)));
+    return loaded;
   })();
 
   inflightGraphs.set(inflightKey, loadGraph);
   try {
-    return { graph: await loadGraph, cacheStatus: "MISS" };
+    const loaded = await loadGraph;
+    return { ...loaded, cacheStatus: "MISS" };
   } finally {
     if (inflightGraphs.get(inflightKey) === loadGraph) inflightGraphs.delete(inflightKey);
   }
