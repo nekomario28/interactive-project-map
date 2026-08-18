@@ -5,8 +5,8 @@ function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function statusOf(repo) { return repo.archived ? "archived" : repo.fork ? "fork" : "original"; }
 function palette(theme) {
   return theme === "light"
-    ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", cluster: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
-    : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", cluster: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
+    ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", cluster: "#376fbd", clusterFill: "#e9f1fb", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
+    : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", cluster: "#6aa7ff", clusterFill: "#0d1728", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
 }
 function groupMembers(group, repos) {
   const key = String(group.id).replace(/^group:/, "");
@@ -30,7 +30,7 @@ function clusterLayout(graph, width, height) {
     const cy = groups.length === 1 ? centerY : centerY + Math.sin(angle) * orbitY;
     const members = groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label));
     const radius = clamp(38 + Math.sqrt(Math.max(1, members.length)) * 13, 48, Math.min(width, height) * 0.21);
-    clusters.push({ group, cx, cy, radius });
+    clusters.push({ group, members, cx, cy, radius });
     const golden = Math.PI * (3 - Math.sqrt(5));
     members.forEach((repo, repoIndex) => {
       const nodeRadius = clamp(4.4 + Math.log2((repo.stars ?? 0) + 1) * 1.2, 4.4, 10.5);
@@ -48,8 +48,11 @@ export function renderClusterSvg(graph, theme, width, height) {
   const { clusters, nodes } = clusterLayout(graph, width, height);
   const pieces = [];
   for (const cluster of clusters) {
-    pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${cluster.radius.toFixed(1)}" fill="${colors.cluster}" fill-opacity="0.055" stroke="${colors.cluster}" stroke-width="1.1" stroke-opacity="0.55"/>`);
-    pieces.push(`<text x="${cluster.cx.toFixed(1)}" y="${(cluster.cy - cluster.radius - 7).toFixed(1)}" text-anchor="middle" fill="${colors.muted}" font-size="10" font-weight="650">${esc(cluster.group.label.length > 24 ? `${cluster.group.label.slice(0, 23)}…` : cluster.group.label)}</text>`);
+    pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${cluster.radius.toFixed(1)}" fill="${colors.clusterFill}" fill-opacity="0.58" stroke="${colors.cluster}" stroke-width="1.25" stroke-opacity="0.72"/>`);
+    const title = cluster.group.label.length > 22 ? `${cluster.group.label.slice(0, 21)}…` : cluster.group.label;
+    const labelY = cluster.cy - cluster.radius - 9;
+    pieces.push(`<text x="${cluster.cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle" fill="${colors.fg}" font-size="10" font-weight="700">${esc(title)}</text>`);
+    pieces.push(`<text x="${cluster.cx.toFixed(1)}" y="${(labelY + 11).toFixed(1)}" text-anchor="middle" fill="${colors.muted}" font-size="8.3">${cluster.members.length} repo${cluster.members.length === 1 ? "" : "s"}</text>`);
   }
   const occupied = [];
   for (const item of nodes) {
@@ -57,14 +60,14 @@ export function renderClusterSvg(graph, theme, width, height) {
     const color = colors[statusOf(repo)];
     pieces.push(`<g><title>${esc(repo.label)} · ${statusOf(repo)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${color}" opacity="${repo.archived ? "0.70" : repo.fork ? "0.82" : "0.96"}"${repo.archived ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ""}/>`);
     if ((repo.stars ?? 0) > 0 || nodes.length <= 36) {
-      const label = repo.label.length > 20 ? `${repo.label.slice(0, 19)}…` : repo.label;
-      const fontSize = 9;
+      const label = repo.label.length > 18 ? `${repo.label.slice(0, 17)}…` : repo.label;
+      const fontSize = 8.8;
       const w = labelWidth(label, fontSize);
       const top = y + radius + 4;
       const box = { left: x - w / 2, right: x + w / 2, top, bottom: top + 13 };
       if (box.left >= 8 && box.right <= width - 8 && box.bottom <= height - 28 && !occupied.some((other) => overlaps(box, other))) {
         occupied.push(box);
-        pieces.push(`<text x="${x.toFixed(1)}" y="${(top + 9).toFixed(1)}" text-anchor="middle" fill="${colors.fg}" font-size="${fontSize}">${esc(label)}</text>`);
+        pieces.push(`<text x="${x.toFixed(1)}" y="${(top + 9).toFixed(1)}" text-anchor="middle" fill="${colors.fg}" font-size="${fontSize}" paint-order="stroke" stroke="${colors.bg}" stroke-width="1.8">${esc(label)}</text>`);
       }
     }
     pieces.push(`</g>`);
