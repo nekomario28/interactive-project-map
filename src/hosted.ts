@@ -64,7 +64,10 @@ export async function getGraph(
   await enforceLimiter(env.UPSTREAM_RATE_LIMITER, `client:${address}`, "Too many uncached GitHub lookups");
   await enforceLimiter(env.GLOBAL_UPSTREAM_RATE_LIMITER, "github-upstream", "Hosted service is busy. Try again shortly.");
 
-  const repos = await fetchPublicRepos(options.username, env, options.maxRepos);
+  const repos = await fetchPublicRepos(options.username, env, options.maxRepos, {
+    includeForks: options.includeForks,
+    includeArchived: options.includeArchived,
+  });
   const graph = buildGraph(options.username, repos, options.includeForks, options.includeArchived);
   const cacheResponse = Response.json(graph, {
     headers: { "Cache-Control": `public, max-age=${GRAPH_CACHE_SECONDS}` },
