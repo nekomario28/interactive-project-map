@@ -64,8 +64,8 @@ test("public Pages build emits Galaxy and Obsidian-like style presets", async ()
     assert.match(viewerJs, /buildGalaxyLayout/);
     assert.match(viewerJs, /buildObsidianLayout/);
     assert.match(viewerJs, /boxesOverlap/);
-    assert.match(viewerJs, /node\.archived \? "archived"/);
-    assert.match(viewerJs, /node\.fork \? "fork" : "original"/);
+    assert.match(viewerJs, /if \(node\.archived\) return "archived"/);
+    assert.match(viewerJs, /return node\.fork \? "fork" : "original"/);
     assert.match(viewerJs, /raw\.githubusercontent\.com/);
     assert.doesNotMatch(viewerJs, /\/api\/graph|api\.github\.com/);
 
