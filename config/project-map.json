@@ -1,0 +1,10 @@
+{
+  "usernames": [
+    "@owner"
+  ],
+  "maxRepos": 100,
+  "includeForks": true,
+  "includeArchived": false,
+  "width": 740,
+  "height": 420
+}
