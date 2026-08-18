@@ -18,6 +18,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /mobile-webkit\.spec\.mjs/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
