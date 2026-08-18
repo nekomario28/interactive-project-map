@@ -10,6 +10,7 @@ import { renderClusterSvg } from "./cluster-svg.mjs";
 import { renderSunburstSvg } from "./sunburst-svg.mjs";
 import { renderMatrixSvg } from "./matrix-svg.mjs";
 import { renderSankeySvg } from "./sankey-svg.mjs";
+import { finalizeSvgForTheme } from "./finalize-svg.mjs";
 
 const WIDTH = 740;
 const HEIGHT = 420;
@@ -27,7 +28,7 @@ const STYLES = [
   ["sankey", "Sankey"],
 ];
 
-function render(style, graph, theme) {
+function rawRender(style, graph, theme) {
   if (style === "radial") return renderRadialTreeSvg(graph, theme, WIDTH, HEIGHT);
   if (style === "galaxy" || style === "obsidian") return renderGalaxySvg(graph, theme, WIDTH, HEIGHT, style);
   if (style === "tree") return renderTreeSvg(graph, theme, WIDTH, HEIGHT);
@@ -38,6 +39,10 @@ function render(style, graph, theme) {
   if (style === "matrix") return renderMatrixSvg(graph, theme, WIDTH, HEIGHT);
   if (style === "sankey") return renderSankeySvg(graph, theme, WIDTH, HEIGHT);
   throw new Error(`Unsupported comparison style: ${style}`);
+}
+
+function render(style, graph, theme) {
+  return finalizeSvgForTheme(rawRender(style, graph, theme), theme);
 }
 
 function esc(value) {
