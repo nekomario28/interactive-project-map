@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import vm from "node:vm";
 import stylelint from "stylelint";
+import { PUBLIC_ACTION_REF } from "./postprocess-public-pages.mjs";
 
 const root = process.cwd();
 const siteDir = join(root, "site");
@@ -49,12 +50,13 @@ async function validateDynamicMarkup() {
 function mockElement(id) { return { id, value: id === "maxRepos" ? "100" : id === "theme" ? "dark" : id === "mapStyle" ? "radial" : "", checked: id === "forks", textContent: "", href: "", src: "", dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {}, select() {}, setAttribute() {} }; }
 async function generateWorkflowFixture() {
   const appJs = await readFile(join(siteDir, "app.js"), "utf8");
+  if (!appJs.includes(PUBLIC_ACTION_REF)) throw new Error(`Emitted app.js must pin finalized Action ${PUBLIC_ACTION_REF}`);
   const elements = new Map();
   const context = { document: { getElementById(id) { if (!elements.has(id)) elements.set(id, mockElement(id)); return elements.get(id); }, querySelectorAll() { return []; }, execCommand() { return true; } }, navigator: { clipboard: { async writeText() {} } }, location: { href: "https://nekomario28.github.io/interactive-project-map/" }, history: { replaceState() {} }, URL, Set, setTimeout() {}, console };
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
   const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'sankey',maxRepos:100,forks:true,archived:false})", context);
-  if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map@")) throw new Error("Generated installer workflow is incomplete");
+  if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes(`uses: nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`)) throw new Error("Generated installer workflow does not use the finalized immutable Action ref");
   if (!workflow.includes("style: sankey")) throw new Error("Generated installer workflow must preserve Sankey style");
   if (workflow.includes("__PROJECT_MAP_ACTION_REF__")) throw new Error("Generated installer workflow still contains placeholder");
   await mkdir(validatorDir, { recursive: true });
