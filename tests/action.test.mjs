@@ -26,6 +26,7 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   const config = actionConfigFromEnv({
     INPUT_USERNAME: " OctoCat ",
     INPUT_THEME: "light",
+    INPUT_STYLE: "obsidian",
     INPUT_MAX_REPOS: "999",
     INPUT_FORKS: "false",
     INPUT_ARCHIVED: "yes",
@@ -35,6 +36,7 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   });
   assert.equal(config.username, "octocat");
   assert.equal(config.theme, "light");
+  assert.equal(config.style, "obsidian");
   assert.equal(config.maxRepos, 300);
   assert.equal(config.includeForks, false);
   assert.equal(config.includeArchived, true);
@@ -43,8 +45,10 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   assert.equal(config.outputDir, "project-map/custom");
 });
 
-test("action username falls back to the caller repository owner", () => {
-  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat" }).username, "octocat");
+test("action username and style use safe defaults", () => {
+  const config = actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "unknown" });
+  assert.equal(config.username, "octocat");
+  assert.equal(config.style, "galaxy");
 });
 
 test("output directory rejects traversal and absolute paths", () => {
@@ -54,12 +58,13 @@ test("output directory rejects traversal and absolute paths", () => {
   assert.throws(() => safeOutputDir("C:/tmp/project-map"));
 });
 
-test("static action writes graph.json and galaxy.svg without needing write access", async () => {
+test("static action writes graph.json and styled SVG without needing write access", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-action-"));
   let received;
   try {
     const config = actionConfigFromEnv({
       INPUT_USERNAME: "example",
+      INPUT_STYLE: "obsidian",
       INPUT_FORKS: "false",
       INPUT_ARCHIVED: "false",
       INPUT_OUTPUT_DIR: "project-map",
@@ -81,7 +86,10 @@ test("static action writes graph.json and galaxy.svg without needing write acces
     const svg = await readFile(join(cwd, result.svgPath), "utf8");
     assert.equal(graph.owner, "example");
     assert.equal(graph.repositoryCount, 2);
-    assert.match(svg, /<svg/);
+    assert.match(svg, /Obsidian-style map/);
+    assert.match(svg, />Original<|>Original<\/text>/);
+    assert.match(svg, />Fork<|>Fork<\/text>/);
+    assert.match(svg, />Archived<|>Archived<\/text>/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
