@@ -1,6 +1,6 @@
 export default [
   {
-    files: ["site/app.js", "site/viewer.js", "site/tree-viewer.js", "site/tree-router.js"],
+    files: ["site/app.js", "site/viewer.js", "site/radial-viewer.js", "site/tree-viewer.js", "site/tree-router.js", "site/tree-nav.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
