@@ -29,9 +29,9 @@ jobs:
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          style: obsidian
-          max_repos: "1"
-          forks: "false"
+          style: tree
+          max_repos: "3"
+          forks: "true"
           archived: "false"
           output_dir: .tmp/project-map
 
@@ -39,7 +39,8 @@ jobs:
         run: |
           test -s .tmp/project-map/galaxy.svg
           test -s .tmp/project-map/graph.json
-          grep -q "Obsidian-style map" .tmp/project-map/galaxy.svg
+          grep -q "Tree-style map" .tmp/project-map/galaxy.svg
+          grep -q "Tree view" .tmp/project-map/galaxy.svg
 
       - name: Verify
         run: npm run verify
