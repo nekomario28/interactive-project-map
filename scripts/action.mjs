@@ -6,6 +6,7 @@ import { buildGraph } from "./graph.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+const STYLE_VALUES = new Set(["galaxy", "obsidian"]);
 
 function input(env, name, legacyName) {
   return env[`INPUT_${name}`] ?? (legacyName ? env[legacyName] : undefined);
@@ -25,6 +26,11 @@ function boolValue(value, fallback) {
   return fallback;
 }
 
+function styleValue(value) {
+  const normalized = String(value || "galaxy").trim().toLowerCase();
+  return STYLE_VALUES.has(normalized) ? normalized : "galaxy";
+}
+
 export function safeOutputDir(value = "project-map") {
   const normalized = String(value || "project-map").trim().replaceAll("\\", "/").replace(/^\.\//, "");
   const segments = normalized.split("/").filter(Boolean);
@@ -41,6 +47,7 @@ export function actionConfigFromEnv(env = process.env) {
   return {
     username,
     theme,
+    style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")),
     maxRepos: boundedInt(input(env, "MAX_REPOS", "PROJECT_MAP_MAX_REPOS"), 100, 1, 300),
     includeForks: boolValue(input(env, "FORKS", "PROJECT_MAP_FORKS"), true),
     includeArchived: boolValue(input(env, "ARCHIVED", "PROJECT_MAP_ARCHIVED"), false),
@@ -89,7 +96,7 @@ export async function generateStaticMap(config, options = {}) {
   const absoluteGraphPath = resolve(cwd, graphPath);
   await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, graph);
   await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
-  await writeFile(resolve(cwd, svgPath), renderGalaxySvg(graph, config.theme, config.width, config.height));
+  await writeFile(resolve(cwd, svgPath), renderGalaxySvg(graph, config.theme, config.width, config.height, config.style));
   return { graphPath, svgPath, graph };
 }
 
@@ -104,7 +111,7 @@ async function main() {
   const result = await generateStaticMap(config);
   await setOutput("svg-path", result.svgPath);
   await setOutput("graph-path", result.graphPath);
-  console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username}`);
+  console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username} (${config.style})`);
   console.log(`SVG: ${result.svgPath}`);
   console.log(`Graph: ${result.graphPath}`);
 }
