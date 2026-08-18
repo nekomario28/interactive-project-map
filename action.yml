@@ -17,7 +17,7 @@ inputs:
     required: false
     default: dark
   style:
-    description: Map presentation preset (radial, galaxy, obsidian, or tree).
+    description: Map presentation preset (radial, galaxy, obsidian, tree, or treemap).
     required: false
     default: radial
   max_repos:
