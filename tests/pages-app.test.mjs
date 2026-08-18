@@ -46,7 +46,8 @@ test("public Pages build emits syntax-checkable external browser scripts", async
     assert.match(viewer, /Interactive Project Map/);
     assert.match(viewer, /<script src="\.\.\/viewer\.js" defer><\/script>/);
     assert.match(viewer, /script-src 'self'/);
-    assert.match(appJs, new RegExp(`nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`));
+    assert.match(appJs, new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));
+    assert.match(appJs, /uses: nekomario28\/interactive-project-map@'\+PROJECT_MAP_ACTION_REF/);
     assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/);
     assert.match(viewerJs, /raw\.githubusercontent\.com/);
     assert.doesNotMatch(viewerJs, /\/api\/graph|api\.github\.com/);
