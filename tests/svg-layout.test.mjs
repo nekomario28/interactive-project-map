@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { renderGalaxySvg } from "../scripts/svg.mjs";
+import { renderTreeSvg } from "../scripts/tree-svg.mjs";
 
 function denseGraph() {
   const groups = Array.from({ length: 4 }, (_, index) => ({
@@ -34,12 +35,8 @@ function denseGraph() {
     ...repositories,
   ];
   const edges = [];
-  for (const group of groups) {
-    edges.push({ source: "user:example", target: group.id, type: "ownership" });
-  }
-  for (const repo of repositories) {
-    edges.push({ source: `group:${repo.groupId}`, target: repo.id, type: "membership" });
-  }
+  for (const group of groups) edges.push({ source: "user:example", target: group.id, type: "ownership" });
+  for (const repo of repositories) edges.push({ source: `group:${repo.groupId}`, target: repo.id, type: "membership" });
   return {
     owner: "example",
     generatedAt: "2026-08-18T00:00:00Z",
@@ -68,9 +65,15 @@ function overlaps(a, b, padding = 2) {
   return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
 }
 
-for (const style of ["galaxy", "obsidian"]) {
+const renderers = {
+  galaxy: (graph) => renderGalaxySvg(graph, "dark", 740, 420, "galaxy"),
+  obsidian: (graph) => renderGalaxySvg(graph, "dark", 740, 420, "obsidian"),
+  tree: (graph) => renderTreeSvg(graph, "dark", 740, 420),
+};
+
+for (const [style, render] of Object.entries(renderers)) {
   test(`${style} SVG keeps dense repository labels readable`, () => {
-    const svg = renderGalaxySvg(denseGraph(), "dark", 740, 420, style);
+    const svg = render(denseGraph());
     const boxes = repositoryLabelBoxes(svg);
     assert.ok(boxes.length >= 5, `${style} should retain several repository labels`);
     for (let first = 0; first < boxes.length; first += 1) {
