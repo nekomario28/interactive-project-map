@@ -15,11 +15,17 @@
     "check:action": "node --check scripts/action.mjs",
     "check:pages": "node --check scripts/github.mjs && node --check scripts/graph.mjs && node --check scripts/svg.mjs && node --check scripts/build.mjs && node --check scripts/pages-app.mjs && node --check scripts/build-public-pages.mjs && node --check scripts/public-home.js && node --check scripts/public-viewer.js",
     "test": "node --test tests/*.test.mjs",
-    "verify": "npm run typecheck && npm run check:worker && npm run check:action && npm run check:pages && npm test",
+    "validate:pages": "npm run build:pages && html-validate site/index.html site/u/index.html && eslint site/app.js site/viewer.js && node scripts/validate-pages.mjs",
+    "validate:actions": "bash scripts/validate-actions.sh",
+    "validate": "npm run validate:pages && npm run validate:actions",
+    "verify": "npm run typecheck && npm run check:worker && npm run check:action && npm run check:pages && npm test && npm run validate",
     "build:pages": "node scripts/build-public-pages.mjs",
     "build:pages:catalog": "node scripts/build.mjs"
   },
   "devDependencies": {
+    "eslint": "10.8.0",
+    "html-validate": "11.6.0",
+    "stylelint": "17.14.1",
     "typescript": "^7.0.2",
     "wrangler": "^4.118.0"
   }

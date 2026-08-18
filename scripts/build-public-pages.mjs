@@ -15,6 +15,15 @@ function externalizeBrowserScript(html, src) {
     .replace(scriptPattern, `<script src="${src}" defer></script>`);
 }
 
+function normalizePublicHtml(html) {
+  return html
+    .replace('<input id="username"', '<input id="username" type="text"')
+    .replace(
+      '<a id="openMap" class="button" target="_blank" rel="noopener">',
+      '<a id="openMap" class="button" href="./u/" target="_blank" rel="noopener">',
+    );
+}
+
 export async function buildPublicPages(outputDir = join(process.cwd(), "site")) {
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(join(outputDir, "u"), { recursive: true });
@@ -25,8 +34,8 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
     PUBLIC_ACTION_REF,
   );
   const viewerScript = await readFile(join(sourceDir, "public-viewer.js"), "utf8");
-  const home = externalizeBrowserScript(renderPagesHome(), "./app.js");
-  const viewer = externalizeBrowserScript(renderPagesViewer(), "../viewer.js");
+  const home = normalizePublicHtml(externalizeBrowserScript(renderPagesHome(), "./app.js"));
+  const viewer = normalizePublicHtml(externalizeBrowserScript(renderPagesViewer(), "../viewer.js"));
 
   await writeFile(join(outputDir, ".nojekyll"), "\n");
   await writeFile(join(outputDir, "index.html"), home);
