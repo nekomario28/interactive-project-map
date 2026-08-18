@@ -94,14 +94,11 @@ async function graphFromResponse(response: Response, username: string): Promise<
 
 export async function fetchStaticProfileGraph(username: string): Promise<GalaxyGraph | null> {
   const owner = encodeURIComponent(username);
-  for (const ref of ["main", "master"]) {
-    const url = `https://raw.githubusercontent.com/${owner}/${owner}/${ref}/project-map/graph.json`;
-    try {
-      const graph = await graphFromResponse(await fetch(url), username);
-      if (graph) return graph;
-    } catch {
-      // A missing/unreachable static file is not fatal; the hosted API can fall back to GitHub REST.
-    }
+  const url = `https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map/graph.json`;
+  try {
+    return await graphFromResponse(await fetch(url), username);
+  } catch {
+    // A missing/unreachable static file is not fatal; the hosted API can fall back to GitHub REST.
+    return null;
   }
-  return null;
 }
