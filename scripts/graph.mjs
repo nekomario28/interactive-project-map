@@ -7,18 +7,27 @@ const GROUP_RULES = [
   { id: "coursework", label: "Coursework / Learning", keywords: ["course", "coursework", "homework", "assignment", "tutorial", "learning", "study", "school", "university"] },
 ];
 
-function slugify(value) {
-  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "other";
+function normalizeSearch(value) {
+  return value.toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim();
+}
+
+function languageGroupKey(language) {
+  let key = "";
+  for (const char of language.toLowerCase()) {
+    if (/[a-z0-9]/.test(char)) key += char;
+    else key += `-u${char.codePointAt(0)?.toString(16) ?? "0"}-`;
+  }
+  return key.replace(/-+/g, "-").replace(/^-|-$/g, "") || "other";
 }
 
 function searchableText(repo) {
-  return [repo.name, repo.description ?? "", repo.language ?? "", ...(repo.topics ?? [])].join(" ").toLowerCase();
+  return normalizeSearch([repo.name, repo.description ?? "", repo.language ?? "", ...(repo.topics ?? [])].join(" "));
 }
 
 function keywordMatches(text, keyword) {
-  if (keyword.length > 3 || keyword.includes("-")) return text.includes(keyword);
-  const tokens = new Set(text.split(/[^a-z0-9+#.]+/g).filter(Boolean));
-  return tokens.has(keyword);
+  const needle = normalizeSearch(keyword);
+  if (!needle) return false;
+  return ` ${text} `.includes(` ${needle} `);
 }
 
 function classify(repo) {
@@ -32,7 +41,7 @@ function classify(repo) {
   }
   if (best) return { id: best.id, label: best.label };
   const language = repo.language || "Other";
-  return { id: `lang-${slugify(language)}`, label: `${language} Projects` };
+  return { id: `lang-${languageGroupKey(language)}`, label: `${language} Projects` };
 }
 
 export function buildGraph(username, repos, includeForks, includeArchived) {
