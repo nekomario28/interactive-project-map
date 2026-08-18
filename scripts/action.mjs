@@ -10,9 +10,11 @@ import { renderTreemapSvg } from "./treemap-svg.mjs";
 import { renderTimelineSvg } from "./timeline-svg.mjs";
 import { renderClusterSvg } from "./cluster-svg.mjs";
 import { renderSunburstSvg } from "./sunburst-svg.mjs";
+import { renderMatrixSvg } from "./matrix-svg.mjs";
+import { renderSankeySvg } from "./sankey-svg.mjs";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const STYLE_VALUES = new Set(["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst"]);
+const STYLE_VALUES = new Set(["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
 function input(env, name, legacyName) { return env[`INPUT_${name}`] ?? (legacyName ? env[legacyName] : undefined); }
 function boundedInt(value, fallback, min, max) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.max(min, Math.min(max, Math.round(parsed))) : fallback; }
 function boolValue(value, fallback) {
@@ -57,6 +59,8 @@ function renderForStyle(graph, config) {
   if (config.style === "timeline") return renderTimelineSvg(graph, config.theme, config.width, config.height);
   if (config.style === "cluster") return renderClusterSvg(graph, config.theme, config.width, config.height);
   if (config.style === "sunburst") return renderSunburstSvg(graph, config.theme, config.width, config.height);
+  if (config.style === "matrix") return renderMatrixSvg(graph, config.theme, config.width, config.height);
+  if (config.style === "sankey") return renderSankeySvg(graph, config.theme, config.width, config.height);
   return renderGalaxySvg(graph, config.theme, config.width, config.height, config.style);
 }
 export async function generateStaticMap(config, options = {}) {
