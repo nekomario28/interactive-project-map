@@ -1,5 +1,5 @@
-import { buildGraph } from "./graph";
-import type { GalaxyGraph, GalaxyNode, GitHubRepo } from "./types";
+import { buildGraph } from "./graph.ts";
+import type { GalaxyGraph, GalaxyNode, GitHubRepo } from "./types.ts";
 
 const REPO_NAME_RE = /^[A-Za-z0-9._-]{1,100}$/;
 const MAX_STATIC_BYTES = 2_000_000;
