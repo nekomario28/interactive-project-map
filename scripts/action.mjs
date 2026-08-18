@@ -1,0 +1,89 @@
+import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { isAbsolute, posix, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+import { fetchPublicRepos } from "./github.mjs";
+import { buildGraph } from "./graph.mjs";
+import { renderGalaxySvg } from "./svg.mjs";
+
+const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+
+function boundedInt(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(parsed)));
+}
+
+function boolValue(value, fallback) {
+  if (value == null || value === "") return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
+export function safeOutputDir(value = "project-map") {
+  const normalized = String(value || "project-map").trim().replaceAll("\\", "/").replace(/^\.\//, "");
+  const segments = normalized.split("/").filter(Boolean);
+  if (!segments.length || isAbsolute(normalized) || segments.some((segment) => segment === ".." || segment === ".")) {
+    throw new Error("output_dir must be a relative directory without '.' or '..' segments");
+  }
+  return segments.join("/");
+}
+
+export function actionConfigFromEnv(env = process.env) {
+  const username = String(env.PROJECT_MAP_USERNAME || env.GITHUB_REPOSITORY_OWNER || "").trim().toLowerCase();
+  if (!USERNAME_RE.test(username)) throw new Error("Invalid GitHub username");
+  const theme = env.PROJECT_MAP_THEME === "light" ? "light" : "dark";
+  return {
+    username,
+    theme,
+    maxRepos: boundedInt(env.PROJECT_MAP_MAX_REPOS, 100, 1, 300),
+    includeForks: boolValue(env.PROJECT_MAP_FORKS, true),
+    includeArchived: boolValue(env.PROJECT_MAP_ARCHIVED, false),
+    width: boundedInt(env.PROJECT_MAP_WIDTH, 740, 420, 1600),
+    height: boundedInt(env.PROJECT_MAP_HEIGHT, 420, 260, 1000),
+    outputDir: safeOutputDir(env.PROJECT_MAP_OUTPUT_DIR),
+  };
+}
+
+export async function generateStaticMap(config, options = {}) {
+  const cwd = options.cwd ?? process.cwd();
+  const fetchRepos = options.fetchRepos ?? fetchPublicRepos;
+  const token = options.token ?? process.env.GITHUB_TOKEN;
+  const repos = await fetchRepos(config.username, token, config.maxRepos, {
+    includeForks: config.includeForks,
+    includeArchived: config.includeArchived,
+  });
+  const graph = buildGraph(config.username, repos, true, true);
+  const outputRoot = resolve(cwd, config.outputDir);
+  const cwdRoot = resolve(cwd) + sep;
+  if (!(outputRoot + sep).startsWith(cwdRoot)) throw new Error("output_dir escaped the workspace");
+  await mkdir(outputRoot, { recursive: true });
+  const graphPath = posix.join(config.outputDir, "graph.json");
+  const svgPath = posix.join(config.outputDir, "galaxy.svg");
+  await writeFile(resolve(cwd, graphPath), JSON.stringify(graph, null, 2) + "\n");
+  await writeFile(resolve(cwd, svgPath), renderGalaxySvg(graph, config.theme, config.width, config.height));
+  return { graphPath, svgPath, graph };
+}
+
+async function setOutput(name, value) {
+  if (!process.env.GITHUB_OUTPUT) return;
+  await appendFile(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+}
+
+async function main() {
+  const config = actionConfigFromEnv();
+  const result = await generateStaticMap(config);
+  await setOutput("svg-path", result.svgPath);
+  await setOutput("graph-path", result.graphPath);
+  console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username}`);
+  console.log(`SVG: ${result.svgPath}`);
+  console.log(`Graph: ${result.graphPath}`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}
