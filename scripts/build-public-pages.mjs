@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
-// Immutable Action commit containing galaxy, obsidian and tree SVG generation.
-export const PUBLIC_ACTION_REF = "c442b8830fa0b9a7212326de764b55b2b99ac18b";
+// Immutable Action commit containing radial, galaxy, obsidian and tree SVG generation.
+export const PUBLIC_ACTION_REF = "395ab553cbba2da142c1fdb35a3666ba167e6c34";
 
 function externalizeBrowserScript(html, src) {
   const scriptPattern = /<script>[\s\S]*?<\/script>/;
@@ -21,14 +21,25 @@ function normalizePublicHtml(html) {
     .replace('<input id="username"', '<input id="username" type="text"')
     .replace(
       '<a id="openMap" class="button" target="_blank" rel="noopener">',
-      '<a id="openMap" class="button" href="./u/" target="_blank" rel="noopener">',
+      '<a id="openMap" class="button" href="./radial/" target="_blank" rel="noopener">',
     );
 }
 
 function stylePresetGallery() {
   return `<div class="preset-title">Choose a visual language</div>
 <div class="preset-gallery">
-  <button class="preset-card is-selected" type="button" data-style-preset="galaxy" aria-pressed="true">
+  <button class="preset-card is-selected" type="button" data-style-preset="radial" aria-pressed="true">
+    <span class="badge">Classic</span>
+    <svg viewBox="0 0 240 120" aria-hidden="true" focusable="false">
+      <circle class="preview-ring" cx="120" cy="60" r="37"/><circle class="preview-ring" cx="120" cy="60" r="54"/>
+      <line class="preview-edge" x1="120" y1="60" x2="120" y2="23"/><line class="preview-edge" x1="120" y1="60" x2="84" y2="69"/><line class="preview-edge" x1="120" y1="60" x2="156" y2="72"/>
+      <line class="preview-edge" x1="120" y1="23" x2="95" y2="11"/><line class="preview-edge" x1="120" y1="23" x2="145" y2="12"/><line class="preview-edge" x1="84" y1="69" x2="61" y2="92"/><line class="preview-edge" x1="84" y1="69" x2="49" y2="61"/><line class="preview-edge" x1="156" y1="72" x2="183" y2="94"/><line class="preview-edge" x1="156" y1="72" x2="194" y2="62"/>
+      <circle class="preview-owner" cx="120" cy="60" r="9"/><circle class="preview-group" cx="120" cy="23" r="5"/><circle class="preview-group" cx="84" cy="69" r="5"/><circle class="preview-group" cx="156" cy="72" r="5"/>
+      <circle class="preview-original" cx="95" cy="11" r="4"/><circle class="preview-fork" cx="145" cy="12" r="4"/><circle class="preview-original" cx="61" cy="92" r="4"/><circle class="preview-archived" cx="49" cy="61" r="4"/><circle class="preview-original" cx="183" cy="94" r="4"/><circle class="preview-fork" cx="194" cy="62" r="4"/>
+    </svg>
+    <strong>Radial Tree</strong><small>Current classic: compact Owner → Category → Repository hierarchy around one center.</small>
+  </button>
+  <button class="preset-card" type="button" data-style-preset="galaxy" aria-pressed="false">
     <span class="badge">Spatial</span>
     <svg viewBox="0 0 240 120" aria-hidden="true" focusable="false">
       <line class="preview-edge" x1="120" y1="58" x2="58" y2="32"/><line class="preview-edge" x1="120" y1="58" x2="181" y2="31"/><line class="preview-edge" x1="120" y1="58" x2="64" y2="91"/><line class="preview-edge" x1="120" y1="58" x2="178" y2="92"/>
@@ -50,14 +61,14 @@ function stylePresetGallery() {
       <path class="tree-line" d="M120 20V39M54 39H186M54 39V57M120 39V57M186 39V57M54 65V82M28 82H80M28 82V99M54 82V99M80 82V99M120 65V99M186 65V82M164 82H208M164 82V99M208 82V99"/>
       <circle class="preview-owner" cx="120" cy="18" r="7"/><circle class="preview-group" cx="54" cy="62" r="5"/><circle class="preview-group" cx="120" cy="62" r="5"/><circle class="preview-group" cx="186" cy="62" r="5"/><circle class="preview-original" cx="28" cy="103" r="4"/><circle class="preview-fork" cx="54" cy="103" r="4"/><circle class="preview-original" cx="80" cy="103" r="4"/><circle class="preview-archived" cx="120" cy="103" r="4"/><circle class="preview-original" cx="164" cy="103" r="4"/><circle class="preview-fork" cx="208" cy="103" r="4"/>
     </svg>
-    <strong>Tree</strong><small>Owner → Category → Repository. Best when hierarchy should be immediately obvious.</small>
+    <strong>Tree</strong><small>Top-down hierarchy. Best when structure should be immediately obvious.</small>
   </button>
 </div>`;
 }
 
 function addHomeStylePreset(html) {
   const marker = '<div class="options">';
-  const control = '<label>Map style <select id="mapStyle"><option value="galaxy">Galaxy</option><option value="obsidian">Obsidian-like</option><option value="tree">Tree</option></select></label>';
+  const control = '<label>Map style <select id="mapStyle"><option value="radial">Radial Tree (Classic)</option><option value="galaxy">Galaxy</option><option value="obsidian">Obsidian-like</option><option value="tree">Tree</option></select></label>';
   if (!html.includes(marker)) throw new Error("Could not find generator options container");
   return html
     .replace("style-src 'unsafe-inline'", "style-src 'self' 'unsafe-inline'")
@@ -67,10 +78,13 @@ function addHomeStylePreset(html) {
 
 function viewerBody({ mode = "graph" } = {}) {
   const tree = mode === "tree";
+  const radial = mode === "radial";
   const scripts = tree
-    ? '<script src="../tree-viewer.js" defer></script>'
-    : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>';
-  return `<body data-map-style="${tree ? "tree" : "galaxy"}">
+    ? '<script src="../tree-nav.js" defer></script>\n<script src="../tree-viewer.js" defer></script>'
+    : radial
+      ? '<script src="../radial-viewer.js" defer></script>'
+      : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>';
+  return `<body data-map-style="${tree ? "tree" : radial ? "radial" : "galaxy"}">
 <main class="app">
   <header class="toolbar">
     <div class="title-block">
@@ -85,7 +99,8 @@ function viewerBody({ mode = "graph" } = {}) {
       <label class="field">
         <span>Style</span>
         <select id="style">
-          <option value="galaxy">Galaxy</option>
+          <option value="radial"${radial ? " selected" : ""}>Radial Tree (Classic)</option>
+          <option value="galaxy"${!tree && !radial ? " selected" : ""}>Galaxy</option>
           <option value="obsidian">Obsidian-like</option>
           <option value="tree"${tree ? " selected" : ""}>Tree</option>
         </select>
@@ -146,6 +161,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(join(outputDir, "u"), { recursive: true });
   await mkdir(join(outputDir, "tree"), { recursive: true });
+  await mkdir(join(outputDir, "radial"), { recursive: true });
 
   const sourceDir = join(process.cwd(), "scripts");
   const homeScript = (await readFile(join(sourceDir, "public-home.js"), "utf8")).replaceAll(
@@ -154,7 +170,9 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   );
   const viewerScript = await readFile(join(sourceDir, "public-viewer.js"), "utf8");
   const treeViewerScript = await readFile(join(sourceDir, "public-tree-viewer.js"), "utf8");
+  const radialViewerScript = await readFile(join(sourceDir, "public-radial-viewer.js"), "utf8");
   const treeRouterScript = await readFile(join(sourceDir, "public-tree-router.js"), "utf8");
+  const treeNavScript = await readFile(join(sourceDir, "public-tree-nav.js"), "utf8");
   const viewerCss = await readFile(join(sourceDir, "public-viewer.css"), "utf8");
   const presetCss = await readFile(join(sourceDir, "public-home-presets.css"), "utf8");
   const baseHome = normalizePublicHtml(externalizeBrowserScript(renderPagesHome(), "./app.js"));
@@ -162,6 +180,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   const home = addHomeStylePreset(baseHome);
   const viewer = enhanceViewer(baseViewer, { mode: "graph" });
   const treeViewer = enhanceViewer(baseViewer, { mode: "tree" });
+  const radialViewer = enhanceViewer(baseViewer, { mode: "radial" });
 
   await writeFile(join(outputDir, ".nojekyll"), "\n");
   await writeFile(join(outputDir, "index.html"), home);
@@ -169,10 +188,13 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await writeFile(join(outputDir, "presets.css"), presetCss);
   await writeFile(join(outputDir, "viewer.js"), viewerScript);
   await writeFile(join(outputDir, "tree-viewer.js"), treeViewerScript);
+  await writeFile(join(outputDir, "radial-viewer.js"), radialViewerScript);
   await writeFile(join(outputDir, "tree-router.js"), treeRouterScript);
+  await writeFile(join(outputDir, "tree-nav.js"), treeNavScript);
   await writeFile(join(outputDir, "viewer.css"), viewerCss);
   await writeFile(join(outputDir, "u", "index.html"), viewer);
   await writeFile(join(outputDir, "tree", "index.html"), treeViewer);
+  await writeFile(join(outputDir, "radial", "index.html"), radialViewer);
 }
 
 async function main() {
