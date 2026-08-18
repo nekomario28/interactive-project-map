@@ -13,19 +13,26 @@ test("normalizeUsername rejects malformed usernames", () => {
 });
 
 test("graph cache keys are canonical and contain only graph-affecting options", () => {
-  const request = graphCacheRequest("https://maps.example", {
+  const options = {
     username: "Octo-Cat",
     maxRepos: 100,
     includeForks: true,
     includeArchived: false,
-  });
+  };
+  const dynamic = graphCacheRequest("https://maps.example", options);
+  const profile = graphCacheRequest("https://maps.example", options, "profile");
 
   assert.equal(
-    request.url,
-    "https://maps.example/__cache/graph?username=octo-cat&max_repos=100&forks=true&archived=false",
+    dynamic.url,
+    "https://maps.example/__cache/graph?source=dynamic&username=octo-cat&max_repos=100&forks=true&archived=false",
   );
-  assert.equal(request.method, "GET");
-  assert.equal(new URL(request.url).searchParams.has("theme"), false);
-  assert.equal(new URL(request.url).searchParams.has("width"), false);
-  assert.equal(new URL(request.url).searchParams.has("height"), false);
+  assert.equal(
+    profile.url,
+    "https://maps.example/__cache/graph?source=profile&username=octo-cat&max_repos=100&forks=true&archived=false",
+  );
+  assert.notEqual(dynamic.url, profile.url);
+  assert.equal(dynamic.method, "GET");
+  assert.equal(new URL(dynamic.url).searchParams.has("theme"), false);
+  assert.equal(new URL(dynamic.url).searchParams.has("width"), false);
+  assert.equal(new URL(dynamic.url).searchParams.has("height"), false);
 });
