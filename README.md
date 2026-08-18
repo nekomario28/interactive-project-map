@@ -87,7 +87,7 @@ The service also works without a token for light public-data use, but GitHub's u
 
 ## Optional: self-host with GitHub Actions + GitHub Pages
 
-GitHub Pages remains available for users who prefer a static copy under their own account.
+GitHub Pages remains available for users who prefer a static copy under their own account. It is deliberately **opt-in** so forks and hosted-service-only deployments do not get failing Pages workflows when Pages is not enabled.
 
 The workflow in `.github/workflows/deploy-pages.yml` fetches repository metadata, builds the graph, renders dark/light SVG previews, generates the interactive viewer, and deploys the result to GitHub Pages.
 
@@ -125,15 +125,16 @@ Edit `config/project-map.json`:
 
 ### Enable Pages
 
-For the static Pages mode only, open:
+For the static Pages mode only:
 
-**Settings → Pages → Build and deployment → Source → GitHub Actions**
+1. Open **Settings → Pages → Build and deployment → Source** and select **GitHub Actions**.
+2. Open **Settings → Secrets and variables → Actions → Variables**.
+3. Create the repository variable `ENABLE_GITHUB_PAGES` with the value `true`.
+4. Run **Actions → Build and deploy project galaxy → Run workflow**.
 
-Then run:
+Without `ENABLE_GITHUB_PAGES=true`, the Pages build job is intentionally skipped. This keeps the hosted Worker usable without any Pages setup.
 
-**Actions → Build and deploy project galaxy → Run workflow**
-
-The workflow also refreshes the generated map twice per day.
+The workflow also refreshes the generated map twice per day while Pages is enabled.
 
 ### GitHub Actions token
 
