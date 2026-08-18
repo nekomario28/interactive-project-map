@@ -24,12 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
-      - name: Smoke test local project-map action
+      - name: Smoke test local project-map action default
         uses: ./
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          style: tree
           max_repos: "3"
           forks: "true"
           archived: "false"
@@ -39,8 +38,8 @@ jobs:
         run: |
           test -s .tmp/project-map/galaxy.svg
           test -s .tmp/project-map/graph.json
-          grep -q "Tree-style map" .tmp/project-map/galaxy.svg
-          grep -q "Tree view" .tmp/project-map/galaxy.svg
+          grep -q "Radial Tree classic map" .tmp/project-map/galaxy.svg
+          grep -q "Radial Tree · Classic" .tmp/project-map/galaxy.svg
 
       - name: Verify
         run: npm run verify
