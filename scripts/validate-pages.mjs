@@ -25,21 +25,26 @@ const cssRules = {
   "unit-no-unknown": true
 };
 
+async function lintCss(code, label) {
+  const result = await stylelint.lint({
+    code,
+    config: { rules: cssRules },
+    formatter: "string"
+  });
+  if (result.errored) throw new Error(`${label} failed Stylelint:\n${result.report}`);
+}
+
 async function validateEmbeddedCss(filePath) {
   const html = await readFile(filePath, "utf8");
   const blocks = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gi)];
   if (!blocks.length) throw new Error(`${filePath}: expected at least one <style> block`);
-
   for (let index = 0; index < blocks.length; index += 1) {
-    const result = await stylelint.lint({
-      code: blocks[index][1],
-      config: { rules: cssRules },
-      formatter: "string"
-    });
-    if (result.errored) {
-      throw new Error(`${filePath} <style> #${index + 1} failed Stylelint:\n${result.report}`);
-    }
+    await lintCss(blocks[index][1], `${filePath} <style> #${index + 1}`);
   }
+}
+
+async function validateExternalCss(filePath) {
+  await lintCss(await readFile(filePath, "utf8"), filePath);
 }
 
 async function validateDynamicMarkup() {
@@ -48,6 +53,9 @@ async function validateDynamicMarkup() {
 
   if (!/<input id="username" type="text"(?:\s|>)/.test(home)) {
     throw new Error("Generator username input must declare type=text");
+  }
+  if (!/<select id="mapStyle">[\s\S]*?value="galaxy"[\s\S]*?value="obsidian"/.test(home)) {
+    throw new Error("Generator must expose Galaxy and Obsidian-like style presets");
   }
   if (!/<a id="openMap" class="button" href="\.\/u\/" target="_blank" rel="noopener">/.test(home)) {
     throw new Error("Generator interactive-map anchor must have a safe default href and rel=noopener");
@@ -58,17 +66,30 @@ async function validateDynamicMarkup() {
     throw new Error("Only the JS-populated preview image may omit src, and it must retain alt text");
   }
 
+  if (!/<select id="style">[\s\S]*?value="galaxy"[\s\S]*?value="obsidian"/.test(viewer)) {
+    throw new Error("Viewer must expose Galaxy and Obsidian-like presets");
+  }
+  for (const className of ["original", "fork", "archived"]) {
+    if (!new RegExp(`class="${className}"`).test(viewer)) throw new Error(`Viewer legend is missing ${className}`);
+  }
+  if (!/<link rel="stylesheet" href="\.\.\/viewer\.css">/.test(viewer)) {
+    throw new Error("Viewer must load the external validated stylesheet");
+  }
+
   for (const [name, html] of [["generator", home], ["viewer", viewer]]) {
     if (/script-src[^;]*'unsafe-inline'/.test(html)) {
       throw new Error(`${name} CSP must not allow unsafe-inline scripts`);
     }
+  }
+  if (/style-src[^;]*'unsafe-inline'/.test(viewer)) {
+    throw new Error("viewer CSP must not require inline styles");
   }
 }
 
 function mockElement(id) {
   return {
     id,
-    value: id === "maxRepos" ? "100" : id === "theme" ? "dark" : "",
+    value: id === "maxRepos" ? "100" : id === "theme" ? "dark" : id === "mapStyle" ? "galaxy" : "",
     checked: id === "forks",
     textContent: "",
     href: "",
@@ -108,12 +129,15 @@ async function generateWorkflowFixture() {
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
   const workflow = vm.runInContext(
-    "workflowFor({username:'nekomario28',theme:'dark',maxRepos:100,forks:true,archived:false})",
+    "workflowFor({username:'nekomario28',theme:'dark',style:'galaxy',maxRepos:100,forks:true,archived:false})",
     context
   );
 
   if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map@")) {
     throw new Error("Generated installer workflow is incomplete");
+  }
+  if (!workflow.includes("style: galaxy")) {
+    throw new Error("Generated installer workflow must preserve the selected map style");
   }
   if (workflow.includes("__PROJECT_MAP_ACTION_REF__")) {
     throw new Error("Generated installer workflow still contains the Action ref placeholder");
@@ -125,6 +149,6 @@ async function generateWorkflowFixture() {
 
 await validateDynamicMarkup();
 await validateEmbeddedCss(join(siteDir, "index.html"));
-await validateEmbeddedCss(join(siteDir, "u", "index.html"));
+await validateExternalCss(join(siteDir, "viewer.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS and browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, style presets and browser installer runtime validated.");
