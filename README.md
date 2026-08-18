@@ -1,33 +1,89 @@
 # GitHub Project Galaxy API
 
-Turn a GitHub user's public repositories into a living project galaxy that can be embedded directly in a GitHub profile README.
+Turn a GitHub user's public repositories into a living project galaxy with:
 
-The service exposes three surfaces:
+- an embeddable SVG preview
+- structured graph JSON
+- an interactive map with pan, zoom, drag, and repository links
 
-- `GET /api/galaxy.svg?username=...` — embeddable SVG preview for README files.
-- `GET /api/graph?username=...` — JSON graph with owner, category, repository nodes and edges.
-- `GET /u/<username>` — interactive canvas viewer with pan, zoom, drag, and repository links.
+This repository supports two deployment modes:
 
-This repository is an independent implementation intended to make the project-map pattern reusable as a public API.
+1. **GitHub Actions + GitHub Pages** — GitHub-only static generation, with no external server required.
+2. **Cloudflare Worker** — the existing request-time API for arbitrary usernames.
 
-## Quick start
+## GitHub Actions + GitHub Pages
 
-```bash
-npm install
-npm run dev
-```
-
-Then open:
+The workflow in `.github/workflows/deploy-pages.yml` fetches repository metadata, builds the graph, renders dark/light SVG previews, generates the interactive viewer, and deploys the result to GitHub Pages.
 
 ```text
-http://localhost:8787/u/syun88
-http://localhost:8787/api/galaxy.svg?username=syun88&theme=dark
-http://localhost:8787/api/graph?username=syun88
+GitHub Actions
+    ↓
+GitHub REST API
+    ↓
+site/api/users/<username>/graph.json
+site/api/users/<username>/galaxy-dark.svg
+site/api/users/<username>/galaxy-light.svg
+site/u/<username>/index.html
+    ↓
+GitHub Pages
 ```
 
-## README embed
+GitHub Pages is static hosting, so these API files are generated when the workflow runs rather than at request time.
 
-After deployment, users can add this directly to their GitHub profile README:
+### Configure users
+
+Edit `config/project-map.json`:
+
+```json
+{
+  "usernames": ["@owner"],
+  "maxRepos": 100,
+  "includeForks": true,
+  "includeArchived": false,
+  "width": 740,
+  "height": 420
+}
+```
+
+`@owner` resolves to the repository owner from `GITHUB_REPOSITORY_OWNER`, so forks can work without changing the config.
+
+You can also publish explicit users:
+
+```json
+{
+  "usernames": ["nekomario28", "syun88"],
+  "maxRepos": 100,
+  "includeForks": true,
+  "includeArchived": false,
+  "width": 740,
+  "height": 420
+}
+```
+
+### Enable Pages
+
+Open:
+
+**Settings → Pages → Build and deployment → Source → GitHub Actions**
+
+Then run:
+
+**Actions → Build and deploy project galaxy → Run workflow**
+
+The workflow also refreshes the generated map twice per day.
+
+### Published URLs
+
+For a repository named `interactive-project-map` owned by `USERNAME`:
+
+```text
+https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/graph.json
+https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/galaxy-dark.svg
+https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/galaxy-light.svg
+https://USERNAME.github.io/interactive-project-map/u/USERNAME/
+```
+
+### Profile README embed
 
 ```html
 <h2 align="center">Interactive Project Map</h2>
@@ -37,63 +93,69 @@ After deployment, users can add this directly to their GitHub profile README:
 </p>
 
 <p align="center">
-  <a href="https://YOUR_DOMAIN/u/YOUR_USERNAME">
+  <a href="https://USERNAME.github.io/interactive-project-map/u/USERNAME/">
     <img
       width="740"
-      src="https://YOUR_DOMAIN/api/galaxy.svg?username=YOUR_USERNAME&theme=dark"
+      src="https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/galaxy-dark.svg"
       alt="Galaxy map of public GitHub projects"
     >
   </a>
 </p>
 
 <p align="center">
-  <a href="https://YOUR_DOMAIN/u/YOUR_USERNAME"><strong>Explore the live map ↗</strong></a><br>
+  <a href="https://USERNAME.github.io/interactive-project-map/u/USERNAME/"><strong>Explore the live map ↗</strong></a><br>
   <sub>Select projects · drag nodes · pan · zoom</sub>
 </p>
 ```
 
-## API
+### GitHub token
 
-### `GET /api/galaxy.svg`
-
-Query parameters:
-
-| Parameter | Default | Description |
-|---|---:|---|
-| `username` | required | GitHub username |
-| `theme` | `dark` | `dark` or `light` |
-| `width` | `740` | SVG width, 420–1600 |
-| `height` | `420` | SVG height, 260–1000 |
-| `max_repos` | `100` | Maximum repositories to fetch, 1–300 |
-| `forks` | `true` | Include forked repositories |
-| `archived` | `false` | Include archived repositories |
-
-Example:
+The workflow uses the built-in `github.token` by default. If a separate token is needed, create a repository Actions secret named:
 
 ```text
-/api/galaxy.svg?username=syun88&theme=dark&forks=false
+PROJECT_MAP_GITHUB_TOKEN
 ```
 
-### `GET /api/graph`
+The workflow automatically prefers that secret when present.
 
-Returns a stable, renderer-friendly structure:
+### Local Pages build
 
-```json
-{
-  "owner": "syun88",
-  "generatedAt": "2026-08-18T00:00:00.000Z",
-  "repositoryCount": 42,
-  "groupCount": 7,
-  "nodes": [],
-  "edges": []
-}
+```bash
+npm run check:pages
+GITHUB_REPOSITORY_OWNER=nekomario28 npm run build:pages
 ```
 
-The endpoint supports `max_repos`, `forks`, and `archived`.
+Output is written to `site/`.
 
-### `GET /u/<username>`
+## Cloudflare Worker
 
-Interactive viewer. It uses the JSON endpoint at runtime and does not require a build per user.
+The request-time API remains available:
+
+```bash
+npm install
+npm run dev
+```
+
+Endpoints:
+
+```text
+GET /api/galaxy.svg?username=USERNAME
+GET /api/graph?username=USERNAME
+GET /u/USERNAME
+```
+
+Deploy with:
+
+```bash
+npx wrangler login
+npm run deploy
+```
+
+For production Worker usage, configure a GitHub token with:
+
+```bash
+npx wrangler secret put GITHUB_TOKEN
+```
 
 ## Repository grouping
 
@@ -107,35 +169,6 @@ Repositories are grouped using deterministic rules based on repository names, de
 - Coursework / Learning
 
 Repositories that do not match a semantic group fall back to a primary-language group such as `Python Projects` or `Rust Projects`.
-
-## GitHub API rate limits
-
-The service works without a token for light use. For a public deployment, configure a GitHub token as a Worker secret so requests are not limited to GitHub's low unauthenticated API quota.
-
-```bash
-npx wrangler secret put GITHUB_TOKEN
-```
-
-The token is used only server-side and is never returned to clients.
-
-## Deploy to Cloudflare Workers
-
-```bash
-npm install
-npx wrangler login
-npm run deploy
-```
-
-After deployment, use the assigned `*.workers.dev` URL or attach a custom domain.
-
-## Design goals
-
-- One deployment works for any public GitHub username.
-- README consumers only need an `<img>` URL.
-- JSON remains independent from the built-in renderer.
-- No client-side GitHub token.
-- Deterministic layouts keep README previews stable between requests.
-- Interactive viewer remains lightweight and dependency-free at runtime.
 
 ## License
 

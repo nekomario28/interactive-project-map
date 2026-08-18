@@ -1,0 +1,67 @@
+name: Build and deploy project galaxy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-pages.yml"
+      - "config/**"
+      - "scripts/**"
+      - "package.json"
+  schedule:
+    - cron: "41 1,13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Validate scripts
+        run: npm run check:pages
+
+      - name: Generate graph JSON, SVG and viewer
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROJECT_MAP_GITHUB_TOKEN || github.token }}
+        run: npm run build:pages
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
