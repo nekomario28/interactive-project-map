@@ -1,6 +1,7 @@
 import { renderHome } from "./home";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
 import { renderViewer } from "./html";
+import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
@@ -49,6 +50,17 @@ export default {
         return Response.json({ ok: true, service: "github-project-galaxy-api" }, { headers: corsHeaders() });
       }
 
+      if (url.pathname === "/api/install-workflow") {
+        const options = installOptionsFromUrl(url);
+        return new Response(renderInstallWorkflow(options), {
+          headers: corsHeaders({
+            "Content-Type": "text/yaml; charset=utf-8",
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+          }),
+        });
+      }
+
       if (url.pathname === "/api/graph") {
         const { graph, cacheStatus } = await getGraph(request, env, ctx);
         return Response.json(graph, {
@@ -81,7 +93,7 @@ export default {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",
-            "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; frame-ancestors 'none'",
             "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "no-referrer",
           },
