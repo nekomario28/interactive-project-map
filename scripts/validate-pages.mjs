@@ -46,7 +46,7 @@ async function validateDynamicMarkup() {
   const home = await readFile(join(siteDir, "index.html"), "utf8");
   const viewer = await readFile(join(siteDir, "u", "index.html"), "utf8");
 
-  if (!/<input id="username" type="text"\b/.test(home)) {
+  if (!/<input id="username" type="text"(?:\s|>)/.test(home)) {
     throw new Error("Generator username input must declare type=text");
   }
   if (!/<a id="openMap" class="button" href="\.\/u\/" target="_blank" rel="noopener">/.test(home)) {
