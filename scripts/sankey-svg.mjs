@@ -29,14 +29,14 @@ function buildSankey(graph, width, height) {
   const total = Math.max(1, bundles.reduce((sum, bundle) => sum + bundle.total, 0));
   const statuses = ["original", "fork", "archived"];
   const statusTotals = Object.fromEntries(statuses.map((status) => [status, bundles.reduce((sum, bundle) => sum + bundle.counts[status], 0)]));
-  const top = 44;
+  const top = 48;
   const bottom = height - 43;
   const usable = Math.max(80, bottom - top);
   const gap = Math.min(12, usable / Math.max(4, bundles.length * 5));
   const unit = Math.max(2, (usable - gap * Math.max(0, bundles.length - 1)) / total);
   const ownerX = 44;
   const groupX = width * 0.43;
-  const statusX = width - 64;
+  const statusX = width - 128;
   let cursor = top;
   const groupNodes = [];
   for (const bundle of bundles) {
@@ -86,7 +86,7 @@ export function renderSankeySvg(graph, theme, width, height) {
     }
   }
 
-  pieces.push(`<rect x="${layout.ownerX}" y="${layout.top}" width="${ownerWidth}" height="${layout.usable}" rx="4" fill="${colors.owner}"/><text x="${layout.ownerX - 7}" y="${layout.top + layout.usable / 2}" text-anchor="end" fill="${colors.fg}" font-size="10" font-weight="700">${esc(graph.owner)}</text>`);
+  pieces.push(`<rect x="${layout.ownerX}" y="${layout.top}" width="${ownerWidth}" height="${layout.usable}" rx="4" fill="${colors.owner}"/><text x="${layout.ownerX}" y="${layout.top - 8}" text-anchor="start" fill="${colors.fg}" font-size="10" font-weight="700">${esc(graph.owner)}</text>`);
   for (const group of layout.groupNodes) {
     pieces.push(`<rect x="${layout.groupX}" y="${group.y.toFixed(1)}" width="${groupWidth}" height="${group.h.toFixed(1)}" rx="3" fill="${colors.group}"/><text x="${layout.groupX - 7}" y="${(group.y + group.h / 2 + 3).toFixed(1)}" text-anchor="end" fill="${colors.muted}" font-size="9.2">${esc(group.group.label.length > 18 ? `${group.group.label.slice(0, 17)}…` : group.group.label)}</text>`);
   }
