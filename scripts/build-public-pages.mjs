@@ -1,20 +1,38 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
 export const PUBLIC_ACTION_REF = "5f62155e586dce5d49280e3ca07446c0a201229f";
 
+function externalizeBrowserScript(html, src) {
+  const scriptPattern = /<script>[\s\S]*?<\/script>/;
+  if (!scriptPattern.test(html)) {
+    throw new Error(`Expected one inline browser script for ${src}`);
+  }
+  return html
+    .replace("script-src 'unsafe-inline'", "script-src 'self'")
+    .replace(scriptPattern, `<script src="${src}" defer></script>`);
+}
+
 export async function buildPublicPages(outputDir = join(process.cwd(), "site")) {
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(join(outputDir, "u"), { recursive: true });
-  const home = renderPagesHome().replaceAll(
-    "nekomario28/interactive-project-map@v1",
-    `nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`,
+
+  const sourceDir = join(process.cwd(), "scripts");
+  const homeScript = (await readFile(join(sourceDir, "public-home.js"), "utf8")).replaceAll(
+    "__PROJECT_MAP_ACTION_REF__",
+    PUBLIC_ACTION_REF,
   );
+  const viewerScript = await readFile(join(sourceDir, "public-viewer.js"), "utf8");
+  const home = externalizeBrowserScript(renderPagesHome(), "./app.js");
+  const viewer = externalizeBrowserScript(renderPagesViewer(), "../viewer.js");
+
   await writeFile(join(outputDir, ".nojekyll"), "\n");
   await writeFile(join(outputDir, "index.html"), home);
-  await writeFile(join(outputDir, "u", "index.html"), renderPagesViewer());
+  await writeFile(join(outputDir, "app.js"), homeScript);
+  await writeFile(join(outputDir, "viewer.js"), viewerScript);
+  await writeFile(join(outputDir, "u", "index.html"), viewer);
 }
 
 async function main() {
