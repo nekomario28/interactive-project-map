@@ -1,6 +1,7 @@
 import { buildGraph } from "./graph";
 import { fetchPublicRepos } from "./github";
 import { renderHome, renderViewer } from "./html";
+import { boolParam, intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
 
@@ -13,25 +14,6 @@ function corsHeaders(extra: Record<string, string> = {}): Headers {
     "Access-Control-Allow-Headers": "Content-Type",
     ...extra,
   });
-}
-
-function intParam(url: URL, key: string, fallback: number, min: number, max: number): number {
-  const value = url.searchParams.get(key);
-  if (value === null || value.trim() === "") return fallback;
-
-  const raw = Number(value);
-  if (!Number.isFinite(raw)) return fallback;
-  return Math.max(min, Math.min(max, Math.round(raw)));
-}
-
-function boolParam(url: URL, key: string, fallback: boolean): boolean {
-  const raw = url.searchParams.get(key);
-  if (raw == null || raw.trim() === "") return fallback;
-
-  const value = raw.toLowerCase();
-  if (["1", "true", "yes", "on"].includes(value)) return true;
-  if (["0", "false", "no", "off"].includes(value)) return false;
-  return fallback;
 }
 
 function usernameFrom(url: URL): string {
