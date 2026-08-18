@@ -1,0 +1,56 @@
+name: Generate Interactive Project Map
+
+description: Generate a static galaxy SVG and graph JSON from a GitHub user's public repositories.
+
+author: nekomario28
+
+inputs:
+  github_token:
+    description: GitHub token used only to read public repository metadata. Give this job contents:read only.
+    required: true
+  username:
+    description: GitHub username to visualize. Defaults to the caller repository owner.
+    required: false
+    default: ""
+  theme:
+    description: SVG theme (dark or light).
+    required: false
+    default: dark
+  max_repos:
+    description: Maximum eligible repositories to include (1-300).
+    required: false
+    default: "100"
+  forks:
+    description: Include forked repositories.
+    required: false
+    default: "true"
+  archived:
+    description: Include archived repositories.
+    required: false
+    default: "false"
+  width:
+    description: SVG width (420-1600).
+    required: false
+    default: "740"
+  height:
+    description: SVG height (260-1000).
+    required: false
+    default: "420"
+  output_dir:
+    description: Relative directory in the caller workspace for generated files.
+    required: false
+    default: project-map
+
+outputs:
+  svg-path:
+    description: Relative path to the generated SVG.
+  graph-path:
+    description: Relative path to the generated graph JSON.
+
+runs:
+  using: node24
+  main: scripts/action.mjs
+
+branding:
+  icon: share-2
+  color: blue

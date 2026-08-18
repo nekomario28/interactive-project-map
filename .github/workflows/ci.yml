@@ -24,5 +24,18 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
+      - name: Smoke test local project-map action
+        uses: ./
+        with:
+          github_token: ${{ github.token }}
+          username: ${{ github.repository_owner }}
+          max_repos: "1"
+          forks: "false"
+          archived: "false"
+          output_dir: .tmp/project-map
+
+      - name: Check action outputs
+        run: test -s .tmp/project-map/galaxy.svg && test -s .tmp/project-map/graph.json
+
       - name: Verify
         run: npm run verify

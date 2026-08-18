@@ -1,9 +1,10 @@
 import { renderHome } from "./home";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
-import { renderViewer } from "./html";
+import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
+import { renderViewer } from "./viewer";
 
 function corsHeaders(extra: Record<string, string> = {}): Headers {
   return new Headers({
@@ -49,18 +50,30 @@ export default {
         return Response.json({ ok: true, service: "github-project-galaxy-api" }, { headers: corsHeaders() });
       }
 
+      if (url.pathname === "/api/install-workflow") {
+        const options = installOptionsFromUrl(url);
+        return new Response(renderInstallWorkflow(options), {
+          headers: corsHeaders({
+            "Content-Type": "text/yaml; charset=utf-8",
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+          }),
+        });
+      }
+
       if (url.pathname === "/api/graph") {
-        const { graph, cacheStatus } = await getGraph(request, env, ctx);
+        const { graph, cacheStatus, source } = await getGraph(request, env, ctx);
         return Response.json(graph, {
           headers: corsHeaders({
             "Cache-Control": "public, max-age=300, s-maxage=900",
             "X-Project-Map-Cache": cacheStatus,
+            "X-Project-Map-Source": source,
           }),
         });
       }
 
       if (url.pathname === "/api/galaxy.svg") {
-        const { graph, cacheStatus } = await getGraph(request, env, ctx);
+        const { graph, cacheStatus, source } = await getGraph(request, env, ctx);
         const theme = url.searchParams.get("theme") === "light" ? "light" : "dark";
         const width = intParam(url, "width", 740, 420, 1600);
         const height = intParam(url, "height", 420, 260, 1000);
@@ -70,6 +83,7 @@ export default {
             "Content-Type": "image/svg+xml; charset=utf-8",
             "Cache-Control": "public, max-age=300, s-maxage=900",
             "X-Project-Map-Cache": cacheStatus,
+            "X-Project-Map-Source": source,
             "X-Content-Type-Options": "nosniff",
           }),
         });
