@@ -45,10 +45,11 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   assert.equal(config.outputDir, "project-map/custom");
 });
 
-test("action username and style use safe defaults", () => {
-  const config = actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "unknown" });
-  assert.equal(config.username, "octocat");
-  assert.equal(config.style, "galaxy");
+test("action username and style use safe defaults while accepting tree", () => {
+  const fallback = actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "unknown" });
+  assert.equal(fallback.username, "octocat");
+  assert.equal(fallback.style, "galaxy");
+  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "tree" }).style, "tree");
 });
 
 test("output directory rejects traversal and absolute paths", () => {
@@ -58,20 +59,20 @@ test("output directory rejects traversal and absolute paths", () => {
   assert.throws(() => safeOutputDir("C:/tmp/project-map"));
 });
 
-test("static action writes graph.json and styled SVG without needing write access", async () => {
+test("static action writes graph.json and tree SVG without needing write access", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-action-"));
   let received;
   try {
     const config = actionConfigFromEnv({
       INPUT_USERNAME: "example",
-      INPUT_STYLE: "obsidian",
+      INPUT_STYLE: "tree",
       INPUT_FORKS: "false",
       INPUT_ARCHIVED: "false",
       INPUT_OUTPUT_DIR: "project-map",
     });
     const fetchRepos = async (username, token, maxRepos, options) => {
       received = { username, token, maxRepos, options };
-      return [repo(1, "alpha"), repo(2, "beta")];
+      return [repo(1, "alpha"), repo(2, "beta", { fork: true })];
     };
     const result = await generateStaticMap(config, { cwd, token: "read-token", fetchRepos });
     assert.deepEqual(received, {
@@ -86,10 +87,10 @@ test("static action writes graph.json and styled SVG without needing write acces
     const svg = await readFile(join(cwd, result.svgPath), "utf8");
     assert.equal(graph.owner, "example");
     assert.equal(graph.repositoryCount, 2);
-    assert.match(svg, /Obsidian-style map/);
-    assert.match(svg, />Original<|>Original<\/text>/);
-    assert.match(svg, />Fork<|>Fork<\/text>/);
-    assert.match(svg, />Archived<|>Archived<\/text>/);
+    assert.match(svg, /Tree-style map/);
+    assert.match(svg, />Original<\/text>/);
+    assert.match(svg, />Fork<\/text>/);
+    assert.match(svg, />Archived<\/text>/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
