@@ -20,6 +20,11 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "webkit",
+      testMatch: /mobile-webkit\.spec\.mjs/,
+      use: { ...devices["iPhone 13"] },
+    },
   ],
   webServer: {
     command: "npm run build:pages && node tests/e2e/server.mjs",
