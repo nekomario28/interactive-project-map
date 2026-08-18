@@ -3,12 +3,20 @@ import type { Env, GitHubRepo } from "./types";
 const API = "https://api.github.com";
 const MAX_PAGES = 5;
 
+export interface RepoFetchOptions {
+  includeForks?: boolean;
+  includeArchived?: boolean;
+}
+
 export async function fetchPublicRepos(
   username: string,
   env: Env,
   maxRepos: number,
+  options: RepoFetchOptions = {},
 ): Promise<GitHubRepo[]> {
   const repos: GitHubRepo[] = [];
+  const includeForks = options.includeForks ?? true;
+  const includeArchived = options.includeArchived ?? true;
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "github-project-galaxy-api",
@@ -34,7 +42,12 @@ export async function fetchPublicRepos(
     }
 
     const batch = (await response.json()) as GitHubRepo[];
-    repos.push(...batch);
+    for (const repo of batch) {
+      if (!includeForks && repo.fork) continue;
+      if (!includeArchived && repo.archived) continue;
+      repos.push(repo);
+      if (repos.length >= maxRepos) break;
+    }
     if (batch.length < 100) break;
   }
 
