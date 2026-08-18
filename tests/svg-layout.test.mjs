@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { renderGalaxySvg } from "../scripts/svg.mjs";
+import { renderRadialTreeSvg } from "../scripts/radial-svg.mjs";
 import { renderTreeSvg } from "../scripts/tree-svg.mjs";
 
 function denseGraph() {
@@ -66,6 +67,7 @@ function overlaps(a, b, padding = 2) {
 }
 
 const renderers = {
+  radial: (graph) => renderRadialTreeSvg(graph, "dark", 740, 420),
   galaxy: (graph) => renderGalaxySvg(graph, "dark", 740, 420, "galaxy"),
   obsidian: (graph) => renderGalaxySvg(graph, "dark", 740, 420, "obsidian"),
   tree: (graph) => renderTreeSvg(graph, "dark", 740, 420),
