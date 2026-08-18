@@ -3,6 +3,7 @@ const CHECKOUT_SHA='3d3c42e5aac5ba805825da76410c181273ba90b1';
 const UPLOAD_SHA='043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
 const DOWNLOAD_SHA='3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
 const PROJECT_MAP_ACTION_REF='__PROJECT_MAP_ACTION_REF__';
+const STYLE_VALUES=new Set(['galaxy','obsidian','tree']);
 const form=document.getElementById('form');
 const usernameInput=document.getElementById('username');
 const themeInput=document.getElementById('theme');
@@ -15,18 +16,29 @@ const resultEl=document.getElementById('result');
 const preview=document.getElementById('preview');
 const previewMessage=document.getElementById('previewMessage');
 const openMap=document.getElementById('openMap');
+const presetCards=[...document.querySelectorAll('[data-style-preset]')];
+
+function normalizeStyle(value){return STYLE_VALUES.has(value)?value:'galaxy';}
+
+function syncPresetCards(style){
+  for(const card of presetCards){
+    const selected=card.dataset.stylePreset===style;
+    card.classList.toggle('is-selected',selected);
+    card.setAttribute('aria-pressed',String(selected));
+  }
+}
 
 function values(){
   const username=usernameInput.value.trim().toLowerCase();
   const maxRepos=Math.max(1,Math.min(300,Math.round(Number(maxReposInput.value)||100)));
-  const style=styleInput?.value==='obsidian'?'obsidian':'galaxy';
+  const style=normalizeStyle(styleInput?.value);
   return{username,theme:themeInput.value==='light'?'light':'dark',style,maxRepos,forks:forksInput.checked,archived:archivedInput.checked};
 }
 
 function urls(v){
   const owner=encodeURIComponent(v.username);
   const raw='https://raw.githubusercontent.com/'+owner+'/'+owner+'/HEAD/project-map';
-  const viewer=new URL('u/',new URL('./',location.href));
+  const viewer=new URL(v.style==='tree'?'tree/':'u/',new URL('./',location.href));
   viewer.searchParams.set('username',v.username);
   viewer.searchParams.set('style',v.style);
   return{svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()};
@@ -52,6 +64,7 @@ function workflowFor(v){
 function generate(){
   const v=values();
   maxReposInput.value=String(v.maxRepos);
+  syncPresetCards(v.style);
   if(!USERNAME_RE.test(v.username)){
     statusEl.textContent='Enter a valid GitHub username.';
     statusEl.classList.add('error');
@@ -84,6 +97,14 @@ function generate(){
   history.replaceState(null,'',share);
 }
 
+for(const card of presetCards){
+  card.addEventListener('click',()=>{
+    const style=normalizeStyle(card.dataset.stylePreset);
+    if(styleInput)styleInput.value=style;
+    syncPresetCards(style);
+  });
+}
+if(styleInput)styleInput.addEventListener('change',()=>syncPresetCards(normalizeStyle(styleInput.value)));
 form.addEventListener('submit',event=>{event.preventDefault();generate();});
 preview.addEventListener('load',()=>{preview.classList.add('ready');previewMessage.textContent='Existing static SVG found in the profile repository.';});
 preview.addEventListener('error',()=>{preview.classList.remove('ready');previewMessage.textContent='No static SVG yet. Run the generated workflow once, then reload this page.';});
@@ -106,9 +127,12 @@ const initial=new URL(location.href).searchParams;
 if(initial.has('username')){
   usernameInput.value=initial.get('username')||'';
   themeInput.value=initial.get('theme')==='light'?'light':'dark';
-  if(styleInput)styleInput.value=initial.get('style')==='obsidian'?'obsidian':'galaxy';
+  if(styleInput)styleInput.value=normalizeStyle(initial.get('style'));
   maxReposInput.value=initial.get('max_repos')||'100';
   forksInput.checked=initial.get('forks')!=='false';
   archivedInput.checked=initial.get('archived')==='true';
+  syncPresetCards(normalizeStyle(styleInput?.value));
   generate();
+}else{
+  syncPresetCards(normalizeStyle(styleInput?.value));
 }
