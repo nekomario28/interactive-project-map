@@ -6,12 +6,22 @@ const GROUP_RULES = [
   { id: "web-apps", label: "Web / Apps", keywords: ["web", "frontend", "backend", "nextjs", "react", "vue", "svelte", "api", "website", "app"] },
   { id: "coursework", label: "Coursework / Learning", keywords: ["course", "coursework", "homework", "assignment", "tutorial", "learning", "study", "school", "university"] },
 ];
+const LANGUAGE_LABELS = new Map([
+  ["Rich Text Format", "RTF"],
+  ["Jupyter Notebook", "Jupyter"],
+  ["Visual Basic .NET", "VB.NET"],
+]);
 
 function normalizeSearch(value) { return value.toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim(); }
 function languageGroupKey(language) {
   let key = "";
   for (const char of language.toLowerCase()) if (/[a-z0-9]/.test(char)) key += char; else key += `-u${char.codePointAt(0)?.toString(16) ?? "0"}-`;
   return key.replace(/-+/g, "-").replace(/^-|-$/g, "") || "other";
+}
+function languageDisplayLabel(language) {
+  const alias = LANGUAGE_LABELS.get(language);
+  if (alias) return alias;
+  return language.length <= 14 ? language : `${language.slice(0, 13)}…`;
 }
 function searchableText(repo) { return normalizeSearch([repo.name, repo.description ?? "", repo.language ?? "", ...(repo.topics ?? [])].join(" ")); }
 function keywordMatches(text, keyword) { const needle = normalizeSearch(keyword); return Boolean(needle) && ` ${text} `.includes(` ${needle} `); }
@@ -24,7 +34,7 @@ function classify(repo) {
   }
   if (best) return { id: best.id, label: best.label };
   const language = repo.language || "Other";
-  return { id: `lang-${languageGroupKey(language)}`, label: language };
+  return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
 }
 
 export function buildGraph(username, repos, includeForks, includeArchived) {
