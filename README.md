@@ -77,6 +77,8 @@ All styles preserve the same semantics:
 
 The interactive viewers provide search, a repository details panel, drag, pan, wheel/pinch zoom, Fit/Reset controls, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`).
 
+Potential future views are intentionally not added to the main selector yet. The strongest candidates are **Timeline** for project history, **Treemap** for compact portfolio comparison, and **Cluster/Bubble** for large repository collections. They require different visual semantics rather than another cosmetic variation of the existing graph layouts.
+
 ## Public URLs
 
 After GitHub Pages is enabled for this repository, the default project-site URL is:
