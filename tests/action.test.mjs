@@ -22,16 +22,16 @@ function repo(id, name, overrides = {}) {
   };
 }
 
-test("action config normalizes and clamps inputs", () => {
+test("action config reads INPUT variables, normalizes and clamps inputs", () => {
   const config = actionConfigFromEnv({
-    PROJECT_MAP_USERNAME: " OctoCat ",
-    PROJECT_MAP_THEME: "light",
-    PROJECT_MAP_MAX_REPOS: "999",
-    PROJECT_MAP_FORKS: "false",
-    PROJECT_MAP_ARCHIVED: "yes",
-    PROJECT_MAP_WIDTH: "200",
-    PROJECT_MAP_HEIGHT: "9999",
-    PROJECT_MAP_OUTPUT_DIR: "./project-map/custom",
+    INPUT_USERNAME: " OctoCat ",
+    INPUT_THEME: "light",
+    INPUT_MAX_REPOS: "999",
+    INPUT_FORKS: "false",
+    INPUT_ARCHIVED: "yes",
+    INPUT_WIDTH: "200",
+    INPUT_HEIGHT: "9999",
+    INPUT_OUTPUT_DIR: "./project-map/custom",
   });
   assert.equal(config.username, "octocat");
   assert.equal(config.theme, "light");
@@ -43,10 +43,15 @@ test("action config normalizes and clamps inputs", () => {
   assert.equal(config.outputDir, "project-map/custom");
 });
 
+test("action username falls back to the caller repository owner", () => {
+  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat" }).username, "octocat");
+});
+
 test("output directory rejects traversal and absolute paths", () => {
   assert.throws(() => safeOutputDir("../outside"));
   assert.throws(() => safeOutputDir("project-map/../outside"));
   assert.throws(() => safeOutputDir("/tmp/project-map"));
+  assert.throws(() => safeOutputDir("C:/tmp/project-map"));
 });
 
 test("static action writes graph.json and galaxy.svg without needing write access", async () => {
@@ -54,10 +59,10 @@ test("static action writes graph.json and galaxy.svg without needing write acces
   let received;
   try {
     const config = actionConfigFromEnv({
-      PROJECT_MAP_USERNAME: "example",
-      PROJECT_MAP_FORKS: "false",
-      PROJECT_MAP_ARCHIVED: "false",
-      PROJECT_MAP_OUTPUT_DIR: "project-map",
+      INPUT_USERNAME: "example",
+      INPUT_FORKS: "false",
+      INPUT_ARCHIVED: "false",
+      INPUT_OUTPUT_DIR: "project-map",
     });
     const fetchRepos = async (username, token, maxRepos, options) => {
       received = { username, token, maxRepos, options };
