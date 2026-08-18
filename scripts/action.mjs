@@ -29,8 +29,8 @@ function boolValue(value, fallback) {
 }
 
 function styleValue(value) {
-  const normalized = String(value || "galaxy").trim().toLowerCase();
-  return STYLE_VALUES.has(normalized) ? normalized : "galaxy";
+  const normalized = String(value || "radial").trim().toLowerCase();
+  return STYLE_VALUES.has(normalized) ? normalized : "radial";
 }
 
 export function safeOutputDir(value = "project-map") {
