@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
-// Immutable Action commit containing all nine static renderers.
-export const PUBLIC_ACTION_REF = "908d76d8a76b660bd98546acb74cfbe8a0ba280d";
+// Immutable Action commit containing all ten static renderers and Action wiring.
+export const PUBLIC_ACTION_REF = "93e2a6835039c240f43e7f7a84c15bd87e6529d6";
 
 const PRESETS = [
   { id: "radial", label: "Radial Tree", badge: "Classic", description: "Current classic: compact Owner → Category → Repository hierarchy around one center." },
@@ -16,9 +16,10 @@ const PRESETS = [
   { id: "cluster", label: "Cluster / Bubble", badge: "Density", description: "Category bubbles expose concentration and density. Best for very large repository sets." },
   { id: "sunburst", label: "Sunburst", badge: "Analytics", description: "Concentric Owner → Category → Repository rings. Compact hierarchy with proportional sectors." },
   { id: "matrix", label: "Matrix / Heatmap", badge: "Analytics", description: "Category × Language cells reveal technical concentration and Original/Fork/Archived mix." },
+  { id: "sankey", label: "Sankey", badge: "Analytics", description: "Owner → Category → Status flows summarize where projects concentrate and how much is original, forked or archived." },
 ];
 
-const DEDICATED_STYLES = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix"];
+const DEDICATED_STYLES = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
 function externalizeBrowserScript(html, src) {
   const pattern = /<script>[\s\S]*?<\/script>/;
@@ -43,6 +44,7 @@ function previewSvg(style) {
     cluster: '<circle class="preview-cluster" cx="65" cy="58" r="42"/><circle class="preview-cluster" cx="155" cy="39" r="30"/><circle class="preview-cluster" cx="174" cy="89" r="24"/><circle class="preview-original" cx="50" cy="47" r="6"/><circle class="preview-original" cx="76" cy="66" r="5"/><circle class="preview-fork" cx="82" cy="39" r="5"/><circle class="preview-archived" cx="45" cy="72" r="4"/><circle class="preview-original" cx="145" cy="32" r="5"/><circle class="preview-fork" cx="168" cy="45" r="5"/><circle class="preview-original" cx="166" cy="84" r="5"/>',
     sunburst: '<circle class="preview-owner" cx="120" cy="60" r="17"/><path class="preview-sun-group" d="M120 34A26 26 0 0 1 146 60L139 60A19 19 0 0 0 120 41Z"/><path class="preview-sun-group" d="M146 60A26 26 0 0 1 96 72L103 69A19 19 0 0 0 139 60Z"/><path class="preview-sun-group" d="M96 72A26 26 0 0 1 120 34L120 41A19 19 0 0 0 103 69Z"/><path class="preview-original" d="M120 29A31 31 0 0 1 145 42L150 35A40 40 0 0 0 120 20Z"/><path class="preview-fork" d="M145 42A31 31 0 0 1 151 60L160 60A40 40 0 0 0 150 35Z"/><path class="preview-original" d="M151 60A31 31 0 0 1 103 87L98 95A40 40 0 0 0 160 60Z"/><path class="preview-archived" d="M103 87A31 31 0 0 1 120 29L120 20A40 40 0 0 0 98 95Z"/>',
     matrix: '<g class="preview-matrix-grid"><rect x="28" y="18" width="52" height="25"/><rect x="84" y="18" width="52" height="25"/><rect x="140" y="18" width="52" height="25"/><rect x="28" y="47" width="52" height="25"/><rect x="84" y="47" width="52" height="25"/><rect x="140" y="47" width="52" height="25"/><rect x="28" y="76" width="52" height="25"/><rect x="84" y="76" width="52" height="25"/><rect x="140" y="76" width="52" height="25"/></g><rect class="preview-original" x="33" y="93" width="22" height="3"/><rect class="preview-fork" x="55" y="93" width="12" height="3"/><rect class="preview-archived" x="67" y="93" width="8" height="3"/>',
+    sankey: '<rect class="preview-owner" x="20" y="24" width="10" height="72" rx="3"/><path class="preview-sankey-flow" d="M30 28C70 28 72 20 108 20V48C72 48 70 48 30 48Z"/><path class="preview-sankey-flow" d="M30 51C70 51 72 55 108 55V78C72 78 70 78 30 78Z"/><path class="preview-sankey-flow" d="M30 81C70 81 72 87 108 87V96C72 96 70 96 30 96Z"/><rect class="preview-group" x="108" y="20" width="10" height="28" rx="3"/><rect class="preview-group" x="108" y="55" width="10" height="23" rx="3"/><rect class="preview-group" x="108" y="87" width="10" height="9" rx="3"/><path class="preview-original" d="M118 21C153 21 157 21 196 21V54C157 54 153 46 118 46Z"/><path class="preview-fork" d="M118 57C153 57 157 61 196 61V78C157 78 153 76 118 76Z"/><path class="preview-archived" d="M118 89C153 89 157 88 196 88V99C157 99 153 95 118 95Z"/><rect class="preview-original" x="196" y="21" width="9" height="33" rx="2"/><rect class="preview-fork" x="196" y="61" width="9" height="17" rx="2"/><rect class="preview-archived" x="196" y="88" width="9" height="11" rx="2"/>',
   };
   return `<svg viewBox="0 0 240 120" aria-hidden="true" focusable="false">${common[style] || ""}</svg>`;
 }
