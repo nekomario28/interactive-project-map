@@ -6,6 +6,7 @@ const PROJECT_MAP_ACTION_REF='__PROJECT_MAP_ACTION_REF__';
 const form=document.getElementById('form');
 const usernameInput=document.getElementById('username');
 const themeInput=document.getElementById('theme');
+const styleInput=document.getElementById('mapStyle');
 const maxReposInput=document.getElementById('maxRepos');
 const forksInput=document.getElementById('forks');
 const archivedInput=document.getElementById('archived');
@@ -18,7 +19,8 @@ const openMap=document.getElementById('openMap');
 function values(){
   const username=usernameInput.value.trim().toLowerCase();
   const maxRepos=Math.max(1,Math.min(300,Math.round(Number(maxReposInput.value)||100)));
-  return{username,theme:themeInput.value==='light'?'light':'dark',maxRepos,forks:forksInput.checked,archived:archivedInput.checked};
+  const style=styleInput?.value==='obsidian'?'obsidian':'galaxy';
+  return{username,theme:themeInput.value==='light'?'light':'dark',style,maxRepos,forks:forksInput.checked,archived:archivedInput.checked};
 }
 
 function urls(v){
@@ -26,6 +28,7 @@ function urls(v){
   const raw='https://raw.githubusercontent.com/'+owner+'/'+owner+'/HEAD/project-map';
   const viewer=new URL('u/',new URL('./',location.href));
   viewer.searchParams.set('username',v.username);
+  viewer.searchParams.set('style',v.style);
   return{svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()};
 }
 
@@ -37,7 +40,7 @@ function workflowFor(v){
     'jobs:','  generate:','    runs-on: ubuntu-latest','    permissions:','      contents: read','    steps:',
     '      - name: Checkout profile repository','        uses: actions/checkout@'+CHECKOUT_SHA+' # v7.0.1','',
     '      - name: Generate project map','        uses: nekomario28/interactive-project-map@'+PROJECT_MAP_ACTION_REF,'        with:',
-    '          github_token: ${{ github.token }}','          username: ${{ github.repository_owner }}','          theme: '+v.theme,'          max_repos: "'+v.maxRepos+'"','          forks: "'+v.forks+'"','          archived: "'+v.archived+'"','          output_dir: project-map','',
+    '          github_token: ${{ github.token }}','          username: ${{ github.repository_owner }}','          theme: '+v.theme,'          style: '+v.style,'          max_repos: "'+v.maxRepos+'"','          forks: "'+v.forks+'"','          archived: "'+v.archived+'"','          output_dir: project-map','',
     '      - name: Transfer generated files to publish job','        uses: actions/upload-artifact@'+UPLOAD_SHA+' # v7.0.1','        with:','          name: project-map-generated','          path: project-map','          if-no-files-found: error','          retention-days: 1','',
     '  publish:','    needs: generate','    runs-on: ubuntu-latest','    permissions:','      actions: read','      contents: write','    steps:',
     '      - name: Checkout profile repository','        uses: actions/checkout@'+CHECKOUT_SHA+' # v7.0.1','',
@@ -57,8 +60,8 @@ function generate(){
   }
   const u=urls(v);
   const workflow=workflowFor(v);
-  const html='<p align="center">\n  <a href="'+u.viewer+'">\n    <img width="740" src="'+u.svg+'" alt="'+v.username+' project galaxy" />\n  </a>\n</p>';
-  const md='[!['+v.username+' project galaxy]('+u.svg+')]('+u.viewer+')';
+  const html='<p align="center">\n  <a href="'+u.viewer+'">\n    <img width="740" src="'+u.svg+'" alt="'+v.username+' project map" />\n  </a>\n</p>';
+  const md='[!['+v.username+' project map]('+u.svg+')]('+u.viewer+')';
   document.getElementById('workflow').value=workflow;
   document.getElementById('readmeHtml').value=html;
   document.getElementById('readmeMarkdown').value=md;
@@ -74,6 +77,7 @@ function generate(){
   share.search='';
   share.searchParams.set('username',v.username);
   share.searchParams.set('theme',v.theme);
+  share.searchParams.set('style',v.style);
   share.searchParams.set('max_repos',String(v.maxRepos));
   share.searchParams.set('forks',String(v.forks));
   share.searchParams.set('archived',String(v.archived));
@@ -102,6 +106,7 @@ const initial=new URL(location.href).searchParams;
 if(initial.has('username')){
   usernameInput.value=initial.get('username')||'';
   themeInput.value=initial.get('theme')==='light'?'light':'dark';
+  if(styleInput)styleInput.value=initial.get('style')==='obsidian'?'obsidian':'galaxy';
   maxReposInput.value=initial.get('max_repos')||'100';
   forksInput.checked=initial.get('forks')!=='false';
   archivedInput.checked=initial.get('archived')==='true';
