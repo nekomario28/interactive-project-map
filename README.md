@@ -1,20 +1,16 @@
 # GitHub Project Galaxy
 
-Turn a GitHub user's public repositories into a project map with:
+Turn a GitHub user's public repositories into a reusable project map with:
 
 - a static SVG for GitHub profile READMEs
-- static `graph.json` owned by each user
-- interactive viewers with search, details, pan, zoom, pinch, and repository links
-- **Radial Tree (Classic)**, **Galaxy**, **Obsidian-like**, **Tree**, **Treemap**, **Timeline**, and **Cluster / Bubble** presentation presets
-- visual example cards in the public generator so users can compare styles before generating setup
-- explicit colors for original repositories, forks, and archived repositories
-- label-aware spacing/collision culling for graph and timeline views
-- a zero-backend public generator hosted on GitHub Pages
-- an optional Cloudflare Worker API for experiments/fallback use
+- user-owned static `project-map/graph.json`
+- interactive GitHub Pages viewers with search, details, pan, zoom, pinch, and repository links
+- **10 visual presets**: Radial Tree, Galaxy, Obsidian-like, Tree, Treemap, Timeline, Cluster / Bubble, Sunburst, Matrix / Heatmap, and Sankey
+- visual example cards in the public generator before setup generation
+- explicit Original / Fork / Archived semantics
+- a static-first architecture with no shared GitHub REST request during normal viewing
 
-## Recommended architecture
-
-The public frontend is a **static GitHub Pages application**. Repository metadata is generated inside each user's own profile repository by GitHub Actions.
+## Architecture
 
 ```text
 https://nekomario28.github.io/interactive-project-map/
@@ -31,126 +27,82 @@ GitHub profile README ──click──> github.io viewer
               USERNAME/USERNAME/HEAD/project-map/graph.json
 ```
 
-Normal README views and interactive-map views do **not** call the GitHub REST API. The REST API is used only when the user's scheduled Action refreshes repository metadata.
+The REST API is used when the user's Action refreshes repository metadata. README views and interactive-map views consume the generated static files instead.
 
-## Map styles
+## Presets
 
-The generator shows a visual example card for every preset. Clicking a card selects that style before generating the workflow and README embed.
+`radial` remains the default for backward compatibility. Existing workflows that omit `style` therefore retain the classic presentation.
+
+| Style | Viewer | Best use |
+|---|---|---|
+| `radial` | `/radial/?username=USER&style=radial` | compact profile README / general default |
+| `galaxy` | `/u/?username=USER&style=galaxy` | spatial portfolio exploration |
+| `obsidian` | `/u/?username=USER&style=obsidian` | organic force-directed exploration |
+| `tree` | `/tree/?username=USER&style=tree` | explicit Owner → Category → Repository hierarchy |
+| `treemap` | `/treemap/?username=USER&style=treemap` | dense portfolio composition and relative emphasis |
+| `timeline` | `/timeline/?username=USER&style=timeline` | repository creation history by category |
+| `cluster` | `/cluster/?username=USER&style=cluster` | category concentration in large repository sets |
+| `sunburst` | `/sunburst/?username=USER&style=sunburst` | compact proportional hierarchy |
+| `matrix` | `/matrix/?username=USER&style=matrix` | Category × Language technical composition |
+| `sankey` | `/sankey/?username=USER&style=sankey` | Owner → Category → Original/Fork/Archived flow |
 
 ### Radial Tree (Classic)
 
-```text
-https://nekomario28.github.io/interactive-project-map/radial/?username=USERNAME&style=radial
-```
-
-The current/main classic layout: owner at the center, categories on a middle ring, and repositories around the outside. It is compact and works well inside a profile-sized 740×420 SVG. **This remains the default** so existing workflows that do not specify `style` keep their presentation after the feature is merged.
+Owner is centered, categories occupy the middle ring, and repositories sit around the outside. It is deliberately compact at the default 740×420 profile size.
 
 ### Galaxy
 
-```text
-https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy
-```
-
-Galaxy places categories in semantic sectors and distributes repositories over multiple radial lanes. Lane capacity is derived from label width and radius; a second screen-space collision pass suppresses labels that would overlap.
+Categories occupy semantic sectors with repositories distributed over radial lanes. Label-aware lane placement and screen-space collision culling keep the map readable.
 
 ### Obsidian-like
 
-```text
-https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=obsidian
-```
-
-Obsidian-like uses a restrained desktop graph-tool appearance and a deterministic force-directed layout with center, repel, link, and collision forces. It is inspired by graph-view interaction patterns without copying product assets or UI verbatim.
+A deterministic force-directed graph using center, repel, link, and collision forces. It prioritizes exploratory relationships over strict hierarchy.
 
 ### Tree
 
-```text
-https://nekomario28.github.io/interactive-project-map/tree/?username=USERNAME&style=tree
-```
-
-Tree renders an explicit top-down `Owner → Category → Repository` hierarchy. It allocates horizontal space by subtree size and wraps dense categories into additional rows.
+An explicit top-down `Owner → Category → Repository` hierarchy. Subtree-size allocation and wrapping make structural relationships immediately visible.
 
 ### Treemap
 
-```text
-https://nekomario28.github.io/interactive-project-map/treemap/?username=USERNAME&style=treemap
-```
-
-Treemap gives each category a region and packs repository tiles inside it. Repository stars have a deliberately weak influence on tile area, so the view shows both portfolio composition and relative emphasis without allowing a single popular repository to dominate the whole map. Small tiles omit text instead of overlapping it; details remain available in the interactive viewer.
+Each category receives a region containing repository tiles. Stars have only a weak influence on tile area so one popular repository cannot dominate the complete portfolio. Small tiles suppress labels rather than overlap them.
 
 ### Timeline
 
-```text
-https://nekomario28.github.io/interactive-project-map/timeline/?username=USERNAME&style=timeline
-```
-
-Timeline places repositories on category lanes using their GitHub creation date. `graph.json` now stores `createdAt` in addition to `updatedAt`. Existing older graph files remain viewable: the Timeline viewer falls back to `updatedAt` until the user's Action regenerates the graph.
+Repositories are positioned on category lanes using GitHub creation time. `graph.json` stores `createdAt` in addition to `updatedAt`; older graph files fall back to `updatedAt` until regenerated.
 
 ### Cluster / Bubble
 
-```text
-https://nekomario28.github.io/interactive-project-map/cluster/?username=USERNAME&style=cluster
-```
+Each category forms a large boundary containing its repositories. This is aimed at large 100–300 repository profiles where domain concentration matters more than explicit edges.
 
-Cluster / Bubble gives each category a large boundary and packs its repositories inside. It is intended for large 100–300 repository collections where the important question is **which domains contain the most work and how dense each domain is**, rather than showing every edge explicitly.
+### Sunburst
 
-All styles preserve the same repository semantics:
+A concentric `Owner → Category → Repository` hierarchy using proportional sectors. Narrow outer sectors suppress repository labels. Dense category labels can still be less readable than Tree or Radial, which is an intentional tradeoff of the compact circular form.
 
-- **Original** repositories use the primary repository color.
-- **Forks** use a distinct fork color.
-- **Archived** repositories use a distinct archived color and an additional dashed treatment.
-- Owner/category/relation elements use separate visual roles where the visualization includes them.
+### Matrix / Heatmap
 
-The interactive viewers provide search, a repository details panel, pan, wheel/pinch zoom, Fit/Reset controls, repository opening, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`). Graph layouts also retain node dragging where applicable.
+Rows are categories and columns are the most-used languages. Cell intensity represents repository count; the small status bar inside each populated cell shows Original / Fork / Archived composition.
 
-Lower-priority future experiments include **Sunburst**, **Matrix / Heatmap**, and **Sankey**. They are intentionally not added to the main selector yet because their information value overlaps more heavily with the seven presets above.
+### Sankey
 
-## Public URLs
+A flow diagram from Owner to Category to repository status. Band widths preserve repository counts, making it easy to compare where work is concentrated and how much is Original, Forked, or Archived.
 
-After GitHub Pages is enabled for this repository, the default project-site URL is:
+All presets preserve the same status colors. Archived repositories receive an additional dashed treatment where the visualization renders individual repository marks.
 
-```text
-https://nekomario28.github.io/interactive-project-map/
-```
+## Installation
 
-The viewers use query parameters and static directories rather than dynamic server routes, which works with GitHub Pages hosting.
-
-## User installation
-
-### 1. Open the generator
-
-Open:
+Open the public generator:
 
 ```text
 https://nekomario28.github.io/interactive-project-map/
 ```
 
-Enter your GitHub username, compare the visual example cards, and choose:
-
-- dark/light static SVG theme
-- one of the seven map styles
-- maximum repository count
-- whether forks are included
-- whether archived repositories are included
-
-The page generates a complete GitHub Actions workflow and README embed.
-
-### 2. Add the workflow to your profile repository
-
-For GitHub user `octocat`, the profile repository is:
+Enter a GitHub username, compare the preset cards, choose theme/style/repository filters, then copy the generated workflow into the user's profile repository:
 
 ```text
-octocat/octocat
+USERNAME/USERNAME/.github/workflows/project-map.yml
 ```
 
-Create:
-
-```text
-.github/workflows/project-map.yml
-```
-
-and paste the workflow generated by the site.
-
-The workflow uses two jobs intentionally:
+The generated workflow intentionally isolates permissions:
 
 ```text
 generate
@@ -163,15 +115,9 @@ publish
   pinned GitHub-maintained Actions + git commit/push
 ```
 
-The custom `interactive-project-map` Action never runs with a write-capable token.
+The custom project-map Action never receives a write-capable token. The public generator pins it to a reviewed immutable commit SHA.
 
-The public generator pins the reusable Action to a reviewed full commit SHA rather than a mutable tag. This gives consumers an immutable dependency by default.
-
-### 3. Run the workflow once
-
-Open the profile repository's **Actions** tab and run **Update project map** manually once.
-
-It creates:
+Run **Update project map** once. It creates:
 
 ```text
 project-map/
@@ -179,88 +125,55 @@ project-map/
 └── graph.json
 ```
 
-The `galaxy.svg` filename is kept for backward compatibility regardless of the selected visual style.
+`galaxy.svg` is kept as the filename for backward compatibility regardless of the chosen preset.
 
-The workflow also runs on a schedule. If repository data did not change, the generator preserves the previous timestamp so no meaningless daily commit is created.
+## Static viewer validation
 
-### 4. Add the generated embed to README.md
-
-The generated snippet links the static SVG to the interactive viewer for the selected style.
-
-## How the static viewers work
-
-The GitHub Pages viewers read:
+Every dedicated viewer reads:
 
 ```text
 https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/graph.json
 ```
 
-in the visitor's browser.
+and validates the graph before rendering. In particular:
 
-Before rendering, the viewer validates/sanitizes the static graph:
+- the requested username must be valid
+- graph owner must match that username
+- repository URLs must remain under `https://github.com/USERNAME/REPO`
+- labels, topics, node counts, and edge counts are bounded
+- malformed nodes/URLs and unknown edges are discarded
 
-- requested username must be a valid GitHub username
-- graph owner must match the requested username
-- repository nodes must point to `https://github.com/USERNAME/REPO`
-- repository names, labels, topics, node counts, and edge counts are bounded
-- invalid repository URLs are discarded
-- edges referring to unknown nodes are discarded
-
-Repository links therefore remain constrained to the requested user's GitHub repositories.
-
-If `graph.json` is missing or invalid, the static viewer shows an installation/recovery message instead of silently consuming a shared GitHub API quota.
+If the graph is missing or invalid, the viewer shows a setup/recovery message instead of consuming a shared API quota.
 
 ## Action inputs
-
-The root `action.yml` supports:
 
 | Input | Default | Meaning |
 |---|---:|---|
 | `github_token` | required | token used to read public repository metadata |
 | `username` | caller owner | GitHub user to visualize |
-| `theme` | `dark` | static SVG theme: `dark` or `light` |
-| `style` | `radial` | `radial`, `galaxy`, `obsidian`, `tree`, `treemap`, `timeline`, or `cluster` |
+| `theme` | `dark` | `dark` or `light` static SVG theme |
+| `style` | `radial` | one of the 10 preset IDs above |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
 | `width` | `740` | SVG width, `420`–`1600` |
 | `height` | `420` | SVG height, `260`–`1000` |
-| `output_dir` | `project-map` | relative generated-output directory |
+| `output_dir` | `project-map` | relative output directory |
 
-## Deploy the public GitHub Pages frontend
+## GitHub Pages
 
-For `nekomario28/interactive-project-map`, enable Pages once:
+For the upstream repository, configure **Settings → Pages → Build and deployment → Source → GitHub Actions** once. The Pages workflow then builds only static frontend files.
 
-1. Open **Settings → Pages**.
-2. Under **Build and deployment → Source**, select **GitHub Actions**.
-3. Run **Actions → Build and deploy project galaxy → Run workflow**, or merge a Pages-related change to `main`.
-
-The upstream repository deploys Pages automatically. Forks remain opt-in: a fork can set repository variable `ENABLE_GITHUB_PAGES=true` after enabling GitHub Pages.
-
-The Pages workflow builds only static files. There is no scheduled central repository-data rebuild; user data is refreshed by each user's own profile-repository Action.
-
-Local build:
+Local frontend build:
 
 ```bash
 npm run build:pages
 ```
 
-The previous configured multi-user static catalog builder remains available for experiments:
+The previous configured multi-user catalog builder remains available for experiments:
 
 ```bash
 npm run build:pages:catalog
-```
-
-## Optional Cloudflare Worker
-
-The Worker implementation remains in the repository for API/fallback experimentation. It is **not required** for the recommended GitHub Pages flow.
-
-For local Worker development:
-
-```bash
-npm install
-npm run verify
-npx wrangler dev
 ```
 
 ## Verification
@@ -273,20 +186,24 @@ Verification includes:
 
 - TypeScript type checking
 - Wrangler Worker dry-run
-- Node 24 Action/rendering syntax checks
-- Pages generator/viewer syntax checks
-- HTML-Validate on emitted HTML
+- Node 24 syntax checks for the Action, all static renderers, and browser viewers
+- HTML-Validate on emitted Pages HTML
 - ESLint on emitted browser JavaScript
 - Stylelint on emitted CSS
-- actionlint on repository workflows and the workflow generated by the browser installer
-- dense SVG label-overlap tests for graph/timeline styles
-- Treemap bounds/coverage tests
-- repository grouping/query/pagination tests
-- static Action generation tests, including `createdAt` preservation
-- install-workflow permission tests
-- static graph validation tests
+- actionlint on repository workflows and the browser-generated installer workflow
+- dense label-overlap regression tests for node-based layouts
+- Treemap bounds/coverage checks
+- Sunburst segment checks
+- Matrix aggregation checks
+- Sankey flow-total checks
+- Action tests for all 10 style values
+- static graph validation and permission-isolation tests
 
-The repository CI also invokes the local `action.yml` **without a `style` input** and verifies that the backward-compatible Radial Tree SVG is generated.
+CI also invokes the local `action.yml` **without a `style` input** and confirms that Radial Tree remains the backward-compatible default. On preset-development PRs it additionally renders all ten presets from the same current `graph.json` and uploads a visual comparison artifact.
+
+## Optional Cloudflare Worker
+
+The Worker implementation remains available for API/fallback experiments but is not required by the recommended GitHub Pages flow.
 
 ## License
 
