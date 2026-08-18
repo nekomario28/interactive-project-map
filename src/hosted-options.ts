@@ -7,14 +7,21 @@ export interface GraphRequestOptions {
   includeArchived: boolean;
 }
 
+export type GraphCacheSource = "dynamic" | "profile";
+
 export function normalizeUsername(value: string): string {
   const username = value.trim().toLowerCase();
   if (!USERNAME_RE.test(username)) throw new Error("Invalid GitHub username");
   return username;
 }
 
-export function graphCacheRequest(origin: string, options: GraphRequestOptions): Request {
+export function graphCacheRequest(
+  origin: string,
+  options: GraphRequestOptions,
+  source: GraphCacheSource = "dynamic",
+): Request {
   const url = new URL("/__cache/graph", origin);
+  url.searchParams.set("source", source);
   url.searchParams.set("username", normalizeUsername(options.username));
   url.searchParams.set("max_repos", String(options.maxRepos));
   url.searchParams.set("forks", String(options.includeForks));
