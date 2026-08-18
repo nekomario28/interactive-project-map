@@ -9,6 +9,8 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "check:pages": "node --check scripts/github.mjs && node --check scripts/graph.mjs && node --check scripts/svg.mjs && node --check scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "verify": "npm run typecheck && npm run check:pages && npm test",
     "build:pages": "node scripts/build.mjs"
   },
   "devDependencies": {
