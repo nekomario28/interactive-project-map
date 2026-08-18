@@ -256,14 +256,14 @@ export function renderGalaxySvg(graph, theme, width, height, style = "galaxy") {
 
   const background = mapStyle === "galaxy"
     ? `<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/><g>${stars(graph.owner, width, height, colors.fg)}</g>`
-    : `<rect width="100%" height="100%" rx="12" fill="${colors.bg}"/><circle cx="${width / 2}" cy="${height / 2}" r="${Math.max(width, height) * 0.42}" fill="${colors.group}" opacity="0.035"/>`;
+    : `<defs><radialGradient id="obsidian-bg" cx="50%" cy="43%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="12" fill="url(#obsidian-bg)"/>`;
 
   const lines = graph.edges.map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
     if (!source || !target) return "";
     const relation = edge.type === "relation";
-    return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${relation ? colors.relation : colors.edge}" stroke-width="${relation ? 1.4 : 1}" opacity="${relation ? 0.72 : mapStyle === "obsidian" ? 0.32 : 0.52}"${relation ? ' stroke-dasharray="5 4"' : ""}/>`;
+    return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${relation ? colors.relation : colors.edge}" stroke-width="${relation ? 1.4 : 1}" opacity="${relation ? 0.72 : mapStyle === "obsidian" ? 0.38 : 0.52}"${relation ? ' stroke-dasharray="5 4"' : ""}/>`;
   }).join("");
 
   const nodes = points.map(({ x, y, node }) => {
