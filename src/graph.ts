@@ -39,6 +39,12 @@ const GROUP_RULES: GroupRule[] = [
   },
 ];
 
+const LANGUAGE_LABELS = new Map<string, string>([
+  ["Rich Text Format", "RTF"],
+  ["Jupyter Notebook", "Jupyter"],
+  ["Visual Basic .NET", "VB.NET"],
+]);
+
 function normalizeSearch(value: string): string {
   return value
     .toLowerCase()
@@ -56,6 +62,12 @@ function languageGroupKey(language: string): string {
     }
   }
   return key.replace(/-+/g, "-").replace(/^-|-$/g, "") || "other";
+}
+
+function languageDisplayLabel(language: string): string {
+  const alias = LANGUAGE_LABELS.get(language);
+  if (alias) return alias;
+  return language.length <= 14 ? language : `${language.slice(0, 13)}…`;
 }
 
 function searchableText(repo: GitHubRepo): string {
@@ -91,7 +103,7 @@ function classify(repo: GitHubRepo): { id: string; label: string } {
 
   if (best) return { id: best.id, label: best.label };
   const language = repo.language || "Other";
-  return { id: `lang-${languageGroupKey(language)}`, label: language };
+  return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
 }
 
 export function buildGraph(
