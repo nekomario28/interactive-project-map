@@ -60,6 +60,9 @@ const MOBILE_FIX = `
 }
 `;
 
+const VIEWER_FIT_OLD = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.25, 2.2);";
+const VIEWER_FIT_NEW = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);";
+
 async function htmlFiles(dir) {
   const found = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -68,6 +71,17 @@ async function htmlFiles(dir) {
     else if (entry.isFile() && entry.name.endsWith(".html")) found.push(path);
   }
   return found;
+}
+
+async function hardenSharedViewer(outputDir) {
+  const viewerPath = join(outputDir, "viewer.js");
+  const source = await readFile(viewerPath, "utf8");
+  if (!source.includes(VIEWER_FIT_OLD) && !source.includes(VIEWER_FIT_NEW)) throw new Error("Could not locate shared viewer Fit zoom contract");
+  const patched = source
+    .replace(VIEWER_FIT_OLD, VIEWER_FIT_NEW)
+    .replaceAll(", 0.2, 4.5)", ", 0.04, 4.5)");
+  if (!patched.includes(VIEWER_FIT_NEW) || patched.includes(VIEWER_FIT_OLD)) throw new Error("Could not lower shared viewer minimum zoom");
+  if (patched !== source) await writeFile(viewerPath, patched);
 }
 
 export async function postprocessPublicPages(outputDir = resolve(process.cwd(), "site")) {
@@ -82,6 +96,8 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
   const cssPath = join(outputDir, "viewer.css");
   const css = await readFile(cssPath, "utf8");
   if (!css.includes("Emitted-site mobile hardening")) await writeFile(cssPath, css + MOBILE_FIX);
+
+  await hardenSharedViewer(outputDir);
 
   const appPath = join(outputDir, "app.js");
   const app = await readFile(appPath, "utf8");
