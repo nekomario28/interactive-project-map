@@ -47,8 +47,14 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: Browser E2E
+      - name: Chromium browser E2E
         run: npm run test:e2e
+
+      - name: Install WebKit for Playwright
+        run: npx playwright install --with-deps webkit
+
+      - name: iPhone WebKit smoke
+        run: npm run test:e2e:webkit
 
       - name: Upload browser E2E evidence
         if: always()
