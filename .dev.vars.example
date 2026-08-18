@@ -1,0 +1,2 @@
+# Optional. Strongly recommended for production to raise GitHub API rate limits.
+GITHUB_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxx

@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "github-project-galaxy-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-18",
+  "observability": {
+    "enabled": true
+  }
+}

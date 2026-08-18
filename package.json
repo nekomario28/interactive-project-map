@@ -1,0 +1,16 @@
+{
+  "name": "github-project-galaxy-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turn a GitHub user's public repositories into an embeddable galaxy map, JSON graph API, and interactive viewer.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "wrangler": "^4.118.0"
+  }
+}
