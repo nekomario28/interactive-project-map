@@ -12,6 +12,7 @@ import { renderClusterSvg } from "./cluster-svg.mjs";
 import { renderSunburstSvg } from "./sunburst-svg.mjs";
 import { renderMatrixSvg } from "./matrix-svg.mjs";
 import { renderSankeySvg } from "./sankey-svg.mjs";
+import { finalizeSvgForTheme } from "./finalize-svg.mjs";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const STYLE_VALUES = new Set(["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
@@ -53,15 +54,17 @@ async function preserveGeneratedAtWhenUnchanged(graphPath, graph) {
   } catch { /* first run or invalid previous file */ }
 }
 function renderForStyle(graph, config) {
-  if (config.style === "tree") return renderTreeSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "radial") return renderRadialTreeSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "treemap") return renderTreemapSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "timeline") return renderTimelineSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "cluster") return renderClusterSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "sunburst") return renderSunburstSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "matrix") return renderMatrixSvg(graph, config.theme, config.width, config.height);
-  if (config.style === "sankey") return renderSankeySvg(graph, config.theme, config.width, config.height);
-  return renderGalaxySvg(graph, config.theme, config.width, config.height, config.style);
+  let svg;
+  if (config.style === "tree") svg = renderTreeSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "radial") svg = renderRadialTreeSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "treemap") svg = renderTreemapSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "timeline") svg = renderTimelineSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "cluster") svg = renderClusterSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "sunburst") svg = renderSunburstSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "matrix") svg = renderMatrixSvg(graph, config.theme, config.width, config.height);
+  else if (config.style === "sankey") svg = renderSankeySvg(graph, config.theme, config.width, config.height);
+  else svg = renderGalaxySvg(graph, config.theme, config.width, config.height, config.style);
+  return finalizeSvgForTheme(svg, config.theme);
 }
 export async function generateStaticMap(config, options = {}) {
   const cwd = options.cwd ?? process.cwd();
