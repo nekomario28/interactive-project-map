@@ -1,5 +1,12 @@
+export interface RateLimitBinding {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 export interface Env {
   GITHUB_TOKEN?: string;
+  API_RATE_LIMITER?: RateLimitBinding;
+  UPSTREAM_RATE_LIMITER?: RateLimitBinding;
+  GLOBAL_UPSTREAM_RATE_LIMITER?: RateLimitBinding;
 }
 
 export interface GitHubRepo {
