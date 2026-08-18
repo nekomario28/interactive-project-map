@@ -45,11 +45,13 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   assert.equal(config.outputDir, "project-map/custom");
 });
 
-test("action username and style use safe defaults while accepting tree", () => {
+test("action username and style preserve classic radial default while accepting all presets", () => {
   const fallback = actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "unknown" });
   assert.equal(fallback.username, "octocat");
-  assert.equal(fallback.style, "galaxy");
-  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "tree" }).style, "tree");
+  assert.equal(fallback.style, "radial");
+  for (const style of ["radial", "galaxy", "obsidian", "tree"]) {
+    assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: style }).style, style);
+  }
 });
 
 test("output directory rejects traversal and absolute paths", () => {
