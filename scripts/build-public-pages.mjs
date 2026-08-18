@@ -3,26 +3,19 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
-// Immutable Action commit containing radial, galaxy, obsidian and tree SVG generation.
-export const PUBLIC_ACTION_REF = "395ab553cbba2da142c1fdb35a3666ba167e6c34";
+// Immutable Action commit containing radial, galaxy, obsidian, tree and treemap SVG generation.
+export const PUBLIC_ACTION_REF = "f071519271076370a0eb0fb578e3dcae26d37134";
 
 function externalizeBrowserScript(html, src) {
   const scriptPattern = /<script>[\s\S]*?<\/script>/;
-  if (!scriptPattern.test(html)) {
-    throw new Error(`Expected one inline browser script for ${src}`);
-  }
-  return html
-    .replace("script-src 'unsafe-inline'", "script-src 'self'")
-    .replace(scriptPattern, `<script src="${src}" defer></script>`);
+  if (!scriptPattern.test(html)) throw new Error(`Expected one inline browser script for ${src}`);
+  return html.replace("script-src 'unsafe-inline'", "script-src 'self'").replace(scriptPattern, `<script src="${src}" defer></script>`);
 }
 
 function normalizePublicHtml(html) {
   return html
     .replace('<input id="username"', '<input id="username" type="text"')
-    .replace(
-      '<a id="openMap" class="button" target="_blank" rel="noopener">',
-      '<a id="openMap" class="button" href="./radial/" target="_blank" rel="noopener">',
-    );
+    .replace('<a id="openMap" class="button" target="_blank" rel="noopener">', '<a id="openMap" class="button" href="./radial/" target="_blank" rel="noopener">');
 }
 
 function stylePresetGallery() {
@@ -63,12 +56,21 @@ function stylePresetGallery() {
     </svg>
     <strong>Tree</strong><small>Top-down hierarchy. Best when structure should be immediately obvious.</small>
   </button>
+  <button class="preset-card" type="button" data-style-preset="treemap" aria-pressed="false">
+    <span class="badge">Dense</span>
+    <svg viewBox="0 0 240 120" aria-hidden="true" focusable="false">
+      <rect class="preview-group-box" x="8" y="8" width="128" height="104" rx="6"/><rect class="preview-group-box" x="142" y="8" width="90" height="55" rx="6"/><rect class="preview-group-box" x="142" y="69" width="90" height="43" rx="6"/>
+      <rect class="preview-original" x="13" y="30" width="62" height="76" rx="3"/><rect class="preview-fork" x="80" y="30" width="51" height="36" rx="3"/><rect class="preview-archived" x="80" y="71" width="51" height="35" rx="3"/>
+      <rect class="preview-original" x="147" y="29" width="47" height="29" rx="3"/><rect class="preview-fork" x="199" y="29" width="28" height="29" rx="3"/><rect class="preview-original" x="147" y="88" width="36" height="19" rx="3"/><rect class="preview-archived" x="188" y="88" width="39" height="19" rx="3"/>
+    </svg>
+    <strong>Treemap</strong><small>Category area contains repository tiles. Best for dense portfolios and relative emphasis.</small>
+  </button>
 </div>`;
 }
 
 function addHomeStylePreset(html) {
   const marker = '<div class="options">';
-  const control = '<label>Map style <select id="mapStyle"><option value="radial">Radial Tree (Classic)</option><option value="galaxy">Galaxy</option><option value="obsidian">Obsidian-like</option><option value="tree">Tree</option></select></label>';
+  const control = '<label>Map style <select id="mapStyle"><option value="radial">Radial Tree (Classic)</option><option value="galaxy">Galaxy</option><option value="obsidian">Obsidian-like</option><option value="tree">Tree</option><option value="treemap">Treemap</option></select></label>';
   if (!html.includes(marker)) throw new Error("Could not find generator options container");
   return html
     .replace("style-src 'unsafe-inline'", "style-src 'self' 'unsafe-inline'")
@@ -79,69 +81,43 @@ function addHomeStylePreset(html) {
 function viewerBody({ mode = "graph" } = {}) {
   const tree = mode === "tree";
   const radial = mode === "radial";
+  const treemap = mode === "treemap";
   const scripts = tree
     ? '<script src="../tree-nav.js" defer></script>\n<script src="../tree-viewer.js" defer></script>'
     : radial
       ? '<script src="../radial-viewer.js" defer></script>'
-      : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>';
-  return `<body data-map-style="${tree ? "tree" : radial ? "radial" : "galaxy"}">
+      : treemap
+        ? '<script src="../treemap-viewer.js" defer></script>'
+        : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>';
+  const activeStyle = tree ? "tree" : radial ? "radial" : treemap ? "treemap" : "galaxy";
+  return `<body data-map-style="${activeStyle}">
 <main class="app">
   <header class="toolbar">
-    <div class="title-block">
-      <h1 id="title">Interactive Project Map</h1>
-      <p id="subtitle">Loading project graph…</p>
-    </div>
+    <div class="title-block"><h1 id="title">Interactive Project Map</h1><p id="subtitle">Loading project graph…</p></div>
     <div class="controls">
-      <label class="field">
-        <span>Search</span>
-        <input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off">
-      </label>
-      <label class="field">
-        <span>Style</span>
-        <select id="style">
-          <option value="radial"${radial ? " selected" : ""}>Radial Tree (Classic)</option>
-          <option value="galaxy"${!tree && !radial ? " selected" : ""}>Galaxy</option>
-          <option value="obsidian">Obsidian-like</option>
-          <option value="tree"${tree ? " selected" : ""}>Tree</option>
-        </select>
-      </label>
-      <button id="fit" type="button">Fit</button>
-      <button id="reset" type="button">Reset</button>
+      <label class="field"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off"></label>
+      <label class="field"><span>Style</span><select id="style">
+        <option value="radial"${radial ? " selected" : ""}>Radial Tree (Classic)</option>
+        <option value="galaxy"${!tree && !radial && !treemap ? " selected" : ""}>Galaxy</option>
+        <option value="obsidian">Obsidian-like</option>
+        <option value="tree"${tree ? " selected" : ""}>Tree</option>
+        <option value="treemap"${treemap ? " selected" : ""}>Treemap</option>
+      </select></label>
+      <button id="fit" type="button">Fit</button><button id="reset" type="button">Reset</button>
     </div>
   </header>
-
   <section class="workspace">
     <canvas id="galaxy" tabindex="0" aria-label="Interactive project graph"></canvas>
-
     <aside id="details" class="details" aria-live="polite">
       <button id="detailsClose" class="details-close" type="button" aria-label="Close project details">×</button>
-      <h2 id="detailsTitle">Project map</h2>
-      <p id="detailsDescription">Select a project to inspect it.</p>
-      <dl id="detailsMeta" hidden></dl>
-      <a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>
+      <h2 id="detailsTitle">Project map</h2><p id="detailsDescription">Select a project to inspect it.</p>
+      <dl id="detailsMeta" hidden></dl><a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>
     </aside>
-
-    <div class="legend">
-      <span><i class="owner"></i>Owner</span>
-      <span><i class="group"></i>Category</span>
-      <span><i class="original"></i>Original</span>
-      <span><i class="fork"></i>Fork</span>
-      <span><i class="archived"></i>Archived</span>
-      <span><i class="relation"></i>Relation</span>
-    </div>
-
-    <div id="tip" class="tip" role="status" hidden></div>
-    <div id="status" class="status">Loading map…</div>
-    <div id="error" class="error" role="alert">
-      <div id="errorText">Could not load project map.</div>
-      <a id="setup" href="../">Generate setup</a>
-    </div>
+    <div class="legend"><span><i class="owner"></i>Owner</span><span><i class="group"></i>Category</span><span><i class="original"></i>Original</span><span><i class="fork"></i>Fork</span><span><i class="archived"></i>Archived</span><span><i class="relation"></i>Relation</span></div>
+    <div id="tip" class="tip" role="status" hidden></div><div id="status" class="status">Loading map…</div>
+    <div id="error" class="error" role="alert"><div id="errorText">Could not load project map.</div><a id="setup" href="../">Generate setup</a></div>
   </section>
-
-  <footer>
-    <span>Static graph from the profile repository · no shared GitHub REST request while viewing</span>
-    <span class="shortcuts"><kbd>0</kbd> Fit · <kbd>+</kbd>/<kbd>−</kbd> Zoom · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span>
-  </footer>
+  <footer><span>Static graph from the profile repository · no shared GitHub REST request while viewing</span><span class="shortcuts"><kbd>0</kbd> Fit · <kbd>+</kbd>/<kbd>−</kbd> Zoom · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span></footer>
 </main>
 ${scripts}
 </body>`;
@@ -150,27 +126,18 @@ ${scripts}
 function enhanceViewer(html, options = {}) {
   const bodyPattern = /<body>[\s\S]*?<\/body>/;
   if (!bodyPattern.test(html)) throw new Error("Could not find viewer body");
-  return html
-    .replace(/<style>[\s\S]*?<\/style>/, "")
-    .replace("style-src 'unsafe-inline'", "style-src 'self'")
-    .replace("</head>", '<link rel="stylesheet" href="../viewer.css">\n</head>')
-    .replace(bodyPattern, viewerBody(options));
+  return html.replace(/<style>[\s\S]*?<\/style>/, "").replace("style-src 'unsafe-inline'", "style-src 'self'").replace("</head>", '<link rel="stylesheet" href="../viewer.css">\n</head>').replace(bodyPattern, viewerBody(options));
 }
 
 export async function buildPublicPages(outputDir = join(process.cwd(), "site")) {
   await rm(outputDir, { recursive: true, force: true });
-  await mkdir(join(outputDir, "u"), { recursive: true });
-  await mkdir(join(outputDir, "tree"), { recursive: true });
-  await mkdir(join(outputDir, "radial"), { recursive: true });
-
+  for (const dir of ["u", "tree", "radial", "treemap"]) await mkdir(join(outputDir, dir), { recursive: true });
   const sourceDir = join(process.cwd(), "scripts");
-  const homeScript = (await readFile(join(sourceDir, "public-home.js"), "utf8")).replaceAll(
-    "__PROJECT_MAP_ACTION_REF__",
-    PUBLIC_ACTION_REF,
-  );
+  const homeScript = (await readFile(join(sourceDir, "public-home.js"), "utf8")).replaceAll("__PROJECT_MAP_ACTION_REF__", PUBLIC_ACTION_REF);
   const viewerScript = await readFile(join(sourceDir, "public-viewer.js"), "utf8");
   const treeViewerScript = await readFile(join(sourceDir, "public-tree-viewer.js"), "utf8");
   const radialViewerScript = await readFile(join(sourceDir, "public-radial-viewer.js"), "utf8");
+  const treemapViewerScript = await readFile(join(sourceDir, "public-treemap-viewer.js"), "utf8");
   const treeRouterScript = await readFile(join(sourceDir, "public-tree-router.js"), "utf8");
   const treeNavScript = await readFile(join(sourceDir, "public-tree-nav.js"), "utf8");
   const viewerCss = await readFile(join(sourceDir, "public-viewer.css"), "utf8");
@@ -181,6 +148,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   const viewer = enhanceViewer(baseViewer, { mode: "graph" });
   const treeViewer = enhanceViewer(baseViewer, { mode: "tree" });
   const radialViewer = enhanceViewer(baseViewer, { mode: "radial" });
+  const treemapViewer = enhanceViewer(baseViewer, { mode: "treemap" });
 
   await writeFile(join(outputDir, ".nojekyll"), "\n");
   await writeFile(join(outputDir, "index.html"), home);
@@ -189,12 +157,14 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await writeFile(join(outputDir, "viewer.js"), viewerScript);
   await writeFile(join(outputDir, "tree-viewer.js"), treeViewerScript);
   await writeFile(join(outputDir, "radial-viewer.js"), radialViewerScript);
+  await writeFile(join(outputDir, "treemap-viewer.js"), treemapViewerScript);
   await writeFile(join(outputDir, "tree-router.js"), treeRouterScript);
   await writeFile(join(outputDir, "tree-nav.js"), treeNavScript);
   await writeFile(join(outputDir, "viewer.css"), viewerCss);
   await writeFile(join(outputDir, "u", "index.html"), viewer);
   await writeFile(join(outputDir, "tree", "index.html"), treeViewer);
   await writeFile(join(outputDir, "radial", "index.html"), radialViewer);
+  await writeFile(join(outputDir, "treemap", "index.html"), treemapViewer);
 }
 
 async function main() {
@@ -205,8 +175,5 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  });
+  main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
 }
