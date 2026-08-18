@@ -36,7 +36,7 @@ async function validateDynamicMarkup() {
     for (const className of ["original", "fork", "archived"]) if (!new RegExp(`class="${className}"`).test(html)) throw new Error(`${name} legend is missing ${className}`);
     if (!/<link rel="stylesheet" href="\.\.\/viewer\.css">/.test(html)) throw new Error(`${name} must load validated stylesheet`);
     if (/script-src[^;]*'unsafe-inline'/.test(html)) throw new Error(`${name} CSP must not allow unsafe-inline scripts`);
-    if (/style-src[^;]*'unsafe-inline'/.test(html)) throw new Error(`${name} CSP must not require inline styles`);
+    if (!/style-src[^;]*'self'[^;]*'unsafe-inline'/.test(html)) throw new Error(`${name} CSP must explicitly permit runtime inline positioning styles`);
   }
   const shared = pages[0][1];
   if (!/tree-router\.js/.test(shared) || !/viewer\.js/.test(shared)) throw new Error("Shared viewer must route dedicated styles");
