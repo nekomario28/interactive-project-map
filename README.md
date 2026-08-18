@@ -1,10 +1,13 @@
 # GitHub Project Galaxy
 
-Turn a GitHub user's public repositories into a project galaxy with:
+Turn a GitHub user's public repositories into a project map with:
 
 - a static SVG for GitHub profile READMEs
 - static `graph.json` owned by each user
-- a shared interactive map with pan, zoom, drag, and repository links
+- a shared interactive map with search, details, pan, zoom, drag, pinch, and repository links
+- **Galaxy** and **Obsidian-like** presentation presets
+- explicit colors for original repositories, forks, and archived repositories
+- label-aware spacing and collision culling so dense maps remain readable
 - a zero-backend public generator hosted on GitHub Pages
 - an optional Cloudflare Worker API for experiments/fallback use
 
@@ -29,6 +32,35 @@ GitHub profile README ──click──> github.io universal viewer
 
 Normal README views and normal interactive-map views do **not** call the GitHub REST API. The REST API is used only when the user's scheduled Action refreshes repository metadata.
 
+## Map styles
+
+The same `graph.json` can be viewed with either presentation preset.
+
+### Galaxy
+
+```text
+https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy
+```
+
+Galaxy places categories in semantic sectors around one owner-centered map and distributes repositories over multiple radial lanes. Lane capacity is based on estimated label width, and the interactive renderer performs a second screen-space label collision pass while drawing.
+
+### Obsidian-like
+
+```text
+https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=obsidian
+```
+
+Obsidian-like uses a neutral native-looking dark workspace and a deterministic force-directed layout based on center, repel, link, and collision forces. It is inspired by the interaction model of graph-view tools without copying Obsidian assets or product UI verbatim.
+
+Both styles preserve the same semantics:
+
+- **Original** repositories use the primary repository color.
+- **Forks** use a distinct fork color.
+- **Archived** repositories use a distinct archived color plus an outer dashed ring.
+- Owner, category, and relation edges have their own visual roles.
+
+The viewer also provides search, a repository details panel, drag, pan, wheel/pinch zoom, Fit/Reset controls, and keyboard shortcuts (`0`, `+`, `-`, `Enter`, `Esc`).
+
 ## Public URLs
 
 After GitHub Pages is enabled for this repository, the default project-site URL is:
@@ -37,10 +69,10 @@ After GitHub Pages is enabled for this repository, the default project-site URL 
 https://nekomario28.github.io/interactive-project-map/
 ```
 
-The universal viewer uses a query parameter rather than a dynamic server route:
+The universal viewer uses query parameters rather than a dynamic server route:
 
 ```text
-https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME
+https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy
 ```
 
 That works with static GitHub Pages hosting and avoids one generated viewer directory per user.
@@ -57,7 +89,8 @@ https://nekomario28.github.io/interactive-project-map/
 
 Enter your GitHub username and choose:
 
-- dark/light theme
+- dark/light static SVG theme
+- Galaxy or Obsidian-like map style
 - maximum repository count
 - whether forks are included
 - whether archived repositories are included
@@ -95,7 +128,7 @@ publish
 
 The custom `interactive-project-map` Action never runs with a write-capable token.
 
-The public generator currently pins the reusable Action to a reviewed full commit SHA rather than a mutable tag. This makes the generated workflow usable before a `v1` release exists and gives consumers an immutable dependency by default.
+The public generator pins the reusable Action to a reviewed full commit SHA rather than a mutable tag. This gives consumers an immutable dependency by default.
 
 ### 3. Run the workflow once
 
@@ -117,11 +150,11 @@ The generated snippet is equivalent to:
 
 ```html
 <p align="center">
-  <a href="https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME">
+  <a href="https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy">
     <img
       width="740"
       src="https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/galaxy.svg"
-      alt="USERNAME project galaxy"
+      alt="USERNAME project map"
     >
   </a>
 </p>
@@ -144,11 +177,11 @@ Before rendering, the viewer validates/sanitizes the static graph:
 - requested username must be a valid GitHub username
 - graph owner must match the requested username
 - repository nodes must point to `https://github.com/USERNAME/REPO`
-- repository names, labels, node counts, and edge counts are bounded
+- repository names, labels, topics, node counts, and edge counts are bounded
 - invalid repository URLs are discarded
 - edges referring to unknown nodes are discarded
 
-Repository clicks therefore remain constrained to the requested user's GitHub repositories.
+Repository links therefore remain constrained to the requested user's GitHub repositories.
 
 If `graph.json` is missing or invalid, the static viewer shows an installation/recovery message instead of silently consuming a shared GitHub API quota.
 
@@ -160,7 +193,8 @@ The root `action.yml` supports:
 |---|---:|---|
 | `github_token` | required | token used to read public repository metadata |
 | `username` | caller owner | GitHub user to visualize |
-| `theme` | `dark` | `dark` or `light` |
+| `theme` | `dark` | static SVG theme: `dark` or `light` |
+| `style` | `galaxy` | `galaxy` or `obsidian` |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
@@ -184,6 +218,9 @@ The Pages workflow builds only static files:
 site/
 ├── .nojekyll
 ├── index.html
+├── app.js
+├── viewer.js
+├── viewer.css
 └── u/
     └── index.html
 ```
@@ -242,13 +279,17 @@ Verification includes:
 - Wrangler Worker dry-run
 - Node 24 Action syntax checks
 - Pages generator/viewer syntax checks
-- static Pages build tests
+- HTML-Validate on emitted HTML
+- ESLint on emitted browser JavaScript
+- Stylelint on emitted CSS
+- actionlint on repository workflows and the workflow generated by the browser installer
+- dense SVG label-overlap tests for Galaxy and Obsidian-like styles
 - repository grouping/query/pagination tests
 - static Action generation tests
 - install-workflow permission tests
 - static graph validation tests
 
-The repository CI also invokes the local `action.yml` with `contents:read` and verifies that a real SVG and graph JSON are generated.
+The repository CI also invokes the local `action.yml` with `contents:read`, requests the Obsidian-like preset, and verifies that a real styled SVG and graph JSON are generated.
 
 ## License
 
