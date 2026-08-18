@@ -6,7 +6,75 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { renderPagesHome, renderPagesViewer } from "../scripts/pages-app.mjs";
 import { buildPublicPages, PUBLIC_ACTION_REF } from "../scripts/build-public-pages.mjs";
-const styles=["radial","galaxy","obsidian","tree","treemap","timeline"];
-test("Pages generator source retains distributed static installation URLs and isolated permissions",()=>{const html=renderPagesHome();assert.match(html,/raw\.githubusercontent\.com/);assert.match(html,/HEAD\/project-map/);assert.match(html,/new URL\('u\/'/);assert.match(html,/nekomario28\/interactive-project-map@v1/);assert.match(html,/contents: read/);assert.match(html,/contents: write/);assert.match(html,/actions\/upload-artifact@/);assert.doesNotMatch(html,/api\.github\.com/);});
-test("legacy viewer render source remains static-only before public shell replacement",()=>{const html=renderPagesViewer();assert.match(html,/raw\.githubusercontent\.com/);assert.match(html,/HEAD\/project-map\/graph\.json/);assert.doesNotMatch(html,/\/api\/graph/);assert.doesNotMatch(html,/api\.github\.com/);});
-test("public Pages build emits six map presets with visual examples",async()=>{const dir=await mkdtemp(join(tmpdir(),"project-map-pages-"));try{await buildPublicPages(dir);const read=async(name)=>readFile(join(dir,name),"utf8"),home=await read("index.html"),viewer=await read("u/index.html"),radial=await read("radial/index.html"),tree=await read("tree/index.html"),treemap=await read("treemap/index.html"),timeline=await read("timeline/index.html"),appJs=await read("app.js"),viewerJs=await read("viewer.js"),radialJs=await read("radial-viewer.js"),treeJs=await read("tree-viewer.js"),treemapJs=await read("treemap-viewer.js"),timelineJs=await read("timeline-viewer.js"),routerJs=await read("tree-router.js"),navJs=await read("tree-nav.js"),viewerCss=await read("viewer.css"),presetCss=await read("presets.css"),noJekyll=await read(".nojekyll");assert.match(home,/Create your map/);assert.match(home,/Radial Tree \(Classic\)/);assert.match(home,/>Timeline</);for(const style of styles)assert.match(home,new RegExp(`data-style-preset="${style}"`));for(const html of[viewer,radial,tree,treemap,timeline])for(const style of styles)assert.match(html,new RegExp(`value="${style}"`));assert.match(viewer,/tree-router\.js/);assert.match(radial,/data-map-style="radial"/);assert.match(radial,/tree-nav\.js/);assert.match(tree,/data-map-style="tree"/);assert.match(tree,/tree-nav\.js/);assert.match(treemap,/data-map-style="treemap"/);assert.match(treemap,/tree-nav\.js/);assert.match(timeline,/data-map-style="timeline"/);assert.match(timeline,/value="timeline" selected/);assert.match(timeline,/tree-nav\.js/);assert.match(timeline,/timeline-viewer\.js/);assert.match(appJs,new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));assert.match(appJs,/STYLE_VALUES=new Set\(\['radial','galaxy','obsidian','tree','treemap','timeline'\]\)/);assert.match(appJs,/v\.style==='timeline'\?'timeline\/'/);assert.doesNotMatch(appJs,/__PROJECT_MAP_ACTION_REF__/);assert.match(viewerJs,/buildGalaxyLayout/);assert.match(radialJs,/buildRadialLayout/);assert.match(treeJs,/buildTreeLayout/);assert.match(treemapJs,/Project treemap/);assert.match(timelineJs,/Project timeline/);assert.match(timelineJs,/createdAt/);assert.match(timelineJs,/raw\.githubusercontent\.com/);assert.match(routerJs,/timeline/);assert.match(navJs,/timeline/);for(const code of[viewerJs,radialJs,treeJs,treemapJs,timelineJs])assert.doesNotMatch(code,/\/api\/graph|api\.github\.com/);assert.match(viewerCss,/--original:/);assert.match(presetCss,/\.preview-tick/);assert.equal(noJekyll,"\n");for(const name of["app.js","viewer.js","radial-viewer.js","tree-viewer.js","treemap-viewer.js","timeline-viewer.js","tree-router.js","tree-nav.js"]){const script=join(dir,name),checked=spawnSync(process.execPath,["--check",script],{encoding:"utf8"});assert.equal(checked.status,0,`${script} failed syntax check:\n${checked.stderr}`);}}finally{await rm(dir,{recursive:true,force:true});}});
+
+const styles = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster"];
+const dedicated = ["radial", "tree", "treemap", "timeline", "cluster"];
+
+test("Pages generator source retains distributed static installation URLs and isolated permissions", () => {
+  const html = renderPagesHome();
+  assert.match(html, /raw\.githubusercontent\.com/);
+  assert.match(html, /HEAD\/project-map/);
+  assert.match(html, /new URL\('u\/'/);
+  assert.match(html, /nekomario28\/interactive-project-map@v1/);
+  assert.match(html, /contents: read/);
+  assert.match(html, /contents: write/);
+  assert.match(html, /actions\/upload-artifact@/);
+  assert.doesNotMatch(html, /api\.github\.com/);
+});
+
+test("legacy viewer render source remains static-only before public shell replacement", () => {
+  const html = renderPagesViewer();
+  assert.match(html, /raw\.githubusercontent\.com/);
+  assert.match(html, /HEAD\/project-map\/graph\.json/);
+  assert.doesNotMatch(html, /\/api\/graph/);
+  assert.doesNotMatch(html, /api\.github\.com/);
+});
+
+test("public Pages build emits seven map presets with visual examples", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "project-map-pages-"));
+  try {
+    await buildPublicPages(dir);
+    const read = (name) => readFile(join(dir, name), "utf8");
+    const home = await read("index.html");
+    const shared = await read("u/index.html");
+    const appJs = await read("app.js");
+    const routerJs = await read("tree-router.js");
+    const navJs = await read("tree-nav.js");
+    const presetCss = await read("presets.css");
+    const noJekyll = await read(".nojekyll");
+
+    assert.match(home, /Radial Tree \(Classic\)/);
+    assert.match(home, />Cluster \/ Bubble</);
+    for (const style of styles) assert.match(home, new RegExp(`data-style-preset="${style}"`));
+    for (const style of styles) assert.match(shared, new RegExp(`value="${style}"`));
+    assert.match(shared, /tree-router\.js/);
+    assert.match(shared, /viewer\.js/);
+
+    for (const style of dedicated) {
+      const html = await read(`${style}/index.html`);
+      const script = await read(`${style}-viewer.js`);
+      assert.match(html, new RegExp(`data-map-style="${style}"`));
+      assert.match(html, new RegExp(`value="${style}" selected`));
+      assert.match(html, /tree-nav\.js/);
+      assert.match(html, new RegExp(`${style}-viewer\\.js`));
+      assert.match(script, /raw\.githubusercontent\.com/);
+      assert.doesNotMatch(script, /\/api\/graph|api\.github\.com/);
+    }
+
+    assert.match(appJs, new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));
+    assert.match(appJs, /STYLE_VALUES=new Set\(\['radial','galaxy','obsidian','tree','treemap','timeline','cluster'\]\)/);
+    assert.match(appJs, /DEDICATED|dedicated/);
+    assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/);
+    assert.match(routerJs, /cluster/);
+    assert.match(navJs, /cluster/);
+    assert.match(presetCss, /\.preview-cluster/);
+    assert.equal(noJekyll, "\n");
+
+    for (const name of ["app.js", "viewer.js", ...dedicated.map((style) => `${style}-viewer.js`), "tree-router.js", "tree-nav.js"]) {
+      const checked = spawnSync(process.execPath, ["--check", join(dir, name)], { encoding: "utf8" });
+      assert.equal(checked.status, 0, `${name} failed syntax check:\n${checked.stderr}`);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
