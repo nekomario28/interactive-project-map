@@ -1,5 +1,6 @@
+import { renderHome } from "./home";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
-import { renderHome, renderViewer } from "./html";
+import { renderViewer } from "./html";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
