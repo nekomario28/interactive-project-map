@@ -3,6 +3,32 @@
   "name": "github-project-galaxy-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-18",
+  "ratelimits": [
+    {
+      "name": "API_RATE_LIMITER",
+      "namespace_id": "284716501",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
+    },
+    {
+      "name": "UPSTREAM_RATE_LIMITER",
+      "namespace_id": "284716502",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    },
+    {
+      "name": "GLOBAL_UPSTREAM_RATE_LIMITER",
+      "namespace_id": "284716503",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
   "observability": {
     "enabled": true
   }

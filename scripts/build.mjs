@@ -93,7 +93,7 @@ const height = boundedInt(config.height, 420, 260, 1000);
 
 for (const username of usernames) {
   console.log(`Generating project map for ${username}...`);
-  const repos = await fetchPublicRepos(username, process.env.GITHUB_TOKEN, maxRepos);
+  const repos = await fetchPublicRepos(username, process.env.GITHUB_TOKEN, maxRepos, { includeForks, includeArchived });
   const graph = buildGraph(username, repos, includeForks, includeArchived);
   const apiDir = join(out, "api", "users", username);
   const viewerDir = join(out, "u", username);

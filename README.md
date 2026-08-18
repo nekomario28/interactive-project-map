@@ -1,17 +1,93 @@
-# GitHub Project Galaxy API
+# GitHub Project Galaxy
 
 Turn a GitHub user's public repositories into a living project galaxy with:
 
-- an embeddable SVG preview
+- an embeddable SVG preview for GitHub README files
 - structured graph JSON
 - an interactive map with pan, zoom, drag, and repository links
+- a zero-setup hosted generator that creates copy-ready embed code from a username
 
-This repository supports two deployment modes:
+## Recommended: one hosted service
 
-1. **GitHub Actions + GitHub Pages** — GitHub-only static generation, with no external server required.
-2. **Cloudflare Worker** — the existing request-time API for arbitrary usernames.
+The Cloudflare Worker is the recommended public deployment. Deploy it once and any user can generate a project map without forking this repository, enabling GitHub Pages, installing npm packages, or providing their own GitHub token.
 
-## GitHub Actions + GitHub Pages
+After deployment, open the Worker root URL and enter a public GitHub username. The generator provides:
+
+- a live SVG preview
+- an interactive map URL
+- a copy-ready HTML snippet for a GitHub profile README
+- a Markdown embed
+- direct SVG and graph JSON URLs
+
+Example public endpoints:
+
+```text
+GET /api/galaxy.svg?username=USERNAME
+GET /api/graph?username=USERNAME
+GET /u/USERNAME
+```
+
+A README can use the hosted service directly:
+
+```html
+<p align="center">
+  <a href="https://YOUR_DOMAIN/u/YOUR_USERNAME">
+    <img
+      width="740"
+      src="https://YOUR_DOMAIN/api/galaxy.svg?username=YOUR_USERNAME&amp;theme=dark"
+      alt="YOUR_USERNAME project galaxy"
+    >
+  </a>
+</p>
+```
+
+### Hosted-service safeguards
+
+The public Worker does not expose its GitHub token to clients. Repository data is fetched server-side.
+
+To avoid turning every image request into a GitHub API request, normalized graph data is cached for 15 minutes using the Cloudflare Workers Cache API. The graph cache key contains only:
+
+```text
+username
+max_repos
+forks
+archived
+```
+
+SVG-only options such as `theme`, `width`, and `height` reuse the same graph cache entry.
+
+The Worker also configures three Cloudflare Rate Limiting bindings:
+
+- `API_RATE_LIMITER` — limits total graph/SVG generation requests per client IP
+- `UPSTREAM_RATE_LIMITER` — limits uncached GitHub lookups per client IP
+- `GLOBAL_UPSTREAM_RATE_LIMITER` — places a coarse per-location ceiling on GitHub upstream lookups
+
+Rate-limit bindings are intentionally optional in the TypeScript environment so local/unit tooling can run without them, while the supplied `wrangler.jsonc` enables them for normal deployment.
+
+> Cloudflare's Cache API cache is data-center-local rather than globally replicated. This is a low-setup v1 protection layer, not a globally consistent database. If traffic grows substantially, move repository metadata caching to a shared storage layer such as Workers KV or a Durable Object.
+
+### Deploy the hosted service
+
+Use Node.js 22.18 or newer (the GitHub workflows use Node.js 24).
+
+```bash
+npm install
+npm run verify
+npx wrangler login
+npm run deploy
+```
+
+For production use, configure a GitHub token as a Worker secret:
+
+```bash
+npx wrangler secret put GITHUB_TOKEN
+```
+
+The service also works without a token for light public-data use, but GitHub's unauthenticated REST quota is much lower.
+
+## Optional: self-host with GitHub Actions + GitHub Pages
+
+GitHub Pages remains available for users who prefer a static copy under their own account. It is deliberately **opt-in** so forks and hosted-service-only deployments do not get failing Pages workflows when Pages is not enabled.
 
 The workflow in `.github/workflows/deploy-pages.yml` fetches repository metadata, builds the graph, renders dark/light SVG previews, generates the interactive viewer, and deploys the result to GitHub Pages.
 
@@ -28,7 +104,7 @@ site/u/<username>/index.html
 GitHub Pages
 ```
 
-GitHub Pages is static hosting, so these API files are generated when the workflow runs rather than at request time.
+GitHub Pages is static hosting, so these files are generated when the workflow runs rather than at request time.
 
 ### Configure users
 
@@ -47,76 +123,26 @@ Edit `config/project-map.json`:
 
 `@owner` resolves to the repository owner from `GITHUB_REPOSITORY_OWNER`, so forks can work without changing the config.
 
-You can also publish explicit users:
-
-```json
-{
-  "usernames": ["nekomario28", "syun88"],
-  "maxRepos": 100,
-  "includeForks": true,
-  "includeArchived": false,
-  "width": 740,
-  "height": 420
-}
-```
-
 ### Enable Pages
 
-Open:
+For the static Pages mode only:
 
-**Settings → Pages → Build and deployment → Source → GitHub Actions**
+1. Open **Settings → Pages → Build and deployment → Source** and select **GitHub Actions**.
+2. Open **Settings → Secrets and variables → Actions → Variables**.
+3. Create the repository variable `ENABLE_GITHUB_PAGES` with the value `true`.
+4. Run **Actions → Build and deploy project galaxy → Run workflow**.
 
-Then run:
+Without `ENABLE_GITHUB_PAGES=true`, the Pages build job is intentionally skipped. This keeps the hosted Worker usable without any Pages setup.
 
-**Actions → Build and deploy project galaxy → Run workflow**
+The workflow also refreshes the generated map twice per day while Pages is enabled.
 
-The workflow also refreshes the generated map twice per day.
+### GitHub Actions token
 
-### Published URLs
-
-For a repository named `interactive-project-map` owned by `USERNAME`:
-
-```text
-https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/graph.json
-https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/galaxy-dark.svg
-https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/galaxy-light.svg
-https://USERNAME.github.io/interactive-project-map/u/USERNAME/
-```
-
-### Profile README embed
-
-```html
-<h2 align="center">Interactive Project Map</h2>
-
-<p align="center">
-  <sub>Public projects arranged as a living galaxy.</sub>
-</p>
-
-<p align="center">
-  <a href="https://USERNAME.github.io/interactive-project-map/u/USERNAME/">
-    <img
-      width="740"
-      src="https://USERNAME.github.io/interactive-project-map/api/users/USERNAME/galaxy-dark.svg"
-      alt="Galaxy map of public GitHub projects"
-    >
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://USERNAME.github.io/interactive-project-map/u/USERNAME/"><strong>Explore the live map ↗</strong></a><br>
-  <sub>Select projects · drag nodes · pan · zoom</sub>
-</p>
-```
-
-### GitHub token
-
-The workflow uses the built-in `github.token` by default. If a separate token is needed, create a repository Actions secret named:
+The Pages workflow uses the built-in `github.token` by default. If a separate token is needed, create a repository Actions secret named:
 
 ```text
 PROJECT_MAP_GITHUB_TOKEN
 ```
-
-The workflow automatically prefers that secret when present.
 
 ### Local Pages build
 
@@ -127,35 +153,24 @@ GITHUB_REPOSITORY_OWNER=nekomario28 npm run build:pages
 
 Output is written to `site/`.
 
-## Cloudflare Worker
+## Query parameters
 
-The request-time API remains available:
+`GET /api/graph` supports:
 
-```bash
-npm install
-npm run dev
-```
+| Parameter | Default | Range / values |
+|---|---:|---|
+| `username` | required | valid public GitHub username |
+| `max_repos` | `100` | `1`–`300` |
+| `forks` | `true` | boolean |
+| `archived` | `false` | boolean |
 
-Endpoints:
+`GET /api/galaxy.svg` supports the same graph parameters plus:
 
-```text
-GET /api/galaxy.svg?username=USERNAME
-GET /api/graph?username=USERNAME
-GET /u/USERNAME
-```
-
-Deploy with:
-
-```bash
-npx wrangler login
-npm run deploy
-```
-
-For production Worker usage, configure a GitHub token with:
-
-```bash
-npx wrangler secret put GITHUB_TOKEN
-```
+| Parameter | Default | Range / values |
+|---|---:|---|
+| `theme` | `dark` | `dark`, `light` |
+| `width` | `740` | `420`–`1600` |
+| `height` | `420` | `260`–`1000` |
 
 ## Repository grouping
 
@@ -168,7 +183,15 @@ Repositories are grouped using deterministic rules based on repository names, de
 - Web / Apps
 - Coursework / Learning
 
-Repositories that do not match a semantic group fall back to a primary-language group such as `Python Projects` or `Rust Projects`.
+Repositories that do not match a semantic group fall back to a primary-language group such as `Python Projects`, `Rust Projects`, `C++ Projects`, or `C# Projects`.
+
+## Verification
+
+```bash
+npm run verify
+```
+
+This runs TypeScript type checking, a Wrangler Worker dry-run (including binding/config validation), Pages script syntax validation, and regression tests.
 
 ## License
 

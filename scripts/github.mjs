@@ -1,8 +1,10 @@
 const API = "https://api.github.com";
 const MAX_PAGES = 5;
 
-export async function fetchPublicRepos(username, token, maxRepos) {
+export async function fetchPublicRepos(username, token, maxRepos, options = {}) {
   const repos = [];
+  const includeForks = options.includeForks ?? true;
+  const includeArchived = options.includeArchived ?? true;
   const headers = {
     Accept: "application/vnd.github+json",
     "User-Agent": "interactive-project-map-pages",
@@ -20,7 +22,12 @@ export async function fetchPublicRepos(username, token, maxRepos) {
     }
     if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
     const batch = await response.json();
-    repos.push(...batch);
+    for (const repo of batch) {
+      if (!includeForks && repo.fork) continue;
+      if (!includeArchived && repo.archived) continue;
+      repos.push(repo);
+      if (repos.length >= maxRepos) break;
+    }
     if (batch.length < 100) break;
   }
 
