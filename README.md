@@ -34,7 +34,7 @@ A README can use the hosted service directly:
   <a href="https://YOUR_DOMAIN/u/YOUR_USERNAME">
     <img
       width="740"
-      src="https://YOUR_DOMAIN/api/galaxy.svg?username=YOUR_USERNAME&theme=dark"
+      src="https://YOUR_DOMAIN/api/galaxy.svg?username=YOUR_USERNAME&amp;theme=dark"
       alt="YOUR_USERNAME project galaxy"
     >
   </a>
@@ -67,6 +67,8 @@ Rate-limit bindings are intentionally optional in the TypeScript environment so 
 > Cloudflare's Cache API cache is data-center-local rather than globally replicated. This is a low-setup v1 protection layer, not a globally consistent database. If traffic grows substantially, move repository metadata caching to a shared storage layer such as Workers KV or a Durable Object.
 
 ### Deploy the hosted service
+
+Use Node.js 22.18 or newer (the GitHub workflows use Node.js 24).
 
 ```bash
 npm install
@@ -188,7 +190,7 @@ Repositories that do not match a semantic group fall back to a primary-language 
 npm run verify
 ```
 
-This runs TypeScript type checking, Pages script syntax validation, and regression tests.
+This runs TypeScript type checking, a Wrangler Worker dry-run (including binding/config validation), Pages script syntax validation, and regression tests.
 
 ## License
 
