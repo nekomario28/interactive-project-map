@@ -7,6 +7,7 @@ import type { Env, GalaxyGraph } from "./types";
 export { normalizeUsername } from "./hosted-options";
 
 const GRAPH_CACHE_SECONDS = 900;
+const inflightGraphs = new Map<string, Promise<GalaxyGraph>>();
 
 type CacheStorageWithDefault = CacheStorage & { default: Cache };
 
@@ -14,7 +15,7 @@ export interface WorkerContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 
-export type GraphCacheStatus = "HIT" | "MISS";
+export type GraphCacheStatus = "HIT" | "MISS" | "COALESCED";
 
 export function graphOptionsFromUrl(url: URL): GraphRequestOptions {
   return {
@@ -61,18 +62,33 @@ export async function getGraph(
     };
   }
 
-  await enforceLimiter(env.UPSTREAM_RATE_LIMITER, `client:${address}`, "Too many uncached GitHub lookups");
-  await enforceLimiter(env.GLOBAL_UPSTREAM_RATE_LIMITER, "github-upstream", "Hosted service is busy. Try again shortly.");
+  const inflightKey = cacheKey.url;
+  const existing = inflightGraphs.get(inflightKey);
+  if (existing) {
+    return { graph: await existing, cacheStatus: "COALESCED" };
+  }
 
-  const repos = await fetchPublicRepos(options.username, env, options.maxRepos, {
-    includeForks: options.includeForks,
-    includeArchived: options.includeArchived,
-  });
-  const graph = buildGraph(options.username, repos, options.includeForks, options.includeArchived);
-  const cacheResponse = Response.json(graph, {
-    headers: { "Cache-Control": `public, max-age=${GRAPH_CACHE_SECONDS}` },
-  });
+  const loadGraph = (async () => {
+    await enforceLimiter(env.UPSTREAM_RATE_LIMITER, `client:${address}`, "Too many uncached GitHub lookups");
+    await enforceLimiter(env.GLOBAL_UPSTREAM_RATE_LIMITER, "github-upstream", "Hosted service is busy. Try again shortly.");
 
-  ctx.waitUntil(cache.put(cacheKey, cacheResponse));
-  return { graph, cacheStatus: "MISS" };
+    const repos = await fetchPublicRepos(options.username, env, options.maxRepos, {
+      includeForks: options.includeForks,
+      includeArchived: options.includeArchived,
+    });
+    const graph = buildGraph(options.username, repos, options.includeForks, options.includeArchived);
+    const cacheResponse = Response.json(graph, {
+      headers: { "Cache-Control": `public, max-age=${GRAPH_CACHE_SECONDS}` },
+    });
+
+    ctx.waitUntil(cache.put(cacheKey, cacheResponse));
+    return graph;
+  })();
+
+  inflightGraphs.set(inflightKey, loadGraph);
+  try {
+    return { graph: await loadGraph, cacheStatus: "MISS" };
+  } finally {
+    if (inflightGraphs.get(inflightKey) === loadGraph) inflightGraphs.delete(inflightKey);
+  }
 }
