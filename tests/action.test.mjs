@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { actionConfigFromEnv, generateStaticMap, safeOutputDir } from "../scripts/action.mjs";
@@ -82,6 +82,25 @@ test("static action writes graph.json and galaxy.svg without needing write acces
     assert.equal(graph.owner, "example");
     assert.equal(graph.repositoryCount, 2);
     assert.match(svg, /<svg/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("unchanged repository data preserves generatedAt so scheduled runs are commit-free", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "project-map-stable-"));
+  try {
+    const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_OUTPUT_DIR: "project-map" });
+    const fetchRepos = async () => [repo(1, "alpha")];
+    const first = await generateStaticMap(config, { cwd, token: "read-token", fetchRepos });
+    const graphPath = join(cwd, first.graphPath);
+    const previous = JSON.parse(await readFile(graphPath, "utf8"));
+    previous.generatedAt = "2026-01-01T00:00:00.000Z";
+    await writeFile(graphPath, JSON.stringify(previous, null, 2) + "\n");
+
+    await generateStaticMap(config, { cwd, token: "read-token", fetchRepos });
+    const second = JSON.parse(await readFile(graphPath, "utf8"));
+    assert.equal(second.generatedAt, "2026-01-01T00:00:00.000Z");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
