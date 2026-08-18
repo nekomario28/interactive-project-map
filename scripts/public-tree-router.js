@@ -1,23 +1,23 @@
 "use strict";
 
-const treeStyleSelect = document.getElementById("style");
-const treeQuery = new URL(location.href).searchParams;
+const styleSelectRouter = document.getElementById("style");
+const styleQuery = new URL(location.href).searchParams;
 
-function treeViewerUrl(username) {
-  const url = new URL("../tree/", location.href);
+function dedicatedViewerUrl(style, username) {
+  const url = new URL(style === "tree" ? "../tree/" : "../radial/", location.href);
   if (username) url.searchParams.set("username", username);
-  url.searchParams.set("style", "tree");
+  url.searchParams.set("style", style);
   return url;
 }
 
-if (treeQuery.get("style") === "tree") {
-  location.replace(treeViewerUrl(treeQuery.get("username")).toString());
+if (["tree", "radial"].includes(styleQuery.get("style"))) {
+  location.replace(dedicatedViewerUrl(styleQuery.get("style"), styleQuery.get("username")).toString());
 }
 
-if (treeStyleSelect) {
-  treeStyleSelect.addEventListener("change", (event) => {
-    if (treeStyleSelect.value !== "tree") return;
+if (styleSelectRouter) {
+  styleSelectRouter.addEventListener("change", (event) => {
+    if (!["tree", "radial"].includes(styleSelectRouter.value)) return;
     event.stopImmediatePropagation();
-    location.assign(treeViewerUrl(treeQuery.get("username")).toString());
+    location.assign(dedicatedViewerUrl(styleSelectRouter.value, styleQuery.get("username")).toString());
   });
 }
