@@ -1,4 +1,4 @@
-import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, posix, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fetchPublicRepos } from "./github.mjs";
@@ -50,6 +50,27 @@ export function actionConfigFromEnv(env = process.env) {
   };
 }
 
+function comparableGraph(graph) {
+  return JSON.stringify({ ...graph, generatedAt: "" });
+}
+
+async function preserveGeneratedAtWhenUnchanged(graphPath, graph) {
+  try {
+    const previous = JSON.parse(await readFile(graphPath, "utf8"));
+    if (
+      previous &&
+      typeof previous === "object" &&
+      typeof previous.generatedAt === "string" &&
+      Number.isFinite(Date.parse(previous.generatedAt)) &&
+      comparableGraph(previous) === comparableGraph(graph)
+    ) {
+      graph.generatedAt = previous.generatedAt;
+    }
+  } catch {
+    // First run or an invalid previous file: write a fresh graph.
+  }
+}
+
 export async function generateStaticMap(config, options = {}) {
   const cwd = options.cwd ?? process.cwd();
   const fetchRepos = options.fetchRepos ?? fetchPublicRepos;
@@ -65,7 +86,9 @@ export async function generateStaticMap(config, options = {}) {
   await mkdir(outputRoot, { recursive: true });
   const graphPath = posix.join(config.outputDir, "graph.json");
   const svgPath = posix.join(config.outputDir, "galaxy.svg");
-  await writeFile(resolve(cwd, graphPath), JSON.stringify(graph, null, 2) + "\n");
+  const absoluteGraphPath = resolve(cwd, graphPath);
+  await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, graph);
+  await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
   await writeFile(resolve(cwd, svgPath), renderGalaxySvg(graph, config.theme, config.width, config.height));
   return { graphPath, svgPath, graph };
 }
