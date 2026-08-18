@@ -23,9 +23,9 @@
     "build:pages:catalog": "node scripts/build.mjs"
   },
   "devDependencies": {
-    "eslint": "^10.8.0",
-    "html-validate": "^11.6.0",
-    "stylelint": "^17.14.1",
+    "eslint": "10.8.0",
+    "html-validate": "11.6.0",
+    "stylelint": "17.14.1",
     "typescript": "^7.0.2",
     "wrangler": "^4.118.0"
   }
