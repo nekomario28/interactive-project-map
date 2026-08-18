@@ -5,6 +5,7 @@ export default [
       ecmaVersion: "latest",
       sourceType: "script",
       globals: {
+        window: "readonly",
         document: "readonly",
         navigator: "readonly",
         location: "readonly",
