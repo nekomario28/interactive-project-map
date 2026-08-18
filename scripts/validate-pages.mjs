@@ -50,12 +50,19 @@ async function validateExternalCss(filePath) {
 async function validateDynamicMarkup() {
   const home = await readFile(join(siteDir, "index.html"), "utf8");
   const viewer = await readFile(join(siteDir, "u", "index.html"), "utf8");
+  const treeViewer = await readFile(join(siteDir, "tree", "index.html"), "utf8");
 
   if (!/<input id="username" type="text"(?:\s|>)/.test(home)) {
     throw new Error("Generator username input must declare type=text");
   }
-  if (!/<select id="mapStyle">[\s\S]*?value="galaxy"[\s\S]*?value="obsidian"/.test(home)) {
-    throw new Error("Generator must expose Galaxy and Obsidian-like style presets");
+  if (!/<select id="mapStyle">[\s\S]*?value="galaxy"[\s\S]*?value="obsidian"[\s\S]*?value="tree"/.test(home)) {
+    throw new Error("Generator must expose Galaxy, Obsidian-like and Tree style presets");
+  }
+  for (const style of ["galaxy", "obsidian", "tree"]) {
+    if (!new RegExp(`data-style-preset="${style}"`).test(home)) throw new Error(`Generator preset gallery is missing ${style}`);
+  }
+  if (!/<link rel="stylesheet" href="\.\/presets\.css">/.test(home)) {
+    throw new Error("Generator must load the preset gallery stylesheet");
   }
   if (!/<a id="openMap" class="button" href="\.\/u\/" target="_blank" rel="noopener">/.test(home)) {
     throw new Error("Generator interactive-map anchor must have a safe default href and rel=noopener");
@@ -66,23 +73,31 @@ async function validateDynamicMarkup() {
     throw new Error("Only the JS-populated preview image may omit src, and it must retain alt text");
   }
 
-  if (!/<select id="style">[\s\S]*?value="galaxy"[\s\S]*?value="obsidian"/.test(viewer)) {
-    throw new Error("Viewer must expose Galaxy and Obsidian-like presets");
-  }
-  for (const className of ["original", "fork", "archived"]) {
-    if (!new RegExp(`class="${className}"`).test(viewer)) throw new Error(`Viewer legend is missing ${className}`);
-  }
-  if (!/<link rel="stylesheet" href="\.\.\/viewer\.css">/.test(viewer)) {
-    throw new Error("Viewer must load the external validated stylesheet");
-  }
-
-  for (const [name, html] of [["generator", home], ["viewer", viewer]]) {
+  for (const [name, html] of [["viewer", viewer], ["tree viewer", treeViewer]]) {
+    if (!/<select id="style">[\s\S]*?value="galaxy"[\s\S]*?value="obsidian"[\s\S]*?value="tree"/.test(html)) {
+      throw new Error(`${name} must expose all three style presets`);
+    }
+    for (const className of ["original", "fork", "archived"]) {
+      if (!new RegExp(`class="${className}"`).test(html)) throw new Error(`${name} legend is missing ${className}`);
+    }
+    if (!/<link rel="stylesheet" href="\.\.\/viewer\.css">/.test(html)) {
+      throw new Error(`${name} must load the external validated stylesheet`);
+    }
     if (/script-src[^;]*'unsafe-inline'/.test(html)) {
       throw new Error(`${name} CSP must not allow unsafe-inline scripts`);
     }
+    if (/style-src[^;]*'unsafe-inline'/.test(html)) {
+      throw new Error(`${name} CSP must not require inline styles`);
+    }
   }
-  if (/style-src[^;]*'unsafe-inline'/.test(viewer)) {
-    throw new Error("viewer CSP must not require inline styles");
+  if (!/tree-router\.js/.test(viewer) || !/viewer\.js/.test(viewer)) {
+    throw new Error("Galaxy/Obsidian viewer must route the Tree selection before starting the graph viewer");
+  }
+  if (!/tree-viewer\.js/.test(treeViewer)) {
+    throw new Error("Tree viewer must load its hierarchical browser renderer");
+  }
+  if (/script-src[^;]*'unsafe-inline'/.test(home)) {
+    throw new Error("generator CSP must not allow unsafe-inline scripts");
   }
 }
 
@@ -95,7 +110,7 @@ function mockElement(id) {
     href: "",
     src: "",
     dataset: {},
-    classList: { add() {}, remove() {} },
+    classList: { add() {}, remove() {}, toggle() {} },
     addEventListener() {},
     select() {},
     setAttribute() {}
@@ -122,6 +137,7 @@ async function generateWorkflowFixture() {
     location: { href: "https://nekomario28.github.io/interactive-project-map/" },
     history: { replaceState() {} },
     URL,
+    Set,
     setTimeout() {},
     console
   };
@@ -129,15 +145,15 @@ async function generateWorkflowFixture() {
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
   const workflow = vm.runInContext(
-    "workflowFor({username:'nekomario28',theme:'dark',style:'galaxy',maxRepos:100,forks:true,archived:false})",
+    "workflowFor({username:'nekomario28',theme:'dark',style:'tree',maxRepos:100,forks:true,archived:false})",
     context
   );
 
   if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map@")) {
     throw new Error("Generated installer workflow is incomplete");
   }
-  if (!workflow.includes("style: galaxy")) {
-    throw new Error("Generated installer workflow must preserve the selected map style");
+  if (!workflow.includes("style: tree")) {
+    throw new Error("Generated installer workflow must preserve the Tree map style");
   }
   if (workflow.includes("__PROJECT_MAP_ACTION_REF__")) {
     throw new Error("Generated installer workflow still contains the Action ref placeholder");
@@ -150,5 +166,6 @@ async function generateWorkflowFixture() {
 await validateDynamicMarkup();
 await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateExternalCss(join(siteDir, "viewer.css"));
+await validateExternalCss(join(siteDir, "presets.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS, style presets and browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, all three style presets and browser installer runtime validated.");
