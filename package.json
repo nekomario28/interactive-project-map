@@ -4,6 +4,9 @@
   "private": true,
   "description": "Turn a GitHub user's public repositories into an embeddable galaxy map, JSON graph API, and interactive viewer.",
   "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
