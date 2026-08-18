@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
 // Immutable Action commit containing all ten static renderers and Action wiring.
-export const PUBLIC_ACTION_REF = "93e2a6835039c240f43e7f7a84c15bd87e6529d6";
+export const PUBLIC_ACTION_REF = "1f5112e164c314825edfc5b507afe9e138e09db2";
 
 const PRESETS = [
   { id: "radial", label: "Radial Tree", badge: "Classic", description: "Current classic: compact Owner → Category → Repository hierarchy around one center." },
