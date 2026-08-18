@@ -1,5 +1,7 @@
 node_modules/
 .wrangler/
+.tmp/
+site/
 .dev.vars
 .env
 .DS_Store
