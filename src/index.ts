@@ -62,17 +62,18 @@ export default {
       }
 
       if (url.pathname === "/api/graph") {
-        const { graph, cacheStatus } = await getGraph(request, env, ctx);
+        const { graph, cacheStatus, source } = await getGraph(request, env, ctx);
         return Response.json(graph, {
           headers: corsHeaders({
             "Cache-Control": "public, max-age=300, s-maxage=900",
             "X-Project-Map-Cache": cacheStatus,
+            "X-Project-Map-Source": source,
           }),
         });
       }
 
       if (url.pathname === "/api/galaxy.svg") {
-        const { graph, cacheStatus } = await getGraph(request, env, ctx);
+        const { graph, cacheStatus, source } = await getGraph(request, env, ctx);
         const theme = url.searchParams.get("theme") === "light" ? "light" : "dark";
         const width = intParam(url, "width", 740, 420, 1600);
         const height = intParam(url, "height", 420, 260, 1000);
@@ -82,6 +83,7 @@ export default {
             "Content-Type": "image/svg+xml; charset=utf-8",
             "Cache-Control": "public, max-age=300, s-maxage=900",
             "X-Project-Map-Cache": cacheStatus,
+            "X-Project-Map-Source": source,
             "X-Content-Type-Options": "nosniff",
           }),
         });
@@ -93,7 +95,7 @@ export default {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",
-            "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'",
             "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "no-referrer",
           },
