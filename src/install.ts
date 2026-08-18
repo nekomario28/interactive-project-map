@@ -25,10 +25,11 @@ export function installOptionsFromUrl(url: URL): InstallOptions {
 
 export function staticAssetUrls(origin: string, options: InstallOptions) {
   const owner = encodeURIComponent(options.username);
-  const rawBase = `https://raw.githubusercontent.com/${owner}/${owner}/main/project-map`;
+  const rawBase = `https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map`;
   const viewer = new URL(`/u/${owner}`, origin);
-  viewer.searchParams.set("repo", `${options.username}/${options.username}`);
-  viewer.searchParams.set("ref", "main");
+  viewer.searchParams.set("max_repos", String(options.maxRepos));
+  viewer.searchParams.set("forks", String(options.includeForks));
+  viewer.searchParams.set("archived", String(options.includeArchived));
   return {
     svg: `${rawBase}/galaxy.svg`,
     graph: `${rawBase}/graph.json`,
