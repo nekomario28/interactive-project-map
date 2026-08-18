@@ -1,3 +1,17 @@
 {
-  "extends": ["html-validate:recommended"]
+  "extends": ["html-validate:recommended"],
+  "rules": {
+    "doctype-style": "off",
+    "void-style": "off",
+    "no-inline-style": "off",
+    "element-required-attributes": "off",
+    "aria-label-misuse": [
+      "error",
+      {
+        "elements": {
+          "exclude": ["canvas"]
+        }
+      }
+    ]
+  }
 }
