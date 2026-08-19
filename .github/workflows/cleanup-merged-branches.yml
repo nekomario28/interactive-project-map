@@ -27,6 +27,7 @@ jobs:
             chore/pin-galaxy-systems-action
             chore/pin-squash-action
             chore/runtime-selection-cleanup
+            docs/semantic-classification-plan
             feat/galaxy-preset-family
             feat/galaxy-systems
             feat/github-pages-static-viewer
