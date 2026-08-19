@@ -105,12 +105,12 @@ test("Galaxy keeps normal-size repository labels visible while orbiting", async 
   expect(failures).toEqual([]);
 });
 
-test("Obsidian is stable at rest instead of starting a second visible simulation", async ({ page }) => {
+test("Obsidian is pre-settled and still at rest before interaction", async ({ page }) => {
   await installGraph(page);
   const failures = browserErrors(page);
   await page.goto("/u/?username=example&style=obsidian");
   await expect(page.locator("#status")).toBeHidden();
-  await expect(page.locator("#subtitle")).toContainText("stable at rest");
+  await expect(page.locator("#subtitle")).toContainText("settled at rest");
   await page.waitForTimeout(250);
 
   const before = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
@@ -121,7 +121,7 @@ test("Obsidian is stable at rest instead of starting a second visible simulation
   expect(failures).toEqual([]);
 });
 
-test("Obsidian drag reheats connected nodes and settles again", async ({ page }) => {
+test("Obsidian drag reheats the whole graph with no release anchor", async ({ page }) => {
   await installGraph(page);
   const failures = browserErrors(page);
   await page.goto("/u/?username=example&style=obsidian");
@@ -131,12 +131,14 @@ test("Obsidian drag reheats connected nodes and settles again", async ({ page })
   const before = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one");
     const neighbor = state.byId.get("group:robotics");
+    const distant = state.byId.get("repository:ai-three");
     const point = worldToScreen(dragged.x, dragged.y);
     const rect = document.getElementById("galaxy").getBoundingClientRect();
     return {
       screen: { x: rect.left + point.x, y: rect.top + point.y },
       dragged: { x: dragged.x, y: dragged.y },
       neighbor: { x: neighbor.x, y: neighbor.y },
+      distant: { x: distant.x, y: distant.y },
     };
   });
 
@@ -150,18 +152,18 @@ test("Obsidian drag reheats connected nodes and settles again", async ({ page })
   const after = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one");
     const neighbor = state.byId.get("group:robotics");
-    return { dragged: { x: dragged.x, y: dragged.y }, neighbor: { x: neighbor.x, y: neighbor.y } };
+    const distant = state.byId.get("repository:ai-three");
+    return {
+      dragged: { x: dragged.x, y: dragged.y },
+      neighbor: { x: neighbor.x, y: neighbor.y },
+      distant: { x: distant.x, y: distant.y },
+    };
   });
   expect(Math.hypot(after.dragged.x - before.dragged.x, after.dragged.y - before.dragged.y)).toBeGreaterThan(20);
   expect(Math.hypot(after.neighbor.x - before.neighbor.x, after.neighbor.y - before.neighbor.y)).toBeGreaterThan(1);
+  expect(Math.hypot(after.distant.x - before.distant.x, after.distant.y - before.distant.y)).toBeGreaterThan(0.05);
 
-  await page.waitForTimeout(900);
-  const settledA = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
-  await page.waitForTimeout(500);
-  const settledB = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
-  const residual = Math.max(...Object.keys(settledA).map((id) => Math.hypot(settledB[id].x - settledA[id].x, settledB[id].y - settledA[id].y)));
-  expect(residual).toBeLessThan(0.5);
-  await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-settled.png", fullPage: true });
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-global-reheat.png", fullPage: true });
   expect(failures).toEqual([]);
 });
 
