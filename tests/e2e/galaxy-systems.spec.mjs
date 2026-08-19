@@ -126,7 +126,10 @@ test("Galaxy Systems reveals repository names progressively as the user zooms in
   const far = await canvasLabelsAtZoom(page, 0.80);
   expect(far.mode).toBe("categories");
   expect(far.visible).toHaveLength(0);
-  for (const [, label] of groupDefs) expect(far.labels).toContain(label);
+  for (const [id, label] of groupDefs) {
+    const count = repositories.filter((repo) => repo[1] === id).length;
+    expect(far.labels).toContain(`${label} · ${count}`);
+  }
   for (const [name] of repositories) expect(far.labels).not.toContain(name);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-far.png", fullPage: true });
 
