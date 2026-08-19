@@ -18,10 +18,12 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   assert.equal(config.username, "octocat"); assert.equal(config.theme, "light"); assert.equal(config.style, "obsidian"); assert.equal(config.maxRepos, 300); assert.equal(config.includeForks, false); assert.equal(config.includeArchived, true); assert.equal(config.width, 420); assert.equal(config.height, 1000); assert.equal(config.outputDir, "project-map/custom");
 });
 
-test("action username and style preserve classic radial default while accepting all presets", () => {
+test("action accepts twelve visible presets and maps legacy galaxy to systems", () => {
   const fallback = actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "unknown" });
   assert.equal(fallback.username, "octocat"); assert.equal(fallback.style, "radial");
-  for (const style of ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]) assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: style }).style, style);
+  const visible = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+  for (const style of visible) assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: style }).style, style);
+  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "OctoCat", INPUT_STYLE: "galaxy" }).style, "galaxy-systems");
 });
 
 test("output directory rejects traversal and absolute paths", () => {
@@ -39,6 +41,20 @@ test("static action writes graph.json and tree SVG without needing write access"
     const graph = JSON.parse(await readFile(join(cwd, result.graphPath), "utf8")); const svg = await readFile(join(cwd, result.svgPath), "utf8");
     assert.equal(graph.owner, "example"); assert.equal(graph.repositoryCount, 2); assert.equal(graph.nodes.find((node) => node.type === "repository")?.createdAt, "2025-08-18T00:00:00Z");
     assert.match(svg, /Tree-style map/); assert.match(svg, />Original<\/text>/); assert.match(svg, />Fork<\/text>/); assert.match(svg, />Archived<\/text>/);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+test("static action dispatches all three Galaxy renderers", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "project-map-galaxy-family-"));
+  try {
+    const fetchRepos = async () => [repo(1, "alpha"), repo(2, "beta"), repo(3, "gamma")];
+    for (const [style, marker] of [["galaxy-classic", 'data-galaxy-preset="classic"'], ["galaxy-systems", 'data-galaxy-preset="systems"'], ["galaxy-hybrid", 'data-galaxy-preset="hybrid"']]) {
+      const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_STYLE: style, INPUT_OUTPUT_DIR: `project-map-${style}` });
+      const result = await generateStaticMap(config, { cwd, token: "read-token", fetchRepos });
+      const svg = await readFile(join(cwd, result.svgPath), "utf8");
+      assert.match(svg, new RegExp(marker));
+      assert.equal(result.graph.repositoryCount, 3);
+    }
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 

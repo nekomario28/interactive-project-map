@@ -7,7 +7,7 @@ import { PUBLIC_ACTION_REF } from "./postprocess-public-pages.mjs";
 const root = process.cwd();
 const siteDir = join(root, "site");
 const validatorDir = join(root, ".tmp", "validator");
-const STYLES = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+const STYLES = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const DEDICATED = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const cssRules = {
   "at-rule-no-unknown": true, "block-no-empty": true, "color-no-invalid-hex": true,
@@ -41,6 +41,10 @@ async function validateDynamicMarkup() {
   }
   const shared = pages[0][1];
   if (!/tree-router\.js/.test(shared) || !/viewer\.js/.test(shared)) throw new Error("Shared viewer must route dedicated styles");
+  const runtimeOrder = ["galaxy-common.js", "galaxy-classic-runtime.js", "galaxy-systems-runtime.js", "galaxy-hybrid-runtime.js", "obsidian-runtime.js", "galaxy-edge-policy.js", "interaction-polish.js"];
+  let cursor = -1;
+  for (const runtime of runtimeOrder) { const next = shared.indexOf(runtime, cursor + 1); if (next < 0) throw new Error(`Shared viewer is missing ${runtime}`); cursor = next; }
+  if (/shared-runtime\.js/.test(shared)) throw new Error("Shared viewer must not load the removed monolithic Galaxy runtime");
   for (const style of DEDICATED) {
     const html = pages.find(([name]) => name === `${style} viewer`)[1];
     if (!new RegExp(`${style}-viewer\\.js`).test(html) || !/tree-nav\.js/.test(html)) throw new Error(`${style} viewer must load its renderer and dedicated nav`);
@@ -55,9 +59,9 @@ async function generateWorkflowFixture() {
   const context = { document: { getElementById(id) { if (!elements.has(id)) elements.set(id, mockElement(id)); return elements.get(id); }, querySelectorAll() { return []; }, execCommand() { return true; } }, navigator: { clipboard: { async writeText() {} } }, location: { href: "https://nekomario28.github.io/interactive-project-map/" }, history: { replaceState() {} }, URL, Set, setTimeout() {}, console };
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
-  const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'sankey',maxRepos:100,forks:true,archived:false})", context);
+  const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'galaxy-hybrid',maxRepos:100,forks:true,archived:false})", context);
   if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes(`uses: nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`)) throw new Error("Generated installer workflow does not use the finalized immutable Action ref");
-  if (!workflow.includes("style: sankey")) throw new Error("Generated installer workflow must preserve Sankey style");
+  if (!workflow.includes("style: galaxy-hybrid")) throw new Error("Generated installer workflow must preserve Galaxy Hybrid style");
   if (workflow.includes("__PROJECT_MAP_ACTION_REF__")) throw new Error("Generated installer workflow still contains placeholder");
   await mkdir(validatorDir, { recursive: true });
   await writeFile(join(validatorDir, "generated-project-map.yml"), `${workflow}\n`);
@@ -67,4 +71,4 @@ await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateExternalCss(join(siteDir, "viewer.css"));
 await validateExternalCss(join(siteDir, "presets.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS, ten style presets and browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, twelve style presets and browser installer runtime validated.");

@@ -5,7 +5,7 @@ Turn a GitHub user's public repositories into a reusable project map with:
 - a static SVG for GitHub profile READMEs
 - user-owned static `project-map/graph.json`
 - interactive GitHub Pages viewers with search, details, pan, zoom, pinch, and repository links
-- **10 visual presets**: Radial Tree, Galaxy, Obsidian-like, Tree, Treemap, Timeline, Cluster / Bubble, Sunburst, Matrix / Heatmap, and Sankey
+- **12 visual presets**: Radial Tree, Galaxy Classic, Galaxy Systems, Galaxy Hybrid, Obsidian-like, Tree, Treemap, Timeline, Cluster / Bubble, Sunburst, Matrix / Heatmap, and Sankey
 - visual example cards in the public generator before setup generation
 - explicit Original / Fork / Archived semantics
 - a static-first architecture with no shared GitHub REST request during normal viewing
@@ -31,12 +31,14 @@ The REST API is used when the user's Action refreshes repository metadata. READM
 
 ## Presets
 
-`radial` remains the default for backward compatibility. Existing workflows that omit `style` therefore retain the classic presentation.
+`radial` remains the default for workflows that omit `style`. The former explicit `style=galaxy` value is retained as a compatibility alias and normalizes to `galaxy-systems`; it is intentionally not shown as a thirteenth preset.
 
 | Style | Viewer | Best use |
 |---|---|---|
 | `radial` | `/radial/?username=USER&style=radial` | compact profile README / general default |
-| `galaxy` | `/u/?username=USER&style=galaxy` | spatial portfolio exploration |
+| `galaxy-classic` | `/u/?username=USER&style=galaxy-classic` | original one-galaxy atmosphere and global motion |
+| `galaxy-systems` | `/u/?username=USER&style=galaxy-systems` | clearest category → repository spatial membership |
+| `galaxy-hybrid` | `/u/?username=USER&style=galaxy-hybrid` | spiral-galaxy atmosphere plus readable local category systems |
 | `obsidian` | `/u/?username=USER&style=obsidian` | organic force-directed exploration |
 | `tree` | `/tree/?username=USER&style=tree` | explicit Owner → Category → Repository hierarchy |
 | `treemap` | `/treemap/?username=USER&style=treemap` | dense portfolio composition and relative emphasis |
@@ -50,13 +52,42 @@ The REST API is used when the user's Action refreshes repository metadata. READM
 
 Owner is centered, categories occupy the middle ring, and repositories sit around the outside. It is deliberately compact at the default 740×420 profile size.
 
-### Galaxy
+### Galaxy Classic
 
-Categories occupy semantic sectors with repositories distributed over radial lanes. Label-aware lane placement and screen-space collision culling keep the map readable.
+Preserves the pre-Galaxy-Systems Living Galaxy behavior: one global galaxy, differential repository motion, spiral atmosphere, and category positions derived from the moving portfolio. It is intentionally kept as an independent runtime so later Systems/Hybrid tuning cannot silently change the original presentation.
+
+The static Classic SVG is non-animated and uses the original bounded Galaxy renderer.
+
+### Galaxy Systems
+
+The owner is the center of the map. Categories form local systems and orbit the owner extremely slowly; repositories orbit only their own category. Category membership is therefore readable from position without following a permanent spoke network.
+
+Interactive timing is deliberately calm:
+
+- category orbit: about **30 minutes per revolution**
+- repository lane 0: **6 minutes per revolution**
+- each additional lane: **+3 minutes**
+- all repositories inside one category use the same hashed direction
+
+Owner → Category and Category → Repository edges are hidden when nothing is focused. Selecting or hovering a repository reveals its explanatory `Owner → Category → Repository` path; category selection reveals that category's ownership/membership edges. Repository relation edges remain faintly visible without focus.
+
+For static SVGs with at most 80 repositories, the same hierarchy uses script-free declarative SVG animation. Renderers that ignore SVG animation still receive a correct initial frame. Above 80 repositories it automatically uses the bounded non-animated dense fallback.
+
+### Galaxy Hybrid
+
+Combines the two ideas rather than replacing either one. Categories occupy one, two, or three spiral arms depending on category count, so the portfolio still reads as one galaxy. Each category remains a local system whose repositories follow elliptical orbits aligned with the arm.
+
+Interactive timing:
+
+- whole spiral/category structure: about **40 minutes per revolution**
+- local repository lane 0: **8 minutes per revolution**
+- each additional lane: **+4 minutes**
+
+Hybrid uses the same focus-only ownership/membership edge policy as Systems and adds nucleus glow, spiral dust, category halos, and elliptical lane guides. Static Hybrid SVG animation is likewise script-free for up to 80 repositories and falls back to the bounded dense renderer above that limit.
 
 ### Obsidian-like
 
-A deterministic force-directed graph using center, repel, link, and collision forces. It prioritizes exploratory relationships over strict hierarchy.
+A deterministic force-directed graph using the original global center / repel / link physics. It prioritizes exploratory relationships over strict hierarchy and remains physically independent from all Galaxy runtimes.
 
 ### Tree
 
@@ -152,7 +183,7 @@ If the graph is missing or invalid, the viewer shows a setup/recovery message in
 | `github_token` | required | token used to read public repository metadata |
 | `username` | caller owner | GitHub user to visualize |
 | `theme` | `dark` | `dark` or `light` static SVG theme |
-| `style` | `radial` | one of the 10 preset IDs above |
+| `style` | `radial` | one of the 12 visible preset IDs above; legacy `galaxy` aliases to `galaxy-systems` |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
@@ -191,15 +222,17 @@ Verification includes:
 - ESLint on emitted browser JavaScript
 - Stylelint on emitted CSS
 - actionlint on repository workflows and the browser-generated installer workflow
-- dense label-overlap regression tests for node-based layouts
+- Galaxy Classic preservation checks
+- Galaxy Systems speed, nested-orbit, focus-edge, and SVG fallback checks
+- Galaxy Hybrid spiral/elliptical-orbit and SVG fallback checks
+- dense 300-repository regression tests across all 12 presets
 - Treemap bounds/coverage checks
 - Sunburst segment checks
 - Matrix aggregation checks
 - Sankey flow-total checks
-- Action tests for all 10 style values
 - static graph validation and permission-isolation tests
 
-CI also invokes the local `action.yml` **without a `style` input** and confirms that Radial Tree remains the backward-compatible default. On preset-development PRs it additionally renders all ten presets from the same current `graph.json` and uploads a visual comparison artifact.
+CI also invokes the local `action.yml` **without a `style` input** and confirms that Radial Tree remains the backward-compatible default. On preset-development PRs it additionally renders all 12 presets from the same current `graph.json` and uploads a visual comparison artifact.
 
 ## Optional Cloudflare Worker
 

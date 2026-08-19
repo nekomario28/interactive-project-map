@@ -46,6 +46,10 @@
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
 
+  function isGalaxyPresentationStyle(value) {
+    return value === "galaxy" || String(value || "").startsWith("galaxy-");
+  }
+
   // One interaction contract across every canvas preset:
   // - click a selectable item -> focus it (owned by each viewer)
   // - click clean blank space -> clear focus
@@ -82,10 +86,10 @@
     canvas.addEventListener("lostpointercapture", (event) => blankPointers.delete(event.pointerId), true);
   }
 
-  // Galaxy is presentation-first: nodes are not draggable. A drag that starts
-  // on a node becomes viewport panning once it passes the click slop.
+  // Galaxy-family presets are presentation-first: nodes are not draggable. A
+  // drag that starts on a node becomes viewport panning after the click slop.
   canvas.addEventListener("pointermove", (event) => {
-    if (state.style !== "galaxy" || state.pointers.size !== 1 || !state.drag || !state.pointers.has(event.pointerId)) return;
+    if (!isGalaxyPresentationStyle(state.style) || state.pointers.size !== 1 || !state.drag || !state.pointers.has(event.pointerId)) return;
     const point = canvasPoint(event);
     state.pointers.set(event.pointerId, point);
     const distance = Math.hypot(point.x - state.down.x, point.y - state.down.y);

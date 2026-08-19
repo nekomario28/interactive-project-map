@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { renderPagesHome, renderPagesViewer } from "../scripts/pages-app.mjs";
 import { buildPublicPages, PUBLIC_ACTION_REF } from "../scripts/build-public-pages.mjs";
 
-const styles = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+const styles = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const dedicated = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
 test("Pages generator source retains distributed static installation URLs and isolated permissions", () => {
@@ -20,23 +20,26 @@ test("legacy viewer render source remains static-only before public shell replac
   assert.match(html, /raw\.githubusercontent\.com/); assert.match(html, /HEAD\/project-map\/graph\.json/); assert.doesNotMatch(html, /\/api\/graph/); assert.doesNotMatch(html, /api\.github\.com/);
 });
 
-test("public Pages build emits ten map presets with visual examples", async () => {
+test("public Pages build emits twelve map presets with three distinct Galaxy examples", async () => {
   const dir = await mkdtemp(join(tmpdir(), "project-map-pages-"));
   try {
     await buildPublicPages(dir);
     const read = (name) => readFile(join(dir, name), "utf8");
     const home = await read("index.html"); const shared = await read("u/index.html"); const appJs = await read("app.js"); const routerJs = await read("tree-router.js"); const navJs = await read("tree-nav.js"); const presetCss = await read("presets.css"); const noJekyll = await read(".nojekyll");
-    assert.match(home, /Radial Tree \(Classic\)/); assert.match(home, />Matrix \/ Heatmap</); assert.match(home, />Sankey</);
+    assert.match(home, /Radial Tree \(Classic\)/); assert.match(home, />Galaxy Classic</); assert.match(home, />Galaxy Systems</); assert.match(home, />Galaxy Hybrid</); assert.match(home, />Matrix \/ Heatmap</); assert.match(home, />Sankey</);
     for (const style of styles) assert.match(home, new RegExp(`data-style-preset="${style}"`));
     for (const style of styles) assert.match(shared, new RegExp(`value="${style}"`));
-    assert.match(shared, /tree-router\.js/); assert.match(shared, /viewer\.js/);
+    assert.match(shared, /tree-router\.js/); assert.match(shared, /viewer\.js/); assert.match(shared, /data-map-style="galaxy-systems"/);
     for (const style of dedicated) {
       const html = await read(`${style}/index.html`); const script = await read(`${style}-viewer.js`);
       assert.match(html, new RegExp(`data-map-style="${style}"`)); assert.match(html, new RegExp(`value="${style}" selected`)); assert.match(html, /tree-nav\.js/); assert.match(html, new RegExp(`${style}-viewer\\.js`)); assert.match(script, /raw\.githubusercontent\.com/); assert.doesNotMatch(script, /\/api\/graph|api\.github\.com/);
     }
     assert.match(appJs, new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));
-    assert.match(appJs, /STYLE_VALUES=new Set\(\['radial','galaxy','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey'\]\)/);
-    assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/); assert.match(routerJs, /matrix/); assert.match(routerJs, /sankey/); assert.match(navJs, /matrix/); assert.match(navJs, /sankey/); assert.match(presetCss, /\.preview-sun-group/); assert.match(presetCss, /\.preview-matrix-grid/); assert.match(presetCss, /\.preview-sankey-flow/); assert.equal(noJekyll, "\n");
+    assert.match(appJs, /STYLE_VALUES=new Set\(\['radial','galaxy-classic','galaxy-systems','galaxy-hybrid','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey'\]\)/);
+    assert.match(appJs, /if\(value==='galaxy'\)return'galaxy-systems'/);
+    assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/);
+    for (const source of [routerJs, navJs]) { assert.match(source, /galaxy-classic/); assert.match(source, /galaxy-systems/); assert.match(source, /galaxy-hybrid/); assert.match(source, /matrix/); assert.match(source, /sankey/); }
+    assert.match(presetCss, /\.preview-sun-group/); assert.match(presetCss, /\.preview-matrix-grid/); assert.match(presetCss, /\.preview-sankey-flow/); assert.equal(noJekyll, "\n");
     for (const name of ["app.js", "viewer.js", ...dedicated.map((style) => `${style}-viewer.js`), "tree-router.js", "tree-nav.js"]) {
       const checked = spawnSync(process.execPath, ["--check", join(dir, name)], { encoding: "utf8" }); assert.equal(checked.status, 0, `${name} failed syntax check:\n${checked.stderr}`);
     }

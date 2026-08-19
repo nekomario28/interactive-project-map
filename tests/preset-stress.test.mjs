@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { performance } from "node:perf_hooks";
 import { renderGalaxySvg } from "../scripts/svg.mjs";
+import { renderGalaxyClassicSvg } from "../scripts/galaxy-svg-classic.mjs";
+import { renderGalaxySystemsSvg } from "../scripts/galaxy-svg-systems.mjs";
+import { renderGalaxyHybridSvg } from "../scripts/galaxy-svg-hybrid.mjs";
 import { renderRadialTreeSvg } from "../scripts/radial-svg.mjs";
 import { renderTreeSvg } from "../scripts/tree-svg.mjs";
 import { renderTreemapSvg } from "../scripts/treemap-svg.mjs";
@@ -13,55 +16,31 @@ import { renderSankeySvg } from "../scripts/sankey-svg.mjs";
 import { finalizeSvgForTheme } from "../scripts/finalize-svg.mjs";
 
 function stressGraph(repositoryCount = 300, groupCount = 10) {
-  const groups = Array.from({ length: groupCount }, (_, index) => ({
-    id: `group:group-${index}`,
-    label: `Category ${index + 1}`,
-    type: "group",
-    repositoryCount: Math.ceil(repositoryCount / groupCount),
-  }));
+  const groups = Array.from({ length: groupCount }, (_, index) => ({ id: `group:group-${index}`, label: `Category ${index + 1}`, type: "group", repositoryCount: Math.ceil(repositoryCount / groupCount) }));
   const repos = Array.from({ length: repositoryCount }, (_, index) => {
-    const groupIndex = index % groupCount;
+    const groupIndex = index % groups.length;
     const archived = index % 17 === 0;
     return {
-      id: `repository:stress-project-${String(index).padStart(3, "0")}`,
-      label: `stress-project-${String(index).padStart(3, "0")}-with-readable-name`,
-      type: "repository",
-      url: `https://github.com/stress/stress-project-${index}`,
-      description: `Synthetic repository ${index} used for a 300-project renderer stress test.`,
-      language: ["Python", "TypeScript", "Rust", "C++", "Java", "Shell"][index % 6],
-      topics: ["stress", `group-${groupIndex}`],
-      stars: (index * 7) % 31,
-      forks: index % 8,
-      fork: !archived && index % 11 === 0,
-      archived,
-      createdAt: new Date(Date.UTC(2020 + (index % 7), index % 12, 1 + (index % 27))).toISOString(),
-      updatedAt: "2026-08-18T00:00:00Z",
-      groupId: `group-${groupIndex}`,
-      groupLabel: `Category ${groupIndex + 1}`,
+      id: `repository:stress-project-${String(index).padStart(3, "0")}`, label: `stress-project-${String(index).padStart(3, "0")}-with-readable-name`, type: "repository",
+      url: `https://github.com/stress/stress-project-${index}`, description: `Synthetic repository ${index} used for a 300-project renderer stress test.`,
+      language: ["Python", "TypeScript", "Rust", "C++", "Java", "Shell"][index % 6], topics: ["stress", `group-${groupIndex}`], stars: (index * 7) % 31,
+      forks: index % 8, fork: !archived && index % 11 === 0, archived, createdAt: new Date(Date.UTC(2020 + (index % 7), index % 12, 1 + (index % 27))).toISOString(),
+      updatedAt: "2026-08-18T00:00:00Z", groupId: `group-${groupIndex}`, groupLabel: `Category ${groupIndex + 1}`,
     };
   });
   const edges = [
     ...groups.map((group) => ({ source: "user:stress", target: group.id, type: "ownership" })),
     ...repos.map((repo) => ({ source: `group:${repo.groupId}`, target: repo.id, type: "membership" })),
-    ...repos.filter((_, index) => index > 0 && index % 25 === 0).map((repo, index) => ({
-      source: repos[index * 25 - 1]?.id || repos[0].id,
-      target: repo.id,
-      type: "relation",
-    })),
+    ...repos.filter((_, index) => index > 0 && index % 25 === 0).map((repo, index) => ({ source: repos[index * 25 - 1]?.id || repos[0].id, target: repo.id, type: "relation" })),
   ];
-  return {
-    owner: "stress",
-    generatedAt: "2026-08-18T00:00:00Z",
-    repositoryCount,
-    groupCount,
-    nodes: [{ id: "user:stress", label: "stress", type: "owner", url: "https://github.com/stress" }, ...groups, ...repos],
-    edges,
-  };
+  return { owner: "stress", generatedAt: "2026-08-18T00:00:00Z", repositoryCount, groupCount, nodes: [{ id: "user:stress", label: "stress", type: "owner", url: "https://github.com/stress" }, ...groups, ...repos], edges };
 }
 
 const renderers = [
   ["radial", (graph) => renderRadialTreeSvg(graph, "dark", 740, 420)],
-  ["galaxy", (graph) => renderGalaxySvg(graph, "dark", 740, 420, "galaxy")],
+  ["galaxy-classic", (graph) => renderGalaxyClassicSvg(graph, "dark", 740, 420)],
+  ["galaxy-systems", (graph) => renderGalaxySystemsSvg(graph, "dark", 740, 420)],
+  ["galaxy-hybrid", (graph) => renderGalaxyHybridSvg(graph, "dark", 740, 420)],
   ["obsidian", (graph) => renderGalaxySvg(graph, "dark", 740, 420, "obsidian")],
   ["tree", (graph) => renderTreeSvg(graph, "dark", 740, 420)],
   ["treemap", (graph) => renderTreemapSvg(graph, "dark", 740, 420)],
@@ -75,26 +54,18 @@ const renderers = [
 function transformedLineEndpoints(svg) {
   const transform = svg.match(/data-galaxy-fit="true" transform="translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\)"/u);
   assert.ok(transform, "dense Galaxy should emit an explicit viewport-fit transform");
-  const tx = Number(transform[1]);
-  const ty = Number(transform[2]);
-  const scale = Number(transform[3]);
-  const endpoints = [];
+  const tx = Number(transform[1]); const ty = Number(transform[2]); const scale = Number(transform[3]); const endpoints = [];
   const lines = /<line\b[^>]*\bx1="(-?[\d.]+)"\s+y1="(-?[\d.]+)"\s+x2="(-?[\d.]+)"\s+y2="(-?[\d.]+)"/gu;
-  for (const match of svg.matchAll(lines)) {
-    endpoints.push(
-      [Number(match[1]) * scale + tx, Number(match[2]) * scale + ty],
-      [Number(match[3]) * scale + tx, Number(match[4]) * scale + ty],
-    );
-  }
+  for (const match of svg.matchAll(lines)) endpoints.push([Number(match[1]) * scale + tx, Number(match[2]) * scale + ty], [Number(match[3]) * scale + tx, Number(match[4]) * scale + ty]);
   return endpoints;
 }
 
-test("all ten static renderers remain finite and bounded at the 300-repository limit", () => {
+test("all twelve static renderers remain finite and bounded at the 300-repository limit", () => {
   const graph = stressGraph();
   const started = performance.now();
   for (const [name, render] of renderers) {
     const rendererStarted = performance.now();
-    const svg = render(graph);
+    const svg = finalizeSvgForTheme(render(graph), "dark");
     const elapsed = performance.now() - rendererStarted;
     assert.match(svg, /^<\?xml version="1\.0" encoding="UTF-8"\?>/u, `${name} did not emit SVG XML`);
     assert.doesNotMatch(svg, /(?:NaN|Infinity)/u, `${name} emitted invalid numeric geometry`);
@@ -102,19 +73,26 @@ test("all ten static renderers remain finite and bounded at the 300-repository l
     assert.ok(elapsed < 5_000, `${name} took ${elapsed.toFixed(0)}ms to render 300 repositories`);
   }
   const total = performance.now() - started;
-  assert.ok(total < 10_000, `ten-preset 300-repository render pass took ${total.toFixed(0)}ms`);
+  assert.ok(total < 12_000, `twelve-preset 300-repository render pass took ${total.toFixed(0)}ms`);
 });
 
-test("single-category 300-repository Galaxy is fitted inside the 740x420 viewport", () => {
+test("Galaxy family dense fallbacks keep all 300 repositories fitted and non-animated", () => {
   const graph = stressGraph(300, 1);
-  const raw = renderGalaxySvg(graph, "dark", 740, 420, "galaxy");
-  assert.match(raw, /x2="(?:[8-9]\d{2,}|\d{4,})\./u, "fixture should reproduce raw Galaxy overflow before finalization");
-  const svg = finalizeSvgForTheme(raw, "dark");
-  const endpoints = transformedLineEndpoints(svg);
-  assert.ok(endpoints.length >= 600, "all 300 membership edges should remain present after fitting");
-  for (const [x, y] of endpoints) {
-    assert.ok(x >= 23.5 && x <= 716.5, `fitted Galaxy x=${x.toFixed(2)} escaped the viewport`);
-    assert.ok(y >= 19.5 && y <= 382.5, `fitted Galaxy y=${y.toFixed(2)} escaped the viewport`);
+  for (const [name, render, marker] of [
+    ["classic", renderGalaxyClassicSvg, 'data-galaxy-preset="classic"'],
+    ["systems", renderGalaxySystemsSvg, 'data-galaxy-preset="systems-dense"'],
+    ["hybrid", renderGalaxyHybridSvg, 'data-galaxy-preset="hybrid-dense"'],
+  ]) {
+    const raw = render(graph, "dark", 740, 420);
+    assert.match(raw, new RegExp(marker));
+    assert.doesNotMatch(raw, /<animateTransform\b/u, `${name} dense fallback must remain non-animated`);
+    const svg = finalizeSvgForTheme(raw, "dark");
+    const endpoints = transformedLineEndpoints(svg);
+    assert.ok(endpoints.length >= 600, `${name} should retain all membership edges`);
+    for (const [x, y] of endpoints) {
+      assert.ok(x >= 23.5 && x <= 716.5, `${name} fitted x=${x.toFixed(2)} escaped the viewport`);
+      assert.ok(y >= 19.5 && y <= 382.5, `${name} fitted y=${y.toFixed(2)} escaped the viewport`);
+    }
+    assert.equal([...svg.matchAll(/<title>stress-project-/gu)].length, 300, `${name} must not drop repositories`);
   }
-  assert.equal([...svg.matchAll(/<title>stress-project-/gu)].length, 300, "viewport fitting must not drop repositories");
 });
