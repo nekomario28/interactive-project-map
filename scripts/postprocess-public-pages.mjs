@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Keep generated consumer workflows on a reviewed, immutable main commit.
-// This commit contains the complete Galaxy Classic / Systems / Hybrid family.
-export const PUBLIC_ACTION_REF = "417b1b8d47de6b038441557d9dce2d2ec1f843b9";
+// This commit includes Galaxy family, Systems label LOD, and category-first static Systems SVG.
+export const PUBLIC_ACTION_REF = "e9143aad2ffed2342cf135822c14cbf534a7dc15";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
