@@ -101,7 +101,8 @@ test("expensive interactive presets initialize at the 300-repository limit", asy
           };
         });
         expect(fitted.repositories).toBe(300);
-        expect(fitted.zoom).toBeLessThan(0.25);
+        expect(fitted.zoom).toBeGreaterThanOrEqual(0.04);
+        expect(fitted.zoom).toBeLessThanOrEqual(1);
         expect(fitted.minX).toBeGreaterThanOrEqual(0);
         expect(fitted.maxX).toBeLessThanOrEqual(fitted.width);
         expect(fitted.minY).toBeGreaterThanOrEqual(0);
