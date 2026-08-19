@@ -1,29 +1,36 @@
 "use strict";
 
 (() => {
-  const allStyles = new Set(["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
+  const visibleStyles = new Set(["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const dedicatedStyles = new Set(["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const styleSelect = document.getElementById("style");
   const params = new URL(location.href).searchParams;
 
+  function normalize(style) {
+    if (style === "galaxy") return "galaxy-systems";
+    return visibleStyles.has(style) ? style : "galaxy-systems";
+  }
+
   function styleUrl(style, username) {
-    const route = dedicatedStyles.has(style) ? `../${style}/` : "../u/";
+    const normalized = normalize(style);
+    const route = dedicatedStyles.has(normalized) ? `../${normalized}/` : "../u/";
     const url = new URL(route, location.href);
     if (username) url.searchParams.set("username", username);
-    url.searchParams.set("style", style);
+    url.searchParams.set("style", normalized);
     return url;
   }
 
-  const requestedStyle = params.get("style");
-  if (dedicatedStyles.has(requestedStyle)) {
-    location.replace(styleUrl(requestedStyle, params.get("username")).toString());
+  const rawRequested = params.get("style");
+  const requested = normalize(rawRequested);
+  if (rawRequested === "galaxy" || dedicatedStyles.has(requested)) {
+    location.replace(styleUrl(requested, params.get("username")).toString());
     return;
   }
 
   if (styleSelect) {
     styleSelect.addEventListener("change", (event) => {
-      const style = styleSelect.value;
-      if (!allStyles.has(style) || !dedicatedStyles.has(style)) return;
+      const style = normalize(styleSelect.value);
+      if (!visibleStyles.has(style) || style === requested) return;
       event.stopImmediatePropagation();
       location.assign(styleUrl(style, params.get("username")).toString());
     }, true);
