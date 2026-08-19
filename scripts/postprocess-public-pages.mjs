@@ -64,6 +64,8 @@ const VIEWER_FIT_OLD = "state.zoom = clamp(Math.min((size.width * 0.84) / width,
 const VIEWER_FIT_NEW = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);";
 const VIEWER_SCRIPT = '<script src="../viewer.js" defer></script>';
 const RUNTIME_SCRIPT = '<script src="../shared-runtime.js" defer></script>';
+const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
+const SUNBURST_VIEWER_SCRIPT = '<script src="../sunburst-viewer.js" defer></script>';
 
 async function htmlFiles(dir) {
   const found = [];
@@ -101,6 +103,30 @@ async function emitSharedRuntime(outputDir) {
   if (withRuntime !== html) await writeFile(htmlPath, withRuntime);
 }
 
+async function emitInteractionPolish(outputDir) {
+  const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
+  const outputPath = join(outputDir, "interaction-polish.js");
+  await copyFile(sourcePath, outputPath);
+
+  const sharedHtmlPath = join(outputDir, "u", "index.html");
+  const sharedHtml = await readFile(sharedHtmlPath, "utf8");
+  if (!sharedHtml.includes(RUNTIME_SCRIPT)) throw new Error("Shared runtime script tag not found before interaction polish");
+  const sharedWithPolish = sharedHtml.includes(POLISH_SCRIPT)
+    ? sharedHtml
+    : sharedHtml.replace(RUNTIME_SCRIPT, `${RUNTIME_SCRIPT}\n${POLISH_SCRIPT}`);
+  if (!sharedWithPolish.includes(POLISH_SCRIPT)) throw new Error("Could not attach interaction polish to /u/");
+  if (sharedWithPolish !== sharedHtml) await writeFile(sharedHtmlPath, sharedWithPolish);
+
+  const sunburstHtmlPath = join(outputDir, "sunburst", "index.html");
+  const sunburstHtml = await readFile(sunburstHtmlPath, "utf8");
+  if (!sunburstHtml.includes(SUNBURST_VIEWER_SCRIPT)) throw new Error("Sunburst viewer script tag not found before interaction polish");
+  const sunburstWithPolish = sunburstHtml.includes(POLISH_SCRIPT)
+    ? sunburstHtml
+    : sunburstHtml.replace(SUNBURST_VIEWER_SCRIPT, `${SUNBURST_VIEWER_SCRIPT}\n${POLISH_SCRIPT}`);
+  if (!sunburstWithPolish.includes(POLISH_SCRIPT)) throw new Error("Could not attach interaction polish to /sunburst/");
+  if (sunburstWithPolish !== sunburstHtml) await writeFile(sunburstHtmlPath, sunburstWithPolish);
+}
+
 export async function postprocessPublicPages(outputDir = resolve(process.cwd(), "site")) {
   for (const path of await htmlFiles(outputDir)) {
     const source = await readFile(path, "utf8");
@@ -116,6 +142,7 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
 
   await hardenSharedViewer(outputDir);
   await emitSharedRuntime(outputDir);
+  await emitInteractionPolish(outputDir);
 
   const appPath = join(outputDir, "app.js");
   const app = await readFile(appPath, "utf8");
