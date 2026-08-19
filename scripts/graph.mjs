@@ -12,7 +12,14 @@ const LANGUAGE_LABELS = new Map([
   ["Visual Basic .NET", "VB.NET"],
 ]);
 
-function normalizeSearch(value) { return value.toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim(); }
+export function normalizeSearch(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}+#]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
 function languageGroupKey(language) {
   let key = "";
   for (const char of language.toLowerCase()) if (/[a-z0-9]/.test(char)) key += char; else key += `-u${char.codePointAt(0)?.toString(16) ?? "0"}-`;
@@ -23,7 +30,15 @@ function languageDisplayLabel(language) {
   if (alias) return alias;
   return language.length <= 14 ? language : `${language.slice(0, 13)}…`;
 }
-function searchableText(repo) { return normalizeSearch([repo.name, repo.description ?? "", repo.language ?? "", ...(repo.topics ?? [])].join(" ")); }
+function searchableText(repo) {
+  return normalizeSearch([
+    repo.name,
+    repo.description ?? "",
+    ...(repo.topics ?? []),
+    repo.readmeExcerpt ?? "",
+    repo.language ?? "",
+  ].join(" "));
+}
 function keywordMatches(text, keyword) { const needle = normalizeSearch(keyword); return Boolean(needle) && ` ${text} `.includes(` ${needle} `); }
 function classify(repo) {
   const text = searchableText(repo); let best = null; let bestScore = 0;
@@ -33,6 +48,8 @@ function classify(repo) {
     if (score > bestScore) { best = rule; bestScore = score; }
   }
   if (best) return { id: best.id, label: best.label };
+  // P1A intentionally preserves the existing language fallback. P1B will
+  // separate technical language from semantic category once evidence metadata lands.
   const language = repo.language || "Other";
   return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
 }

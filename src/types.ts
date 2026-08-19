@@ -22,6 +22,8 @@ export interface GitHubRepo {
   archived: boolean;
   updated_at: string;
   homepage?: string | null;
+  /** Generation-time semantic evidence. Intentionally not emitted as a graph node field in P1A. */
+  readmeExcerpt?: string;
 }
 
 export type GalaxyNodeType = "owner" | "group" | "repository";

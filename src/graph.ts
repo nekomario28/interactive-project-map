@@ -45,10 +45,12 @@ const LANGUAGE_LABELS = new Map<string, string>([
   ["Visual Basic .NET", "VB.NET"],
 ]);
 
-function normalizeSearch(value: string): string {
-  return value
+export function normalizeSearch(value: string): string {
+  return String(value ?? "")
+    .normalize("NFKC")
     .toLowerCase()
-    .replace(/[^a-z0-9+#]+/g, " ")
+    .replace(/[^\p{L}\p{M}\p{N}+#]+/gu, " ")
+    .replace(/\s+/gu, " ")
     .trim();
 }
 
@@ -74,8 +76,9 @@ function searchableText(repo: GitHubRepo): string {
   return normalizeSearch([
     repo.name,
     repo.description ?? "",
-    repo.language ?? "",
     ...(repo.topics ?? []),
+    repo.readmeExcerpt ?? "",
+    repo.language ?? "",
   ].join(" "));
 }
 
@@ -102,6 +105,8 @@ function classify(repo: GitHubRepo): { id: string; label: string } {
   }
 
   if (best) return { id: best.id, label: best.label };
+  // P1A intentionally preserves the existing language fallback. P1B will
+  // separate technical language from semantic category once evidence metadata lands.
   const language = repo.language || "Other";
   return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
 }
