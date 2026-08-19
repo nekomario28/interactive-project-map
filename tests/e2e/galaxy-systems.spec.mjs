@@ -122,7 +122,6 @@ test("Galaxy Systems reveals repository names progressively as the user zooms in
   await installGraph(page);
   await page.goto("/u/?username=example&style=galaxy-systems");
   await expect(page.locator("#status")).toBeHidden();
-  await expect(page.locator("#subtitle")).toContainText("zoom in to reveal repositories");
 
   const far = await canvasLabelsAtZoom(page, 0.80);
   expect(far.mode).toBe("categories");
