@@ -48,7 +48,7 @@ jobs:
       - name: Verify
         run: npm run verify
 
-      - name: Render ten-preset comparison
+      - name: Render twelve-preset comparison
         run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
 
       - name: Upload preset comparison
