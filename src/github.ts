@@ -1,3 +1,4 @@
+import { classifyRepository, extractFrameworkIdentifiers } from "./semantic.ts";
 import type { Env, GitHubRepo } from "./types";
 
 const API = "https://api.github.com";
@@ -5,11 +6,34 @@ const MAX_PAGES = 5;
 export const README_RAW_BYTE_LIMIT = 32 * 1024;
 export const README_TEXT_CHAR_LIMIT = 12 * 1024;
 export const README_FETCH_CONCURRENCY = 4;
+export const MANIFEST_RAW_BYTE_LIMIT = 16 * 1024;
+export const MANIFEST_FILE_LIMIT = 3;
+export const MANIFEST_FETCH_CONCURRENCY = 4;
+export const MANIFEST_PROBE_CONFIDENCE_THRESHOLD = 0.8;
+export const MANIFEST_PROBE_PATHS = Object.freeze([
+  "package.xml",
+  "neoforge.mods.toml",
+  "mods.toml",
+  "fabric.mod.json",
+  "platformio.ini",
+  "gradle.properties",
+  "build.gradle.kts",
+  "build.gradle",
+  "package.json",
+  "pyproject.toml",
+  "requirements.txt",
+  "Cargo.toml",
+  "go.mod",
+  "pom.xml",
+  "docker-compose.yml",
+  "compose.yaml",
+]);
 
 export interface RepoFetchOptions {
   includeForks?: boolean;
   includeArchived?: boolean;
   enrichReadmes?: boolean;
+  enrichManifests?: boolean;
 }
 
 export interface ReadmeEnrichmentOptions {
@@ -19,9 +43,27 @@ export interface ReadmeEnrichmentOptions {
   concurrency?: number;
 }
 
+export interface ManifestEnrichmentOptions {
+  fetchImpl?: typeof fetch;
+  rawByteLimit?: number;
+  fileLimit?: number;
+  concurrency?: number;
+}
+
 type ReadmeFetchOutcome = {
   excerpt?: string;
   stop: boolean;
+};
+
+type ManifestFetchOutcome = {
+  manifests: string[];
+  frameworks: string[];
+  stop: boolean;
+};
+
+type GitHubContentEntry = {
+  type?: unknown;
+  path?: unknown;
 };
 
 function githubHeaders(token: string | undefined, accept: string): Record<string, string> {
@@ -105,8 +147,6 @@ async function readBoundedUtf8(response: Response, maxBytes: number): Promise<st
     if (!truncated) await reader.cancel().catch(() => undefined);
   }
 
-  // When truncated, intentionally do not flush TextDecoder: an incomplete trailing
-  // UTF-8 sequence is discarded rather than replaced with U+FFFD.
   return text;
 }
 
@@ -127,7 +167,6 @@ async function fetchReadmeOutcome(
     const excerpt = cleanReadmeExcerpt(raw, options.textCharLimit);
     return excerpt ? { excerpt, stop: false } : { stop: false };
   } catch {
-    // README enrichment is supporting evidence; it must never fail graph generation.
     return { stop: false };
   }
 }
@@ -143,10 +182,7 @@ export async function enrichReposWithReadmes(
   const fetchImpl = options.fetchImpl ?? fetch;
   const rawByteLimit = boundedOption(options.rawByteLimit, README_RAW_BYTE_LIMIT);
   const textCharLimit = boundedOption(options.textCharLimit, README_TEXT_CHAR_LIMIT);
-  const concurrency = Math.min(
-    enriched.length,
-    boundedOption(options.concurrency, README_FETCH_CONCURRENCY),
-  );
+  const concurrency = Math.min(enriched.length, boundedOption(options.concurrency, README_FETCH_CONCURRENCY));
   let cursor = 0;
   let stop = false;
 
@@ -170,6 +206,104 @@ export async function enrichReposWithReadmes(
   return enriched;
 }
 
+function encodeGitHubPath(path: string): string {
+  return path.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+}
+
+function rootManifestCandidates(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const byLowerPath = new Map<string, string>();
+  for (const rawEntry of value) {
+    const entry = rawEntry as GitHubContentEntry;
+    if (entry?.type !== "file" || typeof entry.path !== "string") continue;
+    byLowerPath.set(entry.path.toLowerCase(), entry.path);
+  }
+  return MANIFEST_PROBE_PATHS
+    .map((path) => byLowerPath.get(path.toLowerCase()))
+    .filter((path): path is string => Boolean(path));
+}
+
+async function fetchManifestOutcome(
+  username: string,
+  repoName: string,
+  token: string | undefined,
+  options: Required<Pick<ManifestEnrichmentOptions, "rawByteLimit" | "fileLimit">> & { fetchImpl: typeof fetch },
+): Promise<ManifestFetchOutcome> {
+  const rootUrl = `${API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repoName)}/contents`;
+  try {
+    const rootResponse = await options.fetchImpl(rootUrl, {
+      headers: githubHeaders(token, "application/vnd.github+json"),
+    });
+    if (rootResponse.status === 403 || rootResponse.status === 429) return { manifests: [], frameworks: [], stop: true };
+    if (!rootResponse.ok) return { manifests: [], frameworks: [], stop: false };
+    const candidates = rootManifestCandidates(await rootResponse.json());
+    const manifests = candidates.slice(0, MANIFEST_PROBE_PATHS.length);
+    const frameworks = new Set<string>();
+
+    for (const path of candidates.slice(0, options.fileLimit)) {
+      const fileUrl = `${API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repoName)}/contents/${encodeGitHubPath(path)}`;
+      const response = await options.fetchImpl(fileUrl, {
+        headers: githubHeaders(token, "application/vnd.github.raw+json"),
+      });
+      if (response.status === 403 || response.status === 429) return { manifests, frameworks: [...frameworks], stop: true };
+      if (!response.ok) continue;
+      const raw = await readBoundedUtf8(response, options.rawByteLimit);
+      for (const framework of extractFrameworkIdentifiers(raw)) frameworks.add(framework);
+    }
+
+    return { manifests, frameworks: [...frameworks], stop: false };
+  } catch {
+    return { manifests: [], frameworks: [], stop: false };
+  }
+}
+
+export async function enrichReposWithManifests(
+  username: string,
+  repos: GitHubRepo[],
+  env: Env,
+  options: ManifestEnrichmentOptions = {},
+): Promise<GitHubRepo[]> {
+  if (!repos.length) return [];
+  const enriched = repos.map((repo) => ({
+    ...repo,
+    ...(repo.manifests ? { manifests: [...repo.manifests] } : {}),
+    ...(repo.frameworks ? { frameworks: [...repo.frameworks] } : {}),
+  }));
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const rawByteLimit = boundedOption(options.rawByteLimit, MANIFEST_RAW_BYTE_LIMIT);
+  const fileLimit = Math.min(MANIFEST_PROBE_PATHS.length, boundedOption(options.fileLimit, MANIFEST_FILE_LIMIT));
+  const concurrency = Math.min(enriched.length, boundedOption(options.concurrency, MANIFEST_FETCH_CONCURRENCY));
+  let cursor = 0;
+  let stop = false;
+
+  async function worker(): Promise<void> {
+    while (!stop) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= enriched.length) return;
+      const target = enriched[index];
+      if (Array.isArray(target.manifests) && Array.isArray(target.frameworks)) continue;
+      const outcome = await fetchManifestOutcome(username, target.name, env.GITHUB_TOKEN, { fetchImpl, rawByteLimit, fileLimit });
+      if (outcome.manifests.length) target.manifests = [...new Set([...(target.manifests ?? []), ...outcome.manifests])];
+      if (outcome.frameworks.length) target.frameworks = [...new Set([...(target.frameworks ?? []), ...outcome.frameworks])];
+      if (outcome.stop) stop = true;
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return enriched;
+}
+
+export function shouldProbeManifests(repo: GitHubRepo): boolean {
+  const classification = classifyRepository(repo);
+  return classification.categoryId === "uncategorized" || classification.confidence < MANIFEST_PROBE_CONFIDENCE_THRESHOLD;
+}
+
+function mergeEnrichedByName(repos: GitHubRepo[], replacements: GitHubRepo[]): GitHubRepo[] {
+  const byName = new Map(replacements.map((repo) => [repo.name.toLowerCase(), repo]));
+  return repos.map((repo) => byName.get(repo.name.toLowerCase()) ?? repo);
+}
+
 export async function fetchPublicRepos(
   username: string,
   env: Env,
@@ -185,15 +319,11 @@ export async function fetchPublicRepos(
     const url = `${API}/users/${encodeURIComponent(username)}/repos?type=owner&sort=updated&direction=desc&per_page=100&page=${page}`;
     const response = await fetch(url, { headers });
 
-    if (response.status === 404) {
-      throw new Error("GitHub user not found");
-    }
+    if (response.status === 404) throw new Error("GitHub user not found");
     if (response.status === 403 || response.status === 429) {
       throw new Error("GitHub API rate limit reached. Configure GITHUB_TOKEN for production.");
     }
-    if (!response.ok) {
-      throw new Error(`GitHub API returned ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
 
     const batch = (await response.json()) as GitHubRepo[];
     for (const repo of batch) {
@@ -205,7 +335,14 @@ export async function fetchPublicRepos(
     if (batch.length < 100) break;
   }
 
-  const selected = repos.slice(0, maxRepos);
-  if (options.enrichReadmes === false) return selected;
-  return enrichReposWithReadmes(username, selected, env);
+  let enriched = repos.slice(0, maxRepos);
+  if (options.enrichReadmes !== false) enriched = await enrichReposWithReadmes(username, enriched, env);
+  if (options.enrichManifests !== false) {
+    const candidates = enriched.filter(shouldProbeManifests);
+    if (candidates.length) {
+      const manifestEnriched = await enrichReposWithManifests(username, candidates, env);
+      enriched = mergeEnrichedByName(enriched, manifestEnriched);
+    }
+  }
+  return enriched;
 }

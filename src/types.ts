@@ -9,6 +9,35 @@ export interface Env {
   GLOBAL_UPSTREAM_RATE_LIMITER?: RateLimitBinding;
 }
 
+export type ClassificationEvidenceSource =
+  | "name"
+  | "description"
+  | "topic"
+  | "readme"
+  | "manifest"
+  | "dependency"
+  | "fork-source"
+  | "embedding"
+  | "llm"
+  | "override";
+
+export interface ClassificationEvidence {
+  categoryId: string;
+  source: ClassificationEvidenceSource;
+  value: string;
+  weight: number;
+  path?: string;
+}
+
+export interface RepositoryClassification {
+  categoryId: string;
+  categoryLabel: string;
+  secondaryTags: string[];
+  confidence: number;
+  method: "deterministic" | "semantic" | "llm" | "override";
+  evidence: ClassificationEvidence[];
+}
+
 export interface GitHubRepo {
   id: number;
   name: string;
@@ -22,8 +51,14 @@ export interface GitHubRepo {
   archived: boolean;
   updated_at: string;
   homepage?: string | null;
-  /** Generation-time semantic evidence. Intentionally not emitted as a graph node field in P1A. */
+  /** Generation-time semantic evidence. README text is intentionally not emitted as a graph node field. */
   readmeExcerpt?: string;
+  /** Bounded, root-level manifest identities discovered during graph generation. */
+  manifests?: string[];
+  /** Recognized framework/dependency identifiers extracted from bounded manifests. */
+  frameworks?: string[];
+  /** Used when safely rehydrating a generated static graph; normal GitHub REST results omit this. */
+  classification?: RepositoryClassification;
 }
 
 export type GalaxyNodeType = "owner" | "group" | "repository";
@@ -44,6 +79,7 @@ export interface GalaxyNode {
   groupId?: string;
   groupLabel?: string;
   repositoryCount?: number;
+  classification?: RepositoryClassification;
 }
 
 export interface GalaxyEdge {
@@ -59,4 +95,5 @@ export interface GalaxyGraph {
   groupCount: number;
   nodes: GalaxyNode[];
   edges: GalaxyEdge[];
+  classificationVersion?: number;
 }

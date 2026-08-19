@@ -39,6 +39,7 @@ test("filtered pagination keeps fetching until maxRepos eligible repositories ar
       includeForks: false,
       includeArchived: true,
       enrichReadmes: false,
+      enrichManifests: false,
     });
 
     assert.equal(calls.length, 2);
@@ -61,6 +62,7 @@ test("archived repositories are skipped before the requested limit is applied", 
       includeForks: true,
       includeArchived: false,
       enrichReadmes: false,
+      enrichManifests: false,
     });
 
     assert.deepEqual(repos.map((item) => item.id), [2, 3]);
@@ -86,7 +88,7 @@ test("hosted fetch enriches selected repositories from the canonical README endp
     const repos = await fetchPublicRepos("example", { GITHUB_TOKEN: "secret" }, 1);
     assert.equal(repos.length, 1);
     assert.match(repos[0].readmeExcerpt ?? "", /Gazebo and ROS2 navigation/);
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 2, "high-confidence README evidence should skip manifest probing");
     assert.equal(calls[1].headers.get("Accept"), "application/vnd.github.raw+json");
     assert.equal(calls[1].headers.get("Authorization"), "Bearer secret");
   } finally {

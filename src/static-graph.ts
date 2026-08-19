@@ -1,9 +1,22 @@
 import { buildGraph } from "./graph.ts";
-import type { GalaxyGraph, GalaxyNode, GitHubRepo } from "./types.ts";
+import type {
+  ClassificationEvidence,
+  ClassificationEvidenceSource,
+  GalaxyGraph,
+  GalaxyNode,
+  GitHubRepo,
+  RepositoryClassification,
+} from "./types.ts";
 
 const REPO_NAME_RE = /^[A-Za-z0-9._-]{1,100}$/;
+const CATEGORY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const MAX_STATIC_BYTES = 2_000_000;
 const MAX_REPOSITORIES = 400;
+const MAX_CLASSIFICATION_EVIDENCE = 24;
+const EVIDENCE_SOURCES = new Set<ClassificationEvidenceSource>([
+  "name", "description", "topic", "readme", "manifest", "dependency", "fork-source", "embedding", "llm", "override",
+]);
+const CLASSIFICATION_METHODS = new Set<RepositoryClassification["method"]>(["deterministic", "semantic", "llm", "override"]);
 
 function finiteNonNegative(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
@@ -19,6 +32,55 @@ function safeTopics(value: unknown): string[] {
     .filter((topic): topic is string => typeof topic === "string")
     .slice(0, 20)
     .map((topic) => topic.slice(0, 50));
+}
+
+function safeClassificationEvidence(value: unknown): ClassificationEvidence[] {
+  if (!Array.isArray(value)) return [];
+  const evidence: ClassificationEvidence[] = [];
+  for (const raw of value.slice(0, MAX_CLASSIFICATION_EVIDENCE)) {
+    if (!raw || typeof raw !== "object") continue;
+    const item = raw as Record<string, unknown>;
+    const categoryId = safeString(item.categoryId, 80);
+    const source = item.source;
+    const evidenceValue = safeString(item.value, 120);
+    const weight = item.weight;
+    if (!CATEGORY_ID_RE.test(categoryId)) continue;
+    if (typeof source !== "string" || !EVIDENCE_SOURCES.has(source as ClassificationEvidenceSource)) continue;
+    if (!evidenceValue) continue;
+    if (typeof weight !== "number" || !Number.isFinite(weight) || weight < 0 || weight > 10) continue;
+    const path = safeString(item.path, 160);
+    evidence.push({
+      categoryId,
+      source: source as ClassificationEvidenceSource,
+      value: evidenceValue,
+      weight,
+      ...(path ? { path } : {}),
+    });
+  }
+  return evidence;
+}
+
+function safeClassification(value: unknown): RepositoryClassification | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  const categoryId = safeString(candidate.categoryId, 80);
+  const categoryLabel = safeString(candidate.categoryLabel, 100);
+  const confidence = candidate.confidence;
+  const method = candidate.method;
+  if (!CATEGORY_ID_RE.test(categoryId) || !categoryLabel) return undefined;
+  if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) return undefined;
+  if (typeof method !== "string" || !CLASSIFICATION_METHODS.has(method as RepositoryClassification["method"])) return undefined;
+  const secondaryTags = Array.isArray(candidate.secondaryTags)
+    ? candidate.secondaryTags.filter((tag): tag is string => typeof tag === "string").slice(0, 8).map((tag) => tag.slice(0, 60))
+    : [];
+  return {
+    categoryId,
+    categoryLabel,
+    secondaryTags,
+    confidence,
+    method: method as RepositoryClassification["method"],
+    evidence: safeClassificationEvidence(candidate.evidence),
+  };
 }
 
 function validatedRepositoryUrl(value: unknown, username: string, repoName: string): string | null {
@@ -38,7 +100,7 @@ function validatedRepositoryUrl(value: unknown, username: string, repoName: stri
 
 export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGraph | null {
   if (!value || typeof value !== "object") return null;
-  const candidate = value as { owner?: unknown; generatedAt?: unknown; nodes?: unknown };
+  const candidate = value as { owner?: unknown; generatedAt?: unknown; nodes?: unknown; classificationVersion?: unknown };
   if (typeof candidate.owner !== "string" || candidate.owner.toLowerCase() !== username.toLowerCase()) return null;
   if (!Array.isArray(candidate.nodes)) return null;
 
@@ -57,6 +119,7 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
     seen.add(key);
     const htmlUrl = validatedRepositoryUrl(node.url, username, name);
     if (!htmlUrl) return null;
+    const classification = safeClassification(node.classification);
     repos.push({
       id: repos.length + 1,
       name,
@@ -69,12 +132,19 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
       fork: node.fork === true,
       archived: node.archived === true,
       updated_at: typeof node.updatedAt === "string" ? node.updatedAt.slice(0, 64) : "",
+      ...(classification ? { classification } : {}),
     });
   }
 
   const graph = buildGraph(username.toLowerCase(), repos, true, true);
   if (typeof candidate.generatedAt === "string" && Number.isFinite(Date.parse(candidate.generatedAt))) {
     graph.generatedAt = candidate.generatedAt;
+  }
+  if (typeof candidate.classificationVersion === "number"
+    && Number.isInteger(candidate.classificationVersion)
+    && candidate.classificationVersion >= 1
+    && candidate.classificationVersion <= 100) {
+    graph.classificationVersion = candidate.classificationVersion;
   }
   return graph;
 }
@@ -98,7 +168,6 @@ export async function fetchStaticProfileGraph(username: string): Promise<GalaxyG
   try {
     return await graphFromResponse(await fetch(url), username);
   } catch {
-    // A missing/unreachable static file is not fatal; the hosted API can fall back to GitHub REST.
     return null;
   }
 }
