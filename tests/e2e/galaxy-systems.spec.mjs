@@ -61,6 +61,27 @@ function maximumMovement(before, after, key) {
   return Math.max(...Object.keys(before[key]).map((id) => Math.hypot(after[key][id].x - before[key][id].x, after[key][id].y - before[key][id].y)));
 }
 
+async function canvasLabelsAtZoom(page, zoom) {
+  return page.evaluate((nextZoom) => {
+    state.zoom = nextZoom;
+    state.query = "";
+    state.selected = null;
+    state.hovered = null;
+    const seen = [];
+    const original = ctx.fillText;
+    ctx.fillText = function capture(text, ...args) {
+      seen.push(String(text));
+      return original.call(this, text, ...args);
+    };
+    try {
+      draw();
+    } finally {
+      ctx.fillText = original;
+    }
+    return { labels: seen, mode: window.GalaxySystemsLabelLOD.mode(), visible: window.GalaxySystemsLabelLOD.visibleRepositoryIds() };
+  }, zoom);
+}
+
 test.beforeAll(async () => {
   await mkdir(".tmp/playwright-visual/dark", { recursive: true });
 });
@@ -95,6 +116,52 @@ test("Galaxy Systems uses slow category motion and slower local repository orbit
   expect(repositoryMovement).toBeLessThan(6);
 
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-slow.png", fullPage: true });
+});
+
+test("Galaxy Systems reveals repository names progressively as the user zooms in", async ({ page }) => {
+  await installGraph(page);
+  await page.goto("/u/?username=example&style=galaxy-systems");
+  await expect(page.locator("#status")).toBeHidden();
+  await expect(page.locator("#subtitle")).toContainText("zoom in to reveal repositories");
+
+  const far = await canvasLabelsAtZoom(page, 0.60);
+  expect(far.mode).toBe("categories");
+  expect(far.visible).toHaveLength(0);
+  for (const [, label] of groupDefs) expect(far.labels).toContain(label);
+  for (const [name] of repositories) expect(far.labels).not.toContain(name);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-far.png", fullPage: true });
+
+  const middle = await canvasLabelsAtZoom(page, 0.95);
+  expect(middle.mode).toBe("featured");
+  expect(middle.visible).toHaveLength(8);
+  expect(middle.labels).toContain("robot-one");
+  expect(middle.labels).toContain("robot-two");
+  expect(middle.labels).not.toContain("robot-three");
+  expect(middle.labels).toContain("ai-one");
+  expect(middle.labels).toContain("ai-two");
+  expect(middle.labels).not.toContain("ai-three");
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-middle.png", fullPage: true });
+
+  const near = await canvasLabelsAtZoom(page, 1.40);
+  expect(near.mode).toBe("all");
+  expect(near.visible).toHaveLength(repositories.length);
+  for (const [name] of repositories) expect(near.labels).toContain(name);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-near.png", fullPage: true });
+
+  const selectedVisible = await page.evaluate(() => {
+    state.zoom = 0.60;
+    updateDetails(state.byId.get("repository:robot-three"));
+    return window.GalaxySystemsLabelLOD.visibleRepositoryIds();
+  });
+  expect(selectedVisible).toContain("repository:robot-three");
+
+  const searchVisible = await page.evaluate(() => {
+    updateDetails(null);
+    state.zoom = 0.60;
+    state.query = "ai-three";
+    return window.GalaxySystemsLabelLOD.visibleRepositoryIds();
+  });
+  expect(searchVisible).toContain("repository:ai-three");
 });
 
 test("Galaxy Hybrid keeps a spiral of category systems while local repositories orbit elliptically", async ({ page }) => {
