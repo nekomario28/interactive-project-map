@@ -1,5 +1,5 @@
 "use strict";
-/* global canvas, state, drawRepoLabels, matches, ctx, clamp */
+/* global canvas, state, drawRepoLabels, matches, ctx, clamp, updateDetails */
 
 (() => {
   const style = document.body.dataset.mapStyle;
@@ -61,5 +61,13 @@
     state.drag = null;
     state.panning = true;
     state.last = state.down;
+  }, true);
+
+  // A clean click on empty Galaxy space clears focus. Node clicks continue into
+  // the base viewer, which immediately replaces the current selection with the
+  // clicked node. Obsidian owns the same semantics in its dedicated runtime.
+  canvas.addEventListener("pointerup", (event) => {
+    if (state.style !== "galaxy" || state.pointers.size !== 1 || !state.pointers.has(event.pointerId)) return;
+    if (!state.moved && !state.drag) updateDetails(null);
   }, true);
 })();
