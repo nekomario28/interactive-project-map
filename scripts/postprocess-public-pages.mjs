@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { copyFile, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -62,6 +62,8 @@ const MOBILE_FIX = `
 
 const VIEWER_FIT_OLD = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.25, 2.2);";
 const VIEWER_FIT_NEW = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);";
+const VIEWER_SCRIPT = '<script src="../viewer.js" defer></script>';
+const RUNTIME_SCRIPT = '<script src="../shared-runtime.js" defer></script>';
 
 async function htmlFiles(dir) {
   const found = [];
@@ -84,6 +86,21 @@ async function hardenSharedViewer(outputDir) {
   if (patched !== source) await writeFile(viewerPath, patched);
 }
 
+async function emitSharedRuntime(outputDir) {
+  const sourcePath = resolve(process.cwd(), "scripts/public-shared-runtime.js");
+  const outputPath = join(outputDir, "shared-runtime.js");
+  await copyFile(sourcePath, outputPath);
+
+  const htmlPath = join(outputDir, "u", "index.html");
+  const html = await readFile(htmlPath, "utf8");
+  if (!html.includes(VIEWER_SCRIPT)) throw new Error("Shared viewer script tag not found");
+  const withRuntime = html.includes(RUNTIME_SCRIPT)
+    ? html
+    : html.replace(VIEWER_SCRIPT, `${VIEWER_SCRIPT}\n${RUNTIME_SCRIPT}`);
+  if (!withRuntime.includes(RUNTIME_SCRIPT)) throw new Error("Could not attach shared runtime to /u/");
+  if (withRuntime !== html) await writeFile(htmlPath, withRuntime);
+}
+
 export async function postprocessPublicPages(outputDir = resolve(process.cwd(), "site")) {
   for (const path of await htmlFiles(outputDir)) {
     const source = await readFile(path, "utf8");
@@ -98,6 +115,7 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
   if (!css.includes("Emitted-site mobile hardening")) await writeFile(cssPath, css + MOBILE_FIX);
 
   await hardenSharedViewer(outputDir);
+  await emitSharedRuntime(outputDir);
 
   const appPath = join(outputDir, "app.js");
   const app = await readFile(appPath, "utf8");
