@@ -38,6 +38,7 @@ test("interaction polish and dedicated Obsidian runtime are emitted in order", a
 
     assert.match(polish, /readableRadialRepoLabels/);
     assert.match(polish, /state\.style !== "galaxy"/);
+    assert.match(polish, /if \(!state\.moved && !state\.drag\) updateDetails\(null\);/);
     assert.doesNotMatch(polish, /releaseAnchor|duration: 520/);
 
     for (const path of [obsidianPath, polishPath]) {
