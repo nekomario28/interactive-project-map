@@ -17,7 +17,7 @@ inputs:
     required: false
     default: dark
   style:
-    description: Map presentation preset (radial, galaxy, obsidian, tree, treemap, timeline, cluster, sunburst, matrix, or sankey).
+    description: Map presentation preset (radial, galaxy-classic, galaxy-systems, galaxy-hybrid, obsidian, tree, treemap, timeline, cluster, sunburst, matrix, or sankey). Legacy galaxy maps to galaxy-systems.
     required: false
     default: radial
   max_repos:
