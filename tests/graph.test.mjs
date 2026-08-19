@@ -66,3 +66,16 @@ test("respects fork and archived filters", () => {
   assert.deepEqual(repositoryNodes(graph).map((node) => node.label), ["normal"]);
   assert.equal(graph.repositoryCount, 1);
 });
+
+test("excludes the GitHub profile repository from the project graph", () => {
+  const graph = buildGraph("example", [
+    repo("example", "Markdown", { stargazers_count: 99 }),
+    repo("EXAMPLE", "Markdown"),
+    repo("actual-project", "TypeScript"),
+  ], true, true);
+
+  assert.deepEqual(repositoryNodes(graph).map((node) => node.label), ["actual-project"]);
+  assert.equal(graph.repositoryCount, 1);
+  assert.equal(graph.nodes.filter((node) => node.type === "owner").length, 1);
+  assert.equal(graph.edges.some((edge) => edge.target === "repository:example" || edge.target === "repository:EXAMPLE"), false);
+});
