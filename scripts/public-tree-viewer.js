@@ -47,23 +47,23 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function cleanText(value, max) {
+  return typeof value === "string" ? value.slice(0, max) : "";
+}
+
 function normalizeUsername(value) {
   const normalized = String(value || "").trim().toLowerCase();
   if (!USERNAME_RE.test(normalized)) throw new Error("Invalid GitHub username");
   return normalized;
 }
 
-function cleanText(value, max) {
-  return typeof value === "string" ? value.slice(0, max) : "";
-}
-
 function safeRepoUrl(value, name) {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || url.hostname !== "github.com") return null;
     const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
-    if (parts.length < 2 || parts[0].toLowerCase() !== username || parts[1].toLowerCase() !== name.toLowerCase()) return null;
+    if (url.protocol !== "https:" || url.hostname !== "github.com" || parts.length < 2) return null;
+    if (parts[0].toLowerCase() !== username || parts[1].toLowerCase() !== name.toLowerCase()) return null;
     return `https://github.com/${encodeURIComponent(username)}/${encodeURIComponent(name)}`;
   } catch {
     return null;
@@ -98,7 +98,6 @@ function sanitizeGraph(value) {
         forks: Number.isFinite(raw.forks) ? Math.max(0, Math.floor(raw.forks)) : 0,
         fork: raw.fork === true,
         archived: raw.archived === true,
-        updatedAt: cleanText(raw.updatedAt, 64),
         groupId: cleanText(raw.groupId, 120),
         groupLabel: cleanText(raw.groupLabel, 120),
       };
@@ -106,17 +105,13 @@ function sanitizeGraph(value) {
     ids.add(id);
     nodes.push(node);
   }
-  if (!nodes.some((node) => node.type === "owner")) nodes.unshift({ id: `user:${username}`, label: username, type: "owner", url: `https://github.com/${encodeURIComponent(username)}` });
+  if (!nodes.some((node) => node.type === "owner")) {
+    nodes.unshift({ id: `user:${username}`, label: username, type: "owner", url: `https://github.com/${encodeURIComponent(username)}` });
+  }
   const edges = Array.isArray(value.edges)
     ? value.edges.filter((edge) => edge && typeof edge === "object" && ids.has(edge.source) && ids.has(edge.target)).slice(0, 1200).map((edge) => ({ source: edge.source, target: edge.target, type: cleanText(edge.type, 40) }))
     : [];
   return { owner: username, nodes, edges };
-}
-
-function nodeStatus(node) {
-  if (node.type !== "repository") return node.type;
-  if (node.archived) return "archived";
-  return node.fork ? "fork" : "original";
 }
 
 function displayLabel(node) {
@@ -134,6 +129,12 @@ function nodeRadius(node) {
   return clamp(5.2 + Math.log2((node.stars || 0) + 1) * 1.25, 5.2, 11);
 }
 
+function nodeStatus(node) {
+  if (node.type !== "repository") return node.type;
+  if (node.archived) return "archived";
+  return node.fork ? "fork" : "original";
+}
+
 function groupMembers(group, repos) {
   const key = String(group.id).replace(/^group:/, "");
   return repos.filter((repo) => repo.groupId === key || group.id === `group:${repo.groupId}`);
@@ -143,48 +144,42 @@ function buildTreeLayout(graph) {
   const owner = graph.nodes.find((node) => node.type === "owner");
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository");
-  const bundles = groups.map((group) => ({ group, members: groupMembers(group, repos).sort((a, b) => (b.stars || 0) - (a.stars || 0) || a.label.localeCompare(b.label)) }));
+  const bundles = groups.map((group) => ({
+    group,
+    members: groupMembers(group, repos).sort((a, b) => (b.stars || 0) - (a.stars || 0) || a.label.localeCompare(b.label)),
+  }));
   const assigned = new Set(bundles.flatMap((bundle) => bundle.members.map((repo) => repo.id)));
   const unassigned = repos.filter((repo) => !assigned.has(repo.id));
   if (unassigned.length) bundles.push({ group: { id: "group:other", label: "Other", type: "group", repositoryCount: unassigned.length }, members: unassigned });
-  const result = [];
-  if (owner) result.push({ ...owner, x: 0, y: -260, depth: 0 });
-  const totalWeight = Math.max(1, bundles.reduce((sum, bundle) => sum + Math.max(1, bundle.members.length), 0));
-  let cursor = -520;
-  const totalWidth = 1040;
-  const gap = bundles.length > 1 ? 26 : 0;
-  const available = totalWidth - gap * Math.max(0, bundles.length - 1);
-  for (const bundle of bundles) {
-    const segmentWidth = available * Math.max(1, bundle.members.length) / totalWeight;
-    const left = cursor;
-    const right = cursor + segmentWidth;
-    const center = (left + right) / 2;
-    result.push({ ...bundle.group, x: center, y: -90, depth: 1, left, right });
-    const widest = Math.max(...bundle.members.slice(0, 30).map(estimateLabelWidth), 72);
-    const columns = Math.max(1, Math.floor(Math.max(70, segmentWidth) / clamp(widest + 28, 86, 190)));
-    bundle.members.forEach((repo, index) => {
-      const row = Math.floor(index / columns);
-      const col = index % columns;
-      const countInRow = Math.min(columns, bundle.members.length - row * columns);
-      const x = countInRow <= 1 ? center : left + segmentWidth * ((col + 1) / (countInRow + 1));
-      result.push({ ...repo, x, y: 95 + row * 88, depth: 2, parentId: bundle.group.id });
-    });
-    cursor = right + gap;
-  }
-  return result;
-}
 
-function rebuildLayout() {
-  if (!state.graph) return;
-  state.nodes = buildTreeLayout(state.graph);
-  state.byId = new Map(state.nodes.map((node) => [node.id, node]));
-  state.edges = state.graph.edges;
-  state.selected = state.selected ? state.byId.get(state.selected.id) || null : null;
-  document.body.dataset.mapStyle = "tree";
-  styleSelect.value = "tree";
-  subtitle.textContent = "Tree view · Owner → Category → Repository · search, select, drag, pan and zoom";
-  fitView();
-  draw();
+  const groupGap = 72;
+  const repoGap = 22;
+  const bundleWidths = bundles.map((bundle) => Math.max(
+    140,
+    bundle.members.reduce((sum, repo) => sum + clamp(estimateLabelWidth(repo) + 28, 94, 224), 0) + repoGap * Math.max(0, bundle.members.length - 1),
+  ));
+  const totalWidth = bundleWidths.reduce((sum, width) => sum + width, 0) + groupGap * Math.max(0, bundles.length - 1);
+  const result = [];
+  if (owner) result.push({ ...owner, x: 0, y: -250, depth: 0 });
+  let cursor = -totalWidth / 2;
+
+  bundles.forEach((bundle, bundleIndex) => {
+    const width = bundleWidths[bundleIndex];
+    const left = cursor;
+    const right = cursor + width;
+    let repoCursor = left;
+    const memberPoints = [];
+    for (const repo of bundle.members) {
+      const slot = clamp(estimateLabelWidth(repo) + 28, 94, 224);
+      memberPoints.push({ repo, x: repoCursor + slot / 2 });
+      repoCursor += slot + repoGap;
+    }
+    const center = memberPoints.length ? (memberPoints[0].x + memberPoints[memberPoints.length - 1].x) / 2 : (left + right) / 2;
+    result.push({ ...bundle.group, x: center, y: -78, depth: 1, left, right });
+    for (const item of memberPoints) result.push({ ...item.repo, x: item.x, y: 112, depth: 2, parentId: bundle.group.id });
+    cursor = right + groupGap;
+  });
+  return result;
 }
 
 function canvasSize() {
@@ -213,22 +208,18 @@ function fitView() {
     const halfWidth = estimateLabelWidth(node) / 2 + 28;
     minX = Math.min(minX, node.x - halfWidth);
     maxX = Math.max(maxX, node.x + halfWidth);
-    minY = Math.min(minY, node.y - 34);
-    maxY = Math.max(maxY, node.y + 48);
+    minY = Math.min(minY, node.y - 42);
+    maxY = Math.max(maxY, node.y + 58);
   }
   const width = Math.max(1, maxX - minX);
   const height = Math.max(1, maxY - minY);
-  state.zoom = clamp(Math.min((size.width * 0.88) / width, (size.height * 0.80) / height), 0.18, 2.4);
+  state.zoom = clamp(Math.min((size.width * 0.9) / width, (size.height * 0.8) / height), 0.14, 2.5);
   state.pan.x = -((minX + maxX) / 2) * state.zoom;
   state.pan.y = -((minY + maxY) / 2) * state.zoom;
 }
 
 function palette() {
-  return { background: "#080b12", panel: "#0e1420", edge: "#48576f", relation: "#f4b65f", text: "#e8edf7", muted: "#98a5b9", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", selection: "#ffffff" };
-}
-
-function nodeColor(node, colors) {
-  return colors[nodeStatus(node)] || colors.original;
+  return { background: "#080b12", edge: "#48576f", relation: "#f4b65f", text: "#e8edf7", muted: "#98a5b9", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", selection: "#ffffff" };
 }
 
 function matchesQuery(node) {
@@ -241,71 +232,71 @@ function connectedToSelected(node) {
   return state.edges.some((edge) => (edge.source === state.selected.id && edge.target === node.id) || (edge.target === state.selected.id && edge.source === node.id));
 }
 
-function drawElbow(a, b, colors, opacity = 0.46) {
-  const source = worldToScreen(a.x, a.y);
-  const target = worldToScreen(b.x, b.y);
-  const midY = source.y + (target.y - source.y) * 0.48;
-  ctx.strokeStyle = colors.edge;
+function strokeSegment(a, b, color, opacity = 0.5, width = 1) {
+  ctx.strokeStyle = color;
   ctx.globalAlpha = opacity;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = width;
   ctx.beginPath();
-  ctx.moveTo(source.x, source.y);
-  ctx.lineTo(source.x, midY);
-  ctx.lineTo(target.x, midY);
-  ctx.lineTo(target.x, target.y);
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
   ctx.stroke();
 }
 
 function drawEdges(colors) {
   const owner = state.nodes.find((node) => node.type === "owner");
   const groups = state.nodes.filter((node) => node.type === "group");
-  if (owner) for (const group of groups) drawElbow(owner, group, colors, 0.62);
-  for (const node of state.nodes) {
-    if (node.type !== "repository" || !node.parentId) continue;
-    const group = state.byId.get(node.parentId);
-    if (group) drawElbow(group, node, colors, 0.42);
+  if (owner && groups.length) {
+    const ownerPoint = worldToScreen(owner.x, owner.y);
+    const groupPoints = groups.map((node) => ({ node, point: worldToScreen(node.x, node.y) }));
+    const branchY = ownerPoint.y + (groupPoints[0].point.y - ownerPoint.y) * 0.48;
+    strokeSegment(ownerPoint, { x: ownerPoint.x, y: branchY }, colors.edge, 0.62);
+    strokeSegment({ x: Math.min(...groupPoints.map((item) => item.point.x)), y: branchY }, { x: Math.max(...groupPoints.map((item) => item.point.x)), y: branchY }, colors.edge, 0.62);
+    for (const item of groupPoints) strokeSegment({ x: item.point.x, y: branchY }, item.point, colors.edge, 0.62);
   }
+
+  for (const group of groups) {
+    const members = state.nodes.filter((node) => node.type === "repository" && node.parentId === group.id);
+    if (!members.length) continue;
+    const groupPoint = worldToScreen(group.x, group.y);
+    const memberPoints = members.map((node) => worldToScreen(node.x, node.y));
+    const busY = groupPoint.y + (memberPoints[0].y - groupPoint.y) * 0.5;
+    strokeSegment(groupPoint, { x: groupPoint.x, y: busY }, colors.edge, 0.5);
+    strokeSegment({ x: Math.min(...memberPoints.map((point) => point.x)), y: busY }, { x: Math.max(...memberPoints.map((point) => point.x)), y: busY }, colors.edge, 0.5);
+    for (const point of memberPoints) strokeSegment({ x: point.x, y: busY }, point, colors.edge, 0.5);
+  }
+
   for (const edge of state.edges) {
     if (edge.type !== "relation") continue;
     const a = state.byId.get(edge.source);
     const b = state.byId.get(edge.target);
     if (!a || !b) continue;
-    const source = worldToScreen(a.x, a.y);
-    const target = worldToScreen(b.x, b.y);
-    ctx.strokeStyle = colors.relation;
-    ctx.globalAlpha = 0.68;
-    ctx.lineWidth = 1.4;
     ctx.setLineDash([5, 4]);
-    ctx.beginPath();
-    ctx.moveTo(source.x, source.y);
-    ctx.lineTo(target.x, target.y);
-    ctx.stroke();
+    strokeSegment(worldToScreen(a.x, a.y), worldToScreen(b.x, b.y), colors.relation, 0.72, 1.5);
     ctx.setLineDash([]);
   }
   ctx.globalAlpha = 1;
 }
 
-function boxesOverlap(a, b, padding = 3) {
-  return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
-}
-
 function drawNodesAndLabels(colors) {
-  const candidates = [];
+  const compactPortfolio = (state.graph?.nodes.filter((node) => node.type === "repository").length || 0) <= 36;
+  const occupied = [];
+  let repositoryIndex = 0;
   for (const node of state.nodes) {
     const point = worldToScreen(node.x, node.y);
     const highlighted = node === state.selected || node === state.hovered;
     const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.14 : 1));
     let opacity = node.archived ? 0.72 : 1;
     if (state.query && !matchesQuery(node)) opacity *= 0.12;
-    if (state.selected && !connectedToSelected(node)) opacity *= 0.22;
+    if (state.selected && !connectedToSelected(node)) opacity *= 0.2;
     ctx.globalAlpha = opacity;
-    ctx.fillStyle = nodeColor(node, colors);
+    ctx.fillStyle = colors[nodeStatus(node)] || colors.original;
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();
+
     if (node.type === "repository" && node.archived) {
       ctx.strokeStyle = colors.archived;
-      ctx.lineWidth = 1.3;
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius + 4, 0, Math.PI * 2);
@@ -313,38 +304,31 @@ function drawNodesAndLabels(colors) {
       ctx.setLineDash([]);
     }
     if (highlighted) {
-      ctx.globalAlpha = Math.max(opacity, 0.76);
       ctx.strokeStyle = colors.selection;
       ctx.lineWidth = node === state.selected ? 2 : 1.2;
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius + 5, 0, Math.PI * 2);
       ctx.stroke();
     }
-    if (node.type !== "repository" || highlighted || state.zoom >= 0.48) {
-      const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 11) * Math.sqrt(state.zoom), 9, 15);
-      candidates.push({ node, point, radius, fontSize, opacity, priority: highlighted ? 100 : node.type === "owner" ? 90 : node.type === "group" ? 80 : (node.stars || 0) + (node.fork ? -1 : 1) });
-    }
-  }
-  ctx.globalAlpha = 1;
-  candidates.sort((a, b) => b.priority - a.priority || a.node.label.localeCompare(b.node.label));
-  const occupied = [];
-  for (const candidate of candidates) {
-    const text = displayLabel(candidate.node);
-    const width = clamp(text.length * candidate.fontSize * 0.58 + 10, 38, 215);
-    const top = candidate.point.y + candidate.radius + 7;
-    const box = { left: candidate.point.x - width / 2, right: candidate.point.x + width / 2, top, bottom: top + candidate.fontSize + 8 };
-    const forced = candidate.node === state.selected || candidate.node === state.hovered || candidate.node.type === "owner";
-    if (!forced && occupied.some((other) => boxesOverlap(box, other, 4))) continue;
+
+    const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 10.5) * Math.sqrt(state.zoom), 8.5, 15);
+    const text = displayLabel(node);
+    const width = clamp(text.length * fontSize * 0.58 + 10, 38, 215);
+    const above = node.type === "repository" && repositoryIndex++ % 2 === 1;
+    const top = above ? point.y - radius - fontSize - 10 : point.y + radius + 7;
+    const box = { left: point.x - width / 2, right: point.x + width / 2, top, bottom: top + fontSize + 6 };
+    const forced = node.type !== "repository" || highlighted || compactPortfolio;
+    if (!forced && occupied.some((other) => !(box.right + 3 < other.left || other.right + 3 < box.left || box.bottom + 3 < other.top || other.bottom + 3 < box.top))) continue;
     occupied.push(box);
-    ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.84 : 0);
-    ctx.font = `${candidate.node.type === "owner" ? 700 : candidate.node.type === "group" ? 600 : 500} ${candidate.fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+    ctx.globalAlpha = Math.max(opacity, highlighted ? 0.85 : 0);
+    ctx.font = `${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500} ${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.strokeStyle = colors.background;
-    ctx.strokeText(text, candidate.point.x, top + 2);
-    ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
-    ctx.fillText(text, candidate.point.x, top + 2);
+    ctx.strokeText(text, point.x, top);
+    ctx.fillStyle = node.type === "group" ? colors.muted : colors.text;
+    ctx.fillText(text, point.x, top);
   }
   ctx.globalAlpha = 1;
 }
@@ -360,6 +344,19 @@ function draw() {
   drawNodesAndLabels(colors);
 }
 
+function rebuildLayout() {
+  if (!state.graph) return;
+  state.nodes = buildTreeLayout(state.graph);
+  state.byId = new Map(state.nodes.map((node) => [node.id, node]));
+  state.edges = state.graph.edges;
+  state.selected = state.selected ? state.byId.get(state.selected.id) || null : null;
+  document.body.dataset.mapStyle = "tree";
+  styleSelect.value = "tree";
+  subtitle.textContent = "Tree · Owner → Category → repositories on one parallel level";
+  fitView();
+  draw();
+}
+
 function resize() {
   const size = canvasSize();
   const dpr = window.devicePixelRatio || 1;
@@ -373,10 +370,10 @@ function resize() {
   draw();
 }
 
-function hitTest(screenX, screenY) {
-  const world = screenToWorld(screenX, screenY);
-  for (let i = state.nodes.length - 1; i >= 0; i -= 1) {
-    const node = state.nodes[i];
+function hitTest(x, y) {
+  const world = screenToWorld(x, y);
+  for (let index = state.nodes.length - 1; index >= 0; index -= 1) {
+    const node = state.nodes[index];
     const radius = Math.max(nodeRadius(node), 10 / state.zoom);
     if ((world.x - node.x) ** 2 + (world.y - node.y) ** 2 <= radius * radius) return node;
   }
@@ -387,8 +384,8 @@ function updateDetails(node) {
   state.selected = node;
   details.classList.toggle("has-selection", Boolean(node));
   if (!node) {
-    detailsTitle.textContent = "Project tree";
-    detailsDescription.textContent = "Hierarchy view: Owner → Category → Repository. Search, select, drag nodes, pan empty space, and zoom.";
+    detailsTitle.textContent = "Tree";
+    detailsDescription.textContent = "Owner → Category → Repository. Every repository child stays on one parallel level.";
     detailsMeta.hidden = true;
     detailsLink.hidden = true;
     draw();
@@ -400,16 +397,14 @@ function updateDetails(node) {
   if (node.type === "repository") {
     rows.push(["Kind", node.archived ? "Archived" : node.fork ? "Fork" : "Original"]);
     if (node.language) rows.push(["Language", node.language]);
-    rows.push(["Stars", String(node.stars || 0)]);
-    rows.push(["Forks", String(node.forks || 0)]);
+    rows.push(["Stars", String(node.stars || 0)], ["Forks", String(node.forks || 0)]);
     if (node.groupLabel) rows.push(["Category", node.groupLabel]);
-    if (node.updatedAt) rows.push(["Updated", node.updatedAt.slice(0, 10)]);
   }
   detailsMeta.replaceChildren();
   for (const [key, value] of rows) {
     const dt = document.createElement("dt");
-    dt.textContent = key;
     const dd = document.createElement("dd");
+    dt.textContent = key;
     dd.textContent = value;
     detailsMeta.append(dt, dd);
   }
@@ -436,7 +431,7 @@ function pointerPair() {
 canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
   const before = screenToWorld(event.offsetX, event.offsetY);
-  state.zoom = clamp(state.zoom * Math.exp(-event.deltaY * 0.0012), 0.16, 4.5);
+  state.zoom = clamp(state.zoom * Math.exp(-event.deltaY * 0.0012), 0.14, 5);
   const after = worldToScreen(before.x, before.y);
   state.pan.x += event.offsetX - after.x;
   state.pan.y += event.offsetY - after.y;
@@ -475,7 +470,7 @@ canvas.addEventListener("pointermove", (event) => {
     const midpoint = { x: (pair[0].x + pair[1].x) / 2, y: (pair[0].y + pair[1].y) / 2 };
     if (state.pinchDistance > 0 && distance > 0) {
       const before = screenToWorld(midpoint.x, midpoint.y);
-      state.zoom = clamp(state.zoom * (distance / state.pinchDistance), 0.16, 4.5);
+      state.zoom = clamp(state.zoom * (distance / state.pinchDistance), 0.14, 5);
       const after = worldToScreen(before.x, before.y);
       state.pan.x += midpoint.x - after.x;
       state.pan.y += midpoint.y - after.y;
@@ -499,14 +494,14 @@ canvas.addEventListener("pointermove", (event) => {
     }
     return;
   }
-  const hover = hitTest(point.x, point.y);
-  state.hovered = hover;
-  canvas.classList.toggle("over-node", Boolean(hover));
-  if (hover) {
+  const hovered = hitTest(point.x, point.y);
+  state.hovered = hovered;
+  canvas.classList.toggle("over-node", Boolean(hovered));
+  if (hovered) {
     tip.hidden = false;
     tip.style.left = `${point.x + 14}px`;
     tip.style.top = `${point.y + 14}px`;
-    tip.textContent = hover.type === "repository" ? `${hover.label}${hover.language ? ` · ${hover.language}` : ""} · ${nodeStatus(hover)}` : hover.label;
+    tip.textContent = hovered.label;
   } else {
     tip.hidden = true;
   }
@@ -541,7 +536,7 @@ canvas.addEventListener("keydown", (event) => {
     draw();
   } else if (["+", "=", "-"].includes(event.key)) {
     event.preventDefault();
-    state.zoom = clamp(state.zoom * (event.key === "-" ? 1 / 1.16 : 1.16), 0.16, 4.5);
+    state.zoom = clamp(state.zoom * (event.key === "-" ? 1 / 1.16 : 1.16), 0.14, 5);
     draw();
   } else if (event.key === "Enter" && state.selected?.url) {
     event.preventDefault();
@@ -555,13 +550,6 @@ searchInput.addEventListener("input", () => {
   state.query = searchInput.value.trim().toLowerCase();
   draw();
 });
-styleSelect.addEventListener("change", () => {
-  if (styleSelect.value === "tree") return;
-  const url = new URL("../u/", location.href);
-  url.searchParams.set("username", username);
-  url.searchParams.set("style", styleSelect.value === "obsidian" ? "obsidian" : "galaxy");
-  location.assign(url.toString());
-});
 fitButton.addEventListener("click", () => {
   fitView();
   draw();
@@ -572,10 +560,7 @@ resetButton.addEventListener("click", () => {
   updateDetails(null);
   rebuildLayout();
 });
-detailsClose.addEventListener("click", () => {
-  updateDetails(null);
-  canvas.focus({ preventScroll: true });
-});
+detailsClose.addEventListener("click", () => updateDetails(null));
 window.addEventListener("resize", resize);
 window.visualViewport?.addEventListener("resize", resize, { passive: true });
 
@@ -587,9 +572,10 @@ function showError(message) {
 
 try {
   username = normalizeUsername(query.get("username"));
-  document.title = `${username} · Project Tree`;
+  document.title = `${username} · Tree`;
   title.textContent = `${username} · Interactive Project Map`;
-  canvas.setAttribute("aria-label", `Interactive project tree for ${username}`);
+  subtitle.textContent = "Tree · Owner → Category → repositories on one parallel level";
+  canvas.setAttribute("aria-label", `Interactive tree for ${username}`);
   const setupUrl = new URL("../", location.href);
   setupUrl.searchParams.set("username", username);
   setupUrl.searchParams.set("style", "tree");
@@ -600,24 +586,22 @@ try {
 
 document.body.dataset.mapStyle = "tree";
 styleSelect.value = "tree";
-subtitle.textContent = "Tree view · Owner → Category → Repository";
 resize();
-
 if (username) {
   const owner = encodeURIComponent(username);
-  const graphUrl = `https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map/graph.json`;
-  fetch(graphUrl, { cache: "no-cache" })
+  fetch(`https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map/graph.json`, { cache: "no-cache" })
     .then((response) => {
       if (!response.ok) throw new Error(`graph.json returned ${response.status}`);
       return response.json();
     })
     .then((value) => {
-      const clean = sanitizeGraph(value);
-      if (!clean) throw new Error("graph.json failed validation");
-      state.graph = clean;
+      const graph = sanitizeGraph(value);
+      if (!graph) throw new Error("graph.json failed validation");
+      state.graph = graph;
       status.hidden = true;
       rebuildLayout();
       updateDetails(null);
+      resize();
     })
-    .catch((error) => showError(`Could not load ${username}/${username}/project-map/graph.json. Run the setup workflow once, or regenerate it if the file is invalid. (${error.message})`));
+    .catch((error) => showError(`Could not load ${username}/${username}/project-map/graph.json. (${error.message})`));
 }

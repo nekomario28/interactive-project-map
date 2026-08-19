@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
+const repoNames = ["robot-one", "robot-two", "robot-three", "ai-one", "ai-two", "ai-three"];
 const graph = {
   owner: "example",
   generatedAt: "2026-08-19T00:00:00Z",
@@ -22,7 +23,7 @@ const graph = {
       label: name,
       type: "repository",
       url: `https://github.com/example/${name}`,
-      description: `${name} live-galaxy fixture`,
+      description: `${name} regression fixture`,
       language,
       topics: ["visualization"],
       stars,
@@ -39,6 +40,7 @@ const graph = {
     { source: "user:example", target: "group:ai", type: "ownership" },
     ...["robot-one", "robot-two", "robot-three"].map((name) => ({ source: "group:robotics", target: `repository:${name}`, type: "membership" })),
     ...["ai-one", "ai-two", "ai-three"].map((name) => ({ source: "group:ai", target: `repository:${name}`, type: "membership" })),
+    { source: "repository:robot-one", target: "repository:ai-one", type: "relation" },
   ],
 };
 
@@ -57,16 +59,36 @@ function browserErrors(page) {
   return failures;
 }
 
+async function capturedCanvasLabels(page) {
+  return page.evaluate(() => {
+    const seen = [];
+    const original = ctx.fillText;
+    ctx.fillText = function capture(text, ...args) {
+      seen.push(String(text));
+      return original.call(this, text, ...args);
+    };
+    try {
+      draw();
+    } finally {
+      ctx.fillText = original;
+    }
+    return seen;
+  });
+}
+
 test.beforeAll(async () => {
   await mkdir(".tmp/playwright-visual/dark", { recursive: true });
 });
 
-test("Galaxy follows the original live github.io orbital motion", async ({ page }) => {
+test("Galaxy keeps normal-size repository labels visible while orbiting", async ({ page }) => {
   await installGraph(page);
   const failures = browserErrors(page);
   await page.goto("/u/?username=example&style=galaxy");
   await expect(page.locator("#status")).toBeHidden();
   await expect(page.locator("#subtitle")).toContainText("Living Galaxy");
+
+  const labels = await capturedCanvasLabels(page);
+  for (const name of repoNames) expect(labels).toContain(name);
 
   const before = await page.evaluate(() => Object.fromEntries(
     state.nodes.filter((node) => node.type === "repository").map((node) => [node.id, { x: node.x, y: node.y }]),
@@ -75,19 +97,36 @@ test("Galaxy follows the original live github.io orbital motion", async ({ page 
   const after = await page.evaluate(() => Object.fromEntries(
     state.nodes.filter((node) => node.type === "repository").map((node) => [node.id, { x: node.x, y: node.y }]),
   ));
-
   const displacement = Math.max(...Object.keys(before).map((id) => Math.hypot(after[id].x - before[id].x, after[id].y - before[id].y)));
   expect(displacement).toBeGreaterThan(1);
-  await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-live.png", fullPage: true });
+
+  await page.evaluate(() => updateDetails(state.byId.get("repository:robot-one")));
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-selected.png", fullPage: true });
   expect(failures).toEqual([]);
 });
 
-test("Obsidian drag reheats the graph so connected nodes respond", async ({ page }) => {
+test("Obsidian is stable at rest instead of starting a second visible simulation", async ({ page }) => {
   await installGraph(page);
   const failures = browserErrors(page);
   await page.goto("/u/?username=example&style=obsidian");
   await expect(page.locator("#status")).toBeHidden();
-  await page.waitForTimeout(2200);
+  await expect(page.locator("#subtitle")).toContainText("stable at rest");
+  await page.waitForTimeout(250);
+
+  const before = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
+  const displacement = Math.max(...Object.keys(before).map((id) => Math.hypot(after[id].x - before[id].x, after[id].y - before[id].y)));
+  expect(displacement).toBeLessThan(0.05);
+  expect(failures).toEqual([]);
+});
+
+test("Obsidian drag reheats connected nodes and settles again", async ({ page }) => {
+  await installGraph(page);
+  const failures = browserErrors(page);
+  await page.goto("/u/?username=example&style=obsidian");
+  await expect(page.locator("#status")).toBeHidden();
+  await page.waitForTimeout(300);
 
   const before = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one");
@@ -104,9 +143,9 @@ test("Obsidian drag reheats the graph so connected nodes respond", async ({ page
   await page.mouse.move(before.screen.x, before.screen.y);
   await page.mouse.down();
   await page.mouse.move(before.screen.x + 110, before.screen.y + 60, { steps: 12 });
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(260);
   await page.mouse.up();
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(850);
 
   const after = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one");
@@ -115,19 +154,46 @@ test("Obsidian drag reheats the graph so connected nodes respond", async ({ page
   });
   expect(Math.hypot(after.dragged.x - before.dragged.x, after.dragged.y - before.dragged.y)).toBeGreaterThan(20);
   expect(Math.hypot(after.neighbor.x - before.neighbor.x, after.neighbor.y - before.neighbor.y)).toBeGreaterThan(1);
-  await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-live.png", fullPage: true });
+
+  await page.waitForTimeout(900);
+  const settledA = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
+  await page.waitForTimeout(500);
+  const settledB = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
+  const residual = Math.max(...Object.keys(settledA).map((id) => Math.hypot(settledB[id].x - settledA[id].x, settledB[id].y - settledA[id].y)));
+  expect(residual).toBeLessThan(0.5);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-settled.png", fullPage: true });
+  expect(failures).toEqual([]);
+});
+
+test("Tree keeps every repository child on exactly one parallel level", async ({ page }) => {
+  await installGraph(page);
+  const failures = browserErrors(page);
+  await page.goto("/tree/?username=example&style=tree");
+  await expect(page.locator("#status")).toBeHidden();
+  const levels = await page.evaluate(() => [...new Set(state.nodes.filter((node) => node.type === "repository").map((node) => node.y.toFixed(4)))]);
+  expect(levels).toHaveLength(1);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/tree-parallel.png", fullPage: true });
+  expect(failures).toEqual([]);
+});
+
+test("Sunburst prints every repository name for a normal-size portfolio", async ({ page }) => {
+  await installGraph(page);
+  const failures = browserErrors(page);
+  await page.goto("/sunburst/?username=example&style=sunburst");
+  await expect(page.locator("#status")).toBeHidden();
+  const labels = await capturedCanvasLabels(page);
+  for (const name of repoNames) expect(labels).toContain(name);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/sunburst-labels.png", fullPage: true });
   expect(failures).toEqual([]);
 });
 
 test("style query text is authoritative even when the path still names another preset", async ({ page }) => {
   await installGraph(page);
   const failures = browserErrors(page);
-
   await page.goto("/tree/?username=example&style=galaxy");
   await page.waitForURL(/\/u\/\?username=example&style=galaxy/);
   await expect(page.locator("#style")).toHaveValue("galaxy");
   await expect(page.locator("#status")).toBeHidden();
-
   await page.goto("/u/?username=example&style=tree");
   await page.waitForURL(/\/tree\/\?username=example&style=tree/);
   await expect(page.locator("#style")).toHaveValue("tree");
