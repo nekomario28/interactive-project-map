@@ -52,12 +52,13 @@ test("Galaxy Systems static frame is category-first and labels at most two repre
   const categoryMarkers = svg.match(/data-static-category=/g) ?? [];
   const representativeMarkers = svg.match(/data-static-representative="true"/g) ?? [];
   const hiddenMarkers = svg.match(/data-static-representative="false"/g) ?? [];
-  assert.equal(categoryMarkers.length, categoryCount, "every category should have one emphasized static hub");
+  assert.equal(categoryMarkers.length, categoryCount, "every category should have one static heading node");
   assert.ok(representativeMarkers.length <= categoryCount * 2, "static Systems must label at most two representatives per category");
   assert.equal(representativeMarkers.length + hiddenMarkers.length, repositoryCount, "every repository node must remain in the SVG");
   assert.ok(hiddenMarkers.length > 0, "normal-size portfolios should retain unlabeled orbiting repository nodes");
   assert.match(svg, /r="42\.0"/, "first repository orbit should leave room for the category hub");
-  assert.match(svg, /font-size="10\.8" font-weight="700"/, "category labels should dominate repository labels");
+  assert.match(svg, /font-size="10\.5" font-weight="650"/, "category headings should retain the original Galaxy Systems node-label styling");
+  assert.doesNotMatch(svg, /data-static-category="[^"]+">[^]*?<rect[^>]+rx="10\.5"/, "category headings must not use the pill treatment");
   assert.match(svg, /text-anchor="(?:start|end|middle)" fill="#[0-9a-f]{6}" font-size="9\.2"/, "representative labels should use outward radial anchors");
 });
 
