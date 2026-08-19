@@ -1,0 +1,19 @@
+name: Cleanup PR 25 branch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'nekomario28/interactive-project-map'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Delete merged branch
+        shell: bash
+        run: git push origin --delete feat/galaxy-systems-label-lod
