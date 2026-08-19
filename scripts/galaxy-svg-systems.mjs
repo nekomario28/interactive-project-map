@@ -20,7 +20,7 @@ function assignments(group, members) {
   const seed = ((hash(`${group.id}:systems-svg-phase`) % 10000) / 10000) * TAU;
   const direction = (hash(`${group.id}:systems-svg-direction`) & 1) === 0 ? 1 : -1;
   while (cursor < members.length) {
-    const radius = 24 + lane * 23;
+    const radius = 42 + lane * 30;
     const capacity = Math.max(5, Math.floor((TAU * radius) / 38));
     const take = Math.min(capacity, members.length - cursor);
     for (let index = 0; index < take; index += 1) {
@@ -51,7 +51,18 @@ function compareRepresentativePriority(a, b) {
 
 function categoryMarkup(group, colors) {
   const label = esc(displayLabel(group));
-  return `<g data-static-category="${esc(group.id)}"><title>${esc(group.label)}</title><circle cx="0" cy="0" r="13" fill="none" stroke="${colors.group}" stroke-width="0.8" opacity="0.18"/><circle cx="0" cy="0" r="8.5" fill="${colors.group}" opacity="0.98"/><text x="0" y="-15" text-anchor="middle" fill="${colors.fg}" font-size="11.4" font-weight="700" paint-order="stroke" stroke="${colors.bg}" stroke-width="2.6" stroke-linejoin="round">${label}</text></g>`;
+  const width = Math.max(30, Math.min(112, label.length * 6.5 + 16));
+  return `<g data-static-category="${esc(group.id)}"><title>${esc(group.label)}</title><rect x="${(-width / 2).toFixed(1)}" y="-10.5" width="${width.toFixed(1)}" height="21" rx="10.5" fill="${colors.bg}" opacity="0.88" stroke="${colors.group}" stroke-width="0.8"/><text x="0" y="4" text-anchor="middle" fill="${colors.fg}" font-size="10.8" font-weight="700">${label}</text></g>`;
+}
+
+function representativeLabelMarkup(repo, phase, colors) {
+  const dx = Math.cos(phase);
+  const dy = Math.sin(phase);
+  const distance = 12;
+  const x = dx * distance;
+  const y = dy * distance + 3;
+  const anchor = dx > 0.3 ? "start" : dx < -0.3 ? "end" : "middle";
+  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${colors.fg}" font-size="9.2" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="2.3" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
 }
 
 function denseFallback(graph, theme, width, height) {
@@ -82,9 +93,11 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
     const representatives = [...system.members].sort(compareRepresentativePriority).slice(0, REPRESENTATIVE_LIMIT);
     system.representativeIds = new Set(representatives.map((repo) => repo.id));
   }
-  const maxSystemRadius = Math.max(24, ...prepared.flatMap((system) => system.assignments.map((target) => target.radius)));
+  const maxSystemRadius = Math.max(42, ...prepared.flatMap((system) => system.assignments.map((target) => target.radius)));
   const spacingRadius = ((maxSystemRadius * 2 + 34) * count) / TAU;
-  const categoryRadius = count === 1 ? minSize * 0.22 : clamp(Math.max(minSize * 0.25, spacingRadius), minSize * 0.25, minSize * 0.40);
+  const categoryRadius = count === 1
+    ? minSize * 0.22
+    : clamp(Math.max(minSize * 0.31, spacingRadius), minSize * 0.31, minSize * 0.43);
 
   const systems = prepared.map((system, groupIndex) => {
     const baseAngle = -Math.PI / 2 + TAU * groupIndex / count;
@@ -98,7 +111,8 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
       const localY = Math.sin(target.phase) * target.radius;
       const motion = circleValues(target.radius, target.phase, target.direction);
       const representative = system.representativeIds.has(target.repo.id);
-      return `<g data-galaxy-orbit="repository" data-static-representative="${representative}" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: representative })}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
+      const labelMarkup = representative ? representativeLabelMarkup(target.repo, target.phase, colors) : "";
+      return `<g data-galaxy-orbit="repository" data-static-representative="${representative}" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${labelMarkup}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
     }).join("");
     return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
   }).join("");
