@@ -84,9 +84,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function systemsLabelMode() {
     if (state.style !== "galaxy-systems") return "all";
-    const firstOrbitRadiusPx = 54 * state.zoom;
-    if (firstOrbitRadiusPx < 42) return "categories";
-    if (firstOrbitRadiusPx < 68) return "featured";
+    const firstOrbitRadiusPx = 58 * state.zoom;
+    if (firstOrbitRadiusPx < 72) return "categories";
+    if (firstOrbitRadiusPx < 112) return "featured";
     return "all";
   }
 
