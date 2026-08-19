@@ -10,7 +10,7 @@ import { PUBLIC_ACTION_REF, postprocessPublicPages } from "../scripts/postproces
 const dedicatedRoutes = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
 test("three Galaxy runtimes and Obsidian stay isolated while interaction polish reaches every preset", async () => {
-  assert.equal(PUBLIC_ACTION_REF, "72976777dc61b102a6d163ac42c7d8ec4bce2e4f");
+  assert.equal(PUBLIC_ACTION_REF, "417b1b8d47de6b038441557d9dce2d2ec1f843b9");
 
   const dir = await mkdtemp(join(tmpdir(), "project-map-galaxy-family-"));
   try {
