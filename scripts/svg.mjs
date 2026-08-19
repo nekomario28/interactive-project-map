@@ -1,5 +1,5 @@
 function esc(value) {
-  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
+  return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
 
 function hash(text) {
@@ -11,96 +11,277 @@ function hash(text) {
   return h >>> 0;
 }
 
-function colorFor(text, theme) {
-  const hue = hash(text) % 360;
-  return `hsl(${hue} ${theme === "dark" ? 72 : 62}% ${theme === "dark" ? 66 : 42}%)`;
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
-function layout(graph, width, height) {
+function displayLabel(node) {
+  const label = String(node.label || "");
+  return label.length <= 28 ? label : `${label.slice(0, 27)}…`;
+}
+
+function labelWidth(node, fontSize = 10) {
+  return clamp(12 + displayLabel(node).length * fontSize * 0.58, 42, 190);
+}
+
+function nodeRadius(node) {
+  if (node.type === "owner") return 25;
+  if (node.type === "group") return 7.5;
+  return clamp(5 + Math.log2((node.stars ?? 0) + 1) * 1.35, 5, 11.5);
+}
+
+function statusOf(node) {
+  if (node.type !== "repository") return node.type;
+  if (node.archived) return "archived";
+  return node.fork ? "fork" : "original";
+}
+
+function palette(theme, style) {
+  const dark = theme === "dark";
+  if (style === "obsidian") {
+    return dark
+      ? { bg: "#1e1e1e", bg2: "#181818", fg: "#dcddde", muted: "#9a9a9f", edge: "#57575d", owner: "#c4b5fd", group: "#8b7cf6", original: "#a89df7", fork: "#67b7a7", archived: "#b97a7a", relation: "#d7a75b" }
+      : { bg: "#f7f7f8", bg2: "#eeeeef", fg: "#242427", muted: "#67676d", edge: "#b9b9c0", owner: "#7868db", group: "#6555c7", original: "#7667d8", fork: "#348e80", archived: "#a75f5f", relation: "#9c6b23" };
+  }
+  return dark
+    ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", relation: "#f4b65f" }
+    : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", relation: "#a46618" };
+}
+
+function groupMembers(group, repos) {
+  const key = String(group.id).replace(/^group:/, "");
+  return repos.filter((repo) => repo.groupId === key || group.id === `group:${repo.groupId}`);
+}
+
+function galaxyLayout(graph, width, height) {
   const cx = width / 2;
-  const cy = height / 2;
+  const cy = height / 2 - 4;
+  const minSize = Math.min(width, height);
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository");
   const points = [];
   const owner = graph.nodes.find((node) => node.type === "owner");
   if (owner) points.push({ x: cx, y: cy, node: owner });
+  const count = Math.max(1, groups.length);
+  const sector = Math.PI * 2 / count;
+  const usableSector = Math.min(1.12, sector * 0.70);
+  const groupRadius = minSize * 0.20;
+  const firstLane = minSize * 0.32;
+  const laneGap = Math.max(46, minSize * 0.105);
 
-  const groupRadius = Math.min(width, height) * 0.28;
-  const repoBaseRadius = Math.min(width, height) * 0.39;
-  groups.forEach((group, index) => {
-    const angle = -Math.PI / 2 + Math.PI * 2 * index / Math.max(groups.length, 1);
-    points.push({ x: cx + Math.cos(angle) * groupRadius, y: cy + Math.sin(angle) * groupRadius, node: group });
-    const members = repos.filter((repo) => repo.groupId && group.id === `group:${repo.groupId}`);
-    members.forEach((repo, memberIndex) => {
-      const spread = Math.min(0.7, 0.16 + members.length * 0.035);
-      const offset = members.length <= 1 ? 0 : (memberIndex / (members.length - 1) - 0.5) * spread;
-      const jitter = ((hash(repo.id) % 1000) / 1000 - 0.5) * 0.08;
-      const radialJitter = ((hash(`${repo.id}:r`) % 1000) / 1000 - 0.5) * Math.min(width, height) * 0.08;
-      const radius = repoBaseRadius + radialJitter;
-      const repoAngle = angle + offset + jitter;
-      points.push({ x: cx + Math.cos(repoAngle) * radius, y: cy + Math.sin(repoAngle) * radius, node: repo });
-    });
+  groups.forEach((group, groupIndex) => {
+    const base = -Math.PI / 2 + sector * groupIndex;
+    points.push({ x: cx + Math.cos(base) * groupRadius, y: cy + Math.sin(base) * groupRadius, node: group });
+    const members = groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label));
+    let cursor = 0;
+    let lane = 0;
+    while (cursor < members.length) {
+      const radius = firstLane + lane * laneGap;
+      const remaining = members.slice(cursor);
+      const widest = Math.max(...remaining.slice(0, 12).map((repo) => labelWidth(repo)), 64);
+      const minimumGap = clamp((widest + 24) / Math.max(80, radius), 0.13, 0.48);
+      const capacity = Math.max(1, Math.floor(usableSector / minimumGap));
+      const take = Math.min(capacity, members.length - cursor);
+      for (let index = 0; index < take; index += 1) {
+        const repo = members[cursor + index];
+        const local = take <= 1 ? 0 : (index / (take - 1) - 0.5) * usableSector;
+        const jitter = ((hash(`${repo.id}:phase`) % 1000) / 1000 - 0.5) * Math.min(0.025, minimumGap * 0.12);
+        const angle = base + local + lane * 0.045 + jitter;
+        points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, node: repo });
+      }
+      cursor += take;
+      lane += 1;
+    }
   });
   return points;
 }
 
-function repositoryLabels(graph, width, height) {
-  const repos = graph.nodes.filter((node) => node.type === "repository");
-  const labelBudget = Math.max(12, Math.min(48, Math.floor((width * height) / 9000)));
-  if (repos.length <= labelBudget) return new Set(repos.map((repo) => repo.id));
+function obsidianLayout(graph, width, height) {
+  const rawNodes = graph.nodes;
+  const nodes = rawNodes.map((raw, index) => {
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const jitter = (hash(raw.id) % 1000) / 1000;
+    const angle = index * golden + jitter * 0.6;
+    const radius = 34 + Math.sqrt((index + 1) / Math.max(1, rawNodes.length)) * 340;
+    return { ...raw, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, vx: 0, vy: 0 };
+  });
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const links = graph.edges.map((edge) => ({ ...edge, sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) })).filter((edge) => edge.sourceNode && edge.targetNode);
 
-  return new Set(
-    [...repos]
-      .sort((a, b) =>
-        (b.stars ?? 0) - (a.stars ?? 0)
-        || (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")
-        || a.label.localeCompare(b.label))
-      .slice(0, labelBudget)
-      .map((repo) => repo.id),
-  );
+  for (let step = 0; step < 90; step += 1) {
+    const alpha = 1 - step / 90;
+    for (let first = 0; first < nodes.length; first += 1) {
+      const a = nodes[first];
+      for (let second = first + 1; second < nodes.length; second += 1) {
+        const b = nodes[second];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1) {
+          const angle = (hash(`${a.id}:${b.id}`) % 6283) / 1000;
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          d2 = 1;
+        }
+        const distance = Math.sqrt(d2);
+        const minimum = Math.min(72, 18 + (labelWidth(a) + labelWidth(b)) * 0.18);
+        const force = (10000 * alpha) / Math.max(d2, minimum * minimum * 0.45);
+        const fx = (dx / distance) * force;
+        const fy = (dy / distance) * force;
+        a.vx -= fx;
+        a.vy -= fy;
+        b.vx += fx;
+        b.vy += fy;
+      }
+    }
+    for (const link of links) {
+      const a = link.sourceNode;
+      const b = link.targetNode;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const target = link.type === "ownership" ? 160 : 118;
+      const amount = (distance - target) * 0.012 * alpha;
+      const fx = (dx / distance) * amount;
+      const fy = (dy / distance) * amount;
+      a.vx += fx;
+      a.vy += fy;
+      b.vx -= fx;
+      b.vy -= fy;
+    }
+    for (const node of nodes) {
+      node.vx += -node.x * 0.00125 * alpha;
+      node.vy += -node.y * 0.00125 * alpha;
+      node.vx *= 0.83;
+      node.vy *= 0.83;
+      node.x += node.vx;
+      node.y += node.vy;
+    }
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const node of nodes) {
+    minX = Math.min(minX, node.x - labelWidth(node) / 2 - 16);
+    maxX = Math.max(maxX, node.x + labelWidth(node) / 2 + 16);
+    minY = Math.min(minY, node.y - 28);
+    maxY = Math.max(maxY, node.y + 38);
+  }
+  const sourceWidth = Math.max(1, maxX - minX);
+  const sourceHeight = Math.max(1, maxY - minY);
+  const scale = Math.min((width - 54) / sourceWidth, (height - 68) / sourceHeight);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  return nodes.map((node) => ({ x: width / 2 + (node.x - centerX) * scale, y: height / 2 - 8 + (node.y - centerY) * scale, node }));
 }
 
-export function renderGalaxySvg(graph, theme, width, height) {
-  const dark = theme === "dark";
-  const bg = dark ? "#070a12" : "#fbfcff";
-  const fg = dark ? "#e8edf7" : "#172033";
-  const muted = dark ? "#9aa7bd" : "#667085";
-  const edge = dark ? "#344054" : "#cfd6e3";
-  const points = layout(graph, width, height);
-  const byId = new Map(points.map((point) => [point.node.id, point]));
-  const labelledRepos = repositoryLabels(graph, width, height);
-  const starSeed = hash(graph.owner);
+export function layoutGraphForStyle(graph, width, height, style = "galaxy") {
+  return style === "obsidian" ? obsidianLayout(graph, width, height) : galaxyLayout(graph, width, height);
+}
 
-  const stars = Array.from({ length: 80 }, (_, i) => {
-    const x = hash(`${starSeed}:x:${i}`) % width;
-    const y = hash(`${starSeed}:y:${i}`) % height;
-    const r = 0.4 + (hash(`${starSeed}:r:${i}`) % 12) / 10;
-    const opacity = 0.12 + (hash(`${starSeed}:o:${i}`) % 45) / 100;
+function boxesOverlap(a, b, padding = 3) {
+  return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
+}
+
+function placeLabels(points, width, height) {
+  const priorities = [...points].sort((a, b) => {
+    const pa = a.node.type === "owner" ? 10000 : a.node.type === "group" ? 9000 : (a.node.stars ?? 0) * 10 + (a.node.fork ? 0 : 5) - (a.node.archived ? 4 : 0);
+    const pb = b.node.type === "owner" ? 10000 : b.node.type === "group" ? 9000 : (b.node.stars ?? 0) * 10 + (b.node.fork ? 0 : 5) - (b.node.archived ? 4 : 0);
+    return pb - pa || a.node.label.localeCompare(b.node.label);
+  });
+  const occupied = [];
+  const placements = new Map();
+  for (const point of priorities) {
+    const node = point.node;
+    const fontSize = node.type === "owner" ? 15 : node.type === "group" ? 10.5 : 9.5;
+    const widthPx = labelWidth(node, fontSize);
+    const heightPx = fontSize + 6;
+    const radius = nodeRadius(node);
+    const candidates = [
+      { x: point.x, y: point.y + radius + 8, anchor: "middle" },
+      { x: point.x, y: point.y - radius - heightPx - 5, anchor: "middle" },
+      { x: point.x + radius + 8 + widthPx / 2, y: point.y - heightPx / 2, anchor: "middle" },
+      { x: point.x - radius - 8 - widthPx / 2, y: point.y - heightPx / 2, anchor: "middle" },
+    ];
+    let chosen = null;
+    for (const candidate of candidates) {
+      const box = { left: candidate.x - widthPx / 2, right: candidate.x + widthPx / 2, top: candidate.y, bottom: candidate.y + heightPx };
+      if (box.left < 8 || box.right > width - 8 || box.top < 8 || box.bottom > height - 26) continue;
+      if (occupied.some((other) => boxesOverlap(box, other, node.type === "repository" ? 4 : 6))) continue;
+      chosen = { ...candidate, fontSize, box };
+      break;
+    }
+    if (chosen || node.type === "owner") {
+      const fallback = chosen || { x: point.x, y: clamp(point.y + radius + 8, 8, height - 34), anchor: "middle", fontSize, box: { left: point.x - widthPx / 2, right: point.x + widthPx / 2, top: point.y + radius + 8, bottom: point.y + radius + 8 + heightPx } };
+      placements.set(node.id, fallback);
+      occupied.push(fallback.box);
+    }
+  }
+  return placements;
+}
+
+function stars(owner, width, height, fg) {
+  const seed = hash(owner);
+  return Array.from({ length: 90 }, (_, i) => {
+    const x = hash(`${seed}:x:${i}`) % width;
+    const y = hash(`${seed}:y:${i}`) % height;
+    const r = 0.35 + (hash(`${seed}:r:${i}`) % 10) / 10;
+    const opacity = 0.10 + (hash(`${seed}:o:${i}`) % 42) / 100;
     return `<circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="${fg}" opacity="${opacity.toFixed(2)}"/>`;
   }).join("");
+}
 
-  const lines = graph.edges.map((item) => {
-    const source = byId.get(item.source);
-    const target = byId.get(item.target);
+function legend(colors, width, height) {
+  const items = [
+    [colors.original, "Original"],
+    [colors.fork, "Fork"],
+    [colors.archived, "Archived"],
+  ];
+  let x = 18;
+  return items.map(([color, label]) => {
+    const chunk = `<circle cx="${x + 4}" cy="${height - 16}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 12.5}" fill="${colors.muted}" font-size="9.5">${label}</text>`;
+    x += 17 + label.length * 5.8 + 15;
+    return chunk;
+  }).join("") + `<text x="${width - 18}" y="${height - 12.5}" text-anchor="end" fill="${colors.muted}" font-size="9.5">${esc("project map")}</text>`;
+}
+
+export function renderGalaxySvg(graph, theme, width, height, style = "galaxy") {
+  const mapStyle = style === "obsidian" ? "obsidian" : "galaxy";
+  const colors = palette(theme, mapStyle);
+  const points = layoutGraphForStyle(graph, width, height, mapStyle);
+  const byId = new Map(points.map((point) => [point.node.id, point]));
+  const labels = placeLabels(points, width, height);
+
+  const background = mapStyle === "galaxy"
+    ? `<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/><g>${stars(graph.owner, width, height, colors.fg)}</g>`
+    : `<defs><radialGradient id="obsidian-bg" cx="50%" cy="43%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="12" fill="url(#obsidian-bg)"/>`;
+
+  const lines = graph.edges.map((edge) => {
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
     if (!source || !target) return "";
-    return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${edge}" stroke-width="1" opacity="0.65"/>`;
+    const relation = edge.type === "relation";
+    return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${relation ? colors.relation : colors.edge}" stroke-width="${relation ? 1.4 : 1}" opacity="${relation ? 0.72 : mapStyle === "obsidian" ? 0.38 : 0.52}"${relation ? ' stroke-dasharray="5 4"' : ""}/>`;
   }).join("");
 
   const nodes = points.map(({ x, y, node }) => {
-    if (node.type === "owner") {
-      return `<g><circle cx="${x}" cy="${y}" r="27" fill="${colorFor(node.label, theme)}" opacity="0.98"/><circle cx="${x}" cy="${y}" r="34" fill="none" stroke="${colorFor(node.label, theme)}" opacity="0.24"/><text x="${x}" y="${y + 47}" text-anchor="middle" fill="${fg}" font-size="16" font-weight="700">${esc(node.label)}</text></g>`;
-    }
-    if (node.type === "group") {
-      return `<g><circle cx="${x}" cy="${y}" r="7" fill="${colorFor(node.label, theme)}"/><text x="${x}" y="${y - 13}" text-anchor="middle" fill="${muted}" font-size="11" font-weight="600">${esc(node.label)}</text></g>`;
-    }
-    const radius = Math.min(10, 4.5 + Math.log2((node.stars ?? 0) + 1) * 1.4);
-    const fill = colorFor(node.language || node.groupLabel || node.label, theme);
-    const label = node.label.length > 22 ? `${node.label.slice(0, 20)}…` : node.label;
-    const text = labelledRepos.has(node.id)
-      ? `<text x="${x}" y="${y + radius + 12}" text-anchor="middle" fill="${fg}" font-size="10">${esc(label)}</text>`
+    const status = statusOf(node);
+    const fill = colors[status] || colors.original;
+    const radius = nodeRadius(node);
+    const placement = labels.get(node.id);
+    const label = placement
+      ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="${placement.anchor}" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${mapStyle === "galaxy" ? 2.5 : 1.8}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
       : "";
-    return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.fork ? 0.72 : 0.95}"/>${text}</g>`;
+    const archivedRing = node.type === "repository" && node.archived
+      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
+      : "";
+    const ownerRing = node.type === "owner"
+      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
+      : "";
+    return `<g><title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.archived ? 0.72 : 0.96}"/>${ownerRing}${archivedRing}${label}</g>`;
   }).join("");
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Galaxy map of ${esc(graph.owner)} public GitHub repositories">\n  <rect width="100%" height="100%" rx="16" fill="${bg}"/>\n  <g>${stars}</g>\n  <g>${lines}</g>\n  <g>${nodes}</g>\n  <text x="18" y="${height - 17}" fill="${muted}" font-size="10">${graph.repositoryCount} public projects · generated ${esc(graph.generatedAt.slice(0, 10))}</text>\n</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(mapStyle === "obsidian" ? "Obsidian-style" : "Galaxy-style")} map of ${esc(graph.owner)} public GitHub repositories">\n  ${background}\n  <g>${lines}</g>\n  <g>${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
 }

@@ -1,9 +1,6 @@
 "use strict";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const STYLE_VALUES = new Set(["galaxy", "obsidian"]);
-const TAU = Math.PI * 2;
-
 const canvas = document.getElementById("galaxy");
 const ctx = canvas.getContext("2d");
 const title = document.getElementById("title");
@@ -23,17 +20,14 @@ const errorBox = document.getElementById("error");
 const errorText = document.getElementById("errorText");
 const setup = document.getElementById("setup");
 const status = document.getElementById("status");
-
 const query = new URL(location.href).searchParams;
 let username = "";
-let initialStyle = STYLE_VALUES.has(query.get("style")) ? query.get("style") : "galaxy";
 
 const state = {
   graph: null,
   nodes: [],
   edges: [],
   byId: new Map(),
-  style: initialStyle,
   query: "",
   selected: null,
   hovered: null,
@@ -51,15 +45,6 @@ const state = {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-function hash(text) {
-  let value = 2166136261;
-  for (let i = 0; i < text.length; i += 1) {
-    value ^= text.charCodeAt(i);
-    value = Math.imul(value, 16777619);
-  }
-  return value >>> 0;
 }
 
 function normalizeUsername(value) {
@@ -87,7 +72,7 @@ function safeRepoUrl(value, name) {
 
 function sanitizeGraph(value) {
   if (!value || typeof value !== "object" || String(value.owner || "").toLowerCase() !== username || !Array.isArray(value.nodes) || value.nodes.length > 520) return null;
-  const safeNodes = [];
+  const nodes = [];
   const ids = new Set();
   for (const raw of value.nodes) {
     if (!raw || typeof raw !== "object" || !["owner", "group", "repository"].includes(raw.type)) continue;
@@ -119,58 +104,13 @@ function sanitizeGraph(value) {
       };
     }
     ids.add(id);
-    safeNodes.push(node);
+    nodes.push(node);
   }
-  const safeEdges = Array.isArray(value.edges)
-    ? value.edges
-        .filter((edge) => edge && typeof edge === "object" && ids.has(edge.source) && ids.has(edge.target))
-        .slice(0, 1200)
-        .map((edge) => ({ source: edge.source, target: edge.target, type: cleanText(edge.type, 40) }))
+  if (!nodes.some((node) => node.type === "owner")) nodes.unshift({ id: `user:${username}`, label: username, type: "owner", url: `https://github.com/${encodeURIComponent(username)}` });
+  const edges = Array.isArray(value.edges)
+    ? value.edges.filter((edge) => edge && typeof edge === "object" && ids.has(edge.source) && ids.has(edge.target)).slice(0, 1200).map((edge) => ({ source: edge.source, target: edge.target, type: cleanText(edge.type, 40) }))
     : [];
-  if (!safeNodes.some((node) => node.type === "owner")) {
-    safeNodes.unshift({ id: `user:${username}`, label: username, type: "owner", url: `https://github.com/${encodeURIComponent(username)}` });
-  }
-  return {
-    owner: username,
-    generatedAt: cleanText(value.generatedAt, 64),
-    repositoryCount: safeNodes.filter((node) => node.type === "repository").length,
-    groupCount: safeNodes.filter((node) => node.type === "group").length,
-    nodes: safeNodes,
-    edges: safeEdges,
-  };
-}
-
-function palette() {
-  if (state.style === "obsidian") {
-    return {
-      background: "#1e1e1e",
-      background2: "#181818",
-      edge: "#5a5a60",
-      relation: "#d7a75b",
-      text: "#dcddde",
-      muted: "#9a9a9f",
-      owner: "#c4b5fd",
-      group: "#8b7cf6",
-      original: "#a89df7",
-      fork: "#67b7a7",
-      archived: "#b97a7a",
-      selection: "#ffffff",
-    };
-  }
-  return {
-    background: "#050811",
-    background2: "#090f1b",
-    edge: "#3a4962",
-    relation: "#f4b65f",
-    text: "#eaf0ff",
-    muted: "#97a6bc",
-    owner: "#64d2ff",
-    group: "#6aa7ff",
-    original: "#57d17a",
-    fork: "#b59aff",
-    archived: "#d9847b",
-    selection: "#ffffff",
-  };
+  return { owner: username, nodes, edges };
 }
 
 function nodeStatus(node) {
@@ -179,29 +119,19 @@ function nodeStatus(node) {
   return node.fork ? "fork" : "original";
 }
 
-function nodeColor(node, colors) {
-  const statusName = nodeStatus(node);
-  return colors[statusName] || colors.original;
-}
-
 function displayLabel(node) {
   const label = String(node.label || "");
   return label.length <= 30 ? label : `${label.slice(0, 29)}…`;
 }
 
 function estimateLabelWidth(node) {
-  const multiplier = node.type === "repository" ? 6.2 : 6.8;
-  return clamp(18 + displayLabel(node).length * multiplier, 52, 205);
+  return clamp(18 + displayLabel(node).length * (node.type === "repository" ? 6.1 : 6.7), 48, 205);
 }
 
 function nodeRadius(node) {
-  if (node.type === "owner") return state.style === "galaxy" ? 24 : 18;
-  if (node.type === "group") return state.style === "galaxy" ? 8 : 12;
-  return clamp(5.5 + Math.log2((node.stars || 0) + 1) * 1.35, 5.5, 12);
-}
-
-function collisionRadius(node) {
-  return Math.max(nodeRadius(node) + 16, Math.min(82, estimateLabelWidth(node) * 0.34 + 18));
+  if (node.type === "owner") return 18;
+  if (node.type === "group") return 8;
+  return clamp(5.2 + Math.log2((node.stars || 0) + 1) * 1.25, 5.2, 11);
 }
 
 function groupMembers(group, repos) {
@@ -209,137 +139,51 @@ function groupMembers(group, repos) {
   return repos.filter((repo) => repo.groupId === key || group.id === `group:${repo.groupId}`);
 }
 
-function buildGalaxyLayout(graph) {
-  const ownerRaw = graph.nodes.find((node) => node.type === "owner");
+function buildTreeLayout(graph) {
+  const owner = graph.nodes.find((node) => node.type === "owner");
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository");
-  const result = [];
-  if (ownerRaw) result.push({ ...ownerRaw, x: 0, y: 0 });
-  const count = Math.max(1, groups.length);
-  const sector = TAU / count;
-  const usableSector = Math.min(1.15, sector * 0.72);
-
-  groups.forEach((group, groupIndex) => {
-    const base = -Math.PI / 2 + sector * groupIndex;
-    result.push({ ...group, x: Math.cos(base) * 172, y: Math.sin(base) * 172 });
-    const members = groupMembers(group, repos).sort((a, b) => (b.stars || 0) - (a.stars || 0) || a.label.localeCompare(b.label));
-    let cursor = 0;
-    let lane = 0;
-    while (cursor < members.length) {
-      const radius = 285 + lane * 92;
-      const remaining = members.slice(cursor);
-      const widest = Math.max(...remaining.slice(0, 12).map(estimateLabelWidth), 70);
-      const minimumGap = clamp((widest + 34) / radius, 0.14, 0.5);
-      const capacity = Math.max(1, Math.floor(usableSector / minimumGap));
-      const take = Math.min(capacity, members.length - cursor);
-      for (let index = 0; index < take; index += 1) {
-        const repo = members[cursor + index];
-        const local = take <= 1 ? 0 : (index / (take - 1) - 0.5) * usableSector;
-        const spiral = lane * 0.055;
-        const jitter = ((hash(`${repo.id}:phase`) % 1000) / 1000 - 0.5) * Math.min(0.035, minimumGap * 0.15);
-        const angle = base + local + spiral + jitter;
-        result.push({ ...repo, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
-      }
-      cursor += take;
-      lane += 1;
-    }
-  });
-
-  const assigned = new Set(result.map((node) => node.id));
+  const bundles = groups.map((group) => ({ group, members: groupMembers(group, repos).sort((a, b) => (b.stars || 0) - (a.stars || 0) || a.label.localeCompare(b.label)) }));
+  const assigned = new Set(bundles.flatMap((bundle) => bundle.members.map((repo) => repo.id)));
   const unassigned = repos.filter((repo) => !assigned.has(repo.id));
-  unassigned.forEach((repo, index) => {
-    const angle = (index / Math.max(1, unassigned.length)) * TAU;
-    const radius = 300 + (index % 3) * 88;
-    result.push({ ...repo, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
-  });
-  return result;
-}
-
-function buildObsidianLayout(graph) {
-  const rawNodes = graph.nodes;
-  const result = rawNodes.map((raw, index) => {
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    const jitter = (hash(raw.id) % 1000) / 1000;
-    const angle = index * golden + jitter * 0.55;
-    const radius = 45 + Math.sqrt((index + 1) / Math.max(1, rawNodes.length)) * 430;
-    return { ...raw, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, vx: 0, vy: 0 };
-  });
-  const byId = new Map(result.map((node) => [node.id, node]));
-  const links = graph.edges.map((edge) => ({ ...edge, sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) })).filter((edge) => edge.sourceNode && edge.targetNode);
-
-  for (let step = 0; step < 110; step += 1) {
-    const alpha = 1 - step / 110;
-    for (let first = 0; first < result.length; first += 1) {
-      const a = result[first];
-      for (let second = first + 1; second < result.length; second += 1) {
-        const b = result[second];
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        let d2 = dx * dx + dy * dy;
-        if (d2 < 1) {
-          const angle = (hash(`${a.id}:${b.id}`) % 6283) / 1000;
-          dx = Math.cos(angle);
-          dy = Math.sin(angle);
-          d2 = 1;
-        }
-        const distance = Math.sqrt(d2);
-        const minimum = collisionRadius(a) + collisionRadius(b) + 10;
-        const effective = Math.max(d2, minimum * minimum * 0.38);
-        const force = (13500 * alpha) / effective;
-        const fx = (dx / distance) * force;
-        const fy = (dy / distance) * force;
-        a.vx -= fx;
-        a.vy -= fy;
-        b.vx += fx;
-        b.vy += fy;
-        if (distance < minimum) {
-          const push = (minimum - distance) * 0.018 * alpha;
-          a.vx -= (dx / distance) * push;
-          a.vy -= (dy / distance) * push;
-          b.vx += (dx / distance) * push;
-          b.vy += (dy / distance) * push;
-        }
-      }
-    }
-    for (const link of links) {
-      const a = link.sourceNode;
-      const b = link.targetNode;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const distance = Math.max(1, Math.hypot(dx, dy));
-      const target = link.type === "ownership" ? 190 : 142;
-      const amount = (distance - target) * 0.012 * alpha;
-      const fx = (dx / distance) * amount;
-      const fy = (dy / distance) * amount;
-      a.vx += fx;
-      a.vy += fy;
-      b.vx -= fx;
-      b.vy -= fy;
-    }
-    for (const node of result) {
-      node.vx += -node.x * 0.0013 * alpha;
-      node.vy += -node.y * 0.0013 * alpha;
-      node.vx *= 0.83;
-      node.vy *= 0.83;
-      node.x += node.vx;
-      node.y += node.vy;
-    }
+  if (unassigned.length) bundles.push({ group: { id: "group:other", label: "Other", type: "group", repositoryCount: unassigned.length }, members: unassigned });
+  const result = [];
+  if (owner) result.push({ ...owner, x: 0, y: -260, depth: 0 });
+  const totalWeight = Math.max(1, bundles.reduce((sum, bundle) => sum + Math.max(1, bundle.members.length), 0));
+  let cursor = -520;
+  const totalWidth = 1040;
+  const gap = bundles.length > 1 ? 26 : 0;
+  const available = totalWidth - gap * Math.max(0, bundles.length - 1);
+  for (const bundle of bundles) {
+    const segmentWidth = available * Math.max(1, bundle.members.length) / totalWeight;
+    const left = cursor;
+    const right = cursor + segmentWidth;
+    const center = (left + right) / 2;
+    result.push({ ...bundle.group, x: center, y: -90, depth: 1, left, right });
+    const widest = Math.max(...bundle.members.slice(0, 30).map(estimateLabelWidth), 72);
+    const columns = Math.max(1, Math.floor(Math.max(70, segmentWidth) / clamp(widest + 28, 86, 190)));
+    bundle.members.forEach((repo, index) => {
+      const row = Math.floor(index / columns);
+      const col = index % columns;
+      const countInRow = Math.min(columns, bundle.members.length - row * columns);
+      const x = countInRow <= 1 ? center : left + segmentWidth * ((col + 1) / (countInRow + 1));
+      result.push({ ...repo, x, y: 95 + row * 88, depth: 2, parentId: bundle.group.id });
+    });
+    cursor = right + gap;
   }
   return result;
 }
 
-function rebuildLayout({ fit = true } = {}) {
+function rebuildLayout() {
   if (!state.graph) return;
-  state.nodes = state.style === "obsidian" ? buildObsidianLayout(state.graph) : buildGalaxyLayout(state.graph);
+  state.nodes = buildTreeLayout(state.graph);
   state.byId = new Map(state.nodes.map((node) => [node.id, node]));
   state.edges = state.graph.edges;
   state.selected = state.selected ? state.byId.get(state.selected.id) || null : null;
-  document.body.dataset.mapStyle = state.style;
-  styleSelect.value = state.style;
-  subtitle.textContent = state.style === "obsidian"
-    ? "Obsidian-like force graph · search, select, drag, pan and zoom"
-    : "Galaxy view · label-aware orbital spacing · search, select, drag, pan and zoom";
-  if (fit) fitView();
+  document.body.dataset.mapStyle = "tree";
+  styleSelect.value = "tree";
+  subtitle.textContent = "Tree view · Owner → Category → Repository · search, select, drag, pan and zoom";
+  fitView();
   draw();
 }
 
@@ -366,82 +210,78 @@ function fitView() {
   let maxX = -Infinity;
   let maxY = -Infinity;
   for (const node of state.nodes) {
-    const halfWidth = estimateLabelWidth(node) / 2 + 22;
-    const halfHeight = nodeRadius(node) + 32;
+    const halfWidth = estimateLabelWidth(node) / 2 + 28;
     minX = Math.min(minX, node.x - halfWidth);
     maxX = Math.max(maxX, node.x + halfWidth);
-    minY = Math.min(minY, node.y - halfHeight);
-    maxY = Math.max(maxY, node.y + halfHeight);
+    minY = Math.min(minY, node.y - 34);
+    maxY = Math.max(maxY, node.y + 48);
   }
   const width = Math.max(1, maxX - minX);
   const height = Math.max(1, maxY - minY);
-  state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.25, 2.2);
+  state.zoom = clamp(Math.min((size.width * 0.88) / width, (size.height * 0.80) / height), 0.18, 2.4);
   state.pan.x = -((minX + maxX) / 2) * state.zoom;
   state.pan.y = -((minY + maxY) / 2) * state.zoom;
-  draw();
+}
+
+function palette() {
+  return { background: "#080b12", panel: "#0e1420", edge: "#48576f", relation: "#f4b65f", text: "#e8edf7", muted: "#98a5b9", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", selection: "#ffffff" };
+}
+
+function nodeColor(node, colors) {
+  return colors[nodeStatus(node)] || colors.original;
 }
 
 function matchesQuery(node) {
   if (!state.query) return true;
-  const text = [node.label, node.description, node.language, node.groupLabel, ...(node.topics || [])].filter(Boolean).join(" ").toLowerCase();
-  return text.includes(state.query);
+  return [node.label, node.description, node.language, node.groupLabel, ...(node.topics || [])].filter(Boolean).join(" ").toLowerCase().includes(state.query);
 }
 
 function connectedToSelected(node) {
   if (!state.selected || node === state.selected) return true;
-  return state.edges.some((edge) =>
-    (edge.source === state.selected.id && edge.target === node.id) || (edge.target === state.selected.id && edge.source === node.id));
+  return state.edges.some((edge) => (edge.source === state.selected.id && edge.target === node.id) || (edge.target === state.selected.id && edge.source === node.id));
 }
 
-function nodeOpacity(node) {
-  let opacity = 1;
-  if (state.query && !matchesQuery(node)) opacity *= 0.12;
-  if (state.selected && !connectedToSelected(node)) opacity *= 0.22;
-  if (node.archived) opacity *= 0.72;
-  return opacity;
-}
-
-function drawBackground(colors, width, height) {
-  ctx.fillStyle = colors.background;
-  ctx.fillRect(0, 0, width, height);
-  if (state.style === "obsidian") {
-    const gradient = ctx.createRadialGradient(width * 0.5, height * 0.45, 0, width * 0.5, height * 0.45, Math.max(width, height) * 0.7);
-    gradient.addColorStop(0, "rgba(124,110,246,.07)");
-    gradient.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-    return;
-  }
-  for (let i = 0; i < 130; i += 1) {
-    ctx.globalAlpha = 0.10 + (hash(`${username}:star:o:${i}`) % 42) / 100;
-    ctx.fillStyle = "#d7e4ff";
-    ctx.beginPath();
-    ctx.arc(hash(`${username}:star:x:${i}`) % width, hash(`${username}:star:y:${i}`) % height, 0.35 + (hash(`${username}:star:r:${i}`) % 11) / 10, 0, TAU);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
+function drawElbow(a, b, colors, opacity = 0.46) {
+  const source = worldToScreen(a.x, a.y);
+  const target = worldToScreen(b.x, b.y);
+  const midY = source.y + (target.y - source.y) * 0.48;
+  ctx.strokeStyle = colors.edge;
+  ctx.globalAlpha = opacity;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(source.x, source.y);
+  ctx.lineTo(source.x, midY);
+  ctx.lineTo(target.x, midY);
+  ctx.lineTo(target.x, target.y);
+  ctx.stroke();
 }
 
 function drawEdges(colors) {
+  const owner = state.nodes.find((node) => node.type === "owner");
+  const groups = state.nodes.filter((node) => node.type === "group");
+  if (owner) for (const group of groups) drawElbow(owner, group, colors, 0.62);
+  for (const node of state.nodes) {
+    if (node.type !== "repository" || !node.parentId) continue;
+    const group = state.byId.get(node.parentId);
+    if (group) drawElbow(group, node, colors, 0.42);
+  }
   for (const edge of state.edges) {
+    if (edge.type !== "relation") continue;
     const a = state.byId.get(edge.source);
     const b = state.byId.get(edge.target);
     if (!a || !b) continue;
     const source = worldToScreen(a.x, a.y);
     const target = worldToScreen(b.x, b.y);
-    let opacity = edge.type === "relation" ? 0.72 : state.style === "obsidian" ? 0.28 : 0.46;
-    if (state.query && !(matchesQuery(a) || matchesQuery(b))) opacity *= 0.15;
-    if (state.selected && a !== state.selected && b !== state.selected) opacity *= 0.16;
-    ctx.strokeStyle = edge.type === "relation" ? colors.relation : colors.edge;
-    ctx.globalAlpha = opacity;
-    ctx.lineWidth = edge.type === "relation" ? 1.6 : 1;
-    ctx.setLineDash(edge.type === "relation" ? [5, 4] : []);
+    ctx.strokeStyle = colors.relation;
+    ctx.globalAlpha = 0.68;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([5, 4]);
     ctx.beginPath();
     ctx.moveTo(source.x, source.y);
     ctx.lineTo(target.x, target.y);
     ctx.stroke();
+    ctx.setLineDash([]);
   }
-  ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 }
 
@@ -449,69 +289,62 @@ function boxesOverlap(a, b, padding = 3) {
   return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
 }
 
-function labelBox(node, point, radius, fontSize) {
-  const text = displayLabel(node);
-  const width = clamp(text.length * fontSize * 0.58 + 10, 38, 215);
-  const height = fontSize + 8;
-  const top = point.y + radius + 7;
-  return { left: point.x - width / 2, right: point.x + width / 2, top, bottom: top + height, width, height, text };
-}
-
 function drawNodesAndLabels(colors) {
   const candidates = [];
   for (const node of state.nodes) {
     const point = worldToScreen(node.x, node.y);
     const highlighted = node === state.selected || node === state.hovered;
-    const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
-    const opacity = nodeOpacity(node);
+    const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.14 : 1));
+    let opacity = node.archived ? 0.72 : 1;
+    if (state.query && !matchesQuery(node)) opacity *= 0.12;
+    if (state.selected && !connectedToSelected(node)) opacity *= 0.22;
     ctx.globalAlpha = opacity;
     ctx.fillStyle = nodeColor(node, colors);
     ctx.beginPath();
-    ctx.arc(point.x, point.y, radius, 0, TAU);
+    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();
-
     if (node.type === "repository" && node.archived) {
       ctx.strokeStyle = colors.archived;
-      ctx.lineWidth = 1.4;
+      ctx.lineWidth = 1.3;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
-      ctx.arc(point.x, point.y, radius + 4, 0, TAU);
+      ctx.arc(point.x, point.y, radius + 4, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
     if (highlighted) {
-      ctx.globalAlpha = Math.max(opacity, 0.72);
+      ctx.globalAlpha = Math.max(opacity, 0.76);
       ctx.strokeStyle = colors.selection;
       ctx.lineWidth = node === state.selected ? 2 : 1.2;
       ctx.beginPath();
-      ctx.arc(point.x, point.y, radius + 5, 0, TAU);
+      ctx.arc(point.x, point.y, radius + 5, 0, Math.PI * 2);
       ctx.stroke();
     }
-    const always = node.type !== "repository" || highlighted;
-    const threshold = state.style === "obsidian" ? 0.58 : 0.46;
-    if (always || state.zoom >= threshold) {
+    if (node.type !== "repository" || highlighted || state.zoom >= 0.48) {
       const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 11) * Math.sqrt(state.zoom), 9, 15);
       candidates.push({ node, point, radius, fontSize, opacity, priority: highlighted ? 100 : node.type === "owner" ? 90 : node.type === "group" ? 80 : (node.stars || 0) + (node.fork ? -1 : 1) });
     }
   }
   ctx.globalAlpha = 1;
-
   candidates.sort((a, b) => b.priority - a.priority || a.node.label.localeCompare(b.node.label));
   const occupied = [];
   for (const candidate of candidates) {
-    const box = labelBox(candidate.node, candidate.point, candidate.radius, candidate.fontSize);
+    const text = displayLabel(candidate.node);
+    const width = clamp(text.length * candidate.fontSize * 0.58 + 10, 38, 215);
+    const top = candidate.point.y + candidate.radius + 7;
+    const box = { left: candidate.point.x - width / 2, right: candidate.point.x + width / 2, top, bottom: top + candidate.fontSize + 8 };
     const forced = candidate.node === state.selected || candidate.node === state.hovered || candidate.node.type === "owner";
-    if (!forced && occupied.some((other) => boxesOverlap(box, other, state.style === "obsidian" ? 4 : 6))) continue;
+    if (!forced && occupied.some((other) => boxesOverlap(box, other, 4))) continue;
     occupied.push(box);
-    ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.82 : 0);
+    ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.84 : 0);
     ctx.font = `${candidate.node.type === "owner" ? 700 : candidate.node.type === "group" ? 600 : 500} ${candidate.fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.lineWidth = state.style === "galaxy" ? 3 : 2;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = colors.background;
-    ctx.strokeText(box.text, candidate.point.x, box.top + 2);
+    ctx.strokeText(text, candidate.point.x, top + 2);
     ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
-    ctx.fillText(box.text, candidate.point.x, box.top + 2);
+    ctx.fillText(text, candidate.point.x, top + 2);
   }
   ctx.globalAlpha = 1;
 }
@@ -520,7 +353,8 @@ function draw() {
   const size = canvasSize();
   const colors = palette();
   ctx.clearRect(0, 0, size.width, size.height);
-  drawBackground(colors, size.width, size.height);
+  ctx.fillStyle = colors.background;
+  ctx.fillRect(0, 0, size.width, size.height);
   if (!state.graph) return;
   drawEdges(colors);
   drawNodesAndLabels(colors);
@@ -535,9 +369,8 @@ function resize() {
   if (state.graph && !state.fitted) {
     state.fitted = true;
     fitView();
-  } else {
-    draw();
   }
+  draw();
 }
 
 function hitTest(screenX, screenY) {
@@ -554,10 +387,8 @@ function updateDetails(node) {
   state.selected = node;
   details.classList.toggle("has-selection", Boolean(node));
   if (!node) {
-    detailsTitle.textContent = "Project map";
-    detailsDescription.textContent = state.style === "obsidian"
-      ? "Obsidian-like force layout. Search, select, drag nodes, pan empty space, and zoom."
-      : "Galaxy layout with label-aware orbital spacing. Search, select, drag nodes, pan empty space, and zoom.";
+    detailsTitle.textContent = "Project tree";
+    detailsDescription.textContent = "Hierarchy view: Owner → Category → Repository. Search, select, drag nodes, pan empty space, and zoom.";
     detailsMeta.hidden = true;
     detailsLink.hidden = true;
     draw();
@@ -593,20 +424,19 @@ function updateDetails(node) {
   draw();
 }
 
+function pointDistance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 function pointerPair() {
   const values = [...state.pointers.values()];
   return values.length >= 2 ? [values[0], values[1]] : null;
 }
 
-function pointDistance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
 canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
   const before = screenToWorld(event.offsetX, event.offsetY);
-  const factor = Math.exp(-event.deltaY * 0.0012);
-  state.zoom = clamp(state.zoom * factor, 0.2, 4.5);
+  state.zoom = clamp(state.zoom * Math.exp(-event.deltaY * 0.0012), 0.16, 4.5);
   const after = worldToScreen(before.x, before.y);
   state.pan.x += event.offsetX - after.x;
   state.pan.y += event.offsetY - after.y;
@@ -629,7 +459,6 @@ canvas.addEventListener("pointerdown", (event) => {
     state.pinchDistance = pair ? pointDistance(pair[0], pair[1]) : 0;
     return;
   }
-  if (state.pointers.size !== 1) return;
   state.drag = hitTest(point.x, point.y);
   state.panning = !state.drag;
   canvas.classList.add("dragging");
@@ -646,7 +475,7 @@ canvas.addEventListener("pointermove", (event) => {
     const midpoint = { x: (pair[0].x + pair[1].x) / 2, y: (pair[0].y + pair[1].y) / 2 };
     if (state.pinchDistance > 0 && distance > 0) {
       const before = screenToWorld(midpoint.x, midpoint.y);
-      state.zoom = clamp(state.zoom * (distance / state.pinchDistance), 0.2, 4.5);
+      state.zoom = clamp(state.zoom * (distance / state.pinchDistance), 0.16, 4.5);
       const after = worldToScreen(before.x, before.y);
       state.pan.x += midpoint.x - after.x;
       state.pan.y += midpoint.y - after.y;
@@ -709,9 +538,10 @@ canvas.addEventListener("keydown", (event) => {
   if (event.key === "0") {
     event.preventDefault();
     fitView();
+    draw();
   } else if (["+", "=", "-"].includes(event.key)) {
     event.preventDefault();
-    state.zoom = clamp(state.zoom * (event.key === "-" ? 1 / 1.16 : 1.16), 0.2, 4.5);
+    state.zoom = clamp(state.zoom * (event.key === "-" ? 1 / 1.16 : 1.16), 0.16, 4.5);
     draw();
   } else if (event.key === "Enter" && state.selected?.url) {
     event.preventDefault();
@@ -726,19 +556,21 @@ searchInput.addEventListener("input", () => {
   draw();
 });
 styleSelect.addEventListener("change", () => {
-  state.style = STYLE_VALUES.has(styleSelect.value) ? styleSelect.value : "galaxy";
-  const url = new URL(location.href);
-  url.searchParams.set("style", state.style);
-  history.replaceState(null, "", url);
-  updateDetails(null);
-  rebuildLayout({ fit: true });
+  if (styleSelect.value === "tree") return;
+  const url = new URL("../u/", location.href);
+  url.searchParams.set("username", username);
+  url.searchParams.set("style", styleSelect.value === "obsidian" ? "obsidian" : "galaxy");
+  location.assign(url.toString());
 });
-fitButton.addEventListener("click", fitView);
+fitButton.addEventListener("click", () => {
+  fitView();
+  draw();
+});
 resetButton.addEventListener("click", () => {
   searchInput.value = "";
   state.query = "";
   updateDetails(null);
-  rebuildLayout({ fit: true });
+  rebuildLayout();
 });
 detailsClose.addEventListener("click", () => {
   updateDetails(null);
@@ -755,18 +587,20 @@ function showError(message) {
 
 try {
   username = normalizeUsername(query.get("username"));
-  document.title = `${username} · Interactive Project Map`;
+  document.title = `${username} · Project Tree`;
   title.textContent = `${username} · Interactive Project Map`;
-  canvas.setAttribute("aria-label", `Interactive project graph for ${username}`);
+  canvas.setAttribute("aria-label", `Interactive project tree for ${username}`);
   const setupUrl = new URL("../", location.href);
   setupUrl.searchParams.set("username", username);
+  setupUrl.searchParams.set("style", "tree");
   setup.href = setupUrl.toString();
 } catch (error) {
   showError(error.message);
 }
 
-document.body.dataset.mapStyle = state.style;
-styleSelect.value = state.style;
+document.body.dataset.mapStyle = "tree";
+styleSelect.value = "tree";
+subtitle.textContent = "Tree view · Owner → Category → Repository";
 resize();
 
 if (username) {
@@ -782,7 +616,7 @@ if (username) {
       if (!clean) throw new Error("graph.json failed validation");
       state.graph = clean;
       status.hidden = true;
-      rebuildLayout({ fit: true });
+      rebuildLayout();
       updateDetails(null);
     })
     .catch((error) => showError(`Could not load ${username}/${username}/project-map/graph.json. Run the setup workflow once, or regenerate it if the file is invalid. (${error.message})`));

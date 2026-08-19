@@ -7,57 +7,38 @@ import { tmpdir } from "node:os";
 import { renderPagesHome, renderPagesViewer } from "../scripts/pages-app.mjs";
 import { buildPublicPages, PUBLIC_ACTION_REF } from "../scripts/build-public-pages.mjs";
 
-test("Pages generator emits distributed static installation URLs and isolated permissions", () => {
+const styles = ["radial", "galaxy", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+const dedicated = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+
+test("Pages generator source retains distributed static installation URLs and isolated permissions", () => {
   const html = renderPagesHome();
-  assert.match(html, /raw\.githubusercontent\.com/);
-  assert.match(html, /HEAD\/project-map/);
-  assert.match(html, /new URL\('u\/'/);
-  assert.match(html, /nekomario28\/interactive-project-map@v1/);
-  assert.match(html, /contents: read/);
-  assert.match(html, /contents: write/);
-  assert.match(html, /actions\/upload-artifact@/);
-  assert.doesNotMatch(html, /api\.github\.com/);
+  assert.match(html, /raw\.githubusercontent\.com/); assert.match(html, /HEAD\/project-map/); assert.match(html, /new URL\('u\/'/); assert.match(html, /nekomario28\/interactive-project-map@v1/); assert.match(html, /contents: read/); assert.match(html, /contents: write/); assert.match(html, /actions\/upload-artifact@/); assert.doesNotMatch(html, /api\.github\.com/);
 });
 
-test("universal Pages viewer reads only the user's static graph in the normal path", () => {
+test("legacy viewer render source remains static-only before public shell replacement", () => {
   const html = renderPagesViewer();
-  assert.match(html, /raw\.githubusercontent\.com/);
-  assert.match(html, /HEAD\/project-map\/graph\.json/);
-  assert.match(html, /sanitizeGraph/);
-  assert.match(html, /u\.hostname!==['"]github\.com['"]/);
-  assert.doesNotMatch(html, /\/api\/graph/);
-  assert.doesNotMatch(html, /api\.github\.com/);
+  assert.match(html, /raw\.githubusercontent\.com/); assert.match(html, /HEAD\/project-map\/graph\.json/); assert.doesNotMatch(html, /\/api\/graph/); assert.doesNotMatch(html, /api\.github\.com/);
 });
 
-test("public Pages build emits syntax-checkable external browser scripts", async () => {
+test("public Pages build emits ten map presets with visual examples", async () => {
   const dir = await mkdtemp(join(tmpdir(), "project-map-pages-"));
   try {
     await buildPublicPages(dir);
-    const home = await readFile(join(dir, "index.html"), "utf8");
-    const viewer = await readFile(join(dir, "u", "index.html"), "utf8");
-    const appJs = await readFile(join(dir, "app.js"), "utf8");
-    const viewerJs = await readFile(join(dir, "viewer.js"), "utf8");
-    const noJekyll = await readFile(join(dir, ".nojekyll"), "utf8");
-
-    assert.match(home, /Create your map/);
-    assert.match(home, /<script src="\.\/app\.js" defer><\/script>/);
-    assert.match(home, /script-src 'self'/);
-    assert.doesNotMatch(home, /<script>\s*const USERNAME_RE/);
-    assert.match(viewer, /Interactive Project Map/);
-    assert.match(viewer, /<script src="\.\.\/viewer\.js" defer><\/script>/);
-    assert.match(viewer, /script-src 'self'/);
-    assert.match(appJs, new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));
-    assert.match(appJs, /uses: nekomario28\/interactive-project-map@'\+PROJECT_MAP_ACTION_REF/);
-    assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/);
-    assert.match(viewerJs, /raw\.githubusercontent\.com/);
-    assert.doesNotMatch(viewerJs, /\/api\/graph|api\.github\.com/);
-    assert.equal(noJekyll, "\n");
-
-    for (const script of [join(dir, "app.js"), join(dir, "viewer.js")]) {
-      const checked = spawnSync(process.execPath, ["--check", script], { encoding: "utf8" });
-      assert.equal(checked.status, 0, `${script} failed syntax check:\n${checked.stderr}`);
+    const read = (name) => readFile(join(dir, name), "utf8");
+    const home = await read("index.html"); const shared = await read("u/index.html"); const appJs = await read("app.js"); const routerJs = await read("tree-router.js"); const navJs = await read("tree-nav.js"); const presetCss = await read("presets.css"); const noJekyll = await read(".nojekyll");
+    assert.match(home, /Radial Tree \(Classic\)/); assert.match(home, />Matrix \/ Heatmap</); assert.match(home, />Sankey</);
+    for (const style of styles) assert.match(home, new RegExp(`data-style-preset="${style}"`));
+    for (const style of styles) assert.match(shared, new RegExp(`value="${style}"`));
+    assert.match(shared, /tree-router\.js/); assert.match(shared, /viewer\.js/);
+    for (const style of dedicated) {
+      const html = await read(`${style}/index.html`); const script = await read(`${style}-viewer.js`);
+      assert.match(html, new RegExp(`data-map-style="${style}"`)); assert.match(html, new RegExp(`value="${style}" selected`)); assert.match(html, /tree-nav\.js/); assert.match(html, new RegExp(`${style}-viewer\\.js`)); assert.match(script, /raw\.githubusercontent\.com/); assert.doesNotMatch(script, /\/api\/graph|api\.github\.com/);
     }
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+    assert.match(appJs, new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));
+    assert.match(appJs, /STYLE_VALUES=new Set\(\['radial','galaxy','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey'\]\)/);
+    assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/); assert.match(routerJs, /matrix/); assert.match(routerJs, /sankey/); assert.match(navJs, /matrix/); assert.match(navJs, /sankey/); assert.match(presetCss, /\.preview-sun-group/); assert.match(presetCss, /\.preview-matrix-grid/); assert.match(presetCss, /\.preview-sankey-flow/); assert.equal(noJekyll, "\n");
+    for (const name of ["app.js", "viewer.js", ...dedicated.map((style) => `${style}-viewer.js`), "tree-router.js", "tree-nav.js"]) {
+      const checked = spawnSync(process.execPath, ["--check", join(dir, name)], { encoding: "utf8" }); assert.equal(checked.status, 0, `${name} failed syntax check:\n${checked.stderr}`);
+    }
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });

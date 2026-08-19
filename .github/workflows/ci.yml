@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -13,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           package-manager-cache: false
@@ -24,18 +28,64 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
-      - name: Smoke test local project-map action
+      - name: Smoke test local project-map action default
         uses: ./
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          max_repos: "1"
-          forks: "false"
+          max_repos: "60"
+          forks: "true"
           archived: "false"
           output_dir: .tmp/project-map
 
       - name: Check action outputs
-        run: test -s .tmp/project-map/galaxy.svg && test -s .tmp/project-map/graph.json
+        run: |
+          test -s .tmp/project-map/galaxy.svg
+          test -s .tmp/project-map/graph.json
+          grep -q "Radial Tree classic map" .tmp/project-map/galaxy.svg
+          grep -q "Radial Tree · Classic" .tmp/project-map/galaxy.svg
 
       - name: Verify
         run: npm run verify
+
+      - name: Render ten-preset comparison
+        run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
+
+      - name: Upload preset comparison
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: preset-comparison
+          path: .tmp/preset-comparison
+          if-no-files-found: error
+          retention-days: 3
+
+  browser-e2e:
+    needs: verify
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001 --ipc=host
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Chromium browser E2E
+        run: npm run test:e2e
+
+      - name: iPhone WebKit smoke
+        run: npm run test:e2e:webkit
+
+      - name: Upload browser E2E evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-e2e
+          path: |
+            .tmp/playwright-visual
+            .tmp/playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 3
