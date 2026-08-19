@@ -124,14 +124,14 @@ test("Galaxy Systems reveals repository names progressively as the user zooms in
   await expect(page.locator("#status")).toBeHidden();
   await expect(page.locator("#subtitle")).toContainText("zoom in to reveal repositories");
 
-  const far = await canvasLabelsAtZoom(page, 0.60);
+  const far = await canvasLabelsAtZoom(page, 0.80);
   expect(far.mode).toBe("categories");
   expect(far.visible).toHaveLength(0);
   for (const [, label] of groupDefs) expect(far.labels).toContain(label);
   for (const [name] of repositories) expect(far.labels).not.toContain(name);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-far.png", fullPage: true });
 
-  const middle = await canvasLabelsAtZoom(page, 0.95);
+  const middle = await canvasLabelsAtZoom(page, 1.50);
   expect(middle.mode).toBe("featured");
   expect(middle.visible).toHaveLength(8);
   expect(middle.labels).toContain("robot-one");
@@ -142,14 +142,14 @@ test("Galaxy Systems reveals repository names progressively as the user zooms in
   expect(middle.labels).not.toContain("ai-three");
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-middle.png", fullPage: true });
 
-  const near = await canvasLabelsAtZoom(page, 1.40);
+  const near = await canvasLabelsAtZoom(page, 2.10);
   expect(near.mode).toBe("all");
   expect(near.visible).toHaveLength(repositories.length);
   for (const [name] of repositories) expect(near.labels).toContain(name);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-near.png", fullPage: true });
 
   const selectedVisible = await page.evaluate(() => {
-    state.zoom = 0.60;
+    state.zoom = 0.80;
     updateDetails(state.byId.get("repository:robot-three"));
     return window.GalaxySystemsLabelLOD.visibleRepositoryIds();
   });
@@ -157,7 +157,7 @@ test("Galaxy Systems reveals repository names progressively as the user zooms in
 
   const searchVisible = await page.evaluate(() => {
     updateDetails(null);
-    state.zoom = 0.60;
+    state.zoom = 0.80;
     state.query = "ai-three";
     return window.GalaxySystemsLabelLOD.visibleRepositoryIds();
   });
