@@ -38,17 +38,15 @@ test("Unicode-safe normalization preserves Japanese and technology tokens in sou
   assert.match(normalizeScriptSearch("日本語の説明：ロボット制御"), /日本語の説明 ロボット制御/);
 });
 
-test("README regression fixtures recover documented P1A domains without changing language facets", () => {
+test("README regression fixtures recover documented domains while language remains a separate facet", () => {
   for (const fixture of semanticP1AFixtures) {
     for (const [name, buildGraph] of [["scripts", buildScriptGraph], ["src", buildSourceGraph]]) {
-      const before = repositoryNode(buildGraph("fixture-user", [{ ...fixture.repo }], true, true));
-      assert.equal(before?.groupId, fixture.beforeGroupId, `${name}/${fixture.id}: baseline fixture must reproduce the old fallback`);
-
       const readmeExcerpt = cleanScriptReadme(fixture.readme);
-      const after = repositoryNode(buildGraph("fixture-user", [{ ...fixture.repo, readmeExcerpt }], true, true));
-      assert.equal(after?.groupId, fixture.afterGroupId, `${name}/${fixture.id}: README evidence should recover the documented domain`);
-      assert.equal(after?.language, fixture.repo.language, `${name}/${fixture.id}: language remains a separate technical facet`);
-      assert.equal(Object.hasOwn(after ?? {}, "readmeExcerpt"), false, `${name}/${fixture.id}: P1A README text must remain generation-only`);
+      const node = repositoryNode(buildGraph("fixture-user", [{ ...fixture.repo, readmeExcerpt }], true, true));
+      assert.equal(node?.groupId, fixture.afterGroupId, `${name}/${fixture.id}: README evidence should recover the documented domain`);
+      assert.equal(node?.language, fixture.repo.language, `${name}/${fixture.id}: language remains a separate technical facet`);
+      assert.equal(Object.hasOwn(node ?? {}, "readmeExcerpt"), false, `${name}/${fixture.id}: raw README text must remain generation-only`);
+      assert.ok(node?.classification?.evidence.some((item) => item.source === "readme"), `${name}/${fixture.id}: README evidence should be inspectable`);
     }
   }
 });

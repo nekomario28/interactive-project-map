@@ -36,6 +36,7 @@ test("Pages pagination continues until maxRepos eligible repositories are found"
       includeForks: false,
       includeArchived: true,
       enrichReadmes: false,
+      enrichManifests: false,
     });
 
     assert.equal(calls.length, 2);
@@ -58,7 +59,7 @@ test("static fetch enriches selected repositories without requiring README succe
       throw new Error(`unexpected URL: ${target}`);
     };
 
-    const repos = await fetchPublicRepos("example", undefined, 2);
+    const repos = await fetchPublicRepos("example", undefined, 2, { enrichManifests: false });
     assert.match(repos[0].readmeExcerpt ?? "", /Minecraft NeoForge addon/);
     assert.equal(repos[1].readmeExcerpt, undefined);
     assert.equal(calls.length, 3);

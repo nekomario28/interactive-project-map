@@ -1,58 +1,7 @@
-const GROUP_RULES = [
-  { id: "robotics", label: "Robotics / ROS 2", keywords: ["robot", "robotics", "ros", "ros2", "gazebo", "isaac", "mujoco", "slam", "lidar", "moveit", "manipulation"] },
-  { id: "ai-ml", label: "AI / Machine Learning", keywords: ["ai", "machine-learning", "deep-learning", "pytorch", "tensorflow", "llm", "vlm", "vla", "vision", "opencv", "transformer"] },
-  { id: "minecraft", label: "Minecraft Modding", keywords: ["minecraft", "forge", "neoforge", "fabric", "modding"] },
-  { id: "hardware", label: "Hardware / Embedded", keywords: ["arduino", "esp32", "embedded", "raspberry", "jetson", "iot", "firmware", "hardware", "sensor"] },
-  { id: "web-apps", label: "Web / Apps", keywords: ["web", "frontend", "backend", "nextjs", "react", "vue", "svelte", "api", "website", "app"] },
-  { id: "coursework", label: "Coursework / Learning", keywords: ["course", "coursework", "homework", "assignment", "tutorial", "learning", "study", "school", "university"] },
-];
-const LANGUAGE_LABELS = new Map([
-  ["Rich Text Format", "RTF"],
-  ["Jupyter Notebook", "Jupyter"],
-  ["Visual Basic .NET", "VB.NET"],
-]);
+import { CLASSIFICATION_VERSION, classifyRepository, normalizeSearch } from "./semantic.mjs";
 
-export function normalizeSearch(value) {
-  return String(value ?? "")
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{M}\p{N}+#]+/gu, " ")
-    .replace(/\s+/gu, " ")
-    .trim();
-}
-function languageGroupKey(language) {
-  let key = "";
-  for (const char of language.toLowerCase()) if (/[a-z0-9]/.test(char)) key += char; else key += `-u${char.codePointAt(0)?.toString(16) ?? "0"}-`;
-  return key.replace(/-+/g, "-").replace(/^-|-$/g, "") || "other";
-}
-function languageDisplayLabel(language) {
-  const alias = LANGUAGE_LABELS.get(language);
-  if (alias) return alias;
-  return language.length <= 14 ? language : `${language.slice(0, 13)}…`;
-}
-function searchableText(repo) {
-  return normalizeSearch([
-    repo.name,
-    repo.description ?? "",
-    ...(repo.topics ?? []),
-    repo.readmeExcerpt ?? "",
-    repo.language ?? "",
-  ].join(" "));
-}
-function keywordMatches(text, keyword) { const needle = normalizeSearch(keyword); return Boolean(needle) && ` ${text} `.includes(` ${needle} `); }
-function classify(repo) {
-  const text = searchableText(repo); let best = null; let bestScore = 0;
-  for (const rule of GROUP_RULES) {
-    let score = 0;
-    for (const keyword of rule.keywords) if (keywordMatches(text, keyword)) score += keyword.length >= 6 ? 2 : 1;
-    if (score > bestScore) { best = rule; bestScore = score; }
-  }
-  if (best) return { id: best.id, label: best.label };
-  // P1A intentionally preserves the existing language fallback. P1B will
-  // separate technical language from semantic category once evidence metadata lands.
-  const language = repo.language || "Other";
-  return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
-}
+export { classifyRepository, normalizeSearch } from "./semantic.mjs";
+
 function isProfileRepository(username, repo) {
   return String(repo?.name || "").toLowerCase() === String(username || "").toLowerCase();
 }
@@ -61,9 +10,10 @@ export function buildGraph(username, repos, includeForks, includeArchived) {
   const filtered = repos.filter((repo) => !isProfileRepository(username, repo) && (includeForks || !repo.fork) && (includeArchived || !repo.archived));
   const groups = new Map();
   for (const repo of filtered) {
-    const group = classify(repo);
-    const existing = groups.get(group.id) ?? { label: group.label, repos: [] };
-    existing.repos.push(repo); groups.set(group.id, existing);
+    const classification = classifyRepository(repo);
+    const existing = groups.get(classification.categoryId) ?? { label: classification.categoryLabel, repos: [] };
+    existing.repos.push({ repo, classification });
+    groups.set(classification.categoryId, existing);
   }
   const sortedGroups = [...groups.entries()].sort((a, b) => b[1].repos.length - a[1].repos.length || a[1].label.localeCompare(b[1].label));
   const nodes = [{ id: `user:${username}`, label: username, type: "owner", url: `https://github.com/${encodeURIComponent(username)}` }];
@@ -72,7 +22,7 @@ export function buildGraph(username, repos, includeForks, includeArchived) {
     const groupNodeId = `group:${groupId}`;
     nodes.push({ id: groupNodeId, label: group.label, type: "group", repositoryCount: group.repos.length });
     edges.push({ source: `user:${username}`, target: groupNodeId, type: "ownership" });
-    group.repos.sort((a, b) => b.stargazers_count - a.stargazers_count || b.updated_at.localeCompare(a.updated_at)).forEach((repo) => {
+    group.repos.sort((a, b) => b.repo.stargazers_count - a.repo.stargazers_count || b.repo.updated_at.localeCompare(a.repo.updated_at)).forEach(({ repo, classification }) => {
       const repoNodeId = `repository:${repo.name}`;
       nodes.push({
         id: repoNodeId, label: repo.name, type: "repository", url: repo.html_url,
@@ -81,9 +31,18 @@ export function buildGraph(username, repos, includeForks, includeArchived) {
         createdAt: repo.created_at ?? repo.updated_at,
         updatedAt: repo.updated_at,
         groupId, groupLabel: group.label,
+        classification,
       });
       edges.push({ source: groupNodeId, target: repoNodeId, type: "membership" });
     });
   }
-  return { owner: username, generatedAt: new Date().toISOString(), repositoryCount: filtered.length, groupCount: sortedGroups.length, nodes, edges };
+  return {
+    owner: username,
+    generatedAt: new Date().toISOString(),
+    repositoryCount: filtered.length,
+    groupCount: sortedGroups.length,
+    nodes,
+    edges,
+    classificationVersion: CLASSIFICATION_VERSION,
+  };
 }

@@ -23,18 +23,17 @@ function repositoryNodes(graph) {
   return graph.nodes.filter((node) => node.type === "repository");
 }
 
-test("keeps C, C++ and C# in distinct fallback language groups", () => {
+test("keeps implementation languages distinct while unknown semantic domains share Uncategorized", () => {
   const graph = buildGraph("example", [
     repo("c-project", "C"),
     repo("cpp-project", "C++"),
     repo("csharp-project", "C#"),
   ], true, true);
 
-  const groups = new Map(repositoryNodes(graph).map((node) => [node.language, node.groupId]));
-  assert.equal(groups.size, 3);
-  assert.equal(groups.get("C"), "lang-c");
-  assert.equal(groups.get("C++"), "lang-c-u2b-u2b");
-  assert.equal(groups.get("C#"), "lang-c-u23");
+  const nodes = repositoryNodes(graph);
+  assert.deepEqual(new Set(nodes.map((node) => node.language)), new Set(["C", "C++", "C#"]));
+  assert.deepEqual(new Set(nodes.map((node) => node.groupId)), new Set(["uncategorized"]));
+  assert.ok(nodes.every((node) => node.classification?.categoryId === "uncategorized"));
 });
 
 test("does not classify substring-only matches as semantic keywords", () => {
@@ -44,16 +43,19 @@ test("does not classify substring-only matches as semantic keywords", () => {
   ], true, true);
 
   const groups = new Map(repositoryNodes(graph).map((node) => [node.label, node.groupId]));
-  assert.equal(groups.get("provisioning-tools"), "lang-shell");
-  assert.equal(groups.get("reactor-simulator"), "lang-rust");
+  assert.equal(groups.get("provisioning-tools"), "uncategorized");
+  assert.equal(groups.get("reactor-simulator"), "uncategorized");
 });
 
-test("still recognizes normalized multi-word semantic keywords", () => {
+test("still recognizes normalized multi-word semantic topics", () => {
   const graph = buildGraph("example", [
     repo("detector", "Python", { topics: ["machine-learning", "computer-vision"] }),
   ], true, true);
 
-  assert.equal(repositoryNodes(graph)[0].groupId, "ai-ml");
+  const node = repositoryNodes(graph)[0];
+  assert.equal(node.groupId, "ai-ml");
+  assert.equal(node.language, "Python");
+  assert.ok(node.classification?.evidence.some((item) => item.source === "topic"));
 });
 
 test("respects fork and archived filters", () => {
