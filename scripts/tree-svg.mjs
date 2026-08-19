@@ -40,8 +40,7 @@ function buildTreeLayout(graph, width, height) {
   const usableWidth = Math.max(120, width - marginX * 2);
   const ownerY = 42;
   const groupY = Math.max(112, Math.min(145, height * 0.31));
-  const repoTop = Math.max(groupY + 88, Math.min(height - 92, height * 0.61));
-  const repoBottom = height - 54;
+  const repoY = Math.max(groupY + 118, Math.min(height - 92, height * 0.67));
   const points = [];
   if (owner) points.push({ x: width / 2, y: ownerY, node: owner, depth: 0 });
 
@@ -71,21 +70,11 @@ function buildTreeLayout(graph, width, height) {
     const center = (left + right) / 2;
     points.push({ x: center, y: groupY, node: bundle.group, depth: 1, left, right });
 
-    if (bundle.members.length) {
-      const widest = Math.max(...bundle.members.slice(0, 30).map((repo) => labelWidth(repo)), 62);
-      const slotWidth = clamp(widest + 18, 68, 158);
-      const columns = Math.max(1, Math.floor(Math.max(50, segmentWidth) / slotWidth));
-      const rows = Math.max(1, Math.ceil(bundle.members.length / columns));
-      const rowGap = rows <= 1 ? 0 : Math.max(28, Math.min(54, (repoBottom - repoTop) / Math.max(1, rows - 1)));
-      bundle.members.forEach((repo, index) => {
-        const row = Math.floor(index / columns);
-        const col = index % columns;
-        const countInRow = Math.min(columns, bundle.members.length - row * columns);
-        const x = countInRow <= 1 ? center : left + segmentWidth * ((col + 1) / (countInRow + 1));
-        const y = clamp(repoTop + row * rowGap, repoTop, repoBottom);
-        points.push({ x, y, node: repo, depth: 2, parentId: bundle.group.id });
-      });
-    }
+    bundle.members.forEach((repo, index) => {
+      const count = bundle.members.length;
+      const x = count <= 1 ? center : left + segmentWidth * ((index + 0.5) / count);
+      points.push({ x, y: repoY, node: repo, depth: 2, parentId: bundle.group.id });
+    });
     cursorX = right + gutter;
   }
   return points;
@@ -112,7 +101,9 @@ function placeLabels(points, width, height) {
     const candidates = node.type === "repository"
       ? [
           { x: point.x, y: point.y + nodeR + 7 },
-          { x: point.x, y: point.y - nodeR - heightPx - 5 },
+          { x: point.x, y: point.y - nodeR - heightPx - 7 },
+          { x: point.x, y: point.y + nodeR + heightPx + 11 },
+          { x: point.x, y: point.y - nodeR - heightPx * 2 - 12 },
           { x: point.x + nodeR + widthPx / 2 + 7, y: point.y - heightPx / 2 },
           { x: point.x - nodeR - widthPx / 2 - 7, y: point.y - heightPx / 2 },
         ]
@@ -162,25 +153,13 @@ export function renderTreeSvg(graph, theme, width, height) {
   for (const group of groups) {
     const members = points.filter((point) => point.node.type === "repository" && point.parentId === group.node.id);
     if (!members.length) continue;
-    const junctionY = group.y + Math.max(34, (Math.min(...members.map((point) => point.y)) - group.y) * 0.48);
+    const junctionY = group.y + Math.max(36, (members[0].y - group.y) * 0.50);
     structural.push(`<line x1="${group.x.toFixed(1)}" y1="${group.y.toFixed(1)}" x2="${group.x.toFixed(1)}" y2="${junctionY.toFixed(1)}" stroke="${colors.edge}" opacity="0.58"/>`);
-    const byRow = new Map();
+    const minX = Math.min(...members.map((point) => point.x));
+    const maxX = Math.max(...members.map((point) => point.x));
+    structural.push(`<line x1="${minX.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${maxX.toFixed(1)}" y2="${junctionY.toFixed(1)}" stroke="${colors.edge}" opacity="0.50"/>`);
     for (const member of members) {
-      const rowKey = member.y.toFixed(1);
-      const row = byRow.get(rowKey) ?? [];
-      row.push(member);
-      byRow.set(rowKey, row);
-    }
-    for (const row of byRow.values()) {
-      const rowY = row[0].y;
-      const rowJunction = Math.min(rowY - 14, junctionY + 18);
-      structural.push(`<line x1="${group.x.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${group.x.toFixed(1)}" y2="${rowJunction.toFixed(1)}" stroke="${colors.edge}" opacity="0.45"/>`);
-      const minX = Math.min(...row.map((point) => point.x));
-      const maxX = Math.max(...row.map((point) => point.x));
-      structural.push(`<line x1="${minX.toFixed(1)}" y1="${rowJunction.toFixed(1)}" x2="${maxX.toFixed(1)}" y2="${rowJunction.toFixed(1)}" stroke="${colors.edge}" opacity="0.45"/>`);
-      for (const member of row) {
-        structural.push(`<line x1="${member.x.toFixed(1)}" y1="${rowJunction.toFixed(1)}" x2="${member.x.toFixed(1)}" y2="${member.y.toFixed(1)}" stroke="${colors.edge}" opacity="0.45"/>`);
-      }
+      structural.push(`<line x1="${member.x.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${member.x.toFixed(1)}" y2="${member.y.toFixed(1)}" stroke="${colors.edge}" opacity="0.50"/>`);
     }
   }
 
