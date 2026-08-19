@@ -50,9 +50,7 @@ function compareRepresentativePriority(a, b) {
 }
 
 function categoryMarkup(group, colors) {
-  const label = esc(displayLabel(group));
-  const width = Math.max(30, Math.min(112, label.length * 6.5 + 16));
-  return `<g data-static-category="${esc(group.id)}"><title>${esc(group.label)}</title><rect x="${(-width / 2).toFixed(1)}" y="-10.5" width="${width.toFixed(1)}" height="21" rx="10.5" fill="${colors.bg}" opacity="0.88" stroke="${colors.group}" stroke-width="0.8"/><text x="0" y="4" text-anchor="middle" fill="${colors.fg}" font-size="10.8" font-weight="700">${label}</text></g>`;
+  return `<g data-static-category="${esc(group.id)}">${nodeMarkup(group, 0, 0, colors)}</g>`;
 }
 
 function representativeLabelMarkup(repo, phase, colors) {
