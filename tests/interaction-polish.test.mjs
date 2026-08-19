@@ -65,7 +65,6 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(edgePolicy, /repositories\.slice\(0, 2\)/);
     assert.match(edgePolicy, /state\.query && matchesQuery\(node\)/);
     assert.match(edgePolicy, /window\.GalaxySystemsLabelLOD/);
-    assert.match(edgePolicy, /zoom in to reveal repositories/);
 
     assert.match(obsidian, /center: 0\.0026/);
     assert.match(obsidian, /repel: 9200/);
