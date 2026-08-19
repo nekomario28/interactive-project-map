@@ -56,7 +56,7 @@ function assignments(group, members) {
 function denseFallback(graph, theme, width, height) {
   const denseGraph = { ...graph, repositoryCount: Math.max(81, graph.repositoryCount || 0) };
   return renderGalaxySvg(denseGraph, theme, width, height, "galaxy")
-    .replace('aria-label="Galaxy-style map', 'data-galaxy-preset="hybrid-dense" aria-label="Galaxy Hybrid dense fallback map')
+    .replace('role="img" aria-label="Galaxy-style map', 'role="img" data-galaxy-preset="hybrid-dense" aria-label="Galaxy-style map')
     .replace('>project map</text>', '>Galaxy Hybrid</text>');
 }
 
