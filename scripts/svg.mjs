@@ -53,7 +53,10 @@ function groupMembers(group, repos) {
   return repos.filter((repo) => repo.groupId === key || group.id === `group:${repo.groupId}`);
 }
 
-function galaxyLayout(graph, width, height) {
+const TAU = Math.PI * 2;
+const GALAXY_SYSTEM_LIMIT = 80;
+
+function denseGalaxyLayout(graph, width, height) {
   const cx = width / 2;
   const cy = height / 2 - 4;
   const minSize = Math.min(width, height);
@@ -61,9 +64,9 @@ function galaxyLayout(graph, width, height) {
   const repos = graph.nodes.filter((node) => node.type === "repository");
   const points = [];
   const owner = graph.nodes.find((node) => node.type === "owner");
-  if (owner) points.push({ x: cx, y: cy, node: owner });
+  if (owner) points.push({ x: cx, y: cy, node: owner, galaxyMode: "dense" });
   const count = Math.max(1, groups.length);
-  const sector = Math.PI * 2 / count;
+  const sector = TAU / count;
   const usableSector = Math.min(1.12, sector * 0.70);
   const groupRadius = minSize * 0.20;
   const firstLane = minSize * 0.32;
@@ -71,7 +74,7 @@ function galaxyLayout(graph, width, height) {
 
   groups.forEach((group, groupIndex) => {
     const base = -Math.PI / 2 + sector * groupIndex;
-    points.push({ x: cx + Math.cos(base) * groupRadius, y: cy + Math.sin(base) * groupRadius, node: group });
+    points.push({ x: cx + Math.cos(base) * groupRadius, y: cy + Math.sin(base) * groupRadius, node: group, galaxyMode: "dense" });
     const members = groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label));
     let cursor = 0;
     let lane = 0;
@@ -87,13 +90,91 @@ function galaxyLayout(graph, width, height) {
         const local = take <= 1 ? 0 : (index / (take - 1) - 0.5) * usableSector;
         const jitter = ((hash(`${repo.id}:phase`) % 1000) / 1000 - 0.5) * Math.min(0.025, minimumGap * 0.12);
         const angle = base + local + lane * 0.045 + jitter;
-        points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, node: repo });
+        points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, node: repo, galaxyMode: "dense" });
       }
       cursor += take;
       lane += 1;
     }
   });
   return points;
+}
+
+function systemOrbitAssignments(group, members) {
+  const assignments = [];
+  let cursor = 0;
+  let lane = 0;
+  const seedPhase = ((hash(`${group.id}:system-phase`) % 10000) / 10000) * TAU;
+  while (cursor < members.length) {
+    const radius = 34 + lane * 28;
+    const capacity = Math.max(4, Math.floor((TAU * radius) / 56));
+    const take = Math.min(capacity, members.length - cursor);
+    for (let index = 0; index < take; index += 1) {
+      const repo = members[cursor + index];
+      const angle = seedPhase + TAU * index / Math.max(1, take) + lane * 0.31;
+      assignments.push({
+        repo,
+        lane,
+        radius,
+        angle,
+        direction: lane % 2 === 0 ? 1 : -1,
+        duration: 92 + lane * 38,
+      });
+    }
+    cursor += take;
+    lane += 1;
+  }
+  return assignments;
+}
+
+function galaxySystemLayout(graph, width, height) {
+  const cx = width / 2;
+  const cy = height / 2 - 4;
+  const minSize = Math.min(width, height);
+  const groups = graph.nodes.filter((node) => node.type === "group");
+  const repos = graph.nodes.filter((node) => node.type === "repository");
+  const owner = graph.nodes.find((node) => node.type === "owner");
+  const count = Math.max(1, groups.length);
+  const systems = groups.map((group) => ({
+    group,
+    assignments: systemOrbitAssignments(group, groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label))),
+  }));
+  const maximumSystemRadius = Math.max(34, ...systems.flatMap((system) => system.assignments.map((assignment) => assignment.radius)));
+  const circumferenceRadius = ((maximumSystemRadius * 2 + 54) * count) / TAU;
+  const groupRadius = count === 1
+    ? minSize * 0.22
+    : clamp(Math.max(minSize * 0.25, circumferenceRadius), minSize * 0.25, minSize * 0.72);
+  const points = [];
+  if (owner) points.push({ x: cx, y: cy, node: owner, galaxyMode: "systems" });
+
+  systems.forEach((system, groupIndex) => {
+    const base = -Math.PI / 2 + TAU * groupIndex / count;
+    const gx = cx + Math.cos(base) * groupRadius;
+    const gy = cy + Math.sin(base) * groupRadius;
+    points.push({ x: gx, y: gy, node: system.group, galaxyMode: "systems", systemRadius: Math.max(34, ...system.assignments.map((assignment) => assignment.radius)) });
+    for (const assignment of system.assignments) {
+      points.push({
+        x: gx + Math.cos(assignment.angle) * assignment.radius,
+        y: gy + Math.sin(assignment.angle) * assignment.radius,
+        node: assignment.repo,
+        galaxyMode: "systems",
+        orbitCenterX: gx,
+        orbitCenterY: gy,
+        orbitRadius: assignment.radius,
+        orbitLane: assignment.lane,
+        orbitDirection: assignment.direction,
+        orbitDuration: assignment.duration,
+        groupId: system.group.id,
+      });
+    }
+  });
+  return points;
+}
+
+function galaxyLayout(graph, width, height) {
+  const repositoryCount = graph.repositoryCount ?? graph.nodes.filter((node) => node.type === "repository").length;
+  return repositoryCount <= GALAXY_SYSTEM_LIMIT
+    ? galaxySystemLayout(graph, width, height)
+    : denseGalaxyLayout(graph, width, height);
 }
 
 function obsidianLayout(graph, width, height) {
@@ -247,41 +328,112 @@ function legend(colors, width, height) {
   }).join("") + `<text x="${width - 18}" y="${height - 12.5}" text-anchor="end" fill="${colors.muted}" font-size="9.5">${esc("project map")}</text>`;
 }
 
-export function renderGalaxySvg(graph, theme, width, height, style = "galaxy") {
-  const mapStyle = style === "obsidian" ? "obsidian" : "galaxy";
-  const colors = palette(theme, mapStyle);
-  const points = layoutGraphForStyle(graph, width, height, mapStyle);
+function galaxySystemGuides(points, colors) {
+  const groups = points.filter((point) => point.node.type === "group" && point.galaxyMode === "systems");
+  const repos = points.filter((point) => point.node.type === "repository" && point.galaxyMode === "systems");
+  return groups.map((groupPoint) => {
+    const members = repos.filter((point) => point.groupId === groupPoint.node.id);
+    const radii = [...new Set(members.map((point) => point.orbitRadius).filter(Number.isFinite))].sort((a, b) => a - b);
+    const outer = Math.max(34, ...radii) + 14;
+    const rings = radii.map((radius) => `<circle cx="${groupPoint.x.toFixed(1)}" cy="${groupPoint.y.toFixed(1)}" r="${radius.toFixed(1)}" fill="none" stroke="${colors.group}" stroke-width="0.7" opacity="0.13"/>`).join("");
+    return `<g data-galaxy-system="${esc(groupPoint.node.id)}"><circle cx="${groupPoint.x.toFixed(1)}" cy="${groupPoint.y.toFixed(1)}" r="${outer.toFixed(1)}" fill="${colors.group}" opacity="0.025"/><circle cx="${groupPoint.x.toFixed(1)}" cy="${groupPoint.y.toFixed(1)}" r="${outer.toFixed(1)}" fill="none" stroke="${colors.group}" stroke-width="1" opacity="0.16"/>${rings}</g>`;
+  }).join("");
+}
+
+function categoryRelationLines(graph, points, colors) {
   const byId = new Map(points.map((point) => [point.node.id, point]));
-  const labels = placeLabels(points, width, height);
+  const groupPoints = new Map(points.filter((point) => point.node.type === "group").map((point) => [point.node.id, point]));
+  const counts = new Map();
+  for (const edge of graph.edges) {
+    if (edge.type !== "relation") continue;
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
+    const sourceGroup = source?.node?.groupId ? `group:${source.node.groupId}` : null;
+    const targetGroup = target?.node?.groupId ? `group:${target.node.groupId}` : null;
+    if (!sourceGroup || !targetGroup || sourceGroup === targetGroup || !groupPoints.has(sourceGroup) || !groupPoints.has(targetGroup)) continue;
+    const key = [sourceGroup, targetGroup].sort().join("|");
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const owner = points.find((point) => point.node.type === "owner");
+  return [...counts.entries()].map(([key, count]) => {
+    const [sourceId, targetId] = key.split("|");
+    const source = groupPoints.get(sourceId);
+    const target = groupPoints.get(targetId);
+    if (!source || !target) return "";
+    const midX = (source.x + target.x) / 2;
+    const midY = (source.y + target.y) / 2;
+    const controlX = owner ? midX * 0.62 + owner.x * 0.38 : midX;
+    const controlY = owner ? midY * 0.62 + owner.y * 0.38 : midY;
+    const width = clamp(0.8 + Math.log2(count + 1) * 0.45, 0.8, 2.2);
+    return `<path data-category-relation="true" d="M${source.x.toFixed(1)},${source.y.toFixed(1)} Q${controlX.toFixed(1)},${controlY.toFixed(1)} ${target.x.toFixed(1)},${target.y.toFixed(1)}" fill="none" stroke="${colors.relation}" stroke-width="${width.toFixed(2)}" stroke-dasharray="4 5" opacity="0.34"><title>${esc(`${source.node.label} ↔ ${target.node.label}: ${count} relation${count === 1 ? "" : "s"}`)}</title></path>`;
+  }).join("");
+}
 
-  const background = mapStyle === "galaxy"
-    ? `<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/><g>${stars(graph.owner, width, height, colors.fg)}</g>`
-    : `<defs><radialGradient id="obsidian-bg" cx="50%" cy="43%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="12" fill="url(#obsidian-bg)"/>`;
-
-  const lines = graph.edges.map((edge) => {
+function staticEdgeLines(graph, points, colors, mapStyle, systemsMode) {
+  const byId = new Map(points.map((point) => [point.node.id, point]));
+  if (systemsMode) {
+    const ownership = graph.edges.filter((edge) => edge.type === "ownership").map((edge) => {
+      const source = byId.get(edge.source);
+      const target = byId.get(edge.target);
+      if (!source || !target) return "";
+      return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${colors.edge}" stroke-width="1" opacity="0.32"/>`;
+    }).join("");
+    return ownership + categoryRelationLines(graph, points, colors);
+  }
+  return graph.edges.map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
     if (!source || !target) return "";
     const relation = edge.type === "relation";
     return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${relation ? colors.relation : colors.edge}" stroke-width="${relation ? 1.4 : 1}" opacity="${relation ? 0.72 : mapStyle === "obsidian" ? 0.38 : 0.52}"${relation ? ' stroke-dasharray="5 4"' : ""}/>`;
   }).join("");
+}
 
-  const nodes = points.map(({ x, y, node }) => {
-    const status = statusOf(node);
-    const fill = colors[status] || colors.original;
-    const radius = nodeRadius(node);
-    const placement = labels.get(node.id);
-    const label = placement
-      ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="${placement.anchor}" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${mapStyle === "galaxy" ? 2.5 : 1.8}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
-      : "";
-    const archivedRing = node.type === "repository" && node.archived
-      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
-      : "";
-    const ownerRing = node.type === "owner"
-      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
-      : "";
-    return `<g><title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.archived ? 0.72 : 0.96}"/>${ownerRing}${archivedRing}${label}</g>`;
-  }).join("");
+function renderPoint(point, labels, colors, mapStyle, systemsMode) {
+  const { x, y, node } = point;
+  const status = statusOf(node);
+  const fill = colors[status] || colors.original;
+  const radius = nodeRadius(node);
+  const placement = labels.get(node.id);
+  const baseLabel = placement
+    ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="${placement.anchor}" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${mapStyle === "galaxy" ? 2.5 : 1.8}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
+    : "";
+  const archivedRing = node.type === "repository" && node.archived
+    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
+    : "";
+  const ownerRing = node.type === "owner"
+    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
+    : "";
+  const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.archived ? 0.72 : 0.96}"/>${ownerRing}${archivedRing}`;
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(mapStyle === "obsidian" ? "Obsidian-style" : "Galaxy-style")} map of ${esc(graph.owner)} public GitHub repositories">\n  ${background}\n  <g>${lines}</g>\n  <g>${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
+  if (!systemsMode || node.type !== "repository" || !Number.isFinite(point.orbitCenterX) || !Number.isFinite(point.orbitCenterY)) {
+    return `<g>${core}${baseLabel}</g>`;
+  }
+
+  const direction = point.orbitDirection < 0 ? -1 : 1;
+  const duration = Math.max(40, Number(point.orbitDuration) || 120);
+  const orbitAnimation = `<animateTransform attributeName="transform" type="rotate" from="0 ${point.orbitCenterX.toFixed(1)} ${point.orbitCenterY.toFixed(1)}" to="${direction * 360} ${point.orbitCenterX.toFixed(1)} ${point.orbitCenterY.toFixed(1)}" dur="${duration.toFixed(0)}s" repeatCount="indefinite"/>`;
+  const label = placement
+    ? `<g>${baseLabel}<animateTransform attributeName="transform" type="rotate" from="0 ${placement.x.toFixed(1)} ${placement.y.toFixed(1)}" to="${-direction * 360} ${placement.x.toFixed(1)} ${placement.y.toFixed(1)}" dur="${duration.toFixed(0)}s" repeatCount="indefinite"/></g>`
+    : "";
+  const membership = `<line x1="${point.orbitCenterX.toFixed(1)}" y1="${point.orbitCenterY.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${colors.edge}" stroke-width="0.75" opacity="0.18"/>`;
+  return `<g data-galaxy-orbit="true" transform="rotate(0 ${point.orbitCenterX.toFixed(1)} ${point.orbitCenterY.toFixed(1)})">${membership}${core}${label}${orbitAnimation}</g>`;
+}
+
+export function renderGalaxySvg(graph, theme, width, height, style = "galaxy") {
+  const mapStyle = style === "obsidian" ? "obsidian" : "galaxy";
+  const colors = palette(theme, mapStyle);
+  const points = layoutGraphForStyle(graph, width, height, mapStyle);
+  const labels = placeLabels(points, width, height);
+  const systemsMode = mapStyle === "galaxy" && points.some((point) => point.galaxyMode === "systems");
+
+  const background = mapStyle === "galaxy"
+    ? `<defs><radialGradient id="galaxy-bg" cx="50%" cy="46%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="16" fill="url(#galaxy-bg)"/><g>${stars(graph.owner, width, height, colors.fg)}</g>`
+    : `<defs><radialGradient id="obsidian-bg" cx="50%" cy="43%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="12" fill="url(#obsidian-bg)"/>`;
+
+  const lines = staticEdgeLines(graph, points, colors, mapStyle, systemsMode);
+  const guides = systemsMode ? galaxySystemGuides(points, colors) : "";
+  const nodes = points.map((point) => renderPoint(point, labels, colors, mapStyle, systemsMode)).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(mapStyle === "obsidian" ? "Obsidian-style" : systemsMode ? "Galaxy systems" : "Galaxy-style")} map of ${esc(graph.owner)} public GitHub repositories">\n  ${background}\n  <g>${lines}</g>\n  <g>${guides}${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
 }
