@@ -10,7 +10,7 @@ import { PUBLIC_ACTION_REF, postprocessPublicPages } from "../scripts/postproces
 const dedicatedRoutes = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
 test("Galaxy and Obsidian runtimes stay separated and interaction polish reaches every preset", async () => {
-  assert.equal(PUBLIC_ACTION_REF, "df63cc702f361c864c5c769254cd4a50009f9fc7");
+  assert.equal(PUBLIC_ACTION_REF, "72976777dc61b102a6d163ac42c7d8ec4bce2e4f");
 
   const dir = await mkdtemp(join(tmpdir(), "project-map-polish-"));
   try {
