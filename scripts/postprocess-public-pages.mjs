@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Keep generated consumer workflows on a reviewed, immutable main commit.
-// This commit includes profile-repository exclusion and the unified selection behavior.
-export const PUBLIC_ACTION_REF = "df63cc702f361c864c5c769254cd4a50009f9fc7";
+// This commit includes profile-repository exclusion, unified selection, and Galaxy Systems.
+export const PUBLIC_ACTION_REF = "72976777dc61b102a6d163ac42c7d8ec4bce2e4f";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
