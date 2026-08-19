@@ -2,7 +2,14 @@
 
 Tracking issue: #20
 
-Status: **design fixed; implementation not started**
+Status: **P1 complete (P1A/P1B merged); P2 not started**
+
+Implementation checkpoint (2026-08-20):
+
+- P1A merged in PR #31 (`bb0d7b5cb5f57f5112436dfd16987c993fd022d0`): Unicode-safe normalization, bounded README enrichment, and regression fixtures.
+- P1B merged in PR #33 (`de609e89c18e1b4ed25bebb146c3ff2be1050fb7`): structured deterministic evidence/confidence, bounded adaptive manifest/framework enrichment, and semantic `Uncategorized` fallback with language retained as a facet.
+- P2+ is intentionally not started here: no embedding provider, embedding calls, semantic repo edges, taxonomy discovery, or LLM adjudication are present.
+
 
 This document is the canonical handoff for implementing semantic repository classification in `interactive-project-map`. It is intentionally detailed enough that a new development session can start from the repository without needing the original discussion.
 
@@ -624,7 +631,7 @@ Do not claim improvement based only on a nicer visualization.
 
 ## 17. Implementation order
 
-### PR 1 — P1A Unicode + README enrichment foundation
+### PR 1 — P1A Unicode + README enrichment foundation ✅ merged (#31)
 
 - Unicode-safe normalization.
 - README fetch/clean/truncate helper.
@@ -633,7 +640,7 @@ Do not claim improvement based only on a nicer visualization.
 
 **Gate:** known README-resolvable failures improve without breaking existing presets.
 
-### PR 2 — P1B structured evidence + category/language separation
+### PR 2 — P1B structured evidence + category/language separation ✅ merged (#33)
 
 - `ClassificationEvidence` and confidence.
 - manifest/framework probes.
