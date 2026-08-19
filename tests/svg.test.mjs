@@ -56,7 +56,9 @@ test("Galaxy Systems static frame is category-first and labels at most two repre
   assert.ok(representativeMarkers.length <= categoryCount * 2, "static Systems must label at most two representatives per category");
   assert.equal(representativeMarkers.length + hiddenMarkers.length, repositoryCount, "every repository node must remain in the SVG");
   assert.ok(hiddenMarkers.length > 0, "normal-size portfolios should retain unlabeled orbiting repository nodes");
-  assert.match(svg, /font-size="11\.4" font-weight="700"/, "category labels should dominate repository labels");
+  assert.match(svg, /r="42\.0"/, "first repository orbit should leave room for the category hub");
+  assert.match(svg, /font-size="10\.8" font-weight="700"/, "category labels should dominate repository labels");
+  assert.match(svg, /text-anchor="(?:start|end|middle)" fill="#[0-9a-f]{6}" font-size="9\.2"/, "representative labels should use outward radial anchors");
 });
 
 test("Galaxy Hybrid emits a rotating spiral with local elliptical repository systems", () => {
