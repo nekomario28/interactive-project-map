@@ -38,6 +38,7 @@ test("filtered pagination keeps fetching until maxRepos eligible repositories ar
     const repos = await fetchPublicRepos("example", {}, 2, {
       includeForks: false,
       includeArchived: true,
+      enrichReadmes: false,
     });
 
     assert.equal(calls.length, 2);
@@ -59,9 +60,35 @@ test("archived repositories are skipped before the requested limit is applied", 
     const repos = await fetchPublicRepos("example", {}, 2, {
       includeForks: true,
       includeArchived: false,
+      enrichReadmes: false,
     });
 
     assert.deepEqual(repos.map((item) => item.id), [2, 3]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("hosted fetch enriches selected repositories from the canonical README endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  try {
+    globalThis.fetch = async (url, init) => {
+      const target = String(url);
+      calls.push({ target, headers: new Headers(init?.headers) });
+      if (target.includes("/users/example/repos?")) return Response.json([repo(1)]);
+      if (target.endsWith("/repos/example/repo-1/readme")) {
+        return new Response("# Robot project\n\nGazebo and ROS2 navigation.");
+      }
+      throw new Error(`unexpected URL: ${target}`);
+    };
+
+    const repos = await fetchPublicRepos("example", { GITHUB_TOKEN: "secret" }, 1);
+    assert.equal(repos.length, 1);
+    assert.match(repos[0].readmeExcerpt ?? "", /Gazebo and ROS2 navigation/);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].headers.get("Accept"), "application/vnd.github.raw+json");
+    assert.equal(calls[1].headers.get("Authorization"), "Bearer secret");
   } finally {
     globalThis.fetch = originalFetch;
   }
