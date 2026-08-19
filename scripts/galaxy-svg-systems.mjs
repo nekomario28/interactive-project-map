@@ -1,7 +1,8 @@
 import { renderGalaxySvg } from "./svg.mjs";
-import { TAU, background, clamp, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
+import { TAU, background, clamp, displayLabel, esc, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
 
 const ANIMATED_LIMIT = 80;
+const REPRESENTATIVE_LIMIT = 2;
 
 function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -38,6 +39,17 @@ function assignments(group, members) {
   return result;
 }
 
+function compareRepresentativePriority(a, b) {
+  return (b.stars ?? 0) - (a.stars ?? 0)
+    || Number(a.fork === true) - Number(b.fork === true)
+    || String(a.label).localeCompare(String(b.label));
+}
+
+function categoryMarkup(group, colors) {
+  const label = esc(displayLabel(group));
+  return `<g data-static-category="${esc(group.id)}"><title>${esc(group.label)}</title><circle cx="0" cy="0" r="13" fill="none" stroke="${colors.group}" stroke-width="0.8" opacity="0.18"/><circle cx="0" cy="0" r="8.5" fill="${colors.group}" opacity="0.98"/><text x="0" y="-15" text-anchor="middle" fill="${colors.fg}" font-size="11.4" font-weight="700" paint-order="stroke" stroke="${colors.bg}" stroke-width="2.6" stroke-linejoin="round">${label}</text></g>`;
+}
+
 function denseFallback(graph, theme, width, height) {
   const denseGraph = { ...graph, repositoryCount: Math.max(81, graph.repositoryCount || 0) };
   return renderGalaxySvg(denseGraph, theme, width, height, "galaxy")
@@ -57,12 +69,17 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
   const repos = graph.nodes.filter((node) => node.type === "repository");
   const owner = graph.nodes.find((node) => node.type === "owner");
   const count = Math.max(1, groups.length);
-  const prepared = groups.map((group) => ({ group, members: groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label)) }));
-  for (const system of prepared) system.assignments = assignments(system.group, system.members);
+  const prepared = groups.map((group) => ({
+    group,
+    members: groupMembers(group, repos).sort(compareRepresentativePriority),
+  }));
+  for (const system of prepared) {
+    system.assignments = assignments(system.group, system.members);
+    system.representativeIds = new Set(system.members.slice(0, REPRESENTATIVE_LIMIT).map((repo) => repo.id));
+  }
   const maxSystemRadius = Math.max(24, ...prepared.flatMap((system) => system.assignments.map((target) => target.radius)));
   const spacingRadius = ((maxSystemRadius * 2 + 34) * count) / TAU;
   const categoryRadius = count === 1 ? minSize * 0.22 : clamp(Math.max(minSize * 0.25, spacingRadius), minSize * 0.25, minSize * 0.40);
-  const showAllLabels = repositoryCount <= 48;
 
   const systems = prepared.map((system, groupIndex) => {
     const baseAngle = -Math.PI / 2 + TAU * groupIndex / count;
@@ -71,14 +88,14 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
     const categoryMotion = circleValues(categoryRadius, baseAngle, 1, cx, cy);
     const rings = [...new Set(system.assignments.map((target) => target.radius))].sort((a, b) => a - b)
       .map((radius) => `<circle cx="0" cy="0" r="${radius.toFixed(1)}" fill="none" stroke="${colors.group}" stroke-width="0.7" opacity="0.14"/>`).join("");
-    const reposMarkup = system.assignments.map((target, index) => {
+    const reposMarkup = system.assignments.map((target) => {
       const localX = Math.cos(target.phase) * target.radius;
       const localY = Math.sin(target.phase) * target.radius;
       const motion = circleValues(target.radius, target.phase, target.direction);
-      const showLabel = showAllLabels || index < 3 || (target.repo.stars ?? 0) > 0;
-      return `<g data-galaxy-orbit="repository" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: showLabel })}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
+      const representative = system.representativeIds.has(target.repo.id);
+      return `<g data-galaxy-orbit="repository" data-static-representative="${representative}" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: representative })}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
     }).join("");
-    return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${nodeMarkup(system.group, 0, 0, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
+    return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
   }).join("");
 
   const nucleus = owner ? `<g transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)})"><circle cx="0" cy="0" r="42" fill="${colors.owner}" opacity="0.025"/>${nodeMarkup(owner, 0, 0, colors)}</g>` : "";
