@@ -2,7 +2,7 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const PUBLIC_ACTION_REF = "1b5c8944ab1dc8795bf09411e00145ff363ffc4a";
+export const PUBLIC_ACTION_REF = "2d35ec20a52d12d18f512c8b2d92590b6ed80a0b";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
