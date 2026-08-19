@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Keep generated consumer workflows on a reviewed, immutable main commit.
-// This commit includes Galaxy family plus P1A Unicode-safe bounded README enrichment.
-export const PUBLIC_ACTION_REF = "bb0d7b5cb5f57f5112436dfd16987c993fd022d0";
+// This commit includes Galaxy family plus complete P1 deterministic semantic enrichment.
+export const PUBLIC_ACTION_REF = "de609e89c18e1b4ed25bebb146c3ff2be1050fb7";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
