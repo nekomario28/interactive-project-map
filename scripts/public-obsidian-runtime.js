@@ -1,5 +1,5 @@
 "use strict";
-/* global state, canvas, ctx, hash, clamp, hitTest, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
+/* global state, canvas, hash, clamp, hitTest, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
 
 (() => {
   // Rebuild Obsidian from the original profile-map behavior boundary:
@@ -16,6 +16,7 @@
 
   const runtime = {
     nodesRef: null,
+    edges: [],
     alpha: 0,
     dragging: null,
     panning: false,
@@ -81,6 +82,8 @@
       }
     }
 
+    // Structural and relation edges are drawn differently, but physics treats
+    // every edge equally, matching the original Obsidian-like baseline.
     for (const edge of edges) {
       const a = edge.sourceNode;
       const b = edge.targetNode;
@@ -100,6 +103,7 @@
       }
     }
 
+    // No owner/category anchors: every node gets the same center law.
     for (const node of nodes) {
       if (node === dragging) {
         node.vx = 0;
@@ -123,9 +127,13 @@
     });
     const edges = linkedEdges(graph, nodes);
     let alpha = 1;
-    for (let step = 0; step < 120; step += 1) {
+    for (let stepIndex = 0; stepIndex < 120; stepIndex += 1) {
       applyForceStep(nodes, edges, alpha);
       alpha *= settings.cooling;
+    }
+    for (const node of nodes) {
+      node.vx = 0;
+      node.vy = 0;
     }
     return nodes;
   };
@@ -134,7 +142,8 @@
     if (state.style !== "obsidian" || !state.graph || !state.nodes.length) return false;
     if (runtime.nodesRef === state.nodes) return true;
     runtime.nodesRef = state.nodes;
-    runtime.alpha = Math.pow(settings.cooling, 120);
+    runtime.edges = linkedEdges({ edges: state.edges }, state.nodes);
+    runtime.alpha = 0;
     runtime.dragging = null;
     runtime.panning = false;
     runtime.pointerStart = null;
@@ -144,14 +153,10 @@
     runtime.pinchMidpoint = null;
     runtime.pinchConsumed = false;
     for (const node of state.nodes) {
-      node.vx = Number.isFinite(node.vx) ? node.vx : 0;
-      node.vy = Number.isFinite(node.vy) ? node.vy : 0;
+      node.vx = 0;
+      node.vy = 0;
     }
     return true;
-  }
-
-  function liveEdges() {
-    return linkedEdges({ edges: state.edges }, state.nodes);
   }
 
   function reheat(value = 0.55) {
@@ -163,12 +168,12 @@
     if (runtime.alpha < 0.001 && !runtime.dragging) {
       runtime.alpha = 0;
       for (const node of state.nodes) {
-        if (Math.abs(node.vx || 0) < 0.001) node.vx = 0;
-        if (Math.abs(node.vy || 0) < 0.001) node.vy = 0;
+        node.vx = 0;
+        node.vy = 0;
       }
       return false;
     }
-    applyForceStep(state.nodes, liveEdges(), Math.max(runtime.alpha, runtime.dragging ? 0.55 : 0), runtime.dragging);
+    applyForceStep(state.nodes, runtime.edges, Math.max(runtime.alpha, runtime.dragging ? 0.55 : 0), runtime.dragging);
     runtime.alpha *= runtime.dragging ? 0.992 : settings.cooling;
     return true;
   }
@@ -310,13 +315,14 @@
   window.addEventListener("DOMContentLoaded", () => {
     function frame() {
       if (state.style === "obsidian") {
-        if (subtitle) subtitle.textContent = "Obsidian Graph-like · global center / repel / link physics · drag to reheat";
+        if (subtitle) subtitle.textContent = "Obsidian Graph-like · global center / repel / link physics · settled at rest";
         if (!state.selected && detailsDescription) {
           detailsDescription.textContent = "Obsidian-style force graph: every node follows the same center, repel, link and distance forces. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
         }
         if (step()) draw();
       } else {
         runtime.nodesRef = null;
+        runtime.edges = [];
         runtime.alpha = 0;
         clearGesture();
       }
