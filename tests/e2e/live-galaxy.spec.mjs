@@ -92,8 +92,13 @@ test("Obsidian drag reheats the graph so connected nodes respond", async ({ page
   const before = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one");
     const neighbor = state.byId.get("group:robotics");
-    const screen = worldToScreen(dragged.x, dragged.y);
-    return { screen, neighbor: { x: neighbor.x, y: neighbor.y } };
+    const point = worldToScreen(dragged.x, dragged.y);
+    const rect = document.getElementById("galaxy").getBoundingClientRect();
+    return {
+      screen: { x: rect.left + point.x, y: rect.top + point.y },
+      dragged: { x: dragged.x, y: dragged.y },
+      neighbor: { x: neighbor.x, y: neighbor.y },
+    };
   });
 
   await page.mouse.move(before.screen.x, before.screen.y);
@@ -104,10 +109,12 @@ test("Obsidian drag reheats the graph so connected nodes respond", async ({ page
   await page.waitForTimeout(650);
 
   const after = await page.evaluate(() => {
+    const dragged = state.byId.get("repository:robot-one");
     const neighbor = state.byId.get("group:robotics");
-    return { x: neighbor.x, y: neighbor.y };
+    return { dragged: { x: dragged.x, y: dragged.y }, neighbor: { x: neighbor.x, y: neighbor.y } };
   });
-  expect(Math.hypot(after.x - before.neighbor.x, after.y - before.neighbor.y)).toBeGreaterThan(1);
+  expect(Math.hypot(after.dragged.x - before.dragged.x, after.dragged.y - before.dragged.y)).toBeGreaterThan(20);
+  expect(Math.hypot(after.neighbor.x - before.neighbor.x, after.neighbor.y - before.neighbor.y)).toBeGreaterThan(1);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-live.png", fullPage: true });
   expect(failures).toEqual([]);
 });
