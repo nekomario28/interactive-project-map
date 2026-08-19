@@ -1,0 +1,55 @@
+name: Cleanup merged branches
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'nekomario28/interactive-project-map'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - name: Delete merged work branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            agent/github-actions-pages
+            chore/add-output-validators
+            chore/pin-galaxy-family-action
+            chore/pin-galaxy-systems-action
+            chore/pin-squash-action
+            chore/runtime-selection-cleanup
+            feat/galaxy-preset-family
+            feat/galaxy-systems
+            feat/github-pages-static-viewer
+            feat/live-galaxy-unified-switch
+            feat/viewer-style-presets
+            fix/generated-pages-syntax
+            fix/post-pages-audit
+            fix/restore-original-obsidian-physics
+            fix/selection-focus-contract
+            fix/sunburst-galaxy-obsidian-polish
+            fix/tree-sunburst-galaxy-obsidian
+            tmp/branch-cleanup
+            tmp/branch-cleanup-trigger
+            tmp/branch-cleanup-workflow
+            tmp/branch-cleanup-final
+            tmp/branch-cleanup-stop
+            tmp/branch-cleanup-ignore
+            tmp/branch-cleanup-ignore-2
+            tmp/branch-cleanup-ignore-3
+            tmp/branch-cleanup-ignore-4
+          )
+          for branch in "${branches[@]}"; do
+            if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+            fi
+          done
