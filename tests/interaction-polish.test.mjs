@@ -58,6 +58,14 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(edgePolicy, /if \(!focus\) return relation \? \(state\.style === "galaxy-hybrid" \? 0\.12 : 0\.16\) : 0;/);
     assert.match(edgePolicy, /focusMembership/);
     assert.match(edgePolicy, /categoryOwnership/);
+    assert.match(edgePolicy, /function systemsLabelMode\(\)/);
+    assert.match(edgePolicy, /const firstOrbitRadiusPx = 54 \* state\.zoom;/);
+    assert.match(edgePolicy, /firstOrbitRadiusPx < 42/);
+    assert.match(edgePolicy, /firstOrbitRadiusPx < 68/);
+    assert.match(edgePolicy, /repositories\.slice\(0, 2\)/);
+    assert.match(edgePolicy, /state\.query && matchesQuery\(node\)/);
+    assert.match(edgePolicy, /window\.GalaxySystemsLabelLOD/);
+    assert.match(edgePolicy, /zoom in to reveal repositories/);
 
     assert.match(obsidian, /center: 0\.0026/);
     assert.match(obsidian, /repel: 9200/);
