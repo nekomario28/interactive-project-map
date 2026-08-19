@@ -1,5 +1,5 @@
 "use strict";
-/* global state, drawEdges, drawNodesAndLabels, worldToScreen, ctx, matchesQuery, displayLabel, subtitle */
+/* global state, drawEdges, drawNodesAndLabels, worldToScreen, ctx, matchesQuery, displayLabel */
 
 window.addEventListener("DOMContentLoaded", () => {
   if (!window.GalaxyCommon || !["galaxy-systems", "galaxy-hybrid"].includes(state.style)) return;
@@ -171,8 +171,4 @@ window.addEventListener("DOMContentLoaded", () => {
     mode: systemsLabelMode,
     visibleRepositoryIds: () => [...visibleRepositoryIds()],
   };
-
-  if (state.style === "galaxy-systems" && subtitle) {
-    subtitle.textContent = "Galaxy Systems · categories first · zoom in to reveal repositories";
-  }
 });
