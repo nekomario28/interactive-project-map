@@ -82,6 +82,36 @@ test("Galaxy follows the original live github.io orbital motion", async ({ page 
   expect(failures).toEqual([]);
 });
 
+test("Obsidian drag reheats the graph so connected nodes respond", async ({ page }) => {
+  await installGraph(page);
+  const failures = browserErrors(page);
+  await page.goto("/u/?username=example&style=obsidian");
+  await expect(page.locator("#status")).toBeHidden();
+  await page.waitForTimeout(2200);
+
+  const before = await page.evaluate(() => {
+    const dragged = state.byId.get("repository:robot-one");
+    const neighbor = state.byId.get("group:robotics");
+    const screen = worldToScreen(dragged.x, dragged.y);
+    return { screen, neighbor: { x: neighbor.x, y: neighbor.y } };
+  });
+
+  await page.mouse.move(before.screen.x, before.screen.y);
+  await page.mouse.down();
+  await page.mouse.move(before.screen.x + 110, before.screen.y + 60, { steps: 12 });
+  await page.waitForTimeout(300);
+  await page.mouse.up();
+  await page.waitForTimeout(650);
+
+  const after = await page.evaluate(() => {
+    const neighbor = state.byId.get("group:robotics");
+    return { x: neighbor.x, y: neighbor.y };
+  });
+  expect(Math.hypot(after.x - before.neighbor.x, after.y - before.neighbor.y)).toBeGreaterThan(1);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-live.png", fullPage: true });
+  expect(failures).toEqual([]);
+});
+
 test("style query text is authoritative even when the path still names another preset", async ({ page }) => {
   await installGraph(page);
   const failures = browserErrors(page);
