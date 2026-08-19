@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 
 const styles = [
   ["radial", "/radial/"],
-  ["galaxy", "/u/"],
+  ["galaxy-classic", "/u/"],
+  ["galaxy-systems", "/u/"],
+  ["galaxy-hybrid", "/u/"],
   ["obsidian", "/u/"],
   ["tree", "/tree/"],
   ["treemap", "/treemap/"],
@@ -41,28 +43,11 @@ const graph = {
   groupCount: groups.length,
   nodes: [
     { id: "user:example", label: "example", type: "owner", url: "https://github.com/example" },
-    ...groups.map(([id, label]) => ({
-      id: `group:${id}`,
-      label,
-      type: "group",
-      repositoryCount: repoDefs.filter((repo) => repo[1] === id).length,
-    })),
+    ...groups.map(([id, label]) => ({ id: `group:${id}`, label, type: "group", repositoryCount: repoDefs.filter((repo) => repo[1] === id).length })),
     ...repoDefs.map(([name, groupId, language, fork, archived, stars, createdAt], index) => ({
-      id: `repository:${name}`,
-      label: name,
-      type: "repository",
-      url: `https://github.com/example/${name}`,
-      description: `${name} browser fixture project`,
-      language,
-      topics: index % 2 === 0 ? ["robotics", "visualization"] : ["project-map"],
-      stars,
-      forks: Math.floor(stars / 3),
-      fork,
-      archived,
-      createdAt,
-      updatedAt: "2026-08-18T00:00:00Z",
-      groupId,
-      groupLabel: groups.find(([id]) => id === groupId)?.[1] || "Other",
+      id: `repository:${name}`, label: name, type: "repository", url: `https://github.com/example/${name}`, description: `${name} browser fixture project`, language,
+      topics: index % 2 === 0 ? ["robotics", "visualization"] : ["project-map"], stars, forks: Math.floor(stars / 3), fork, archived, createdAt,
+      updatedAt: "2026-08-18T00:00:00Z", groupId, groupLabel: groups.find(([id]) => id === groupId)?.[1] || "Other",
     })),
   ],
   edges: [
@@ -77,20 +62,14 @@ async function installRawFixture(page) {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
   });
   await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/galaxy.svg", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="740" height="420"><rect width="100%" height="100%" fill="#070a12"/></svg>',
-    });
+    await route.fulfill({ status: 200, contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="740" height="420"><rect width="100%" height="100%" fill="#070a12"/></svg>' });
   });
 }
 
 function watchBrowserErrors(page) {
   const failures = [];
   page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
-  page.on("console", (message) => {
-    if (message.type() === "error") failures.push(`console: ${message.text()}`);
-  });
+  page.on("console", (message) => { if (message.type() === "error") failures.push(`console: ${message.text()}`); });
   return failures;
 }
 
@@ -99,13 +78,13 @@ test.beforeAll(async () => {
   await mkdir(".tmp/playwright-visual/mobile", { recursive: true });
 });
 
-test("generator exposes ten visual presets and emits the selected immutable setup", async ({ page }) => {
+test("generator exposes twelve visual presets and emits the selected immutable setup", async ({ page }) => {
   await installRawFixture(page);
   const browserErrors = watchBrowserErrors(page);
   await page.goto("/");
 
   const cards = page.locator("[data-style-preset]");
-  await expect(cards).toHaveCount(10);
+  await expect(cards).toHaveCount(12);
   for (const [style] of styles) {
     const card = page.locator(`[data-style-preset="${style}"]`);
     await card.click();
@@ -113,7 +92,7 @@ test("generator exposes ten visual presets and emits the selected immutable setu
     await expect(card).toHaveAttribute("aria-pressed", "true");
   }
 
-  await page.locator('[data-style-preset="matrix"]').click();
+  await page.locator('[data-style-preset="galaxy-hybrid"]').click();
   await page.locator("#username").fill("example");
   await page.locator("#theme").selectOption("light");
   await page.locator("#maxRepos").fill("300");
@@ -121,13 +100,13 @@ test("generator exposes ten visual presets and emits the selected immutable setu
 
   await expect(page.locator("#result")).toHaveClass(/visible/);
   const workflow = await page.locator("#workflow").inputValue();
-  expect(workflow).toContain("style: matrix");
+  expect(workflow).toContain("style: galaxy-hybrid");
   expect(workflow).toContain('max_repos: "300"');
   expect(workflow).toContain("theme: light");
   expect(workflow).toMatch(/uses: nekomario28\/interactive-project-map@[0-9a-f]{40}/);
   const staticUrls = await page.locator("#staticUrls").inputValue();
-  expect(staticUrls).toContain("/matrix/?username=example&style=matrix");
-  await expect(page).toHaveURL(/style=matrix/);
+  expect(staticUrls).toContain("/u/?username=example&style=galaxy-hybrid");
+  await expect(page).toHaveURL(/style=galaxy-hybrid/);
 
   await page.locator("#username").fill("bad user!");
   await page.getByRole("button", { name: "Generate setup" }).click();
@@ -136,7 +115,7 @@ test("generator exposes ten visual presets and emits the selected immutable setu
   expect(browserErrors).toEqual([]);
 });
 
-test("all ten viewers load one sanitized graph without browser errors", async ({ browser }) => {
+test("all twelve viewers load one sanitized graph without browser errors", async ({ browser }) => {
   for (const [style, path] of styles) {
     await test.step(style, async () => {
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
@@ -165,16 +144,18 @@ test("all ten viewers load one sanitized graph without browser errors", async ({
   }
 });
 
-test("style navigation crosses dedicated and shared viewer routes", async ({ page }) => {
+test("style navigation crosses dedicated and all shared Galaxy routes", async ({ page }) => {
   await installRawFixture(page);
   const browserErrors = watchBrowserErrors(page);
   await page.goto("/tree/?username=example&style=tree");
   await expect(page.locator("#status")).toBeHidden();
 
-  await page.locator("#style").selectOption("galaxy");
-  await page.waitForURL(/\/u\/\?username=example&style=galaxy/);
-  await expect(page.locator("#style")).toHaveValue("galaxy");
-  await expect(page.locator("#status")).toBeHidden();
+  for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"]) {
+    await page.locator("#style").selectOption(style);
+    await page.waitForURL(new RegExp(`/u/\\?username=example&style=${style}`));
+    await expect(page.locator("#style")).toHaveValue(style);
+    await expect(page.locator("#status")).toBeHidden();
+  }
 
   await page.locator("#style").selectOption("sankey");
   await page.waitForURL(/\/sankey\/\?username=example&style=sankey/);
@@ -190,16 +171,16 @@ test("generator and viewer remain usable at a phone viewport", async ({ browser 
   const browserErrors = watchBrowserErrors(page);
 
   await page.goto("/");
-  await expect(page.locator("[data-style-preset]")).toHaveCount(10);
+  await expect(page.locator("[data-style-preset]")).toHaveCount(12);
   const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(homeOverflow).toBeLessThanOrEqual(1);
   await page.screenshot({ path: ".tmp/playwright-visual/mobile/generator.png", fullPage: true });
 
-  await page.goto("/tree/?username=example&style=tree");
+  await page.goto("/u/?username=example&style=galaxy-hybrid");
   await expect(page.locator("#status")).toBeHidden();
   const viewerOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(viewerOverflow).toBeLessThanOrEqual(1);
-  await page.screenshot({ path: ".tmp/playwright-visual/mobile/tree.png", fullPage: true });
+  await page.screenshot({ path: ".tmp/playwright-visual/mobile/galaxy-hybrid.png", fullPage: true });
 
   expect(browserErrors).toEqual([]);
   await context.close();
