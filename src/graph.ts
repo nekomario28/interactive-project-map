@@ -1,7 +1,7 @@
-import { CLASSIFICATION_VERSION, classifyRepository } from "./semantic";
+import { CLASSIFICATION_VERSION, classifyRepository } from "./semantic.ts";
 import type { GalaxyEdge, GalaxyGraph, GalaxyNode, GitHubRepo, RepositoryClassification } from "./types";
 
-export { classifyRepository, normalizeSearch } from "./semantic";
+export { classifyRepository, normalizeSearch } from "./semantic.ts";
 
 function isProfileRepository(username: string, repo: GitHubRepo): boolean {
   return repo.name.toLowerCase() === username.toLowerCase();
