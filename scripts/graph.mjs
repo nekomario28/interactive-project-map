@@ -36,9 +36,12 @@ function classify(repo) {
   const language = repo.language || "Other";
   return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
 }
+function isProfileRepository(username, repo) {
+  return String(repo?.name || "").toLowerCase() === String(username || "").toLowerCase();
+}
 
 export function buildGraph(username, repos, includeForks, includeArchived) {
-  const filtered = repos.filter((repo) => (includeForks || !repo.fork) && (includeArchived || !repo.archived));
+  const filtered = repos.filter((repo) => !isProfileRepository(username, repo) && (includeForks || !repo.fork) && (includeArchived || !repo.archived));
   const groups = new Map();
   for (const repo of filtered) {
     const group = classify(repo);

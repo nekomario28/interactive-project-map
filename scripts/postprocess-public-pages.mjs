@@ -64,8 +64,13 @@ const VIEWER_FIT_OLD = "state.zoom = clamp(Math.min((size.width * 0.84) / width,
 const VIEWER_FIT_NEW = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);";
 const VIEWER_SCRIPT = '<script src="../viewer.js" defer></script>';
 const RUNTIME_SCRIPT = '<script src="../shared-runtime.js" defer></script>';
+const OBSIDIAN_SCRIPT = '<script src="../obsidian-runtime.js" defer></script>';
 const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
 const SUNBURST_VIEWER_SCRIPT = '<script src="../sunburst-viewer.js" defer></script>';
+const LEGACY_OBSIDIAN_FRAME = `          changed = stepObsidian();
+          if (subtitle) subtitle.textContent = "Obsidian Graph-like · stable at rest · hover highlights links · drag reheats local force layout";
+          if (!state.selected && detailsDescription) detailsDescription.textContent = "Stable force-directed graph: center, repulsion and link forces settle before display. Hover highlights links; dragging locally reheats connected nodes, then the graph becomes still again.";`;
+const DEDICATED_OBSIDIAN_FRAME = "          changed = false; // Dedicated obsidian-runtime.js owns Obsidian physics and drag semantics.";
 
 async function htmlFiles(dir) {
   const found = [];
@@ -93,6 +98,12 @@ async function emitSharedRuntime(outputDir) {
   const outputPath = join(outputDir, "shared-runtime.js");
   await copyFile(sourcePath, outputPath);
 
+  const source = await readFile(outputPath, "utf8");
+  if (!source.includes(LEGACY_OBSIDIAN_FRAME) && !source.includes(DEDICATED_OBSIDIAN_FRAME)) throw new Error("Could not locate legacy Obsidian runtime branch");
+  const patched = source.replace(LEGACY_OBSIDIAN_FRAME, DEDICATED_OBSIDIAN_FRAME);
+  if (!patched.includes(DEDICATED_OBSIDIAN_FRAME) || patched.includes("changed = stepObsidian();")) throw new Error("Could not disable legacy Obsidian dynamics");
+  if (patched !== source) await writeFile(outputPath, patched);
+
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
   if (!html.includes(VIEWER_SCRIPT)) throw new Error("Shared viewer script tag not found");
@@ -103,6 +114,21 @@ async function emitSharedRuntime(outputDir) {
   if (withRuntime !== html) await writeFile(htmlPath, withRuntime);
 }
 
+async function emitObsidianRuntime(outputDir) {
+  const sourcePath = resolve(process.cwd(), "scripts/public-obsidian-runtime.js");
+  const outputPath = join(outputDir, "obsidian-runtime.js");
+  await copyFile(sourcePath, outputPath);
+
+  const htmlPath = join(outputDir, "u", "index.html");
+  const html = await readFile(htmlPath, "utf8");
+  if (!html.includes(RUNTIME_SCRIPT)) throw new Error("Shared runtime script tag not found before Obsidian runtime");
+  const withObsidian = html.includes(OBSIDIAN_SCRIPT)
+    ? html
+    : html.replace(RUNTIME_SCRIPT, `${RUNTIME_SCRIPT}\n${OBSIDIAN_SCRIPT}`);
+  if (!withObsidian.includes(OBSIDIAN_SCRIPT)) throw new Error("Could not attach Obsidian runtime to /u/");
+  if (withObsidian !== html) await writeFile(htmlPath, withObsidian);
+}
+
 async function emitInteractionPolish(outputDir) {
   const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
   const outputPath = join(outputDir, "interaction-polish.js");
@@ -110,10 +136,11 @@ async function emitInteractionPolish(outputDir) {
 
   const sharedHtmlPath = join(outputDir, "u", "index.html");
   const sharedHtml = await readFile(sharedHtmlPath, "utf8");
-  if (!sharedHtml.includes(RUNTIME_SCRIPT)) throw new Error("Shared runtime script tag not found before interaction polish");
+  const sharedAnchor = sharedHtml.includes(OBSIDIAN_SCRIPT) ? OBSIDIAN_SCRIPT : RUNTIME_SCRIPT;
+  if (!sharedHtml.includes(sharedAnchor)) throw new Error("Graph runtime script tag not found before interaction polish");
   const sharedWithPolish = sharedHtml.includes(POLISH_SCRIPT)
     ? sharedHtml
-    : sharedHtml.replace(RUNTIME_SCRIPT, `${RUNTIME_SCRIPT}\n${POLISH_SCRIPT}`);
+    : sharedHtml.replace(sharedAnchor, `${sharedAnchor}\n${POLISH_SCRIPT}`);
   if (!sharedWithPolish.includes(POLISH_SCRIPT)) throw new Error("Could not attach interaction polish to /u/");
   if (sharedWithPolish !== sharedHtml) await writeFile(sharedHtmlPath, sharedWithPolish);
 
@@ -142,6 +169,7 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
 
   await hardenSharedViewer(outputDir);
   await emitSharedRuntime(outputDir);
+  await emitObsidianRuntime(outputDir);
   await emitInteractionPolish(outputDir);
 
   const appPath = join(outputDir, "app.js");

@@ -106,6 +106,10 @@ function classify(repo: GitHubRepo): { id: string; label: string } {
   return { id: `lang-${languageGroupKey(language)}`, label: languageDisplayLabel(language) };
 }
 
+function isProfileRepository(username: string, repo: GitHubRepo): boolean {
+  return repo.name.toLowerCase() === username.toLowerCase();
+}
+
 export function buildGraph(
   username: string,
   repos: GitHubRepo[],
@@ -113,6 +117,7 @@ export function buildGraph(
   includeArchived: boolean,
 ): GalaxyGraph {
   const filtered = repos.filter((repo) => {
+    if (isProfileRepository(username, repo)) return false;
     if (!includeForks && repo.fork) return false;
     if (!includeArchived && repo.archived) return false;
     return true;
