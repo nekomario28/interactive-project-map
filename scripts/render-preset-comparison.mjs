@@ -2,6 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderGalaxySvg } from "./svg.mjs";
+import { renderGalaxyClassicSvg } from "./galaxy-svg-classic.mjs";
+import { renderGalaxySystemsSvg } from "./galaxy-svg-systems.mjs";
+import { renderGalaxyHybridSvg } from "./galaxy-svg-hybrid.mjs";
 import { renderRadialTreeSvg } from "./radial-svg.mjs";
 import { renderTreeSvg } from "./tree-svg.mjs";
 import { renderTreemapSvg } from "./treemap-svg.mjs";
@@ -17,7 +20,9 @@ const HEIGHT = 420;
 const THEMES = ["dark", "light"];
 const STYLES = [
   ["radial", "Radial Tree (Classic)"],
-  ["galaxy", "Galaxy"],
+  ["galaxy-classic", "Galaxy Classic"],
+  ["galaxy-systems", "Galaxy Systems"],
+  ["galaxy-hybrid", "Galaxy Hybrid"],
   ["obsidian", "Obsidian-like"],
   ["tree", "Tree"],
   ["treemap", "Treemap"],
@@ -30,7 +35,10 @@ const STYLES = [
 
 function rawRender(style, graph, theme) {
   if (style === "radial") return renderRadialTreeSvg(graph, theme, WIDTH, HEIGHT);
-  if (style === "galaxy" || style === "obsidian") return renderGalaxySvg(graph, theme, WIDTH, HEIGHT, style);
+  if (style === "galaxy-classic") return renderGalaxyClassicSvg(graph, theme, WIDTH, HEIGHT);
+  if (style === "galaxy-systems") return renderGalaxySystemsSvg(graph, theme, WIDTH, HEIGHT);
+  if (style === "galaxy-hybrid") return renderGalaxyHybridSvg(graph, theme, WIDTH, HEIGHT);
+  if (style === "obsidian") return renderGalaxySvg(graph, theme, WIDTH, HEIGHT, "obsidian");
   if (style === "tree") return renderTreeSvg(graph, theme, WIDTH, HEIGHT);
   if (style === "treemap") return renderTreemapSvg(graph, theme, WIDTH, HEIGHT);
   if (style === "timeline") return renderTimelineSvg(graph, theme, WIDTH, HEIGHT);
@@ -69,7 +77,7 @@ function comparisonSheet(rendered, graph, theme) {
     const data = Buffer.from(item.svg).toString("base64");
     return `<g><text x="${x + 4}" y="${y + 18}" fill="${text}" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16" font-weight="700">${index + 1}. ${esc(item.label)}</text><rect x="${x}" y="${y + 30}" width="${imageWidth + 8}" height="${imageHeight + 8}" rx="14" fill="${panelBg}" stroke="${panelBorder}"/><image x="${x + 4}" y="${y + 34}" width="${imageWidth}" height="${imageHeight}" href="data:image/svg+xml;base64,${data}"/></g>`;
   }).join("");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${sheetWidth}" height="${sheetHeight}" viewBox="0 0 ${sheetWidth} ${sheetHeight}" role="img" aria-label="Ten ${theme} project-map preset visual comparison for ${esc(graph.owner || "user")}"><rect width="100%" height="100%" fill="${sheetBg}"/>${images}</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${sheetWidth}" height="${sheetHeight}" viewBox="0 0 ${sheetWidth} ${sheetHeight}" role="img" aria-label="Twelve ${theme} project-map preset visual comparison for ${esc(graph.owner || "user")}"><rect width="100%" height="100%" fill="${sheetBg}"/>${images}</svg>`;
 }
 
 export async function renderPresetComparison(graphPath, outputDir) {
