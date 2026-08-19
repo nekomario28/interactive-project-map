@@ -1,0 +1,73 @@
+name: Finalize P1 semantic status
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.repository == 'nekomario28/interactive-project-map'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Update canonical semantic plan status
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/semantic-classification-plan.md')
+          text = path.read_text(encoding='utf-8')
+          old_status = 'Status: **design fixed; implementation not started**'
+          new_status = 'Status: **P1 complete (P1A/P1B merged); P2 not started**'
+          if old_status in text:
+              text = text.replace(old_status, new_status, 1)
+          elif new_status not in text:
+              raise SystemExit('semantic plan status anchor not found')
+
+          checkpoint = '''\n\nImplementation checkpoint (2026-08-20):\n\n- P1A merged in PR #31 (`bb0d7b5cb5f57f5112436dfd16987c993fd022d0`): Unicode-safe normalization, bounded README enrichment, and regression fixtures.\n- P1B merged in PR #33 (`de609e89c18e1b4ed25bebb146c3ff2be1050fb7`): structured deterministic evidence/confidence, bounded adaptive manifest/framework enrichment, and semantic `Uncategorized` fallback with language retained as a facet.\n- P2+ is intentionally not started here: no embedding provider, embedding calls, semantic repo edges, taxonomy discovery, or LLM adjudication are present.\n'''
+          marker = new_status
+          if 'Implementation checkpoint (2026-08-20):' not in text:
+              text = text.replace(marker, marker + checkpoint, 1)
+
+          text = text.replace(
+              '### PR 1 — P1A Unicode + README enrichment foundation',
+              '### PR 1 — P1A Unicode + README enrichment foundation ✅ merged (#31)',
+              1,
+          )
+          text = text.replace(
+              '### PR 2 — P1B structured evidence + category/language separation',
+              '### PR 2 — P1B structured evidence + category/language separation ✅ merged (#33)',
+              1,
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit status update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/semantic-classification-plan.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record completed P1 semantic classification phase'
+            git push origin HEAD:main
+          fi
+
+      - name: Delete merged P1B branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          for branch in feat/p1b-structured-evidence chore/pin-p1b-action; do
+            if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+            fi
+          done
