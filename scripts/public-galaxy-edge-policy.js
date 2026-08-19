@@ -1,10 +1,11 @@
 "use strict";
-/* global state, drawEdges, worldToScreen, ctx, matchesQuery */
+/* global state, drawEdges, drawNodesAndLabels, worldToScreen, ctx, matchesQuery, displayLabel, subtitle */
 
 window.addEventListener("DOMContentLoaded", () => {
   if (!window.GalaxyCommon || !["galaxy-systems", "galaxy-hybrid"].includes(state.style)) return;
   const { categoryForRepository, ownerNode } = window.GalaxyCommon;
   const baseDrawEdges = drawEdges;
+  const baseDrawNodesAndLabels = drawNodesAndLabels;
 
   function isIncident(edge, node) {
     return Boolean(node && (edge.source === node.id || edge.target === node.id));
@@ -80,4 +81,98 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
   };
+
+  function systemsLabelMode() {
+    if (state.style !== "galaxy-systems") return "all";
+    const firstOrbitRadiusPx = 54 * state.zoom;
+    if (firstOrbitRadiusPx < 42) return "categories";
+    if (firstOrbitRadiusPx < 68) return "featured";
+    return "all";
+  }
+
+  function featuredRepositories() {
+    const byCategory = new Map();
+    for (const node of state.nodes) {
+      if (node.type !== "repository") continue;
+      const key = node.groupId || "";
+      if (!byCategory.has(key)) byCategory.set(key, []);
+      byCategory.get(key).push(node);
+    }
+    const featured = new Set();
+    for (const repositories of byCategory.values()) {
+      repositories.sort((a, b) =>
+        (b.stars || 0) - (a.stars || 0) ||
+        Number(a.fork === true) - Number(b.fork === true) ||
+        String(a.label).localeCompare(String(b.label)));
+      for (const repository of repositories.slice(0, 2)) featured.add(repository.id);
+    }
+    return featured;
+  }
+
+  function visibleRepositoryIds() {
+    const mode = systemsLabelMode();
+    const visible = new Set();
+    const featured = mode === "featured" ? featuredRepositories() : null;
+    for (const node of state.nodes) {
+      if (node.type !== "repository") continue;
+      if (node === state.selected || node === state.hovered) {
+        visible.add(node.id);
+        continue;
+      }
+      if (state.query && matchesQuery(node)) {
+        visible.add(node.id);
+        continue;
+      }
+      if (mode === "all" || (mode === "featured" && featured.has(node.id))) visible.add(node.id);
+    }
+    return visible;
+  }
+
+  drawNodesAndLabels = function galaxySystemsLabelLod(colors) {
+    if (state.style !== "galaxy-systems") {
+      baseDrawNodesAndLabels(colors);
+      return;
+    }
+
+    const visible = visibleRepositoryIds();
+    const visibleRepoLabels = new Set();
+    const hiddenRepoLabels = new Set();
+    const protectedLabels = new Set();
+    for (const node of state.nodes) {
+      const label = displayLabel(node);
+      if (node.type !== "repository") protectedLabels.add(label);
+      else if (visible.has(node.id)) visibleRepoLabels.add(label);
+      else hiddenRepoLabels.add(label);
+    }
+
+    const shouldSuppress = (text) => {
+      const label = String(text || "");
+      return hiddenRepoLabels.has(label) && !visibleRepoLabels.has(label) && !protectedLabels.has(label);
+    };
+    const originalFillText = ctx.fillText;
+    const originalStrokeText = ctx.strokeText;
+    ctx.fillText = function lodFillText(text, ...args) {
+      if (!shouldSuppress(text)) return originalFillText.call(this, text, ...args);
+      return undefined;
+    };
+    ctx.strokeText = function lodStrokeText(text, ...args) {
+      if (!shouldSuppress(text)) return originalStrokeText.call(this, text, ...args);
+      return undefined;
+    };
+    try {
+      baseDrawNodesAndLabels(colors);
+    } finally {
+      ctx.fillText = originalFillText;
+      ctx.strokeText = originalStrokeText;
+    }
+  };
+
+  window.GalaxySystemsLabelLOD = {
+    mode: systemsLabelMode,
+    visibleRepositoryIds: () => [...visibleRepositoryIds()],
+  };
+
+  if (state.style === "galaxy-systems" && subtitle) {
+    subtitle.textContent = "Galaxy Systems · categories first · zoom in to reveal repositories";
+  }
 });
