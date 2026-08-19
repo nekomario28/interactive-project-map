@@ -1,20 +1,17 @@
 "use strict";
-/* global state, clamp, hash, collisionRadius, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, nodeColor, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, palette, performance, console, requestAnimationFrame */
+/* global state, clamp, hash, collisionRadius, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, palette, performance, console, requestAnimationFrame */
 
 window.addEventListener("DOMContentLoaded", () => {
   const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
   const tau = Math.PI * 2;
   const runtime = {
-    galaxyInitialized: false,
-    galaxyNodesRef: null,
+    initialized: false,
+    nodesRef: null,
     owner: null,
     ownerHome: null,
     categories: new Map(),
     repositories: new Map(),
-    lastGalaxyTime: performance.now(),
-    obsidianNodesRef: null,
-    obsidianAlpha: 0,
-    obsidianFocusId: null,
+    lastTime: performance.now(),
   };
   const cosmic = { particles: [], seed: 0x6e656b6f };
 
@@ -113,7 +110,7 @@ window.addEventListener("DOMContentLoaded", () => {
     group.vy += (vy * 0.78 - group.vy) * 0.012;
   }
 
-  function initializeGalaxy() {
+  function initialize() {
     if (state.style !== "galaxy" || !state.graph || !state.nodes.length) return false;
     const owner = state.nodes.find((node) => node.type === "owner");
     if (!owner) return false;
@@ -155,14 +152,14 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const category of runtime.categories.values()) positionCategory(category, true);
     owner.vx = 0;
     owner.vy = 0;
-    runtime.galaxyNodesRef = state.nodes;
-    runtime.lastGalaxyTime = performance.now();
-    runtime.galaxyInitialized = true;
+    runtime.nodesRef = state.nodes;
+    runtime.lastTime = performance.now();
+    runtime.initialized = true;
     if (subtitle) subtitle.textContent = "Living Galaxy · differential rotation · all project names visible at normal portfolio size";
     if (!state.selected && detailsDescription) {
       detailsDescription.textContent = motionMedia.matches
-        ? "Living Galaxy motion is paused by your reduced-motion preference. Project names remain visible; drag, pan, and zoom still work."
-        : "Living Galaxy: projects orbit with differential rotation. Project names remain visible at normal portfolio size; drag, pan, and zoom.";
+        ? "Living Galaxy motion is paused by your reduced-motion preference. Project names remain visible; pan and zoom still work."
+        : "Living Galaxy: projects orbit with differential rotation. Project names remain visible at normal portfolio size; pan and zoom.";
     }
     fitView();
     return true;
@@ -173,12 +170,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!owner) return;
     owner.vx = Number.isFinite(owner.vx) ? owner.vx : 0;
     owner.vy = Number.isFinite(owner.vy) ? owner.vy : 0;
-    if (state.drag === owner) {
-      runtime.ownerHome = { x: owner.x, y: owner.y };
-      owner.vx = 0;
-      owner.vy = 0;
-      return;
-    }
     const home = runtime.ownerHome || { x: owner.x, y: owner.y };
     const dx = home.x - owner.x;
     const dy = home.y - owner.y;
@@ -196,11 +187,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!node || !owner) return;
     node.vx = Number.isFinite(node.vx) ? node.vx : 0;
     node.vy = Number.isFinite(node.vy) ? node.vy : 0;
-    if (state.drag === node) {
-      node.vx = 0;
-      node.vy = 0;
-      return;
-    }
     let dx = node.x - owner.x;
     let dy = node.y - owner.y;
     let radius = Math.hypot(dx, dy);
@@ -232,7 +218,7 @@ window.addEventListener("DOMContentLoaded", () => {
     for (let first = 0; first < targets.length; first += 1) {
       const aTarget = targets[first];
       const a = aTarget.node;
-      if (!a || state.drag === a) continue;
+      if (!a) continue;
       const aDx = a.x - owner.x;
       const aDy = a.y - owner.y;
       const aRadius = Math.max(1, Math.hypot(aDx, aDy));
@@ -242,7 +228,7 @@ window.addEventListener("DOMContentLoaded", () => {
       for (let second = first + 1; second < targets.length; second += 1) {
         const bTarget = targets[second];
         const b = bTarget.node;
-        if (!b || state.drag === b) continue;
+        if (!b) continue;
         const radialInfluence = clamp(1 - Math.abs(aTarget.targetRadius - bTarget.targetRadius) / 105, 0, 1);
         if (radialInfluence <= 0) continue;
         const bDx = b.x - owner.x;
@@ -269,8 +255,8 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function limitGalaxySpeed(node) {
-    if (!node || state.drag === node) return;
+  function limitSpeed(node) {
+    if (!node) return;
     const speed = Math.hypot(node.vx || 0, node.vy || 0);
     const maximum = node.type === "owner" ? 0.22 : node.type === "group" ? 0.58 : 0.82;
     if (speed <= maximum || speed < 0.001) return;
@@ -279,13 +265,13 @@ window.addEventListener("DOMContentLoaded", () => {
     node.vy *= scale;
   }
 
-  function stepGalaxy(now) {
-    if (state.nodes !== runtime.galaxyNodesRef || !runtime.galaxyInitialized) {
-      if (!initializeGalaxy()) return false;
+  function step(now) {
+    if (state.nodes !== runtime.nodesRef || !runtime.initialized) {
+      if (!initialize()) return false;
     }
     if (motionMedia.matches) return false;
-    const dt = clamp(now - runtime.lastGalaxyTime, 0, 50);
-    runtime.lastGalaxyTime = now;
+    const dt = clamp(now - runtime.lastTime, 0, 50);
+    runtime.lastTime = now;
     if (dt <= 0) return false;
     const frameScale = dt / (1000 / 60);
     steerOwner(frameScale);
@@ -293,11 +279,10 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const target of runtime.repositories.values()) steerRepository(target, frameScale);
     for (const category of runtime.categories.values()) positionCategory(category, false);
     applyOrbitalSpacing(0.82);
-    for (const node of state.nodes) limitGalaxySpeed(node);
+    for (const node of state.nodes) limitSpeed(node);
     for (const node of state.nodes) {
       node.vx = Number.isFinite(node.vx) ? node.vx : 0;
       node.vy = Number.isFinite(node.vy) ? node.vy : 0;
-      if (state.drag === node) continue;
       const damping = node.type === "repository" ? 0.9992 : node.type === "group" ? 0.9975 : 0.995;
       node.vx *= Math.pow(damping, frameScale);
       node.vy *= Math.pow(damping, frameScale);
@@ -305,143 +290,6 @@ window.addEventListener("DOMContentLoaded", () => {
       node.y += node.vy * frameScale;
     }
     return true;
-  }
-
-  function ensureObsidianState() {
-    if (runtime.obsidianNodesRef === state.nodes) return;
-    runtime.obsidianNodesRef = state.nodes;
-    runtime.obsidianAlpha = 0;
-    runtime.obsidianFocusId = null;
-    for (const node of state.nodes) {
-      node.vx = 0;
-      node.vy = 0;
-    }
-  }
-
-  function neighborhoodLevels(focusId) {
-    const levels = new Map();
-    if (!focusId) return levels;
-    levels.set(focusId, 0);
-    for (const edge of state.edges) {
-      if (edge.source === focusId) levels.set(edge.target, 1);
-      if (edge.target === focusId) levels.set(edge.source, 1);
-    }
-    const direct = new Set([...levels].filter(([, level]) => level === 1).map(([id]) => id));
-    for (const edge of state.edges) {
-      if (direct.has(edge.source) && !levels.has(edge.target)) levels.set(edge.target, 2);
-      if (direct.has(edge.target) && !levels.has(edge.source)) levels.set(edge.source, 2);
-    }
-    return levels;
-  }
-
-  function nodeActivity(levels, node) {
-    const level = levels.get(node.id);
-    if (level === 0) return 1;
-    if (level === 1) return 0.85;
-    if (level === 2) return 0.18;
-    return 0.025;
-  }
-
-  function stepObsidian() {
-    ensureObsidianState();
-    if (state.drag) {
-      runtime.obsidianFocusId = state.drag.id;
-      runtime.obsidianAlpha = Math.max(runtime.obsidianAlpha, 0.78);
-    }
-    const alpha = runtime.obsidianAlpha;
-    if (alpha < 0.004 || !runtime.obsidianFocusId) {
-      runtime.obsidianAlpha = 0;
-      runtime.obsidianFocusId = null;
-      for (const node of state.nodes) {
-        node.vx = 0;
-        node.vy = 0;
-      }
-      return false;
-    }
-
-    const levels = neighborhoodLevels(runtime.obsidianFocusId);
-    const nodes = state.nodes;
-    for (let first = 0; first < nodes.length; first += 1) {
-      const a = nodes[first];
-      for (let second = first + 1; second < nodes.length; second += 1) {
-        const b = nodes[second];
-        const pairActivity = Math.max(nodeActivity(levels, a), nodeActivity(levels, b));
-        if (pairActivity < 0.03) continue;
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        let d2 = dx * dx + dy * dy;
-        if (d2 < 1) {
-          const angle = (hash(`${a.id}:${b.id}:obsidian`) % 6283) / 1000;
-          dx = Math.cos(angle);
-          dy = Math.sin(angle);
-          d2 = 1;
-        }
-        const distance = Math.sqrt(d2);
-        const minimum = collisionRadius(a) + collisionRadius(b) + 8;
-        const effective = Math.max(d2, minimum * minimum * 0.48);
-        const force = 7600 * alpha * pairActivity / effective;
-        const fx = dx / distance * force;
-        const fy = dy / distance * force;
-        if (state.drag !== a) {
-          a.vx -= fx;
-          a.vy -= fy;
-        }
-        if (state.drag !== b) {
-          b.vx += fx;
-          b.vy += fy;
-        }
-      }
-    }
-
-    for (const edge of state.edges) {
-      const a = state.byId.get(edge.source);
-      const b = state.byId.get(edge.target);
-      if (!a || !b) continue;
-      const activity = Math.max(nodeActivity(levels, a), nodeActivity(levels, b));
-      if (activity < 0.03) continue;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const distance = Math.max(1, Math.hypot(dx, dy));
-      const targetDistance = edge.type === "ownership" ? 155 : edge.type === "relation" ? 150 : 122;
-      const amount = (distance - targetDistance) * 0.0105 * alpha * activity;
-      const fx = dx / distance * amount;
-      const fy = dy / distance * amount;
-      if (state.drag !== a) {
-        a.vx += fx;
-        a.vy += fy;
-      }
-      if (state.drag !== b) {
-        b.vx -= fx;
-        b.vy -= fy;
-      }
-    }
-
-    for (const node of nodes) {
-      if (state.drag === node) {
-        node.vx = 0;
-        node.vy = 0;
-        continue;
-      }
-      const activity = nodeActivity(levels, node);
-      node.vx += -node.x * 0.00055 * alpha * activity;
-      node.vy += -node.y * 0.00055 * alpha * activity;
-      node.vx *= 0.76;
-      node.vy *= 0.76;
-      const speed = Math.hypot(node.vx, node.vy);
-      if (speed > 4.5) {
-        node.vx *= 4.5 / speed;
-        node.vy *= 4.5 / speed;
-      }
-      node.x += node.vx;
-      node.y += node.vy;
-    }
-
-    runtime.obsidianAlpha *= state.drag ? 0.98 : 0.88;
-    return true;
-  }
-
-  function associationUnit(groupId, key) {
-    return (hash(`${groupId}:${key}`) % 10000) / 9999;
   }
 
   function drawDiskParticles(colors, width, height) {
@@ -544,6 +392,10 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   }
 
+  function associationUnit(groupId, key) {
+    return (hash(`${groupId}:${key}`) % 10000) / 9999;
+  }
+
   function drawAssociations(colors) {
     if (!runtime.owner) return;
     for (const category of runtime.categories.values()) {
@@ -578,75 +430,35 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function degreeOf(node) {
-    if (!node) return 0;
-    return state.edges.reduce((count, edge) => count + Number(edge.source === node.id || edge.target === node.id), 0);
-  }
-
   function connectedToFocus(node, focus) {
     if (!focus || node === focus) return true;
     return state.edges.some((edge) => (edge.source === focus.id && edge.target === node.id) || (edge.target === focus.id && edge.source === node.id));
   }
 
-  const basePalette = palette;
   const baseNodeRadius = nodeRadius;
-  const baseNodeColor = nodeColor;
   const baseDrawBackground = drawBackground;
   const baseDrawEdges = drawEdges;
+  const baseDrawNodesAndLabels = drawNodesAndLabels;
 
-  palette = function runtimePalette() {
-    if (state.style !== "obsidian") return basePalette();
-    return {
-      background: "#202020",
-      background2: "#181818",
-      edge: "#707075",
-      relation: "#c6aa70",
-      text: "#dcddde",
-      muted: "#9b9ba0",
-      owner: "#b6a7ff",
-      group: "#9385e8",
-      original: "#a79cf2",
-      fork: "#a79cf2",
-      archived: "#77777d",
-      selection: "#ffffff",
-    };
-  };
-
-  nodeRadius = function runtimeNodeRadius(node) {
-    if (state.style === "galaxy") {
-      if (node.type === "owner") return 7;
-      if (node.type === "group") return 2.2;
-      return baseNodeRadius(node);
-    }
-    if (state.style === "obsidian") return clamp(4.8 + Math.log2(degreeOf(node) + 1) * 1.8, 5, 11.5);
+  nodeRadius = function galaxyNodeRadius(node) {
+    if (state.style !== "galaxy") return baseNodeRadius(node);
+    if (node.type === "owner") return 7;
+    if (node.type === "group") return 2.2;
     return baseNodeRadius(node);
   };
 
-  nodeColor = function runtimeNodeColor(node, colors) {
-    if (state.style !== "obsidian") return baseNodeColor(node, colors);
-    if (node.archived) return colors.archived;
-    if (node.type === "owner") return colors.owner;
-    if (node.type === "group") return colors.group;
-    return colors.original;
-  };
-
-  drawBackground = function runtimeDrawBackground(colors, width, height) {
-    if (state.style === "galaxy" && runtime.galaxyInitialized) {
-      ctx.fillStyle = colors.background;
-      ctx.fillRect(0, 0, width, height);
-      drawDiskParticles(colors, width, height);
-      drawNucleus(colors);
-      drawRings(colors);
-      drawSpiralSectors(colors);
-      drawAssociations(colors);
+  drawBackground = function galaxyBackground(colors, width, height) {
+    if (state.style !== "galaxy" || !runtime.initialized) {
+      baseDrawBackground(colors, width, height);
       return;
     }
-    if (state.style === "obsidian") {
-      ctx.fillStyle = colors.background;
-      ctx.fillRect(0, 0, width, height);
-      return;
-    }
-    baseDrawBackground(colors, width, height);
+    ctx.fillStyle = colors.background;
+    ctx.fillRect(0, 0, width, height);
+    drawDiskParticles(colors, width, height);
+    drawNucleus(colors);
+    drawRings(colors);
+    drawSpiralSectors(colors);
+    drawAssociations(colors);
   };
 
   function drawEdgeStroke(source, target, color, opacity, width, halo = false) {
@@ -668,8 +480,8 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.stroke();
   }
 
-  drawEdges = function runtimeDrawEdges(colors) {
-    if (state.style !== "galaxy" && state.style !== "obsidian") {
+  drawEdges = function galaxyEdges(colors) {
+    if (state.style !== "galaxy") {
       baseDrawEdges(colors);
       return;
     }
@@ -682,23 +494,13 @@ window.addEventListener("DOMContentLoaded", () => {
       const target = worldToScreen(b.x, b.y);
       const incident = Boolean(focus && (a === focus || b === focus));
       const relation = edge.type === "relation";
-      let opacity;
-      let width;
-      if (state.style === "galaxy") {
-        opacity = relation ? 0.72 : 0.055;
-        width = relation ? 1.55 : 0.72;
-        if (focus) {
-          if (incident) {
-            opacity = state.selected ? (relation ? 1 : 0.95) : (relation ? 0.92 : 0.74);
-            width = state.selected ? (relation ? 2.6 : 1.8) : (relation ? 2.05 : 1.35);
-          } else {
-            opacity = relation ? 0.08 : 0.014;
-          }
-        }
-      } else {
-        opacity = focus ? (incident ? 0.9 : 0.055) : 0.28;
-        width = incident ? 1.65 : 0.8;
-        if (relation && incident) width = 1.95;
+      let opacity = relation ? 0.72 : 0.055;
+      let width = relation ? 1.55 : 0.72;
+      if (focus) {
+        if (incident) {
+          opacity = state.selected ? (relation ? 1 : 0.95) : (relation ? 0.92 : 0.74);
+          width = state.selected ? (relation ? 2.6 : 1.8) : (relation ? 2.05 : 1.35);
+        } else opacity = relation ? 0.08 : 0.014;
       }
       if (state.query && !(matchesQuery(a) || matchesQuery(b))) opacity *= 0.25;
       const color = relation ? colors.relation : colors.edge;
@@ -708,10 +510,13 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.globalAlpha = 1;
   };
 
-  drawNodesAndLabels = function runtimeDrawNodesAndLabels(colors) {
+  drawNodesAndLabels = function galaxyNodesAndLabels(colors) {
+    if (state.style !== "galaxy") {
+      baseDrawNodesAndLabels(colors);
+      return;
+    }
     const repoCount = state.graph?.repositoryCount ?? state.nodes.filter((node) => node.type === "repository").length;
-    const forceGalaxyRepos = state.style === "galaxy" && repoCount <= 48;
-    const forceObsidianRepos = state.style === "obsidian" && repoCount <= 60;
+    const forceRepositories = repoCount <= 48;
     const focus = state.selected || state.hovered;
     const candidates = [];
 
@@ -721,11 +526,11 @@ window.addEventListener("DOMContentLoaded", () => {
       const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
       let opacity = node.archived ? 0.72 : 1;
       if (state.query && !matchesQuery(node)) opacity *= 0.12;
-      if (state.style === "obsidian" && focus && !connectedToFocus(node, focus)) opacity *= 0.12;
-      else if (state.selected && !connectedToFocus(node, state.selected)) opacity *= 0.22;
+      if (state.selected && !connectedToFocus(node, state.selected)) opacity *= 0.22;
 
       ctx.globalAlpha = opacity;
-      ctx.fillStyle = nodeColor(node, colors);
+      const colorsByStatus = node.type === "owner" ? colors.owner : node.type === "group" ? colors.group : node.archived ? colors.archived : node.fork ? colors.fork : colors.original;
+      ctx.fillStyle = colorsByStatus;
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius, 0, tau);
       ctx.fill();
@@ -747,9 +552,8 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.stroke();
       }
 
-      const always = node.type !== "repository" || highlighted || forceGalaxyRepos || forceObsidianRepos;
-      const threshold = state.style === "obsidian" ? 0.50 : 0.42;
-      if (always || state.zoom >= threshold) {
+      const always = node.type !== "repository" || highlighted || forceRepositories;
+      if (always || state.zoom >= 0.42) {
         const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 11) * Math.sqrt(state.zoom), 9, 15);
         candidates.push({
           node,
@@ -768,14 +572,14 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const candidate of candidates) {
       const box = labelBox(candidate.node, candidate.point, candidate.radius, candidate.fontSize);
       const forced = candidate.node === state.selected || candidate.node === state.hovered || candidate.node.type === "owner" ||
-        (forceGalaxyRepos && candidate.node.type === "repository") || (forceObsidianRepos && candidate.node.type === "repository");
-      if (!forced && occupied.some((other) => boxesOverlap(box, other, state.style === "obsidian" ? 4 : 6))) continue;
+        (forceRepositories && candidate.node.type === "repository");
+      if (!forced && occupied.some((other) => boxesOverlap(box, other, 6))) continue;
       occupied.push(box);
       ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.84 : 0);
       ctx.font = `${candidate.node.type === "owner" ? 700 : candidate.node.type === "group" ? 600 : 500} ${candidate.fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.lineWidth = state.style === "galaxy" ? 3.2 : 2.6;
+      ctx.lineWidth = 3.2;
       ctx.strokeStyle = colors.background;
       ctx.strokeText(displayLabel(candidate.node), candidate.point.x, box.top + 2);
       ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
@@ -784,32 +588,29 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.globalAlpha = 1;
   };
 
+  function reset() {
+    runtime.initialized = false;
+    runtime.nodesRef = null;
+    runtime.owner = null;
+    runtime.ownerHome = null;
+    runtime.categories.clear();
+    runtime.repositories.clear();
+  }
+
   function frame(now) {
-    let changed = false;
     try {
-      if (state.graph && state.nodes.length) {
-        if (state.style === "galaxy") {
-          changed = stepGalaxy(now);
-          runtime.obsidianNodesRef = null;
-          runtime.obsidianAlpha = 0;
-          runtime.obsidianFocusId = null;
-        } else if (state.style === "obsidian") {
-          runtime.galaxyInitialized = false;
-          runtime.galaxyNodesRef = null;
-          changed = stepObsidian();
-          if (subtitle) subtitle.textContent = "Obsidian Graph-like · stable at rest · hover highlights links · drag reheats local force layout";
-          if (!state.selected && detailsDescription) detailsDescription.textContent = "Stable force-directed graph: center, repulsion and link forces settle before display. Hover highlights links; dragging locally reheats connected nodes, then the graph becomes still again.";
-        }
-      }
-      if (changed) draw();
+      if (state.style === "galaxy" && state.graph && state.nodes.length) {
+        if (step(now)) draw();
+      } else if (runtime.initialized || runtime.nodesRef) reset();
     } catch (error) {
-      console.warn("Shared graph dynamics paused after an unexpected error.", error);
+      console.warn("Galaxy dynamics paused after an unexpected error.", error);
+      reset();
     }
     requestAnimationFrame(frame);
   }
 
   motionMedia.addEventListener("change", () => {
-    runtime.lastGalaxyTime = performance.now();
+    runtime.lastTime = performance.now();
   });
 
   requestAnimationFrame(frame);
