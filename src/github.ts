@@ -1,4 +1,4 @@
-import { classifyRepository, extractFrameworkIdentifiers } from "./semantic";
+import { classifyRepository, extractFrameworkIdentifiers } from "./semantic.ts";
 import type { Env, GitHubRepo } from "./types";
 
 const API = "https://api.github.com";
