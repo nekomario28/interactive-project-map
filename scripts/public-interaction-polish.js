@@ -1,5 +1,5 @@
 "use strict";
-/* global canvas, state, drawRepoLabels, matches, ctx, clamp, updateDetails */
+/* global canvas, state, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails */
 
 (() => {
   const style = document.body.dataset.mapStyle;
@@ -39,11 +39,47 @@
     };
   }
 
-  if (style === "sunburst" || typeof canvas === "undefined" || typeof state === "undefined") return;
+  if (typeof canvas === "undefined" || typeof state === "undefined") return;
 
   function canvasPoint(event) {
     const rect = canvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  // One interaction contract across every canvas preset:
+  // - click a selectable item -> focus it (owned by each viewer)
+  // - click clean blank space -> clear focus
+  // - drag/pan/pinch -> never clear focus on release
+  // Obsidian owns the same contract in its dedicated capture-phase runtime, so
+  // its stopImmediatePropagation naturally prevents this fallback from double-running.
+  const blankPointers = new Map();
+  if (typeof hitTest === "function" && typeof updateDetails === "function") {
+    canvas.addEventListener("pointerdown", (event) => {
+      const point = canvasPoint(event);
+      blankPointers.set(event.pointerId, {
+        start: point,
+        moved: false,
+        blank: !hitTest(point.x, point.y),
+      });
+    }, true);
+
+    canvas.addEventListener("pointermove", (event) => {
+      const gesture = blankPointers.get(event.pointerId);
+      if (!gesture || gesture.moved) return;
+      const point = canvasPoint(event);
+      if (Math.hypot(point.x - gesture.start.x, point.y - gesture.start.y) >= 6) gesture.moved = true;
+    }, true);
+
+    canvas.addEventListener("pointerup", (event) => {
+      const gesture = blankPointers.get(event.pointerId);
+      blankPointers.delete(event.pointerId);
+      if (!gesture || gesture.moved || !gesture.blank) return;
+      const point = canvasPoint(event);
+      if (!hitTest(point.x, point.y)) updateDetails(null);
+    }, true);
+
+    canvas.addEventListener("pointercancel", (event) => blankPointers.delete(event.pointerId), true);
+    canvas.addEventListener("lostpointercapture", (event) => blankPointers.delete(event.pointerId), true);
   }
 
   // Galaxy is presentation-first: nodes are not draggable. A drag that starts
@@ -61,13 +97,5 @@
     state.drag = null;
     state.panning = true;
     state.last = state.down;
-  }, true);
-
-  // A clean click on empty Galaxy space clears focus. Node clicks continue into
-  // the base viewer, which immediately replaces the current selection with the
-  // clicked node. Obsidian owns the same semantics in its dedicated runtime.
-  canvas.addEventListener("pointerup", (event) => {
-    if (state.style !== "galaxy" || state.pointers.size !== 1 || !state.pointers.has(event.pointerId)) return;
-    if (!state.moved && !state.drag) updateDetails(null);
   }, true);
 })();

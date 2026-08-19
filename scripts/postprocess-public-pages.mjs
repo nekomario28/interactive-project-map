@@ -2,7 +2,9 @@ import { copyFile, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const PUBLIC_ACTION_REF = "2d35ec20a52d12d18f512c8b2d92590b6ed80a0b";
+// Keep generated consumer workflows on a reviewed, immutable main commit.
+// This commit includes profile-repository exclusion and the unified selection behavior.
+export const PUBLIC_ACTION_REF = "df63cc702f361c864c5c769254cd4a50009f9fc7";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
@@ -66,11 +68,16 @@ const VIEWER_SCRIPT = '<script src="../viewer.js" defer></script>';
 const RUNTIME_SCRIPT = '<script src="../shared-runtime.js" defer></script>';
 const OBSIDIAN_SCRIPT = '<script src="../obsidian-runtime.js" defer></script>';
 const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
-const SUNBURST_VIEWER_SCRIPT = '<script src="../sunburst-viewer.js" defer></script>';
-const LEGACY_OBSIDIAN_FRAME = `          changed = stepObsidian();
-          if (subtitle) subtitle.textContent = "Obsidian Graph-like · stable at rest · hover highlights links · drag reheats local force layout";
-          if (!state.selected && detailsDescription) detailsDescription.textContent = "Stable force-directed graph: center, repulsion and link forces settle before display. Hover highlights links; dragging locally reheats connected nodes, then the graph becomes still again.";`;
-const DEDICATED_OBSIDIAN_FRAME = "          changed = false; // Dedicated obsidian-runtime.js owns Obsidian physics and drag semantics.";
+const DEDICATED_VIEWERS = new Map([
+  ["radial", '<script src="../radial-viewer.js" defer></script>'],
+  ["tree", '<script src="../tree-viewer.js" defer></script>'],
+  ["treemap", '<script src="../treemap-viewer.js" defer></script>'],
+  ["timeline", '<script src="../timeline-viewer.js" defer></script>'],
+  ["cluster", '<script src="../cluster-viewer.js" defer></script>'],
+  ["sunburst", '<script src="../sunburst-viewer.js" defer></script>'],
+  ["matrix", '<script src="../matrix-viewer.js" defer></script>'],
+  ["sankey", '<script src="../sankey-viewer.js" defer></script>'],
+]);
 
 async function htmlFiles(dir) {
   const found = [];
@@ -98,12 +105,6 @@ async function emitSharedRuntime(outputDir) {
   const outputPath = join(outputDir, "shared-runtime.js");
   await copyFile(sourcePath, outputPath);
 
-  const source = await readFile(outputPath, "utf8");
-  if (!source.includes(LEGACY_OBSIDIAN_FRAME) && !source.includes(DEDICATED_OBSIDIAN_FRAME)) throw new Error("Could not locate legacy Obsidian runtime branch");
-  const patched = source.replace(LEGACY_OBSIDIAN_FRAME, DEDICATED_OBSIDIAN_FRAME);
-  if (!patched.includes(DEDICATED_OBSIDIAN_FRAME) || patched.includes("changed = stepObsidian();")) throw new Error("Could not disable legacy Obsidian dynamics");
-  if (patched !== source) await writeFile(outputPath, patched);
-
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
   if (!html.includes(VIEWER_SCRIPT)) throw new Error("Shared viewer script tag not found");
@@ -129,6 +130,16 @@ async function emitObsidianRuntime(outputDir) {
   if (withObsidian !== html) await writeFile(htmlPath, withObsidian);
 }
 
+async function attachPolish(htmlPath, anchor) {
+  const html = await readFile(htmlPath, "utf8");
+  if (!html.includes(anchor)) throw new Error(`Viewer script tag not found before interaction polish in ${htmlPath}`);
+  const withPolish = html.includes(POLISH_SCRIPT)
+    ? html
+    : html.replace(anchor, `${anchor}\n${POLISH_SCRIPT}`);
+  if (!withPolish.includes(POLISH_SCRIPT)) throw new Error(`Could not attach interaction polish to ${htmlPath}`);
+  if (withPolish !== html) await writeFile(htmlPath, withPolish);
+}
+
 async function emitInteractionPolish(outputDir) {
   const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
   const outputPath = join(outputDir, "interaction-polish.js");
@@ -137,21 +148,11 @@ async function emitInteractionPolish(outputDir) {
   const sharedHtmlPath = join(outputDir, "u", "index.html");
   const sharedHtml = await readFile(sharedHtmlPath, "utf8");
   const sharedAnchor = sharedHtml.includes(OBSIDIAN_SCRIPT) ? OBSIDIAN_SCRIPT : RUNTIME_SCRIPT;
-  if (!sharedHtml.includes(sharedAnchor)) throw new Error("Graph runtime script tag not found before interaction polish");
-  const sharedWithPolish = sharedHtml.includes(POLISH_SCRIPT)
-    ? sharedHtml
-    : sharedHtml.replace(sharedAnchor, `${sharedAnchor}\n${POLISH_SCRIPT}`);
-  if (!sharedWithPolish.includes(POLISH_SCRIPT)) throw new Error("Could not attach interaction polish to /u/");
-  if (sharedWithPolish !== sharedHtml) await writeFile(sharedHtmlPath, sharedWithPolish);
+  await attachPolish(sharedHtmlPath, sharedAnchor);
 
-  const sunburstHtmlPath = join(outputDir, "sunburst", "index.html");
-  const sunburstHtml = await readFile(sunburstHtmlPath, "utf8");
-  if (!sunburstHtml.includes(SUNBURST_VIEWER_SCRIPT)) throw new Error("Sunburst viewer script tag not found before interaction polish");
-  const sunburstWithPolish = sunburstHtml.includes(POLISH_SCRIPT)
-    ? sunburstHtml
-    : sunburstHtml.replace(SUNBURST_VIEWER_SCRIPT, `${SUNBURST_VIEWER_SCRIPT}\n${POLISH_SCRIPT}`);
-  if (!sunburstWithPolish.includes(POLISH_SCRIPT)) throw new Error("Could not attach interaction polish to /sunburst/");
-  if (sunburstWithPolish !== sunburstHtml) await writeFile(sunburstHtmlPath, sunburstWithPolish);
+  for (const [route, viewerScript] of DEDICATED_VIEWERS) {
+    await attachPolish(join(outputDir, route, "index.html"), viewerScript);
+  }
 }
 
 export async function postprocessPublicPages(outputDir = resolve(process.cwd(), "site")) {
