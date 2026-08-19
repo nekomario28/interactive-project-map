@@ -39,6 +39,10 @@ function assignments(group, members) {
   return result;
 }
 
+function compareLayoutOrder(a, b) {
+  return (b.stars ?? 0) - (a.stars ?? 0) || String(a.label).localeCompare(String(b.label));
+}
+
 function compareRepresentativePriority(a, b) {
   return (b.stars ?? 0) - (a.stars ?? 0)
     || Number(a.fork === true) - Number(b.fork === true)
@@ -71,11 +75,12 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
   const count = Math.max(1, groups.length);
   const prepared = groups.map((group) => ({
     group,
-    members: groupMembers(group, repos).sort(compareRepresentativePriority),
+    members: groupMembers(group, repos).sort(compareLayoutOrder),
   }));
   for (const system of prepared) {
     system.assignments = assignments(system.group, system.members);
-    system.representativeIds = new Set(system.members.slice(0, REPRESENTATIVE_LIMIT).map((repo) => repo.id));
+    const representatives = [...system.members].sort(compareRepresentativePriority).slice(0, REPRESENTATIVE_LIMIT);
+    system.representativeIds = new Set(representatives.map((repo) => repo.id));
   }
   const maxSystemRadius = Math.max(24, ...prepared.flatMap((system) => system.assignments.map((target) => target.radius)));
   const spacingRadius = ((maxSystemRadius * 2 + 34) * count) / TAU;
