@@ -44,6 +44,21 @@ test("Galaxy Systems emits slow nested declarative motion with a valid static fr
   assert.doesNotMatch(svg, /stroke-width="1" opacity="0\.32"/, "Systems must not draw always-on owner-category spokes");
 });
 
+test("Galaxy Systems static frame is category-first and labels at most two representative repositories per category", () => {
+  const graph = buildGraph("example", Array.from({ length: 18 }, (_, index) => repo(index)), true, true);
+  const svg = renderGalaxySystemsSvg(graph, "dark", 740, 420);
+  const categoryCount = graph.nodes.filter((node) => node.type === "group").length;
+  const repositoryCount = graph.nodes.filter((node) => node.type === "repository").length;
+  const categoryMarkers = svg.match(/data-static-category=/g) ?? [];
+  const representativeMarkers = svg.match(/data-static-representative="true"/g) ?? [];
+  const hiddenMarkers = svg.match(/data-static-representative="false"/g) ?? [];
+  assert.equal(categoryMarkers.length, categoryCount, "every category should have one emphasized static hub");
+  assert.ok(representativeMarkers.length <= categoryCount * 2, "static Systems must label at most two representatives per category");
+  assert.equal(representativeMarkers.length + hiddenMarkers.length, repositoryCount, "every repository node must remain in the SVG");
+  assert.ok(hiddenMarkers.length > 0, "normal-size portfolios should retain unlabeled orbiting repository nodes");
+  assert.match(svg, /font-size="11\.4" font-weight="700"/, "category labels should dominate repository labels");
+});
+
 test("Galaxy Hybrid emits a rotating spiral with local elliptical repository systems", () => {
   const graph = buildGraph("example", Array.from({ length: 18 }, (_, index) => repo(index)), true, true);
   const svg = renderGalaxyHybridSvg(graph, "dark", 740, 420);
