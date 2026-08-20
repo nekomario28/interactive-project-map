@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Keep generated consumer workflows on a reviewed, immutable main commit.
-// This commit includes Galaxy family plus complete P1/P2 semantic enrichment and sparse-edge support.
-export const PUBLIC_ACTION_REF = "3c3e9099d00e6904aa19485c389ced194935e84e";
+// This commit includes P1/P2 semantics plus the P3A frozen taxonomy state/override boundary.
+export const PUBLIC_ACTION_REF = "6dad03fa74beb5733c30a7a44bb1dadd22caeca3";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
