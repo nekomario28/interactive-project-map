@@ -61,6 +61,50 @@ export interface GitHubRepo {
   classification?: RepositoryClassification;
 }
 
+export interface RepoSemanticDocument {
+  repoId: number;
+  name: string;
+  description: string;
+  topics: string[];
+  readmeExcerpt: string;
+  language: string | null;
+  frameworks: string[];
+  manifests: string[];
+  fork: {
+    isFork: boolean;
+    sourceName?: string;
+    sourceDescription?: string;
+    sourceTopics?: string[];
+  };
+}
+
+export interface EmbeddingProvider {
+  id: string;
+  model: string;
+  embed(texts: string[]): Promise<number[][]>;
+}
+
+export interface EmbeddingCache {
+  get(key: string): Promise<number[] | null>;
+  set(key: string, vector: number[]): Promise<void>;
+}
+
+export interface EmbeddingDiagnostics {
+  providerId: string;
+  model: string;
+  documents: number;
+  cacheHits: number;
+  embedded: number;
+  dimension: number;
+  disabled: boolean;
+}
+
+export interface EmbeddedSemanticCorpus {
+  vectors: number[][];
+  cacheKeys: string[];
+  diagnostics: EmbeddingDiagnostics;
+}
+
 export type GalaxyNodeType = "owner" | "group" | "repository";
 
 export interface GalaxyNode {
