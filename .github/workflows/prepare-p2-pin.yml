@@ -1,0 +1,133 @@
+name: Prepare P2 pin checkpoint
+
+on:
+  push:
+    branches: [chore/pin-p2-action]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.repository == 'nekomario28/interactive-project-map'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Update P2 pin and canonical plan
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p2_sha = '3c3e9099d00e6904aa19485c389ced194935e84e'
+          p1_sha = 'de609e89c18e1b4ed25bebb146c3ff2be1050fb7'
+
+          post = Path('scripts/postprocess-public-pages.mjs')
+          text = post.read_text(encoding='utf-8')
+          text = text.replace(
+              '// This commit includes Galaxy family plus complete P1 deterministic semantic enrichment.\n'
+              f'export const PUBLIC_ACTION_REF = "{p1_sha}";',
+              '// This commit includes Galaxy family plus complete P1/P2 semantic enrichment and sparse-edge support.\n'
+              f'export const PUBLIC_ACTION_REF = "{p2_sha}";',
+              1,
+          )
+          if p2_sha not in text:
+              raise SystemExit('PUBLIC_ACTION_REF replacement failed')
+          post.write_text(text, encoding='utf-8')
+
+          test = Path('tests/interaction-polish.test.mjs')
+          text = test.read_text(encoding='utf-8')
+          text = text.replace(
+              f'assert.equal(PUBLIC_ACTION_REF, "{p1_sha}");',
+              f'assert.equal(PUBLIC_ACTION_REF, "{p2_sha}");',
+              1,
+          )
+          if p2_sha not in text:
+              raise SystemExit('pin assertion replacement failed')
+          test.write_text(text, encoding='utf-8')
+
+          plan = Path('docs/semantic-classification-plan.md')
+          text = plan.read_text(encoding='utf-8')
+          text = text.replace(
+              'Status: **P1 complete (P1A/P1B merged); P2 not started**',
+              'Status: **P2 complete (P2A/P2B merged); P3 not started**',
+              1,
+          )
+          text = text.replace(
+              '- P2+ is intentionally not started here: no embedding provider, embedding calls, semantic repo edges, taxonomy discovery, or LLM adjudication are present.',
+              '- P2A merged in PR #35 (`961c28429770f9366f86e0387d4829682bd3e47e`): stable bounded `RepoSemanticDocument`, vendor-neutral embedding provider abstraction, SHA-256 cache identity, batching, cache reuse, and strict vector validation.\n'
+              '- P2B merged in PR #36 (`3c3e9099d00e6904aa19485c389ced194935e84e`): bounded top-k semantic edges, provider-failure fallback, separate `semanticEdges`, and Galaxy/Obsidian exploratory integration without changing Obsidian force constants.\n'
+              '- P3+ is intentionally not started here: no portfolio taxonomy discovery, frozen schema, category-description embedding assignment, or LLM adjudication is present. No production embedding vendor is selected; the default provider path remains disabled.',
+              1,
+          )
+          text = text.replace('The project now has ten visual presets.', 'The project now has twelve visual presets.', 1)
+          text = text.replace('Existing 10 visual presets remain compatible', 'Existing 12 visual presets remain compatible', 1)
+          text = text.replace(
+              '### PR 3 — P2 semantic document + embedding abstraction',
+              '### PR 3 — P2 semantic document + embedding abstraction ✅ merged (#35)',
+              1,
+          )
+          text = text.replace(
+              '### PR 4 — P2 sparse semantic edges + viewer integration',
+              '### PR 4 — P2 sparse semantic edges + viewer integration ✅ merged (#36)',
+              1,
+          )
+
+          old_start = '''## 19. Start-here instructions for the next development session
+
+A new session should **not start by integrating an LLM**.
+
+Start with Issue #20 and this sequence:
+
+1. inspect current `src/graph.ts`, `src/github.ts`, `src/types.ts`, graph-generation scripts, and tests;
+2. run the current test suite and capture baseline;
+3. implement Unicode-safe normalization with regression tests;
+4. implement bounded README enrichment with a fake GitHub-fetch fixture;
+5. reproduce the documented misclassification cases locally;
+6. make P1A green before touching embeddings or taxonomy discovery;
+7. open one focused PR for P1A.
+'''
+          new_start = '''## 19. Start-here instructions for the next development session
+
+P1 and P2 are complete. A new session should **not start by adding an unconditional LLM path**.
+
+Start P3 from Issue #20 and this sequence:
+
+1. inspect the merged `RepoSemanticDocument`, embedding cache identity, sparse `semanticEdges`, deterministic classification, and existing fixtures;
+2. define a versioned `TaxonomyCategory` / taxonomy document schema and corpus fingerprint before selecting any discovery provider;
+3. implement validation, freeze/reuse, and human override behavior with a fully local fake discovery provider;
+4. prove unchanged corpora preserve taxonomy IDs/labels and small corpus drift does not cause unnecessary churn;
+5. add category-description embedding assignment using the existing provider abstraction only after taxonomy persistence is stable;
+6. route only genuinely ambiguous assignments to an optional structured LLM judge with deterministic fallback;
+7. keep normal viewers static-only and keep production semantic/LLM providers opt-in.
+'''
+          if old_start not in text:
+              raise SystemExit('P3 start-here replacement anchor not found')
+          text = text.replace(old_start, new_start, 1)
+
+          required = [
+              'Status: **P2 complete (P2A/P2B merged); P3 not started**',
+              '✅ merged (#35)',
+              '✅ merged (#36)',
+              'Start P3 from Issue #20',
+          ]
+          if not all(item in text for item in required):
+              raise SystemExit('semantic plan checkpoint validation failed')
+          plan.write_text(text, encoding='utf-8')
+          PY
+
+          git rm .github/workflows/prepare-p2-pin.yml
+
+      - name: Commit prepared checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/postprocess-public-pages.mjs tests/interaction-polish.test.mjs docs/semantic-classification-plan.md .github/workflows/prepare-p2-pin.yml
+          git commit -m 'Pin generated workflows to P2 merge and record P2 completion'
+          git push origin HEAD:chore/pin-p2-action
