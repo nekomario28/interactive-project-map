@@ -41,6 +41,7 @@ const HYBRID_SCRIPT = '<script src="../galaxy-hybrid-runtime.js" defer></script>
 const OBSIDIAN_SCRIPT = '<script src="../obsidian-runtime.js" defer></script>';
 const EDGE_SCRIPT = '<script src="../galaxy-edge-policy.js" defer></script>';
 const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
+const SEARCH_EMPHASIS_SCRIPT = '<script src="../search-emphasis.js" defer></script>';
 const DEDICATED_VIEWERS = new Map([
   ["radial", '<script src="../radial-viewer.js" defer></script>'],
   ["tree", '<script src="../tree-viewer.js" defer></script>'],
@@ -146,12 +147,17 @@ async function emitObsidianRuntime(outputDir) {
 
 async function emitInteractionPolish(outputDir) {
   const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
+  const emphasisSourcePath = resolve(process.cwd(), "scripts/public-search-emphasis.js");
   await copyFile(sourcePath, join(outputDir, "interaction-polish.js"));
+  await copyFile(emphasisSourcePath, join(outputDir, "search-emphasis.js"));
   for (const [route, viewerScript] of DEDICATED_VIEWERS) {
     const htmlPath = join(outputDir, route, "index.html");
     const html = await readFile(htmlPath, "utf8");
     if (!html.includes(viewerScript)) throw new Error(`Viewer script tag not found before interaction polish in ${htmlPath}`);
-    const next = html.includes(POLISH_SCRIPT) ? html : html.replace(viewerScript, `${viewerScript}\n${POLISH_SCRIPT}`);
+    let next = html;
+    if (!next.includes(POLISH_SCRIPT)) next = next.replace(viewerScript, `${viewerScript}\n${POLISH_SCRIPT}`);
+    if (!next.includes(SEARCH_EMPHASIS_SCRIPT)) next = next.replace(POLISH_SCRIPT, `${POLISH_SCRIPT}\n${SEARCH_EMPHASIS_SCRIPT}`);
+    if (!next.includes(SEARCH_EMPHASIS_SCRIPT)) throw new Error(`Could not attach search emphasis runtime in ${htmlPath}`);
     if (next !== html) await writeFile(htmlPath, next);
   }
 }
