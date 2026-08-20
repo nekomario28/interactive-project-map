@@ -126,6 +126,24 @@ test("run metric collector accepts generation-result diagnostics without provide
   assert.equal(metrics.adjudication.accepted, 1);
 });
 
+test("public portfolio candidate fixture stays strict, complete, profile-excluded, and intentionally five-category", async () => {
+  const raw = JSON.parse(await readFile("docs/semantic-evaluation-nekomario28.candidate.json", "utf8"));
+  const candidate = normalizeSemanticEvaluationExpected(raw);
+  const names = Object.keys(candidate.repositories);
+  assert.equal(names.length, 12);
+  assert.equal(names.some((name) => name.toLowerCase() === "nekomario28"), false);
+  assert.deepEqual(new Set(names.map((name) => name.toLowerCase())).size, 12);
+  const counts = {};
+  for (const item of Object.values(candidate.repositories)) counts[item.categoryId] = (counts[item.categoryId] ?? 0) + 1;
+  assert.deepEqual(counts, {
+    "hardware-integration": 1,
+    robotics: 2,
+    "game-development": 1,
+    "minecraft-modding": 7,
+    "developer-tools": 1,
+  });
+});
+
 test("CLI writes a machine-readable report and exits 2 only when an explicit gate fails", async () => {
   const dir = await mkdtemp(join(tmpdir(), "project-map-semantic-eval-"));
   try {
