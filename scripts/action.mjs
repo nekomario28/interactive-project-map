@@ -9,6 +9,7 @@ import { TAXONOMY_ASSIGNMENT_VERSION, assignRepositoriesToTaxonomy } from "./tax
 import { adjudicateAmbiguousTaxonomyAssignments } from "./taxonomy-adjudication.mjs";
 import { parseTaxonomyOverrideFile, resolvePortfolioTaxonomy } from "./taxonomy.mjs";
 import { parseTaxonomyRepositoryOverridesFile } from "./taxonomy-overrides.mjs";
+import { resolveStandardTaxonomy, standardizeRepositoriesForAssignment } from "./standard-taxonomy-runtime.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
 import { renderGalaxyClassicSvg } from "./galaxy-svg-classic.mjs";
 import { renderGalaxySystemsSvg } from "./galaxy-svg-systems.mjs";
@@ -80,13 +81,20 @@ export async function generateStaticMap(config, options = {}) {
   const taxonomyOverridesPath = resolve(outputRoot, "taxonomy-overrides.json");
   const previousTaxonomy = options.previousTaxonomy !== undefined ? options.previousTaxonomy : await readGeneratedTaxonomy(taxonomyStatePath);
   const taxonomyOverrides = options.taxonomyOverrides !== undefined ? (typeof options.taxonomyOverrides === "string" ? parseTaxonomyOverrideDocument(options.taxonomyOverrides) : options.taxonomyOverrides) : await readTaxonomyOverrides(taxonomyOverridesPath);
-  const taxonomy = await resolvePortfolioTaxonomy(semanticRepos, options.taxonomyProvider, { previousTaxonomy, overrides: taxonomyOverrides, forceRediscovery: options.forceTaxonomyRediscovery, maxDriftRatio: options.taxonomyOptions?.maxDriftRatio });
+  const usePortfolioTaxonomy = options.taxonomyMode === "portfolio" || Boolean(options.taxonomyProvider) || Boolean(taxonomyOverrides?.categories?.length);
+  const taxonomy = usePortfolioTaxonomy
+    ? await resolvePortfolioTaxonomy(semanticRepos, options.taxonomyProvider, { previousTaxonomy, overrides: taxonomyOverrides, forceRediscovery: options.forceTaxonomyRediscovery, maxDriftRatio: options.taxonomyOptions?.maxDriftRatio })
+    : await resolveStandardTaxonomy(semanticRepos);
   if (taxonomy.taxonomy) graph.taxonomy = taxonomy.taxonomy;
   if (taxonomy.error) console.warn(`Taxonomy discovery fallback: ${taxonomy.error}`);
 
-  const taxonomyAssignment = await assignRepositoriesToTaxonomy(semanticRepos, taxonomy.taxonomy, options.embeddingProvider, sharedEmbeddingCache, { overrides: taxonomyOverrides, ...(options.taxonomyAssignmentOptions ?? {}) });
+  const assignmentRepos = usePortfolioTaxonomy ? semanticRepos : standardizeRepositoriesForAssignment(semanticRepos);
+  const assignmentOptions = usePortfolioTaxonomy
+    ? { overrides: taxonomyOverrides, ...(options.taxonomyAssignmentOptions ?? {}) }
+    : { deterministicConfidence: 0.9, overrides: taxonomyOverrides, ...(options.taxonomyAssignmentOptions ?? {}) };
+  const taxonomyAssignment = await assignRepositoriesToTaxonomy(assignmentRepos, taxonomy.taxonomy, options.embeddingProvider, sharedEmbeddingCache, assignmentOptions);
   if (taxonomyAssignment.error) console.warn(`Taxonomy assignment fallback: ${taxonomyAssignment.error}`);
-  const taxonomyAdjudication = await adjudicateAmbiguousTaxonomyAssignments(semanticRepos, taxonomy.taxonomy, taxonomyAssignment, options.taxonomyAdjudicator, options.taxonomyAdjudicationOptions);
+  const taxonomyAdjudication = await adjudicateAmbiguousTaxonomyAssignments(assignmentRepos, taxonomy.taxonomy, taxonomyAssignment, options.taxonomyAdjudicator, options.taxonomyAdjudicationOptions);
   if (taxonomyAdjudication.error) console.warn(`Taxonomy adjudication fallback: ${taxonomyAdjudication.error}`);
   attachTaxonomyAssignments(graph, taxonomyAdjudication.assignments);
 
@@ -97,7 +105,7 @@ export async function generateStaticMap(config, options = {}) {
   await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
   if (taxonomy.taxonomy) await writeFile(taxonomyStatePath, JSON.stringify(taxonomy.taxonomy, null, 2) + "\n");
   await writeFile(resolve(cwd, svgPath), renderForStyle(graph, config));
-  return { graphPath, svgPath, taxonomyPath, graph, semantic, taxonomy, taxonomyAssignment, taxonomyAdjudication };
+  return { graphPath, svgPath, taxonomyPath, graph, semantic, taxonomy, taxonomyAssignment, taxonomyAdjudication, taxonomyMode: usePortfolioTaxonomy ? "portfolio" : "standard" };
 }
 
 async function setOutput(name, value) { if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `${name}=${value}\n`); }
@@ -106,7 +114,7 @@ async function main() {
   const config = actionConfigFromEnv(); const result = await generateStaticMap(config);
   await setOutput("svg-path", result.svgPath); await setOutput("graph-path", result.graphPath);
   console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username} (${config.style})`); console.log(`SVG: ${result.svgPath}`); console.log(`Graph: ${result.graphPath}`);
-  if (result.taxonomyPath) console.log(`Taxonomy: ${result.taxonomyPath} (${result.taxonomy.diagnostics.reason})`);
+  if (result.taxonomyPath) console.log(`Taxonomy: ${result.taxonomyPath} (${result.taxonomy.diagnostics.reason}; ${result.taxonomyMode})`);
   if (result.graph.taxonomy) console.log(`Taxonomy assignments: ${Object.keys(result.taxonomyAdjudication.assignments).length} assigned / ${result.taxonomyAdjudication.ambiguous.length} ambiguous; adjudicator accepted ${result.taxonomyAdjudication.diagnostics.accepted}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
