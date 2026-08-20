@@ -1,5 +1,5 @@
 "use strict";
-/* global canvas, state, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, draw */
+/* global canvas, state, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, nodeOpacity, draw */
 
 (() => {
   const style = document.body.dataset.mapStyle;
@@ -51,6 +51,168 @@
   function isExploratoryStyle(value) {
     return value === "obsidian" || isGalaxyPresentationStyle(value);
   }
+
+  // Shared search semantics for every interactive preset. The viewer-specific
+  // geometry remains untouched; this layer only widens match context so a
+  // direct repository hit carries its standard category with it, while a
+  // direct category hit softly keeps its member repositories in context.
+  let cachedSearchQuery = null;
+  let cachedSearchGraph = null;
+  let cachedSearchNodeCount = -1;
+  let cachedSearchContext = null;
+
+  function normalizedSearch(value) {
+    return String(value || "").normalize("NFKC").toLocaleLowerCase("en-US").trim();
+  }
+
+  function groupNodeId(value) {
+    const id = String(value || "");
+    if (!id) return "";
+    return id.startsWith("group:") ? id : `group:${id}`;
+  }
+
+  function searchText(values) {
+    return values.filter(Boolean).join(" ").normalize("NFKC").toLocaleLowerCase("en-US");
+  }
+
+  function currentSearchContext() {
+    const query = normalizedSearch(state.query);
+    const graph = state.graph;
+    const graphNodes = Array.isArray(graph?.nodes) ? graph.nodes : Array.isArray(state.nodes) ? state.nodes : [];
+    if (cachedSearchContext
+      && cachedSearchQuery === query
+      && cachedSearchGraph === graph
+      && cachedSearchNodeCount === graphNodes.length) return cachedSearchContext;
+
+    const directRepositoryIds = new Set();
+    const directCategoryIds = new Set();
+    const contextCategoryIds = new Set();
+    const categoryMemberIds = new Set();
+    const repositories = graphNodes.filter((node) => node?.type === "repository");
+    const groups = graphNodes.filter((node) => node?.type === "group");
+
+    if (query) {
+      for (const repo of repositories) {
+        const text = searchText([repo.label, repo.description, repo.language, ...(repo.topics || [])]);
+        if (text.includes(query)) directRepositoryIds.add(repo.id);
+      }
+      for (const group of groups) {
+        const text = searchText([group.label, String(group.id || "").replace(/^group:/, "")]);
+        if (text.includes(query)) directCategoryIds.add(group.id);
+      }
+
+      for (const repo of repositories) {
+        if (!directRepositoryIds.has(repo.id)) continue;
+        const id = groupNodeId(repo.groupId);
+        if (id) contextCategoryIds.add(id);
+      }
+
+      // Compatibility fallback for older graphs that have membership edges but
+      // no repository.groupId field.
+      for (const edge of Array.isArray(graph?.edges) ? graph.edges : []) {
+        if (edge?.type !== "membership" || !directRepositoryIds.has(edge.target)) continue;
+        if (typeof edge.source === "string" && edge.source.startsWith("group:")) contextCategoryIds.add(edge.source);
+      }
+
+      for (const id of directCategoryIds) contextCategoryIds.add(id);
+      if (directCategoryIds.size) {
+        for (const repo of repositories) {
+          const id = groupNodeId(repo.groupId);
+          if (id && directCategoryIds.has(id)) categoryMemberIds.add(repo.id);
+        }
+        for (const edge of Array.isArray(graph?.edges) ? graph.edges : []) {
+          if (edge?.type === "membership" && directCategoryIds.has(edge.source)) categoryMemberIds.add(edge.target);
+        }
+      }
+    }
+
+    cachedSearchQuery = query;
+    cachedSearchGraph = graph;
+    cachedSearchNodeCount = graphNodes.length;
+    cachedSearchContext = {
+      query,
+      directRepositoryIds,
+      directCategoryIds,
+      contextCategoryIds,
+      categoryMemberIds,
+    };
+    return cachedSearchContext;
+  }
+
+  function searchLevel(node) {
+    const context = currentSearchContext();
+    if (!context.query || !node) return "all";
+    if (node.type === "repository") {
+      if (context.directRepositoryIds.has(node.id)) return "direct";
+      if (context.categoryMemberIds.has(node.id)) return "category-member";
+      return "none";
+    }
+    if (node.type === "group") {
+      if (context.directCategoryIds.has(node.id)) return "direct-category";
+      if (context.contextCategoryIds.has(node.id)) return "category-context";
+    }
+    return "none";
+  }
+
+  function searchContextMatches(node) {
+    const level = searchLevel(node);
+    return level !== "none";
+  }
+
+  if (typeof matchesQuery === "function") {
+    const baseMatchesQuery = matchesQuery;
+    matchesQuery = function searchAwareMatchesQuery(node) {
+      if (!state.query) return true;
+      if (node && (node === state.selected || node === state.hovered)) return true;
+      return searchContextMatches(node) || baseMatchesQuery(node);
+    };
+  }
+
+  if (typeof matches === "function") {
+    const baseMatches = matches;
+    matches = function searchAwareMatches(node) {
+      if (!state.query) return true;
+      if (node && (node === state.selected || node === state.hovered)) return true;
+      return searchContextMatches(node) || baseMatches(node);
+    };
+  }
+
+  if (typeof nodeOpacity === "function") {
+    const baseNodeOpacity = nodeOpacity;
+    nodeOpacity = function searchAwareNodeOpacity(node) {
+      const opacity = baseNodeOpacity(node);
+      if (!state.query || !node || node === state.selected || node === state.hovered) return opacity;
+      const level = searchLevel(node);
+      if (level === "category-context") return Math.min(opacity, 0.76);
+      if (level === "category-member") return Math.min(opacity, 0.72);
+      return opacity;
+    };
+  }
+
+  window.ProjectMapSearchContext = {
+    snapshot() {
+      const context = currentSearchContext();
+      return {
+        query: context.query,
+        directRepositoryIds: [...context.directRepositoryIds].sort(),
+        directCategoryIds: [...context.directCategoryIds].sort(),
+        contextCategoryIds: [...context.contextCategoryIds].sort(),
+        categoryMemberIds: [...context.categoryMemberIds].sort(),
+      };
+    },
+    level(nodeOrId) {
+      const id = typeof nodeOrId === "string" ? nodeOrId : nodeOrId?.id;
+      const nodes = Array.isArray(state.graph?.nodes) ? state.graph.nodes : Array.isArray(state.nodes) ? state.nodes : [];
+      const node = typeof nodeOrId === "object" && nodeOrId ? nodeOrId : nodes.find((item) => item.id === id);
+      return searchLevel(node);
+    },
+    matches(nodeOrId) {
+      const id = typeof nodeOrId === "string" ? nodeOrId : nodeOrId?.id;
+      const nodes = Array.isArray(state.graph?.nodes) ? state.graph.nodes : Array.isArray(state.nodes) ? state.nodes : [];
+      const node = typeof nodeOrId === "object" && nodeOrId ? nodeOrId : nodes.find((item) => item.id === id);
+      return searchContextMatches(node);
+    },
+  };
 
   if (isExploratoryStyle(state.style)
     && typeof sanitizeGraph === "function"
