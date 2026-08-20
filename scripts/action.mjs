@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { fetchPublicRepos } from "./github.mjs";
 import { buildGraph } from "./graph.mjs";
 import { generateSemanticEdges } from "./semantic-edges.mjs";
+import { parseTaxonomyOverrideFile, resolvePortfolioTaxonomy } from "./taxonomy.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
 import { renderGalaxyClassicSvg } from "./galaxy-svg-classic.mjs";
 import { renderGalaxySystemsSvg } from "./galaxy-svg-systems.mjs";
@@ -100,6 +101,37 @@ async function preserveGeneratedAtWhenUnchanged(graphPath, graph) {
   }
 }
 
+async function readGeneratedTaxonomy(path) {
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+async function readTaxonomyOverrides(path) {
+  try {
+    return parseTaxonomyOverrideFile(await readFile(path, "utf8"));
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+function semanticReposForGraph(repos, graph) {
+  const classificationByName = new Map(
+    graph.nodes
+      .filter((node) => node.type === "repository")
+      .map((node) => [String(node.label).toLowerCase(), node.classification]),
+  );
+  return repos
+    .filter((repo) => classificationByName.has(String(repo.name).toLowerCase()))
+    .map((repo) => ({
+      ...repo,
+      classification: classificationByName.get(String(repo.name).toLowerCase()),
+    }));
+}
+
 function graphForExploratoryStyle(graph, style) {
   if (!EXPLORATORY_STYLES.has(style) || !Array.isArray(graph.semanticEdges) || !graph.semanticEdges.length) return graph;
   const semanticRelations = graph.semanticEdges.map((edge) => ({ source: edge.source, target: edge.target, type: "relation" }));
@@ -126,6 +158,10 @@ function renderForStyle(graph, config) {
 
 export async function generateStaticMap(config, options = {}) {
   const cwd = options.cwd ?? process.cwd();
+  const outputRoot = resolve(cwd, config.outputDir);
+  const cwdRoot = resolve(cwd) + sep;
+  if (!(outputRoot + sep).startsWith(cwdRoot)) throw new Error("output_dir escaped the workspace");
+
   const fetchRepos = options.fetchRepos ?? fetchPublicRepos;
   const token = options.token ?? process.env.INPUT_GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
   const repos = await fetchRepos(config.username, token, config.maxRepos, {
@@ -133,8 +169,10 @@ export async function generateStaticMap(config, options = {}) {
     includeArchived: config.includeArchived,
   });
   const graph = buildGraph(config.username, repos, true, true);
+  const semanticRepos = semanticReposForGraph(repos, graph);
+
   const semantic = await generateSemanticEdges(
-    repos,
+    semanticRepos,
     options.embeddingProvider,
     options.embeddingCache,
     options.semanticOptions,
@@ -142,17 +180,33 @@ export async function generateStaticMap(config, options = {}) {
   if (semantic.edges.length) graph.semanticEdges = semantic.edges;
   if (semantic.error) console.warn(`Semantic edges disabled for this run: ${semantic.error}`);
 
-  const outputRoot = resolve(cwd, config.outputDir);
-  const cwdRoot = resolve(cwd) + sep;
-  if (!(outputRoot + sep).startsWith(cwdRoot)) throw new Error("output_dir escaped the workspace");
+  const taxonomyStatePath = resolve(outputRoot, "taxonomy.json");
+  const taxonomyOverridesPath = resolve(outputRoot, "taxonomy-overrides.json");
+  const previousTaxonomy = options.previousTaxonomy !== undefined
+    ? options.previousTaxonomy
+    : await readGeneratedTaxonomy(taxonomyStatePath);
+  const taxonomyOverrides = options.taxonomyOverrides !== undefined
+    ? (typeof options.taxonomyOverrides === "string" ? parseTaxonomyOverrideFile(options.taxonomyOverrides) : options.taxonomyOverrides)
+    : await readTaxonomyOverrides(taxonomyOverridesPath);
+  const taxonomy = await resolvePortfolioTaxonomy(semanticRepos, options.taxonomyProvider, {
+    previousTaxonomy,
+    overrides: taxonomyOverrides,
+    forceRediscovery: options.forceTaxonomyRediscovery,
+    maxDriftRatio: options.taxonomyOptions?.maxDriftRatio,
+  });
+  if (taxonomy.taxonomy) graph.taxonomy = taxonomy.taxonomy;
+  if (taxonomy.error) console.warn(`Taxonomy discovery fallback: ${taxonomy.error}`);
+
   await mkdir(outputRoot, { recursive: true });
   const graphPath = posix.join(config.outputDir, "graph.json");
   const svgPath = posix.join(config.outputDir, "galaxy.svg");
+  const taxonomyPath = taxonomy.taxonomy ? posix.join(config.outputDir, "taxonomy.json") : undefined;
   const absoluteGraphPath = resolve(cwd, graphPath);
   await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, graph);
   await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
+  if (taxonomy.taxonomy) await writeFile(taxonomyStatePath, JSON.stringify(taxonomy.taxonomy, null, 2) + "\n");
   await writeFile(resolve(cwd, svgPath), renderForStyle(graph, config));
-  return { graphPath, svgPath, graph, semantic };
+  return { graphPath, svgPath, taxonomyPath, graph, semantic, taxonomy };
 }
 
 async function setOutput(name, value) {
@@ -168,6 +222,7 @@ async function main() {
   console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username} (${config.style})`);
   console.log(`SVG: ${result.svgPath}`);
   console.log(`Graph: ${result.graphPath}`);
+  if (result.taxonomyPath) console.log(`Taxonomy: ${result.taxonomyPath} (${result.taxonomy.diagnostics.reason})`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

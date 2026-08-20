@@ -129,6 +129,103 @@ export interface SemanticEdgeGenerationResult {
   error?: string;
 }
 
+export interface TaxonomyCategory {
+  id: string;
+  label: string;
+  description: string;
+  aliases: string[];
+  parentId?: string;
+}
+
+export interface TaxonomyRepositoryFingerprint {
+  repoId: number;
+  name: string;
+  contentHash: string;
+}
+
+export interface PortfolioTaxonomy {
+  schemaVersion: number;
+  corpusFingerprint: string;
+  repositories: TaxonomyRepositoryFingerprint[];
+  categories: TaxonomyCategory[];
+  source: {
+    providerId: string;
+    model: string;
+  };
+}
+
+export interface TaxonomyDiscoveryRepository {
+  repoId: number;
+  name: string;
+  description: string;
+  topics: string[];
+  readmeExcerpt: string;
+  language: string | null;
+  frameworks: string[];
+  manifests: string[];
+  classification?: {
+    categoryId: string;
+    categoryLabel: string;
+    confidence: number;
+    secondaryTags: string[];
+  };
+}
+
+export interface TaxonomyDiscoveryInput {
+  schemaVersion: number;
+  corpusFingerprint: string;
+  targetCategoryCount: number;
+  repositories: TaxonomyDiscoveryRepository[];
+}
+
+export interface TaxonomyDiscoveryProvider {
+  id: string;
+  model: string;
+  discover(input: TaxonomyDiscoveryInput): Promise<unknown>;
+}
+
+export interface TaxonomyOverrideFile {
+  version: number;
+  forceRediscovery?: boolean;
+  /** When present, categories are authoritative and discovery is skipped. */
+  categories?: TaxonomyCategory[];
+}
+
+export type TaxonomyResolutionReason =
+  | "override"
+  | "unchanged"
+  | "small-drift"
+  | "provider-disabled"
+  | "provider-disabled-reused"
+  | "initial-discovery"
+  | "drift-discovery"
+  | "forced-discovery"
+  | "provider-error"
+  | "provider-error-reused"
+  | "invalid-provider"
+  | "invalid-provider-reused";
+
+export interface TaxonomyDiagnostics {
+  documents: number;
+  providerId: string;
+  model: string;
+  previousAvailable: boolean;
+  exactCorpusMatch: boolean;
+  changedRepositories: number;
+  driftRatio: number;
+  reused: boolean;
+  discovered: boolean;
+  overridden: boolean;
+  stale: boolean;
+  reason: TaxonomyResolutionReason;
+}
+
+export interface TaxonomyResolutionResult {
+  taxonomy?: PortfolioTaxonomy;
+  diagnostics: TaxonomyDiagnostics;
+  error?: string;
+}
+
 export type GalaxyNodeType = "owner" | "group" | "repository";
 
 export interface GalaxyNode {
@@ -165,4 +262,5 @@ export interface GalaxyGraph {
   edges: GalaxyEdge[];
   classificationVersion?: number;
   semanticEdges?: SemanticEdge[];
+  taxonomy?: PortfolioTaxonomy;
 }
