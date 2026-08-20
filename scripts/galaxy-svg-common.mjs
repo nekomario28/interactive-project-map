@@ -1,20 +1,13 @@
-export const TAU = Math.PI * 2;
+import { TAU, clamp, hashText } from "../packages/spatial-core/src/index.js";
+
+export { TAU, clamp };
 
 export function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
 
 export function hash(text) {
-  let value = 2166136261;
-  for (let index = 0; index < String(text).length; index += 1) {
-    value ^= String(text).charCodeAt(index);
-    value = Math.imul(value, 16777619);
-  }
-  return value >>> 0;
-}
-
-export function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+  return hashText(text);
 }
 
 export function displayLabel(node) {
