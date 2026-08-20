@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "taxonomyId": "ipm-standard-v1",
+  "reviewedAt": "2026-08-20",
+  "repositories": {
+    "BuyClaimChunks": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft", "ecosystem:ftb-chunks"]
+    },
+    "antifullbright": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft", "topic:anti-cheat"]
+    },
+    "FTBPublicClaims": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft", "ecosystem:ftb-chunks"]
+    },
+    "recruits": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft"]
+    },
+    "workers": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft"]
+    },
+    "OffHandCombat": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft"]
+    },
+    "sable": {
+      "categoryId": "game-modding",
+      "secondaryTags": ["artifact:game-mod", "ecosystem:minecraft", "topic:moving-structures"]
+    },
+    "lime_tidyup": {
+      "categoryId": "robotics-automation",
+      "secondaryTags": ["ecosystem:ros2", "topic:gazebo", "topic:manipulation"]
+    },
+    "ros_gz": {
+      "categoryId": "robotics-automation",
+      "secondaryTags": ["ecosystem:ros2", "topic:gazebo", "topic:middleware"]
+    },
+    "ProjExD_Group10": {
+      "categoryId": "game-development",
+      "secondaryTags": ["artifact:application", "platform:desktop", "topic:board-game", "ecosystem:pygame"]
+    },
+    "turing-smart-screen-python-owl": {
+      "categoryId": "hardware-embedded",
+      "secondaryTags": ["artifact:application", "platform:desktop", "topic:device-integration", "topic:usb-display"]
+    },
+    "interactive-project-map": {
+      "categoryId": "visualization-knowledge",
+      "secondaryTags": ["artifact:application", "platform:web", "ecosystem:github", "topic:project-visualization"]
+    }
+  }
+}
