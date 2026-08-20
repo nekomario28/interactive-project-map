@@ -45,3 +45,29 @@ test("standard facet vocabularies are namespaced separately from primary categor
   assert.match(raw.facets.ecosystem.format, /^ecosystem:/);
   assert.match(raw.facets.topic.format, /^topic:/);
 });
+
+test("reviewed public portfolio fixture uses only standard-v1 category ids and preserves the approved five-way split", async () => {
+  const fixture = JSON.parse(await readFile(new URL("../docs/semantic-evaluation-nekomario28.standard-v1.json", import.meta.url), "utf8"));
+  const categoryIds = new Set(STANDARD_TAXONOMY_CATEGORIES.map((category) => category.id));
+  const entries = Object.entries(fixture.repositories);
+  assert.equal(fixture.taxonomyId, STANDARD_TAXONOMY_ID);
+  assert.equal(entries.length, 12);
+  assert.equal(Object.hasOwn(fixture.repositories, "nekomario28"), false);
+
+  const distribution = new Map();
+  for (const [repo, expected] of entries) {
+    assert.equal(categoryIds.has(expected.categoryId), true, `${repo} references non-standard category ${expected.categoryId}`);
+    assert.ok(Array.isArray(expected.secondaryTags));
+    for (const tag of expected.secondaryTags) assert.match(tag, /^(artifact|platform|ecosystem|topic):[a-z0-9][a-z0-9-]*$/);
+    distribution.set(expected.categoryId, (distribution.get(expected.categoryId) ?? 0) + 1);
+  }
+
+  assert.deepEqual(Object.fromEntries([...distribution.entries()].sort()), {
+    "game-development": 1,
+    "game-modding": 7,
+    "hardware-embedded": 1,
+    "robotics-automation": 2,
+    "visualization-knowledge": 1,
+  });
+  assert.equal(fixture.repositories["interactive-project-map"].categoryId, "visualization-knowledge");
+});
