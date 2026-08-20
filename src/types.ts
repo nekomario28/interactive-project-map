@@ -105,6 +105,30 @@ export interface EmbeddedSemanticCorpus {
   diagnostics: EmbeddingDiagnostics;
 }
 
+export interface SemanticEdge {
+  source: string;
+  target: string;
+  type: "semantic";
+  score: number;
+}
+
+export interface SemanticEdgeDiagnostics {
+  documents: number;
+  comparisons: number;
+  retainedCandidates: number;
+  emittedEdges: number;
+  topK: number;
+  minSimilarity: number;
+  maxEdges: number;
+}
+
+export interface SemanticEdgeGenerationResult {
+  edges: SemanticEdge[];
+  embedding: EmbeddingDiagnostics;
+  diagnostics: SemanticEdgeDiagnostics;
+  error?: string;
+}
+
 export type GalaxyNodeType = "owner" | "group" | "repository";
 
 export interface GalaxyNode {
@@ -140,4 +164,5 @@ export interface GalaxyGraph {
   nodes: GalaxyNode[];
   edges: GalaxyEdge[];
   classificationVersion?: number;
+  semanticEdges?: SemanticEdge[];
 }

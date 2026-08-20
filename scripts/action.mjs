@@ -3,6 +3,7 @@ import { isAbsolute, posix, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fetchPublicRepos } from "./github.mjs";
 import { buildGraph } from "./graph.mjs";
+import { generateSemanticEdges } from "./semantic-edges.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
 import { renderGalaxyClassicSvg } from "./galaxy-svg-classic.mjs";
 import { renderGalaxySystemsSvg } from "./galaxy-svg-systems.mjs";
@@ -33,6 +34,7 @@ const STYLE_VALUES = new Set([
   "matrix",
   "sankey",
 ]);
+const EXPLORATORY_STYLES = new Set(["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"]);
 
 function input(env, name, legacyName) {
   return env[`INPUT_${name}`] ?? (legacyName ? env[legacyName] : undefined);
@@ -98,20 +100,27 @@ async function preserveGeneratedAtWhenUnchanged(graphPath, graph) {
   }
 }
 
+function graphForExploratoryStyle(graph, style) {
+  if (!EXPLORATORY_STYLES.has(style) || !Array.isArray(graph.semanticEdges) || !graph.semanticEdges.length) return graph;
+  const semanticRelations = graph.semanticEdges.map((edge) => ({ source: edge.source, target: edge.target, type: "relation" }));
+  return { ...graph, edges: [...graph.edges, ...semanticRelations] };
+}
+
 function renderForStyle(graph, config) {
+  const renderGraph = graphForExploratoryStyle(graph, config.style);
   let svg;
-  if (config.style === "tree") svg = renderTreeSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "radial") svg = renderRadialTreeSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "treemap") svg = renderTreemapSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "timeline") svg = renderTimelineSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "cluster") svg = renderClusterSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "sunburst") svg = renderSunburstSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "matrix") svg = renderMatrixSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "sankey") svg = renderSankeySvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "galaxy-classic") svg = renderGalaxyClassicSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "galaxy-hybrid") svg = renderGalaxyHybridSvg(graph, config.theme, config.width, config.height);
-  else if (config.style === "galaxy-systems") svg = renderGalaxySystemsSvg(graph, config.theme, config.width, config.height);
-  else svg = renderGalaxySvg(graph, config.theme, config.width, config.height, "obsidian");
+  if (config.style === "tree") svg = renderTreeSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "radial") svg = renderRadialTreeSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "treemap") svg = renderTreemapSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "timeline") svg = renderTimelineSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "cluster") svg = renderClusterSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "sunburst") svg = renderSunburstSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "matrix") svg = renderMatrixSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "sankey") svg = renderSankeySvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "galaxy-classic") svg = renderGalaxyClassicSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "galaxy-hybrid") svg = renderGalaxyHybridSvg(renderGraph, config.theme, config.width, config.height);
+  else if (config.style === "galaxy-systems") svg = renderGalaxySystemsSvg(renderGraph, config.theme, config.width, config.height);
+  else svg = renderGalaxySvg(renderGraph, config.theme, config.width, config.height, "obsidian");
   return finalizeSvgForTheme(svg, config.theme);
 }
 
@@ -124,6 +133,15 @@ export async function generateStaticMap(config, options = {}) {
     includeArchived: config.includeArchived,
   });
   const graph = buildGraph(config.username, repos, true, true);
+  const semantic = await generateSemanticEdges(
+    repos,
+    options.embeddingProvider,
+    options.embeddingCache,
+    options.semanticOptions,
+  );
+  if (semantic.edges.length) graph.semanticEdges = semantic.edges;
+  if (semantic.error) console.warn(`Semantic edges disabled for this run: ${semantic.error}`);
+
   const outputRoot = resolve(cwd, config.outputDir);
   const cwdRoot = resolve(cwd) + sep;
   if (!(outputRoot + sep).startsWith(cwdRoot)) throw new Error("output_dir escaped the workspace");
@@ -134,7 +152,7 @@ export async function generateStaticMap(config, options = {}) {
   await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, graph);
   await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
   await writeFile(resolve(cwd, svgPath), renderForStyle(graph, config));
-  return { graphPath, svgPath, graph };
+  return { graphPath, svgPath, graph, semantic };
 }
 
 async function setOutput(name, value) {

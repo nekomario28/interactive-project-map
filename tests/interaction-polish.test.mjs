@@ -79,6 +79,14 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(polish, /blankPointers/);
     assert.match(polish, /isGalaxyPresentationStyle/);
     assert.match(polish, /String\(value \|\| ""\)\.startsWith\("galaxy-"\)/);
+    assert.match(polish, /semanticAwareSanitizeGraph/);
+    assert.match(polish, /semanticAwareObsidianLayout/);
+    assert.match(polish, /semanticAwareRebuildLayout/);
+    assert.match(polish, /installSemanticDrawLayer/);
+    assert.match(polish, /semanticAwareDrawEdges/);
+    assert.match(polish, /ProjectMapSemanticEdges/);
+    assert.match(polish, /DOMCont(?:entLoaded|entLoaded)/);
+    assert.match(polish, /state\.edges = \[\.\.\.state\.graph\.edges, \.\.\.state\.graph\.semanticEdges\]/);
     assert.doesNotMatch(polish, /releaseAnchor|duration: 520/);
 
     for (const path of [commonPath, classicPath, systemsPath, hybridPath, edgePath, obsidianPath, polishPath]) {
