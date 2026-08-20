@@ -1,0 +1,181 @@
+name: ros_gz #919 hosted validation
+
+on:
+  push:
+    branches:
+      - ci/ros-gz-919-hosted
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: ubuntu:resolute
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: baseline
+            ros_gz_ref: ros2
+            expect_bug: "1"
+          - name: fixed
+            ros_gz_ref: fix/919-set-simulation-stopped-timeout
+            expect_bug: "0"
+    steps:
+      - name: Install ROS and Gazebo dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -qq -y \
+            git lsb-release wget curl gnupg build-essential ca-certificates
+
+          install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://packages.osrfoundation.org/gazebo.gpg \
+            -o /etc/apt/keyrings/pkgs-osrf-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" \
+            > /etc/apt/sources.list.d/gazebo-stable.list
+
+          curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+            -o /etc/apt/keyrings/ros-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu $(lsb_release -cs) main" \
+            > /etc/apt/sources.list.d/ros2-testing.list
+
+          apt-get update -qq
+          apt-get install -qq -y \
+            python3-colcon-common-extensions \
+            python3-rosdep \
+            libcli11-dev \
+            ros-rolling-ros-base
+
+      - name: Clone ros_gz fork
+        shell: bash
+        env:
+          ROS_GZ_REF: ${{ matrix.ros_gz_ref }}
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --branch "${ROS_GZ_REF}" \
+            https://github.com/nekomario28/ros_gz.git /root/ros_gz
+          git -C /root/ros_gz rev-parse HEAD
+
+      - name: Resolve ros_gz dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          rosdep init
+          rosdep update --rosdistro rolling
+          rosdep install --from-paths /root/ros_gz -i -y --rosdistro rolling
+
+      - name: Build ros_gz_sim
+        shell: bash
+        run: |
+          set -euo pipefail
+          source /opt/ros/rolling/setup.bash
+          mkdir -p /root/ws/src
+          cp -a /root/ros_gz /root/ws/src/ros_gz
+          cd /root/ws
+          colcon build \
+            --packages-up-to ros_gz_sim \
+            --executor sequential \
+            --parallel-workers 1 \
+            --event-handlers console_direct+
+
+      - name: Run ros_gz_sim tests and codecheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          source /opt/ros/rolling/setup.bash
+          source /root/ws/install/setup.bash
+          cd /root/ws
+          colcon test \
+            --packages-select ros_gz_sim \
+            --executor sequential \
+            --event-handlers console_direct+
+          colcon test-result --verbose
+
+      - name: Validate PLAYING to STOPPED transition
+        shell: bash
+        env:
+          EXPECT_BUG: ${{ matrix.expect_bug }}
+        run: |
+          set -euo pipefail
+          source /opt/ros/rolling/setup.bash
+          source /root/ws/install/setup.bash
+
+          world_file=/root/ros_gz/ros_gz_sim/test/sdf/gz_simulation_interfaces.sdf
+          ros2 run ros_gz_sim gzserver --ros-args -p world_sdf_file:="${world_file}" \
+            > /tmp/issue919-gzserver.log 2>&1 &
+          server_pid=$!
+          cleanup_server() {
+            kill "${server_pid}" 2>/dev/null || true
+            wait "${server_pid}" 2>/dev/null || true
+            cat /tmp/issue919-gzserver.log || true
+          }
+          trap cleanup_server EXIT
+
+          for _ in $(seq 1 60); do
+            if ros2 service type /gzserver/set_simulation_state >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          ros2 service type /gzserver/set_simulation_state
+
+          python3 - <<'PY'
+          import os
+          import rclpy
+          from simulation_interfaces.msg import Result, SimulationState
+          from simulation_interfaces.srv import GetSimulationState, SetSimulationState
+
+          expect_bug = os.environ['EXPECT_BUG'] == '1'
+          rclpy.init()
+          node = rclpy.create_node('issue_919_validation')
+          try:
+              set_client = node.create_client(
+                  SetSimulationState, '/gzserver/set_simulation_state')
+              get_client = node.create_client(
+                  GetSimulationState, '/gzserver/get_simulation_state')
+              assert set_client.wait_for_service(timeout_sec=10.0)
+              assert get_client.wait_for_service(timeout_sec=10.0)
+
+              def set_state(state):
+                  request = SetSimulationState.Request()
+                  request.state.state = state
+                  future = set_client.call_async(request)
+                  rclpy.spin_until_future_complete(node, future, timeout_sec=10.0)
+                  assert future.done(), 'set_simulation_state did not respond'
+                  response = future.result()
+                  assert response is not None
+                  return response
+
+              playing = set_state(SimulationState.STATE_PLAYING)
+              assert playing.result.result == Result.RESULT_OK, playing.result.error_message
+
+              stopped = set_state(SimulationState.STATE_STOPPED)
+              print('STOPPED response:', stopped.result.result, repr(stopped.result.error_message))
+
+              if expect_bug:
+                  assert stopped.result.result == Result.RESULT_OPERATION_FAILED, (
+                      'baseline no longer reproduces #919: '
+                      f'{stopped.result.result} {stopped.result.error_message!r}'
+                  )
+                  assert 'Timed out' in stopped.result.error_message, stopped.result.error_message
+              else:
+                  assert stopped.result.result == Result.RESULT_OK, stopped.result.error_message
+
+                  request = GetSimulationState.Request()
+                  future = get_client.call_async(request)
+                  rclpy.spin_until_future_complete(node, future, timeout_sec=10.0)
+                  assert future.done(), 'get_simulation_state did not respond'
+                  response = future.result()
+                  assert response is not None
+                  assert response.result.result == Result.RESULT_OK, response.result.error_message
+                  assert response.state.state == SimulationState.STATE_STOPPED, response.state.state
+          finally:
+              node.destroy_node()
+              rclpy.shutdown()
+          PY
