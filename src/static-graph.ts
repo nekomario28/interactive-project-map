@@ -1,4 +1,5 @@
 import { buildGraph } from "./graph.ts";
+import { promoteStandardHierarchy } from "./standard-hierarchy.ts";
 import { sanitizePortfolioTaxonomy } from "./taxonomy.ts";
 import type { ClassificationEvidence, ClassificationEvidenceSource, GalaxyGraph, GalaxyNode, GitHubRepo, PortfolioTaxonomy, RepositoryClassification, RepositoryTaxonomyAssignment, SemanticEdge } from "./types.ts";
 
@@ -111,6 +112,7 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
       if (!assignment) continue; node.taxonomyAssignment = assignment; assignments += 1;
     }
     if (assignments > 0) graph.taxonomyAssignmentVersion = 1;
+    Object.assign(graph, promoteStandardHierarchy(graph));
   }
   return graph;
 }

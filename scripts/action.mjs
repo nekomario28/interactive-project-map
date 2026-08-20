@@ -10,6 +10,7 @@ import { adjudicateAmbiguousTaxonomyAssignments } from "./taxonomy-adjudication.
 import { parseTaxonomyOverrideFile, resolvePortfolioTaxonomy } from "./taxonomy.mjs";
 import { parseTaxonomyRepositoryOverridesFile } from "./taxonomy-overrides.mjs";
 import { resolveStandardTaxonomy, standardizeRepositoriesForAssignment } from "./standard-taxonomy-runtime.mjs";
+import { promoteStandardHierarchy } from "./standard-hierarchy.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
 import { renderGalaxyClassicSvg } from "./galaxy-svg-classic.mjs";
 import { renderGalaxySystemsSvg } from "./galaxy-svg-systems.mjs";
@@ -97,6 +98,7 @@ export async function generateStaticMap(config, options = {}) {
   const taxonomyAdjudication = await adjudicateAmbiguousTaxonomyAssignments(assignmentRepos, taxonomy.taxonomy, taxonomyAssignment, options.taxonomyAdjudicator, options.taxonomyAdjudicationOptions);
   if (taxonomyAdjudication.error) console.warn(`Taxonomy adjudication fallback: ${taxonomyAdjudication.error}`);
   attachTaxonomyAssignments(graph, taxonomyAdjudication.assignments);
+  if (!usePortfolioTaxonomy) Object.assign(graph, promoteStandardHierarchy(graph));
 
   await mkdir(outputRoot, { recursive: true });
   const graphPath = posix.join(config.outputDir, "graph.json"); const svgPath = posix.join(config.outputDir, "galaxy.svg"); const taxonomyPath = taxonomy.taxonomy ? posix.join(config.outputDir, "taxonomy.json") : undefined;

@@ -79,7 +79,11 @@ function assignmentsByName(result) {
   return new Map(result.graph.nodes.filter((node) => node.type === "repository").map((node) => [node.label, node.taxonomyAssignment]));
 }
 
-test("default Action uses the same standard taxonomy for arbitrary portfolios without changing the visible P1 hierarchy", async () => {
+function groupsByRepository(result) {
+  return new Map(result.graph.nodes.filter((node) => node.type === "repository").map((node) => [node.label, node.groupId]));
+}
+
+test("default Action promotes the reviewed standard taxonomy into the visible hierarchy", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-standard-default-"));
   try {
     const result = await generateStaticMap(config, { cwd, token: "read-token", fetchRepos: async () => representativeRepos });
@@ -89,22 +93,33 @@ test("default Action uses the same standard taxonomy for arbitrary portfolios wi
     assert.equal(result.graph.taxonomy?.categories.length, STANDARD_TAXONOMY_CATEGORIES.length);
 
     const assignments = assignmentsByName(result);
-    assert.equal(assignments.get("claim-mod")?.categoryId, "game-modding");
-    assert.equal(assignments.get("robot-nav")?.categoryId, "robotics-automation");
-    assert.equal(assignments.get("othello-game")?.categoryId, "game-development");
-    assert.equal(assignments.get("usb-screen")?.categoryId, "hardware-embedded");
-    assert.equal(assignments.get("project-map")?.categoryId, "visualization-knowledge");
+    const groups = groupsByRepository(result);
+    const expected = new Map([
+      ["claim-mod", "game-modding"],
+      ["robot-nav", "robotics-automation"],
+      ["othello-game", "game-development"],
+      ["usb-screen", "hardware-embedded"],
+      ["project-map", "visualization-knowledge"],
+    ]);
+    for (const [name, categoryId] of expected) {
+      assert.equal(assignments.get(name)?.categoryId, categoryId);
+      assert.equal(groups.get(name), categoryId, `${name} visible group must use its standard primary category`);
+    }
     assert.ok(assignments.get("project-map")?.secondaryTags.includes("topic:project-visualization"));
+    assert.equal(result.graph.groupCount, 5);
+    assert.deepEqual(
+      new Set(result.graph.nodes.filter((node) => node.type === "group").map((node) => node.id)),
+      new Set([...expected.values()].map((categoryId) => `group:${categoryId}`)),
+    );
 
     const projectMapNode = result.graph.nodes.find((node) => node.type === "repository" && node.label === "project-map");
-    assert.notEqual(projectMapNode?.groupId, "visualization-knowledge", "standard taxonomy must remain a migration field until hierarchy promotion is separately gated");
-    assert.notEqual(projectMapNode?.classification?.categoryId, "visualization-knowledge");
+    assert.notEqual(projectMapNode?.classification?.categoryId, "visualization-knowledge", "P1 evidence remains separate from the promoted standard hierarchy");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
 });
 
-test("explicit portfolio mode preserves the previous provider-specific taxonomy path", async () => {
+test("explicit portfolio mode preserves the previous provider-specific visible hierarchy", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-portfolio-mode-"));
   try {
     const result = await generateStaticMap({ ...config, outputDir: "project-map-portfolio" }, {
@@ -116,12 +131,13 @@ test("explicit portfolio mode preserves the previous provider-specific taxonomy 
     assert.equal(result.taxonomyMode, "portfolio");
     assert.equal(result.graph.taxonomy, undefined);
     assert.equal(result.taxonomy.taxonomy, undefined);
+    assert.equal(result.graph.nodes.find((node) => node.type === "repository")?.groupId, "minecraft");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
 });
 
-test("custom category definitions intentionally select custom/portfolio taxonomy mode", async () => {
+test("custom category definitions intentionally select custom/portfolio taxonomy mode without standard promotion", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-custom-taxonomy-"));
   try {
     const result = await generateStaticMap({ ...config, outputDir: "project-map-custom" }, {
@@ -136,12 +152,13 @@ test("custom category definitions intentionally select custom/portfolio taxonomy
     assert.equal(result.taxonomyMode, "portfolio");
     assert.equal(result.graph.taxonomy?.source.providerId, "override");
     assert.deepEqual(result.graph.taxonomy?.categories.map((category) => category.id), ["custom-domain"]);
+    assert.equal(result.graph.nodes.find((node) => node.type === "repository")?.groupId, "minecraft");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
 });
 
-test("repository overrides remain authoritative inside standard taxonomy mode", async () => {
+test("repository overrides remain authoritative and are reflected by the standard visible hierarchy", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-standard-override-"));
   try {
     const result = await generateStaticMap({ ...config, outputDir: "project-map-override" }, {
@@ -158,6 +175,25 @@ test("repository overrides remain authoritative inside standard taxonomy mode", 
     assert.equal(result.taxonomyMode, "standard");
     assert.equal(assignmentsByName(result).get("project-map")?.categoryId, "developer-tools");
     assert.equal(assignmentsByName(result).get("project-map")?.method, "override");
+    assert.equal(groupsByRepository(result).get("project-map"), "developer-tools");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("unresolved standard repositories remain explicit in an Uncategorized visible group", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "project-map-standard-ambiguous-"));
+  try {
+    const result = await generateStaticMap({ ...config, outputDir: "project-map-ambiguous" }, {
+      cwd,
+      token: "read-token",
+      fetchRepos: async () => [repo(9, "misc-utils", { language: "Python", description: "Reusable code." })],
+    });
+    const node = result.graph.nodes.find((item) => item.type === "repository");
+    assert.equal(node?.taxonomyAssignment, undefined);
+    assert.equal(node?.groupId, "uncategorized");
+    assert.equal(node?.groupLabel, "Uncategorized");
+    assert.equal(result.graph.nodes.find((item) => item.type === "group")?.id, "group:uncategorized");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
