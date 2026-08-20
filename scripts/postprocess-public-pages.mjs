@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Keep generated consumer workflows on a reviewed, immutable main commit.
-// This commit includes P1/P2 semantics plus the P3A frozen taxonomy state/override boundary.
-export const PUBLIC_ACTION_REF = "6dad03fa74beb5733c30a7a44bb1dadd22caeca3";
+// This commit contains P1/P2 semantics plus the complete P3A/P3B assignment and ambiguity-only adjudication boundaries.
+export const PUBLIC_ACTION_REF = "824550a74a33e46ca4ceffd9f43d58befcc40df0";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
