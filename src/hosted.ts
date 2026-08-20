@@ -3,6 +3,7 @@ import { fetchPublicRepos } from "./github";
 import { graphCacheRequest, normalizeUsername, type GraphRequestOptions } from "./hosted-options";
 import { boolParam, intParam } from "./params";
 import { fetchStaticProfileGraph } from "./static-graph";
+import { attachStandardTaxonomyToGraph } from "./standard-taxonomy-runtime";
 import type { Env, GalaxyGraph } from "./types";
 
 export { normalizeUsername } from "./hosted-options";
@@ -102,10 +103,9 @@ export async function getGraph(
       includeForks: options.includeForks,
       includeArchived: options.includeArchived,
     });
-    const loaded: LoadedGraph = {
-      graph: buildGraph(options.username, repos, options.includeForks, options.includeArchived),
-      source: "GITHUB",
-    };
+    const graph = buildGraph(options.username, repos, options.includeForks, options.includeArchived);
+    await attachStandardTaxonomyToGraph(graph, repos);
+    const loaded: LoadedGraph = { graph, source: "GITHUB" };
     ctx.waitUntil(cache.put(cacheKey, cacheResponse(loaded)));
     return loaded;
   })();

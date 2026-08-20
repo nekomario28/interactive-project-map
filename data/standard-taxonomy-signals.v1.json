@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "taxonomyId": "ipm-standard-v1",
+  "p1Priors": {
+    "ai-ml": "ai-ml",
+    "robotics": "robotics-automation",
+    "minecraft": "game-modding",
+    "hardware": "hardware-embedded",
+    "web-apps": "applications-services",
+    "coursework": "education-learning"
+  },
+  "signals": {
+    "ai-ml": ["machine learning", "deep learning", "generative ai", "computer vision", "pytorch", "tensorflow", "transformers", "llm", "diffusion", "neural network", "model training", "model inference", "機械学習", "深層学習", "画像認識", "生成ai"],
+    "data-analytics": ["data analytics", "data engineering", "database", "etl", "data pipeline", "information retrieval", "search engine", "analytics", "data warehouse", "データ分析", "データベース"],
+    "visualization-knowledge": ["data visualization", "information visualization", "project visualization", "project map", "project-map", "knowledge map", "knowledge graph", "graph visualization", "force directed", "force-directed", "treemap", "sunburst", "sankey", "heatmap", "visual analytics", "portfolio map", "可視化", "プロジェクトマップ"],
+    "applications-services": ["end user", "end user application", "end user app", "web app", "desktop app", "mobile app", "self hosted service", "backend service", "api service", "client application", "consumer application", "ユーザー向けアプリ", "アプリケーション"],
+    "developer-tools": ["developer tool", "devtool", "build tool", "debugger", "linter", "formatter", "code generator", "codegen", "test runner", "package manager", "sdk", "compiler", "開発ツール", "コード生成"],
+    "systems-infrastructure": ["operating system", "kernel", "container runtime", "kubernetes", "docker", "cloud infrastructure", "observability", "deployment", "storage engine", "system daemon", "service manager", "インフラ"],
+    "security-privacy": ["security", "privacy", "authentication", "authorization", "cryptography", "malware", "anti-cheat", "anti cheat", "xray detection", "exploit", "セキュリティ", "暗号", "認証"],
+    "networking-distributed": ["distributed system", "distributed systems", "network protocol", "networking", "peer to peer", "peer-to-peer", "rpc", "message broker", "transport bridge", "network transport", "distributed messaging", "分散システム", "ネットワーク"],
+    "hardware-embedded": ["embedded", "firmware", "microcontroller", "arduino", "esp32", "platformio", "gpio", "usb display", "usb-c display", "hardware integration", "device integration", "iot", "sensor", "組み込み", "マイコン", "電子工作"],
+    "robotics-automation": ["robotics", "robot", "ros2", "ros 2", "gazebo", "moveit", "nav2", "slam", "manipulation", "autonomous", "lidar", "robot control", "ロボット", "ロボティクス", "自律走行", "マニピュレーション"],
+    "game-development": ["game development", "game engine", "pygame", "godot", "unity", "unreal", "gameplay", "board game", "othello", "reversi", "original game", "オセロ", "ゲーム開発", "対戦型ボードゲーム"],
+    "game-modding": ["minecraft mod", "minecraft modding", "game mod", "modding", "neoforge", "minecraft forge", "forgegradle", "fabric loader", "fabric-api", "fabric api", "ftb chunks", "modrinth", "curseforge", "mod loader", "マインクラフト"],
+    "science-engineering": ["scientific computing", "numerical simulation", "numerical analysis", "engineering analysis", "physics simulation", "mathematics", "research software", "finite element", "数値計算", "科学計算", "数値解析"],
+    "education-learning": ["coursework", "homework", "assignment", "tutorial", "learning project", "teaching", "university course", "exercise", "課題", "授業", "演習", "学習"],
+    "media-creative": ["audio", "video editing", "image editor", "image editing", "graphics", "animation", "creative coding", "music", "media production", "画像編集", "動画編集", "クリエイティブ"],
+    "business-productivity": ["productivity", "business workflow", "collaboration", "project management", "crm", "office automation", "commerce", "inventory management", "team collaboration", "業務", "生産性", "共同作業", "プロジェクト管理"]
+  }
+}
