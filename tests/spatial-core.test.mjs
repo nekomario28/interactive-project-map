@@ -5,6 +5,7 @@ import {
   TAU,
   adaptGalaxyGraph,
   clamp,
+  createForceNodes,
   deterministicScatter,
   hashText,
   linkForceEdges,
@@ -49,7 +50,10 @@ test("normalizeWeightedEdges validates, deduplicates and sorts sparse relations"
   ]);
 });
 
-test("force core settles a generic graph and respects a dragged node", () => {
+test("force core settles a generic graph, honors position hints and respects a dragged node", () => {
+  const hinted = createForceNodes([{ id: "hinted", positionHint: { x: 17, y: -23 } }]);
+  assert.deepEqual({ x: hinted[0].x, y: hinted[0].y }, { x: 17, y: -23 });
+
   const rawNodes = [{ id: "a" }, { id: "b" }, { id: "c" }];
   const rawEdges = [{ source: "a", target: "b" }, { source: "b", target: "c" }];
   const settled = settleForceLayout(rawNodes, rawEdges, { steps: 8 });
