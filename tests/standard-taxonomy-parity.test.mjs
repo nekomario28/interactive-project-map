@@ -44,7 +44,7 @@ test("Node Action and TypeScript hosted mapper stay byte-for-byte equivalent on 
   }
 });
 
-test("hosted dynamic graph attaches standard-v1 taxonomy assignments without changing visible P1 groups", async () => {
+test("hosted dynamic graph promotes standard-v1 taxonomy assignments into visible groups", async () => {
   const data = await fixture();
   const selected = [
     data.cases.find((entry) => entry.id === "viz-en"),
@@ -54,7 +54,6 @@ test("hosted dynamic graph attaches standard-v1 taxonomy assignments without cha
   ];
   const repos = selected.map((entry, index) => fullRepo(index, entry.repo));
   const graph = buildGraph("parity", repos, true, true);
-  const beforeGroups = new Map(graph.nodes.filter((node) => node.type === "repository").map((node) => [node.label, node.groupId]));
   await attachStandardTaxonomyToGraph(graph, repos);
 
   assert.equal(graph.taxonomy?.source.providerId, "standard");
@@ -66,8 +65,13 @@ test("hosted dynamic graph attaches standard-v1 taxonomy assignments without cha
   for (const node of graph.nodes.filter((item) => item.type === "repository")) {
     assert.equal(node.taxonomyAssignment?.categoryId, expected.get(node.label));
     assert.equal(node.taxonomyAssignment?.method, "deterministic");
-    assert.equal(node.groupId, beforeGroups.get(node.label), `${node.label} visible P1 group changed during hosted parity migration`);
+    assert.equal(node.groupId, expected.get(node.label), `${node.label} visible hierarchy must match standard-v1 assignment`);
+    assert.equal(node.groupLabel, graph.taxonomy.categories.find((category) => category.id === expected.get(node.label))?.label);
   }
+  assert.deepEqual(
+    new Set(graph.nodes.filter((node) => node.type === "group").map((node) => node.id)),
+    new Set([...expected.values()].map((categoryId) => `group:${categoryId}`)),
+  );
 });
 
 test("standard signal profile covers exactly the versioned standard primary IDs", async () => {
