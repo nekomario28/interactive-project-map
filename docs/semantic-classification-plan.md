@@ -2,232 +2,211 @@
 
 Tracking issue: #20
 
-Status: **P1 complete (P1A/P1B merged); P2 not started**
+Status: **P2 complete (P2A/P2B merged); P3 not started**
 
-Implementation checkpoint (2026-08-20):
+This document is the canonical handoff for semantic repository classification in `interactive-project-map`. It describes the architecture that is already merged through P2, the invariants that must not regress, and the next implementation boundary for P3.
 
-- P1A merged in PR #31 (`bb0d7b5cb5f57f5112436dfd16987c993fd022d0`): Unicode-safe normalization, bounded README enrichment, and regression fixtures.
-- P1B merged in PR #33 (`de609e89c18e1b4ed25bebb146c3ff2be1050fb7`): structured deterministic evidence/confidence, bounded adaptive manifest/framework enrichment, and semantic `Uncategorized` fallback with language retained as a facet.
-- P2+ is intentionally not started here: no embedding provider, embedding calls, semantic repo edges, taxonomy discovery, or LLM adjudication are present.
+## 1. Implementation checkpoint
 
+### P1 — deterministic enrichment and evidence ✅
 
-This document is the canonical handoff for implementing semantic repository classification in `interactive-project-map`. It is intentionally detailed enough that a new development session can start from the repository without needing the original discussion.
+- P1A merged in PR #31 (`bb0d7b5cb5f57f5112436dfd16987c993fd022d0`)
+  - Unicode-safe normalization;
+  - bounded README enrichment;
+  - concrete semantic regression fixtures.
+- P1B merged in PR #33 (`de609e89c18e1b4ed25bebb146c3ff2be1050fb7`)
+  - structured deterministic classification evidence;
+  - confidence and secondary evidence;
+  - bounded adaptive manifest/framework enrichment;
+  - semantic `Uncategorized` fallback instead of programming-language fallback;
+  - language retained as an independent technical facet.
 
-## 1. Problem statement
+### P2 — semantic representation and sparse relationships ✅
 
-The current classifier in `src/graph.ts` builds a searchable string from:
+- P2A merged in PR #35 (`961c28429770f9366f86e0387d4829682bd3e47e`)
+  - stable bounded `RepoSemanticDocument`;
+  - vendor-neutral `EmbeddingProvider` abstraction;
+  - explicit disabled provider path;
+  - SHA-256 cache identity including semantic-document schema version, provider id, model id, and normalized content;
+  - batching, cache reuse, and strict vector validation.
+- P2B merged in PR #36 (`3c3e9099d00e6904aa19485c389ced194935e84e`)
+  - bounded top-k cosine-similarity semantic edges;
+  - provider-failure fallback to deterministic-only graph generation;
+  - optional `semanticEdges` stored separately from structural graph edges;
+  - Galaxy/Obsidian exploratory integration;
+  - static graph sanitization and old/new graph compatibility;
+  - 300-repository sparse-output stress gate.
 
-- repository name
-- GitHub description
-- primary language
-- GitHub topics
+Generated consumer workflows are pinned to the reviewed immutable P2 implementation commit:
 
-It then scores six fixed keyword groups:
+```text
+3c3e9099d00e6904aa19485c389ced194935e84e
+```
 
-- Robotics / ROS 2
-- AI / Machine Learning
-- Minecraft Modding
-- Hardware / Embedded
-- Web / Apps
-- Coursework / Learning
+P3+ is intentionally not implemented yet. There is currently:
 
-If none matches, the repository is classified by primary language.
+- no portfolio-specific taxonomy discovery;
+- no frozen taxonomy/schema persistence;
+- no category-description embedding assignment;
+- no LLM adjudication;
+- no selected production embedding vendor.
 
-This has three structural problems.
+The default embedding path remains explicitly **disabled**.
 
-### 1.1 Sparse GitHub metadata is treated as complete semantic evidence
+## 2. Core invariant
 
-A repository with an empty description/topics but a precise README can only fall back to language. That produces categories such as `Java`, `Python`, or `RTF`, which describe implementation technology rather than project domain.
+Preserve this invariant throughout all future phases:
 
-### 1.2 Current normalization destroys non-ASCII evidence
+> **repository = semantic node; category/language/status = facets; semantic similarity = optional sparse edges; AI runs at generation time, never as a normal viewer dependency.**
 
-`normalizeSearch()` currently removes characters outside `[a-z0-9+#]`. Japanese descriptions therefore contribute little or no useful text to classification.
+Do not turn this project into a generic knowledge-graph extractor.
 
-### 1.3 Classification and visualization are too tightly reduced to a single category label
-
-The project now has ten visual presets. A single Owner → Category → Repository tree is sufficient for Tree/Radial, but Galaxy and Obsidian-like can benefit from repository-to-repository semantic relationships, while Matrix should keep language as a technical facet rather than pretending it is a project category.
-
-## 2. Design goals
-
-The replacement pipeline must:
-
-1. improve semantic categorization without requiring AI calls during normal page viewing;
-2. preserve the existing static-first architecture;
-3. use cheap deterministic evidence before expensive semantic/LLM operations;
-4. keep repository nodes as the primary units instead of expanding every concept into a knowledge graph;
-5. keep semantic domain and technical language as separate facets;
-6. expose sparse repository-similarity edges for Galaxy/Obsidian-like;
-7. optionally expose stable subcategories for Tree/Sunburst;
-8. remain deterministic enough that unchanged repositories do not jump categories every refresh;
-9. support old `graph.json` files during migration;
-10. bound network work, graph size, and AI cost.
-
-## 3. Explicit non-goals
-
-Do **not** turn this project into a generic knowledge-graph extractor.
-
-Out of scope:
+Explicit non-goals remain:
 
 - subject-predicate-object extraction for arbitrary README concepts;
-- concept nodes such as `ROS2`, `Gazebo`, `Python`, `Minecraft` as first-class graph nodes;
-- unbounded all-to-all similarity edges;
-- calling an LLM once for every repository on every refresh;
-- requiring an embedding or LLM provider in the browser viewer;
-- replacing GitHub language metadata; language remains useful as a technical facet;
-- adopting a heavyweight GraphRAG pipeline wholesale.
+- first-class concept nodes such as `ROS2`, `Gazebo`, `Python`, or `Minecraft`;
+- unbounded all-to-all graph output;
+- unconditional per-repository LLM calls;
+- browser-side embedding or LLM requests;
+- replacing GitHub language metadata;
+- importing a heavyweight GraphRAG stack wholesale.
 
-## 4. Recommended architecture
+## 3. Current semantic pipeline
 
 ```text
 GitHub repository metadata
   + bounded README excerpt
-  + lightweight manifest/framework evidence
-  + fork/source metadata
+  + bounded root-manifest/framework evidence
             │
             ▼
-  RepoSemanticDocument (one per repo)
+ deterministic classification
+  + evidence / confidence
             │
-   ┌────────┴─────────┐
-   │                  │
-   ▼                  ▼
-deterministic       embedding
-classification      representation
-   │                  │
-   │                  ├── sparse repo↔repo similarity edges
-   │                  │
-   └───── confidence ─┤
-                      ▼
-            portfolio taxonomy
-          discovery / frozen schema
-                      │
-                      ▼
-           primary category +
-           secondary tags +
-           evidence + confidence
-                      │
-             optional sparse graph
-                      │
-              hierarchical community
-              detection for large sets
-                      │
-                      ▼
-                  graph.json
-                      │
-       ┌──────────────┼────────────────┐
-       ▼              ▼                ▼
- Tree/Sunburst   Galaxy/Obsidian   Matrix/Sankey/etc.
- hierarchy       semantic edges    facets/status
+            ├───────────────┐
+            │               │
+            ▼               ▼
+ RepoSemanticDocument   technical facets
+            │           (language/status/etc.)
+            ▼
+ optional EmbeddingProvider
+            │
+            ▼
+ content-hash/provider/model cache
+            │
+            ▼
+ bounded cosine similarity
+            │
+            ▼
+ sparse semanticEdges
+            │
+            ▼
+ graph.json
+   │             │               │
+   ▼             ▼               ▼
+Tree/etc.    Galaxy/Obsidian   Matrix/Sankey
+structure    semantic layer    facets/status
 ```
 
-The generated `graph.json` remains the source consumed by normal viewers. AI work is a generation-time concern only.
+The generated `graph.json` remains the source consumed by normal viewers. Semantic providers are generation-time components only.
 
-## 5. What to borrow from existing projects
+## 4. P1 current behavior
 
-The intent is to reuse ideas first. Copy implementation code only after confirming that doing so is simpler than a local implementation and after preserving attribution/license requirements.
+### 4.1 Unicode-safe normalization
 
-### 5.1 Atomic — adopt the semantic-unit model
+Normalization uses Unicode-aware NFKC handling rather than ASCII-only stripping.
 
-Repository: <https://github.com/kenforthewin/atomic>
-License: MIT (verified 2026-08-20)
+Requirements that are now regression-tested:
 
-Useful ideas:
+- Japanese/non-Latin text remains usable;
+- technology tokens such as `C++`, `C#`, `ROS2`, and `NeoForge` remain meaningful;
+- ASCII alias matching avoids substring errors such as `react` matching `reactor`;
+- Japanese-adjacent strings such as `ROS2でロボット制御` remain classifiable.
 
-- one note/document as one semantic unit;
-- embeddings as a representation separate from visible tags;
-- semantic similarity links;
-- hierarchical/automatic tagging concepts.
+### 4.2 Evidence sources and weights
 
-Adaptation here:
+Current deterministic evidence preserves individual records rather than only an opaque final score.
 
-- one GitHub repository becomes one semantic unit;
-- do not import Atomic's application/database architecture;
-- use embeddings only during static graph generation;
-- expose only top-k, thresholded similarity edges.
+Baseline weights:
 
-### 5.2 sift-kg — adopt corpus-level schema discovery
+- exact GitHub topic: `1.0`;
+- known manifest/dependency/framework evidence: `0.9`;
+- README alias: `0.7`;
+- description alias: `0.7`;
+- repository-name alias: `0.5`;
+- primary language: `0` for semantic domain.
 
-Repository: <https://github.com/juanceresa/sift-kg>
-License: MIT (verified 2026-08-20)
+Language remains available on repository nodes for technical views such as Matrix/details.
 
-Useful idea:
+### 4.3 README enrichment
 
-- look at the complete corpus before deciding the domain/schema;
-- persist discovered structure so later runs reuse it;
-- keep the structure inspectable/editable.
+README enrichment is bounded and generation-only.
 
-Adaptation here:
+Current properties include:
 
-- discover a portfolio-specific taxonomy instead of hard-coding all category names;
-- save/freeze the taxonomy in generated state/config;
-- allow explicit user overrides;
-- do **not** adopt entity/relation knowledge-graph extraction.
+- canonical GitHub README endpoint;
+- bounded raw bytes and cleaned characters;
+- generated badge/URL/code noise removal;
+- Unicode preservation;
+- bounded concurrency;
+- missing README is non-fatal;
+- rate limiting stops new enrichment work rather than failing graph generation.
 
-### 5.3 Microsoft GraphRAG — adopt optional hierarchical communities
+README text itself is not emitted as a public repository-node field.
 
-Repository: <https://github.com/microsoft/graphrag>
-License: MIT (verified 2026-08-20)
+### 4.4 Manifest/framework enrichment
 
-Useful idea:
+Manifest enrichment does not recursively scan repositories.
 
-- hierarchical graph communities, particularly Leiden-style community organization.
+It probes a fixed allowlist of high-value root files, including representative files such as:
 
-Adaptation here:
+- `package.json`;
+- `pyproject.toml`;
+- `requirements.txt`;
+- `Cargo.toml`;
+- `go.mod`;
+- `pom.xml`;
+- Gradle metadata;
+- NeoForge/Forge/Fabric metadata;
+- ROS `package.xml`;
+- selected compose files as supporting evidence.
 
-- only consider community detection after a sparse repo-similarity graph exists;
-- enable it only when repository count and cluster quality justify it;
-- use communities as optional subcategories for Tree/Sunburst;
-- do not import the complete GraphRAG indexing/RAG stack.
+Current hard bounds include:
 
-### 5.4 References that should not be adopted wholesale
+- at most 3 manifest files read per probed repository;
+- 16 KiB raw cap per manifest;
+- repository concurrency 4;
+- adaptive probing: repositories already confidently classified can skip the manifest network phase;
+- 403/429 stops new manifest work;
+- failures degrade gracefully.
 
-`rahulnyk/knowledge_graph` and `hanxiao/knowledge-graph-extractor` are useful references for text-to-graph extraction and semantic deduplication, but their central abstraction is the wrong one for this project: they expand concepts/entities/relations, whereas this project should preserve **repository = node**.
+Only recognized framework/dependency identifiers and manifest identities are retained as semantic evidence.
 
-## 6. Data model
+## 5. Current graph data model
 
-Introduce a generation-time semantic model before changing viewer behavior.
+The existing compatibility tree remains intact:
 
-Suggested types (names may change during implementation):
+```text
+Owner → Category → Repository
+```
+
+Compatibility fields such as `groupId` / `groupLabel` are still populated.
+
+Repository nodes may also contain structured classification data:
 
 ```ts
-interface RepoSemanticDocument {
-  repoId: number;
-  name: string;
-  description: string;
-  topics: string[];
-  readmeExcerpt?: string;
-  language?: string | null;
-  frameworks: string[];
-  manifests: string[];
-  fork?: {
-    isFork: boolean;
-    sourceName?: string;
-    sourceDescription?: string;
-  };
-}
-
-interface ClassificationEvidence {
-  source: "name" | "description" | "topic" | "readme" | "manifest" | "dependency" | "fork-source" | "embedding" | "llm" | "override";
-  value: string;
-  weight?: number;
-}
-
 interface RepositoryClassification {
   categoryId: string;
   categoryLabel: string;
   secondaryTags: string[];
-  confidence: number; // normalized 0..1
+  confidence: number;
   method: "deterministic" | "semantic" | "llm" | "override";
   evidence: ClassificationEvidence[];
 }
+```
 
-interface TaxonomyCategory {
-  id: string;
-  label: string;
-  description: string;
-  aliases?: string[];
-  parentId?: string;
-}
+The graph may contain:
 
+```ts
 interface SemanticEdge {
   source: string;
   target: string;
@@ -236,150 +215,59 @@ interface SemanticEdge {
 }
 ```
 
-### 6.1 `graph.json` migration
+Semantic edges are stored in:
 
-Do not remove existing fields immediately.
+```ts
+GalaxyGraph.semanticEdges?: SemanticEdge[]
+```
 
-Add optional fields first:
+They are intentionally **not** mixed into the canonical ownership/membership `edges` array.
 
-- repository `groupId` / `groupLabel`: continue to be populated for compatibility;
-- repository `classification`: new structured classification;
-- graph `taxonomy`: optional category definitions;
-- graph `semanticEdges`: optional sparse similarity edges;
-- graph `classificationVersion`: schema/pipeline version.
+This separation is important for backward compatibility and for keeping hierarchy/facet views independent from exploratory semantic relationships.
 
-Old viewers must tolerate the new fields. New viewers must tolerate old graphs where they are absent.
+## 6. RepoSemanticDocument — merged P2A contract
 
-## 7. Evidence acquisition
+One repository maps to one bounded semantic document.
 
-### 7.1 Tier 0 — existing GitHub metadata
+Current interface:
 
-Keep:
+```ts
+interface RepoSemanticDocument {
+  repoId: number;
+  name: string;
+  description: string;
+  topics: string[];
+  readmeExcerpt: string;
+  language: string | null;
+  frameworks: string[];
+  manifests: string[];
+  fork: {
+    isFork: boolean;
+    sourceName?: string;
+    sourceDescription?: string;
+    sourceTopics?: string[];
+  };
+}
+```
 
-- name
-- description
-- topics
-- primary language
-- fork/archive state
+Current semantic-document schema version:
 
-Language must **not** be the semantic fallback category after migration.
+```text
+1
+```
 
-### 7.2 Tier 1 — README enrichment
+Normalization deliberately removes cosmetic instability:
 
-Fetch README only during graph generation and keep it bounded.
+- Unicode NFKC;
+- whitespace normalization;
+- deterministic list deduplication/sorting;
+- bounded string/list lengths.
 
-Recommended behavior:
+Meaningful content changes must change document identity. Cosmetic whitespace or list-order changes should not.
 
-- try GitHub's canonical README endpoint or common root README names;
-- cap decoded input by bytes and/or characters;
-- prioritize the title, first explanatory paragraphs, badges/keywords, and early feature section;
-- strip obvious generated badge URLs/HTML noise before semantic use;
-- cache by repository + README blob SHA/ETag where the generation environment permits it;
-- a failed/missing README must never fail the whole graph build.
+## 7. Embedding provider and cache — merged P2A contract
 
-Initial limit suggestion: **8–16 KiB of cleaned text per repository**. Benchmark before raising it.
-
-### 7.3 Tier 2 — manifests/framework hints
-
-Do not recursively scan repositories.
-
-Probe a bounded set of high-value files, for example:
-
-- `package.json`
-- `pyproject.toml`
-- `requirements.txt`
-- `Cargo.toml`
-- `go.mod`
-- `pom.xml`
-- `build.gradle` / `build.gradle.kts`
-- `gradle.properties`
-- `mods.toml` / `neoforge.mods.toml`
-- `package.xml` (ROS)
-- `docker-compose.yml` / `compose.yaml` only as supporting evidence
-
-Extract dependency/framework identifiers, not entire files.
-
-Examples:
-
-- `rclpy`, `rclcpp`, ROS package metadata → Robotics evidence;
-- `neoforge`, `forge`, `fabric`, Minecraft mod metadata → Minecraft evidence;
-- `react`, `next`, `svelte`, `vue` → Web evidence;
-- `torch`, `transformers`, `tensorflow` → AI/ML evidence.
-
-This tier should remain deterministic and cheap.
-
-### 7.4 Tier 3 — fork/source evidence
-
-Fork metadata can contain stronger semantics than the local fork description.
-
-Use source/parent name, description, and topics as supporting evidence where available. Do not let source metadata override clear local README evidence because forks may diverge substantially.
-
-## 8. Unicode-safe normalization
-
-This is the first code change to make.
-
-Current behavior strips Japanese text. Replace ASCII-only normalization with Unicode-aware normalization.
-
-Requirements:
-
-- lower/case-fold where meaningful;
-- Unicode normalization (`NFKC` is a reasonable candidate);
-- preserve letters/numbers from non-Latin scripts;
-- normalize punctuation/separators to spaces;
-- keep technology tokens such as `C++`, `C#`, `ROS2`, `NeoForge` usable;
-- tests must include Japanese repository descriptions.
-
-Do not rely on simple whitespace tokenization for Japanese semantic matching. Deterministic matching can use normalized substring/alias matching, while embedding/LLM stages naturally handle Japanese later.
-
-## 9. P1 — deterministic enrichment before AI
-
-P1 should be independently useful and mergeable.
-
-### 9.1 Target behavior
-
-Classification considers:
-
-1. explicit user override;
-2. high-confidence GitHub topics;
-3. strong manifest/framework evidence;
-4. name/description/README aliases;
-5. fork/source supporting evidence;
-6. otherwise `Uncategorized` / `Other`, **not language**.
-
-Language stays on the repository node for Matrix and details.
-
-### 9.2 Evidence scoring
-
-Avoid one opaque score. Preserve evidence records and combine them predictably.
-
-Example starting weights, to be tuned by fixtures:
-
-- explicit override: terminal/highest priority;
-- exact GitHub topic: 1.0;
-- known manifest/dependency: 0.9;
-- strong README alias: 0.7;
-- description alias: 0.7;
-- name alias: 0.5;
-- fork/source evidence: 0.4;
-- primary language: **0 for semantic domain**.
-
-Do not interpret these as probabilities. Convert final margin/coverage into a normalized `confidence` only after tests establish sensible thresholds.
-
-### 9.3 Ambiguity
-
-A repository may legitimately span domains. P1 should still choose one primary category for compatibility while retaining secondary evidence/tags.
-
-If top categories are close, mark confidence low rather than invent certainty.
-
-## 10. P2 — embeddings and sparse semantic edges
-
-P2 introduces semantic relationships without requiring taxonomy discovery yet.
-
-### 10.1 Embedding provider abstraction
-
-The core graph code must not depend directly on one vendor.
-
-Suggested interface:
+Core code does not depend on one vendor.
 
 ```ts
 interface EmbeddingProvider {
@@ -389,144 +277,261 @@ interface EmbeddingProvider {
 }
 ```
 
-Also support an explicit `disabled` path so the project still works without embeddings.
+There is an explicit disabled provider path. When disabled:
 
-### 10.2 Cache identity
+- no provider request occurs;
+- no cache work is required;
+- graph generation continues normally;
+- no semantic edges are emitted.
 
-Embedding cache key should include at least:
+### 7.1 Cache identity
 
-- normalized semantic-document content hash;
+Embedding cache identity contains all of:
+
+- semantic-document schema version;
 - provider id;
 - model id;
-- semantic-document schema version.
+- SHA-256 of normalized semantic-document content.
 
-An unchanged repo must not be re-embedded unnecessarily.
+Conceptually:
 
-### 10.3 Sparse edges
+```text
+embedding:semantic-v1:<provider>:<model>:<sha256>
+```
 
-Never emit every pair.
+An unchanged repository therefore does not need to be re-embedded when the cache is present.
 
-Starting rule to test:
+### 7.2 Validation and failure behavior
 
-- compute similarity;
-- retain top `k=3` or `k=4` neighbors per repository;
-- require a minimum threshold;
-- symmetrize/deduplicate edges;
-- cap total semantic edges;
-- avoid same-fork-family edges dominating the graph unless semantic content supports them.
+Embedding output is rejected when it has:
 
-This keeps edge growth near O(n·k), not O(n²).
+- wrong vector count;
+- non-finite values;
+- empty vectors;
+- inconsistent dimensions.
 
-### 10.4 Viewer use
+Corrupt cache entries are treated as misses instead of poisoning the run.
 
-- Obsidian-like: semantic edges can become the primary exploratory links; membership/category forces may remain weak structural guidance.
-- Galaxy: use semantic edges for proximity/relationship highlighting while category sectors remain a broad organizing force.
-- Tree/Radial: semantic edges normally hidden.
-- Matrix: unchanged; language remains a separate facet.
+Cache persistence is an optimization. Cache read/write failure must not break otherwise-valid provider output.
 
-## 11. P3 — portfolio-specific taxonomy discovery
+Default embedding batch size is bounded; production implementations must preserve batching and provider-specific timeout/retry budgets.
 
-The current six categories are reasonable defaults but should not be treated as universal truth.
+## 8. Sparse semantic edges — merged P2B contract
 
-### 11.1 Discovery input
+Current defaults:
 
-Use compact representations of **all** included repositories, not one independent LLM prompt per repo.
+```text
+topK = 3
+minimum cosine similarity = 0.72
+hard topK cap = 8
+hard emitted semantic-edge cap = 1200
+```
 
-Each item should include:
+The edge builder:
 
-- repository name;
-- compact semantic summary/evidence;
-- topics/framework hints;
-- optionally nearest semantic neighbors.
+1. computes cosine similarity;
+2. discards scores below the threshold;
+3. retains only top-k neighbor candidates per repository;
+4. symmetrizes and deduplicates unordered pairs;
+5. deterministically orders output;
+6. caps final emitted edges to `min(n*k, 1200)` unless an explicitly smaller cap is supplied.
 
-### 11.2 Discovery output
+Pairwise similarity computation is currently O(n²), but retained state and graph output are bounded near O(n·k). The project explicitly does **not** materialize or emit a dense pair matrix.
 
-Target roughly 5–10 primary categories for medium portfolios, with constraints:
+### 8.1 300-repository gate
 
-- categories describe project domains/purposes, not programming languages;
-- labels are short and human-readable;
-- descriptions are explicit enough to embed/match against;
-- avoid singleton categories unless semantically necessary;
-- avoid one giant catch-all category when meaningful structure exists;
-- stable IDs are derived separately from human labels.
+For 300 repositories and `k=4`:
 
-Suggested structured output:
+- pairwise comparisons: `44,850`;
+- retained candidates: at most `300 × 4 = 1,200`;
+- emitted edges: at most `1,200`.
 
-```json
-{
-  "version": 1,
-  "categories": [
-    {
-      "id": "robotics",
-      "label": "Robotics",
-      "description": "Robot simulation, control, navigation, manipulation, and sim-to-real projects",
-      "aliases": ["ROS", "ROS 2", "Gazebo", "Isaac"]
-    }
-  ]
+This is the required stress behavior until a future approximate-nearest-neighbor implementation is justified by measurement.
+
+### 8.2 Provider failure
+
+If the optional embedding provider fails:
+
+- semantic edge generation returns an empty semantic layer plus bounded diagnostics/error text;
+- deterministic classification and normal map generation continue;
+- no viewer becomes dependent on provider availability.
+
+## 9. Viewer integration — merged P2B behavior
+
+The project now has **twelve** visible visual presets.
+
+Semantic edges are used only where they improve exploratory behavior.
+
+### 9.1 Galaxy family
+
+Galaxy Classic / Systems / Hybrid can consume `semanticEdges` as a faint exploratory relationship layer.
+
+Important constraints:
+
+- canonical ownership/membership edges remain separate;
+- Galaxy Systems/Hybrid keep their existing structural edge policy;
+- semantic drawing wraps the final Galaxy edge policy after `DOMContentLoaded`;
+- search dimming and focus emphasis remain intact;
+- semantic links are subtle by default and stronger when incident to selection/hover.
+
+### 9.2 Obsidian-like
+
+Semantic links enter the existing global force layout as ordinary relation links.
+
+The historical Obsidian force constants remain fixed:
+
+```js
+center: 0.0026
+repel: 9200
+link: 0.022
+linkDistance: 138
+damping: 0.855
+```
+
+Interaction invariants also remain:
+
+- deterministic scatter;
+- no privileged physical anchors;
+- all edge types use the same global force system;
+- drag directly moves the node and reheats with `reheat(0.55)`;
+- release creates no pin/release anchor;
+- released node rejoins the global system;
+- empty-space drag pans;
+- scroll/pinch zoom remains unchanged.
+
+Do not reintroduce local-neighborhood reheating, release anchors, or owner/category physical anchors.
+
+### 9.3 Hierarchy/facet presets
+
+Tree, Radial, Treemap, Timeline, Cluster, Sunburst, Matrix, and Sankey do not automatically promote semantic edges into their primary structure.
+
+In particular:
+
+- Tree/Radial continue to express hierarchy;
+- Matrix continues to use language as a technical facet;
+- semantic links do not silently alter aggregate counts/flows.
+
+## 10. Static graph security and migration
+
+Old graph files without new semantic fields remain supported.
+
+New static semantic edges are sanitized before use:
+
+- `type` must be exactly `semantic`;
+- source/target must both be known repository IDs;
+- self-edges are rejected;
+- score must be finite and within `[0,1]`;
+- reversed duplicates are canonicalized/deduplicated;
+- total semantic edges are capped at 1200.
+
+Structural group/edge data from static input remains untrusted and is rebuilt from sanitized repository nodes as before.
+
+Existing **twelve** visual presets remain compatible with old graph files during migration.
+
+## 11. Tests and acceptance evidence through P2
+
+P1/P2 regression coverage now includes:
+
+- Unicode normalization including Japanese;
+- documented P1 domain fixtures;
+- deterministic evidence extraction and category confidence;
+- `Uncategorized` instead of language fallback;
+- README cleaning/truncation/concurrency/rate-limit behavior;
+- manifest/framework extraction and bounds;
+- old/new static graph compatibility;
+- semantic-document source/static parity;
+- semantic-document hash stability;
+- provider/model cache-key separation;
+- cache reuse for unchanged repositories;
+- disabled provider path;
+- invalid provider vector rejection;
+- top-k thresholding/deduplication;
+- explicit semantic edge caps;
+- 300-repository retained/output bound;
+- provider-failure fallback;
+- semantic-edge sanitization;
+- Galaxy Systems/Hybrid/Obsidian semantic runtime checks;
+- Tree exclusion from the exploratory semantic layer;
+- unchanged Obsidian force constants and release semantics.
+
+P2A and P2B both passed the repository's full Verify workflow plus Chromium and iPhone WebKit browser gates before merge.
+
+Do not claim future semantic-quality improvement solely from visualization appearance. Future evaluation still needs manual semantic-edge precision and taxonomy stability measurements.
+
+## 12. P3 — portfolio-specific taxonomy discovery (next)
+
+P3 is the next implementation boundary.
+
+The current deterministic category set is a useful fallback, but it must not be treated as universal truth for every portfolio.
+
+### 12.1 Required taxonomy schema
+
+Before selecting any production discovery provider, define a versioned, validated taxonomy structure, for example:
+
+```ts
+interface TaxonomyCategory {
+  id: string;
+  label: string;
+  description: string;
+  aliases?: string[];
+  parentId?: string;
+}
+
+interface PortfolioTaxonomy {
+  version: number;
+  corpusFingerprint: string;
+  categories: TaxonomyCategory[];
 }
 ```
 
-### 11.3 Freeze and reuse
+Stable IDs must be separated from editable human labels.
 
-Taxonomy discovery should not run on every refresh.
+### 12.2 Discovery input
 
-Persist:
+Taxonomy discovery should inspect the portfolio as a corpus, not execute one independent LLM prompt per repository.
+
+A compact corpus item can include:
+
+- repository name;
+- deterministic classification/evidence;
+- compact semantic document fields;
+- topics/framework hints;
+- optional nearest semantic neighbors from P2.
+
+### 12.3 Discovery output constraints
+
+For a medium portfolio, target roughly 5–10 primary categories, subject to corpus size and actual structure.
+
+Categories should:
+
+- describe domain/purpose, not implementation language;
+- use short human-readable labels;
+- include explicit descriptions suitable for later embedding/matching;
+- avoid unnecessary singleton categories;
+- avoid one giant catch-all category where meaningful structure exists;
+- preserve stable IDs across refreshes.
+
+### 12.4 Freeze and reuse
+
+Taxonomy discovery must not run on every refresh.
+
+Persist at least:
 
 - taxonomy version;
 - corpus fingerprint;
 - categories;
-- optional manually edited aliases/descriptions.
+- aliases/descriptions;
+- human overrides.
 
-Rediscover only when explicitly requested or when corpus drift exceeds a threshold (for example, substantial repo additions/removals). Exact policy should be tested rather than guessed.
+Unchanged corpora must preserve taxonomy IDs and labels exactly.
 
-### 11.4 Assignment
+Small repository changes should not cause automatic taxonomy churn. Rediscovery policy must be tested using controlled corpus additions/removals rather than guessed.
 
-Once taxonomy exists:
+### 12.5 Human override behavior
 
-1. deterministic evidence can directly assign very high-confidence cases;
-2. compare repository embedding with category-description embeddings;
-3. if the score/margin is strong, assign semantically;
-4. only ambiguous cases go to a small LLM judge;
-5. persist the final result and evidence.
+Automatic taxonomy must remain correctable.
 
-This avoids N unconditional LLM calls.
-
-## 12. P4 — optional hierarchical communities
-
-Only add this after P2/P3 metrics show value.
-
-Use the sparse semantic graph as input to a community algorithm such as Leiden.
-
-Enable only when:
-
-- repository count is large enough;
-- communities are stable under small refreshes;
-- modularity/quality and minimum group sizes exceed chosen thresholds;
-- the result improves Tree/Sunburst readability in fixtures.
-
-A community is not automatically a semantic label. If communities become subcategories, label them using deterministic dominant evidence or a bounded LLM summarization step.
-
-Expected use:
-
-```text
-Robotics
-├── Simulation
-│   ├── ...
-│   └── ...
-├── Sim ↔ Real
-│   ├── ...
-│   └── ...
-└── Runtime / Control
-    └── ...
-```
-
-Do not force hierarchy for small portfolios.
-
-## 13. Overrides and user control
-
-Automatic classification must remain correctable.
-
-Recommended config shape:
+The exact config shape can follow existing project conventions, but it should support concepts equivalent to:
 
 ```yaml
 classification:
@@ -541,187 +546,174 @@ classification:
       aliases: [ROS2, Gazebo]
 ```
 
-Exact file format/location should align with existing project configuration conventions during implementation.
+Explicit override always outranks automatic assignment.
 
-Overrides outrank all automatic evidence.
+### 12.6 Category assignment after taxonomy exists
 
-## 14. Static-first and security constraints
+Recommended order:
 
-The project currently advertises a static-first architecture. Preserve it.
+1. explicit override;
+2. very high-confidence deterministic evidence;
+3. repository embedding vs category-description embedding;
+4. confidence/margin gate;
+5. optional LLM judge only for genuinely ambiguous cases;
+6. persist final category, secondary tags, confidence, and evidence.
 
-- generation workflow may call GitHub and optional semantic providers;
-- generated artifacts contain classification results;
-- public browser viewers consume static artifacts;
-- no provider API key is exposed to GitHub Pages;
-- no README content is sent to an external AI service unless the user explicitly enabled/configured that provider;
-- provider failures degrade to deterministic classification rather than breaking map generation.
+Do not call an LLM once for every repository.
 
-For public repositories, README content is public, but external-provider use should still be opt-in/configurable.
+## 13. P3 optional LLM judge boundary
 
-## 15. Cost and performance controls
+LLM adjudication belongs after taxonomy persistence and semantic assignment are stable.
 
-Hard limits must exist before enabling AI stages.
+Requirements before enabling it:
 
-Recommended controls:
+- optional provider boundary;
+- strict structured output schema;
+- timeout and retry budget;
+- deterministic fallback when unavailable or invalid;
+- ambiguity gate so clear repositories never call the LLM;
+- diagnostics counting adjudicated repositories;
+- no provider API key in public Pages output;
+- no browser-side LLM call.
 
-- max repositories already exists; preserve it;
+An unconditional N-repository LLM loop is prohibited by design.
+
+## 14. P4 — optional hierarchical communities
+
+Only implement P4 if P2/P3 evaluation demonstrates value.
+
+Potential input is the sparse semantic graph from P2.
+
+A Leiden-style hierarchical/community layer is acceptable only when:
+
+- portfolio size is large enough;
+- communities are stable under small corpus changes;
+- quality/modularity and minimum group size pass chosen thresholds;
+- Tree/Sunburst readability improves in controlled fixtures.
+
+A graph community is not automatically a semantic label. If promoted to a subcategory, its label still needs deterministic dominant evidence or another bounded labeling mechanism.
+
+Small portfolios must remain simple and hierarchy must remain disableable.
+
+## 15. Cost, privacy, and performance constraints
+
+Maintain hard bounds before selecting any production AI provider.
+
+Already present through P2:
+
+- max repository limit;
 - README byte/character cap;
-- bounded manifest probe list;
-- batch embedding calls;
-- content-hash cache;
-- top-k semantic edges;
-- taxonomy discovery only on corpus change/manual refresh;
-- ambiguity-only LLM judging;
+- bounded manifest probe list/files/concurrency;
+- embedding batch bounds;
+- content-hash cache identity;
+- top-k semantic edge retention;
+- semantic edge global cap;
+- deterministic provider-failure fallback;
+- provider-independent browser viewers.
+
+P3 should add:
+
+- corpus fingerprint cache;
+- taxonomy rediscovery threshold/manual refresh control;
 - provider timeout/retry budget;
-- deterministic fallback.
+- ambiguity-only LLM count/cost budget;
+- taxonomy churn diagnostics.
 
-Record generation diagnostics such as:
+README/semantic content must not be sent to an external AI provider unless that provider is explicitly configured/enabled. Public repository content may be public, but external-provider use should still be opt-in and documented.
 
-- number of READMEs fetched/cache-hit/missing;
-- deterministic assignments;
-- semantic assignments;
-- LLM-adjudicated assignments;
-- low-confidence count;
-- embedding cache hits;
-- semantic edge count.
+## 16. Metrics still required
 
-## 16. Testing strategy
+Before declaring the whole semantic-classification initiative complete, measure:
 
-### 16.1 Unit tests
-
-Add tests for:
-
-- Unicode normalization including Japanese;
-- deterministic evidence extraction;
-- category scoring/margins;
-- `Other/Uncategorized` behavior instead of language fallback;
-- README truncation/cleaning;
-- manifest extraction;
-- semantic-document hash stability;
-- top-k edge bounding/deduplication;
-- taxonomy parsing/validation;
-- old/new graph compatibility.
-
-### 16.2 Regression fixtures
-
-Preserve the concrete repos and expected semantic direction in `docs/semantic-classification-evidence.md` and convert them into small local fixtures rather than tests that depend on live GitHub state.
-
-Initial required cases:
-
-- `lime_tidyup` → Robotics, not Python;
-- `FTBPublicClaims` → Minecraft Modding, not Java;
-- `BuyClaimChunks` → Minecraft Modding, not Java;
-- `turing-smart-screen-python-owl` → Hardware/System Monitoring class, not RTF;
-- Japanese description remains present after normalization;
-- a genuinely uncategorizable repo becomes Other/Uncategorized rather than its implementation language.
-
-### 16.3 Evaluation metrics
-
-Before/after evaluation should include:
-
-- manual classification accuracy on a fixed repo fixture set;
+- manual classification accuracy on a fixed fixture set;
 - percentage of language-fallback-like semantic errors;
-- low-confidence rate;
-- taxonomy churn across identical/near-identical refreshes;
-- semantic edge precision by manual spot-check;
-- graph size;
-- generation network calls/time.
+- low-confidence classification rate;
+- embedding cache hit rate;
+- semantic edge count;
+- manual precision of semantic neighbor links;
+- taxonomy churn across unchanged and near-identical corpora;
+- graph artifact size;
+- generation network calls/time;
+- optional provider cost when enabled.
 
-Do not claim improvement based only on a nicer visualization.
+The initiative is not complete merely because Galaxy/Obsidian look richer.
 
 ## 17. Implementation order
 
 ### PR 1 — P1A Unicode + README enrichment foundation ✅ merged (#31)
 
-- Unicode-safe normalization.
-- README fetch/clean/truncate helper.
-- no embeddings/LLM.
-- regression fixtures and tests.
-
-**Gate:** known README-resolvable failures improve without breaking existing presets.
+Gate completed: README-resolvable fixture failures improve without breaking existing presets.
 
 ### PR 2 — P1B structured evidence + category/language separation ✅ merged (#33)
 
-- `ClassificationEvidence` and confidence.
-- manifest/framework probes.
-- semantic category no longer falls back to language.
-- compatibility fields preserved.
+Gate completed: `graph.json` compatibility retained and language remains available as a technical facet.
 
-**Gate:** `graph.json` remains backward compatible and Matrix still receives language.
+### PR 3 — P2 semantic document + embedding abstraction ✅ merged (#35)
 
-### PR 3 — P2 semantic document + embedding abstraction
+Gate completed: local/fake deterministic provider and cache tests require no production provider.
 
-- semantic document builder;
-- provider interface;
-- cache identity;
-- local/fake deterministic test provider.
+### PR 4 — P2 sparse semantic edges + viewer integration ✅ merged (#36)
 
-**Gate:** no production provider required for tests.
-
-### PR 4 — P2 sparse semantic edges + viewer integration
-
-- top-k similarity graph;
-- Obsidian/Galaxy integration;
-- edge-count/performance tests.
-
-**Gate:** no dense edge explosion at 100–300 repos.
+Gate completed: no dense edge-output explosion at 100–300 repositories; browser integration passes Chromium/WebKit.
 
 ### PR 5 — P3 taxonomy discovery + persistence
 
+Planned scope:
+
 - taxonomy schema;
-- discovery provider boundary;
-- validation/freeze/override behavior;
-- semantic category assignment.
+- corpus fingerprint;
+- discovery-provider boundary;
+- validation/freeze/reuse;
+- human overrides;
+- taxonomy stability tests.
 
 **Gate:** unchanged corpus preserves taxonomy IDs/labels unless explicitly rediscovered.
 
-### PR 6 — P3 ambiguity-only LLM judge
+### PR 6 — P3 semantic assignment + ambiguity-only LLM judge
 
-- optional adjudicator;
-- strict structured output validation;
-- deterministic fallback on failure;
+Planned scope:
+
+- category-description embeddings using existing P2 provider abstraction;
+- semantic assignment thresholds/margins;
+- optional structured adjudicator;
+- deterministic fallback;
 - diagnostics/cost counters.
 
-**Gate:** unconditional per-repo LLM calls are prohibited by test/design.
+**Gate:** unconditional per-repository LLM calls are prohibited and tested.
 
-### PR 7 — P4 hierarchical communities (only if evaluation justifies it)
+### PR 7 — P4 hierarchical communities, only if evaluation justifies it
 
-- sparse graph community detection;
-- stability thresholds;
-- Tree/Sunburst subcategory integration.
+**Gate:** hierarchy remains disableable; small portfolios stay simple; stability/quality thresholds are measured.
 
-**Gate:** retain ability to disable hierarchy; small portfolios remain simple.
+## 18. Definition of done for the full initiative
 
-## 18. Definition of done
+The full semantic-classification initiative is complete only when:
 
-The semantic-classification initiative is complete when:
-
-- repository domain no longer defaults to language;
+- repository domain never defaults to implementation language;
 - Unicode/non-English metadata is preserved;
-- README/manifest evidence fixes the known regressions;
+- README/manifest evidence fixes the documented regressions;
 - semantic relationships are available for exploratory presets;
-- taxonomy can adapt to the portfolio rather than only six global groups;
+- taxonomy adapts to the portfolio rather than only six global groups;
 - automatic taxonomy is stable and overrideable;
-- AI providers are optional generation-time components;
+- semantic category assignment uses deterministic/embedding evidence before optional LLM adjudication;
+- AI providers remain optional generation-time components;
 - static viewers remain provider-independent;
-- graph growth is bounded;
-- the fixture/evaluation suite demonstrates a measurable classification improvement;
-- docs describe provider configuration, privacy/cost implications, and migration behavior.
+- graph growth remains bounded;
+- fixture/evaluation metrics demonstrate measurable semantic improvement;
+- provider configuration, privacy/cost implications, migration, and overrides are documented.
 
-## 19. Start-here instructions for the next development session
+## 19. Start here next
 
-A new session should **not start by integrating an LLM**.
+P1 and P2 are complete. A new development session should **not start by adding an unconditional LLM path**.
 
-Start with Issue #20 and this sequence:
+Start P3 from Issue #20 in this order:
 
-1. inspect current `src/graph.ts`, `src/github.ts`, `src/types.ts`, graph-generation scripts, and tests;
-2. run the current test suite and capture baseline;
-3. implement Unicode-safe normalization with regression tests;
-4. implement bounded README enrichment with a fake GitHub-fetch fixture;
-5. reproduce the documented misclassification cases locally;
-6. make P1A green before touching embeddings or taxonomy discovery;
-7. open one focused PR for P1A.
+1. inspect the merged `RepoSemanticDocument`, embedding cache identity, sparse `semanticEdges`, deterministic classification, and current fixtures;
+2. define a versioned `TaxonomyCategory` / `PortfolioTaxonomy` schema and corpus fingerprint before selecting any discovery provider;
+3. implement validation, freeze/reuse, and human override behavior with a fully local fake discovery provider;
+4. prove unchanged corpora preserve taxonomy IDs/labels and that small corpus drift does not cause unnecessary churn;
+5. add category-description embedding assignment using the existing P2 provider abstraction only after taxonomy persistence is stable;
+6. route only genuinely ambiguous assignments to an optional structured LLM judge with deterministic fallback;
+7. keep normal viewers static-only and keep production embedding/LLM providers opt-in.
 
-When making architectural choices, preserve the invariant:
-
-> **repository = semantic node; category/language/status = facets; semantic similarity = optional sparse edges; AI runs at generation time, never as a viewer dependency.**
+The next focused implementation should therefore be **P3 taxonomy schema + corpus fingerprint + persistence/freeze + override behavior**, not production LLM integration.
