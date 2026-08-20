@@ -6,6 +6,7 @@ import { buildGraph } from "./graph.mjs";
 import { MemoryEmbeddingCache } from "./embedding.mjs";
 import { generateSemanticEdges } from "./semantic-edges.mjs";
 import { TAXONOMY_ASSIGNMENT_VERSION, assignRepositoriesToTaxonomy } from "./taxonomy-assignment.mjs";
+import { adjudicateAmbiguousTaxonomyAssignments } from "./taxonomy-adjudication.mjs";
 import { parseTaxonomyOverrideFile, resolvePortfolioTaxonomy } from "./taxonomy.mjs";
 import { parseTaxonomyRepositoryOverridesFile } from "./taxonomy-overrides.mjs";
 import { renderGalaxySvg } from "./svg.mjs";
@@ -23,10 +24,7 @@ import { renderSankeySvg } from "./sankey-svg.mjs";
 import { finalizeSvgForTheme } from "./finalize-svg.mjs";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const STYLE_VALUES = new Set([
-  "radial", "galaxy", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian",
-  "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey",
-]);
+const STYLE_VALUES = new Set(["radial", "galaxy", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
 const EXPLORATORY_STYLES = new Set(["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"]);
 
 function input(env, name, legacyName) { return env[`INPUT_${name}`] ?? (legacyName ? env[legacyName] : undefined); }
@@ -45,17 +43,7 @@ export function actionConfigFromEnv(env = process.env) {
   const username = String(input(env, "USERNAME", "PROJECT_MAP_USERNAME") || env.GITHUB_REPOSITORY_OWNER || "").trim().toLowerCase();
   if (!USERNAME_RE.test(username)) throw new Error("Invalid GitHub username");
   const theme = input(env, "THEME", "PROJECT_MAP_THEME") === "light" ? "light" : "dark";
-  return {
-    username,
-    theme,
-    style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")),
-    maxRepos: boundedInt(input(env, "MAX_REPOS", "PROJECT_MAP_MAX_REPOS"), 100, 1, 300),
-    includeForks: boolValue(input(env, "FORKS", "PROJECT_MAP_FORKS"), true),
-    includeArchived: boolValue(input(env, "ARCHIVED", "PROJECT_MAP_ARCHIVED"), false),
-    width: boundedInt(input(env, "WIDTH", "PROJECT_MAP_WIDTH"), 740, 420, 1600),
-    height: boundedInt(input(env, "HEIGHT", "PROJECT_MAP_HEIGHT"), 420, 260, 1000),
-    outputDir: safeOutputDir(input(env, "OUTPUT_DIR", "PROJECT_MAP_OUTPUT_DIR")),
-  };
+  return { username, theme, style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")), maxRepos: boundedInt(input(env, "MAX_REPOS", "PROJECT_MAP_MAX_REPOS"), 100, 1, 300), includeForks: boolValue(input(env, "FORKS", "PROJECT_MAP_FORKS"), true), includeArchived: boolValue(input(env, "ARCHIVED", "PROJECT_MAP_ARCHIVED"), false), width: boundedInt(input(env, "WIDTH", "PROJECT_MAP_WIDTH"), 740, 420, 1600), height: boundedInt(input(env, "HEIGHT", "PROJECT_MAP_HEIGHT"), 420, 260, 1000), outputDir: safeOutputDir(input(env, "OUTPUT_DIR", "PROJECT_MAP_OUTPUT_DIR")) };
 }
 
 function comparableGraph(graph) { return JSON.stringify({ ...graph, generatedAt: "" }); }
@@ -67,61 +55,16 @@ function parseTaxonomyOverrideDocument(text) {
   const repositories = parseTaxonomyRepositoryOverridesFile(text);
   return { ...base, ...(Object.keys(repositories).length ? { repositories } : {}) };
 }
-
-async function readTaxonomyOverrides(path) {
-  try { return parseTaxonomyOverrideDocument(await readFile(path, "utf8")); }
-  catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return undefined; throw error; }
-}
-
-function semanticReposForGraph(repos, graph) {
-  const classificationByName = new Map(graph.nodes.filter((node) => node.type === "repository").map((node) => [String(node.label).toLowerCase(), node.classification]));
-  return repos.filter((repo) => classificationByName.has(String(repo.name).toLowerCase())).map((repo) => ({ ...repo, classification: classificationByName.get(String(repo.name).toLowerCase()) }));
-}
-
-function attachTaxonomyAssignments(graph, assignments) {
-  const byName = new Map(Object.entries(assignments).map(([name, assignment]) => [name.toLowerCase(), assignment]));
-  let attached = 0;
-  for (const node of graph.nodes) {
-    if (node.type !== "repository") continue;
-    const assignment = byName.get(String(node.label).toLowerCase());
-    if (!assignment) continue;
-    node.taxonomyAssignment = assignment;
-    attached += 1;
-  }
-  if (graph.taxonomy) graph.taxonomyAssignmentVersion = TAXONOMY_ASSIGNMENT_VERSION;
-  return attached;
-}
-
-function graphForExploratoryStyle(graph, style) {
-  if (!EXPLORATORY_STYLES.has(style) || !Array.isArray(graph.semanticEdges) || !graph.semanticEdges.length) return graph;
-  const semanticRelations = graph.semanticEdges.map((edge) => ({ source: edge.source, target: edge.target, type: "relation" }));
-  return { ...graph, edges: [...graph.edges, ...semanticRelations] };
-}
-
-function renderForStyle(graph, config) {
-  const renderGraph = graphForExploratoryStyle(graph, config.style);
-  let svg;
-  if (config.style === "tree") svg = renderTreeSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "radial") svg = renderRadialTreeSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "treemap") svg = renderTreemapSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "timeline") svg = renderTimelineSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "cluster") svg = renderClusterSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "sunburst") svg = renderSunburstSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "matrix") svg = renderMatrixSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "sankey") svg = renderSankeySvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "galaxy-classic") svg = renderGalaxyClassicSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "galaxy-hybrid") svg = renderGalaxyHybridSvg(renderGraph, config.theme, config.width, config.height);
-  else if (config.style === "galaxy-systems") svg = renderGalaxySystemsSvg(renderGraph, config.theme, config.width, config.height);
-  else svg = renderGalaxySvg(renderGraph, config.theme, config.width, config.height, "obsidian");
-  return finalizeSvgForTheme(svg, config.theme);
-}
+async function readTaxonomyOverrides(path) { try { return parseTaxonomyOverrideDocument(await readFile(path, "utf8")); } catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return undefined; throw error; } }
+function semanticReposForGraph(repos, graph) { const classificationByName = new Map(graph.nodes.filter((node) => node.type === "repository").map((node) => [String(node.label).toLowerCase(), node.classification])); return repos.filter((repo) => classificationByName.has(String(repo.name).toLowerCase())).map((repo) => ({ ...repo, classification: classificationByName.get(String(repo.name).toLowerCase()) })); }
+function attachTaxonomyAssignments(graph, assignments) { const byName = new Map(Object.entries(assignments).map(([name, assignment]) => [name.toLowerCase(), assignment])); let attached = 0; for (const node of graph.nodes) { if (node.type !== "repository") continue; const assignment = byName.get(String(node.label).toLowerCase()); if (!assignment) continue; node.taxonomyAssignment = assignment; attached += 1; } if (graph.taxonomy) graph.taxonomyAssignmentVersion = TAXONOMY_ASSIGNMENT_VERSION; return attached; }
+function graphForExploratoryStyle(graph, style) { if (!EXPLORATORY_STYLES.has(style) || !Array.isArray(graph.semanticEdges) || !graph.semanticEdges.length) return graph; const semanticRelations = graph.semanticEdges.map((edge) => ({ source: edge.source, target: edge.target, type: "relation" })); return { ...graph, edges: [...graph.edges, ...semanticRelations] }; }
+function renderForStyle(graph, config) { const renderGraph = graphForExploratoryStyle(graph, config.style); let svg; if (config.style === "tree") svg = renderTreeSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "radial") svg = renderRadialTreeSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "treemap") svg = renderTreemapSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "timeline") svg = renderTimelineSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "cluster") svg = renderClusterSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "sunburst") svg = renderSunburstSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "matrix") svg = renderMatrixSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "sankey") svg = renderSankeySvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "galaxy-classic") svg = renderGalaxyClassicSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "galaxy-hybrid") svg = renderGalaxyHybridSvg(renderGraph, config.theme, config.width, config.height); else if (config.style === "galaxy-systems") svg = renderGalaxySystemsSvg(renderGraph, config.theme, config.width, config.height); else svg = renderGalaxySvg(renderGraph, config.theme, config.width, config.height, "obsidian"); return finalizeSvgForTheme(svg, config.theme); }
 
 export async function generateStaticMap(config, options = {}) {
   const cwd = options.cwd ?? process.cwd();
-  const outputRoot = resolve(cwd, config.outputDir);
-  const cwdRoot = resolve(cwd) + sep;
+  const outputRoot = resolve(cwd, config.outputDir); const cwdRoot = resolve(cwd) + sep;
   if (!(outputRoot + sep).startsWith(cwdRoot)) throw new Error("output_dir escaped the workspace");
-
   const fetchRepos = options.fetchRepos ?? fetchPublicRepos;
   const token = options.token ?? process.env.INPUT_GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
   const repos = await fetchRepos(config.username, token, config.maxRepos, { includeForks: config.includeForks, includeArchived: config.includeArchived });
@@ -136,49 +79,34 @@ export async function generateStaticMap(config, options = {}) {
   const taxonomyStatePath = resolve(outputRoot, "taxonomy.json");
   const taxonomyOverridesPath = resolve(outputRoot, "taxonomy-overrides.json");
   const previousTaxonomy = options.previousTaxonomy !== undefined ? options.previousTaxonomy : await readGeneratedTaxonomy(taxonomyStatePath);
-  const taxonomyOverrides = options.taxonomyOverrides !== undefined
-    ? (typeof options.taxonomyOverrides === "string" ? parseTaxonomyOverrideDocument(options.taxonomyOverrides) : options.taxonomyOverrides)
-    : await readTaxonomyOverrides(taxonomyOverridesPath);
-  const taxonomy = await resolvePortfolioTaxonomy(semanticRepos, options.taxonomyProvider, {
-    previousTaxonomy,
-    overrides: taxonomyOverrides,
-    forceRediscovery: options.forceTaxonomyRediscovery,
-    maxDriftRatio: options.taxonomyOptions?.maxDriftRatio,
-  });
+  const taxonomyOverrides = options.taxonomyOverrides !== undefined ? (typeof options.taxonomyOverrides === "string" ? parseTaxonomyOverrideDocument(options.taxonomyOverrides) : options.taxonomyOverrides) : await readTaxonomyOverrides(taxonomyOverridesPath);
+  const taxonomy = await resolvePortfolioTaxonomy(semanticRepos, options.taxonomyProvider, { previousTaxonomy, overrides: taxonomyOverrides, forceRediscovery: options.forceTaxonomyRediscovery, maxDriftRatio: options.taxonomyOptions?.maxDriftRatio });
   if (taxonomy.taxonomy) graph.taxonomy = taxonomy.taxonomy;
   if (taxonomy.error) console.warn(`Taxonomy discovery fallback: ${taxonomy.error}`);
 
-  const taxonomyAssignment = await assignRepositoriesToTaxonomy(
-    semanticRepos,
-    taxonomy.taxonomy,
-    options.embeddingProvider,
-    sharedEmbeddingCache,
-    { overrides: taxonomyOverrides, ...(options.taxonomyAssignmentOptions ?? {}) },
-  );
-  attachTaxonomyAssignments(graph, taxonomyAssignment.assignments);
+  const taxonomyAssignment = await assignRepositoriesToTaxonomy(semanticRepos, taxonomy.taxonomy, options.embeddingProvider, sharedEmbeddingCache, { overrides: taxonomyOverrides, ...(options.taxonomyAssignmentOptions ?? {}) });
   if (taxonomyAssignment.error) console.warn(`Taxonomy assignment fallback: ${taxonomyAssignment.error}`);
+  const taxonomyAdjudication = await adjudicateAmbiguousTaxonomyAssignments(semanticRepos, taxonomy.taxonomy, taxonomyAssignment, options.taxonomyAdjudicator, options.taxonomyAdjudicationOptions);
+  if (taxonomyAdjudication.error) console.warn(`Taxonomy adjudication fallback: ${taxonomyAdjudication.error}`);
+  attachTaxonomyAssignments(graph, taxonomyAdjudication.assignments);
 
   await mkdir(outputRoot, { recursive: true });
-  const graphPath = posix.join(config.outputDir, "graph.json");
-  const svgPath = posix.join(config.outputDir, "galaxy.svg");
-  const taxonomyPath = taxonomy.taxonomy ? posix.join(config.outputDir, "taxonomy.json") : undefined;
+  const graphPath = posix.join(config.outputDir, "graph.json"); const svgPath = posix.join(config.outputDir, "galaxy.svg"); const taxonomyPath = taxonomy.taxonomy ? posix.join(config.outputDir, "taxonomy.json") : undefined;
   const absoluteGraphPath = resolve(cwd, graphPath);
   await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, graph);
   await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
   if (taxonomy.taxonomy) await writeFile(taxonomyStatePath, JSON.stringify(taxonomy.taxonomy, null, 2) + "\n");
   await writeFile(resolve(cwd, svgPath), renderForStyle(graph, config));
-  return { graphPath, svgPath, taxonomyPath, graph, semantic, taxonomy, taxonomyAssignment };
+  return { graphPath, svgPath, taxonomyPath, graph, semantic, taxonomy, taxonomyAssignment, taxonomyAdjudication };
 }
 
 async function setOutput(name, value) { if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `${name}=${value}\n`); }
 async function main() {
   if (!process.env.INPUT_GITHUB_TOKEN && !process.env.GITHUB_TOKEN) throw new Error("github_token input is required");
-  const config = actionConfigFromEnv();
-  const result = await generateStaticMap(config);
+  const config = actionConfigFromEnv(); const result = await generateStaticMap(config);
   await setOutput("svg-path", result.svgPath); await setOutput("graph-path", result.graphPath);
-  console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username} (${config.style})`);
-  console.log(`SVG: ${result.svgPath}`); console.log(`Graph: ${result.graphPath}`);
+  console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username} (${config.style})`); console.log(`SVG: ${result.svgPath}`); console.log(`Graph: ${result.graphPath}`);
   if (result.taxonomyPath) console.log(`Taxonomy: ${result.taxonomyPath} (${result.taxonomy.diagnostics.reason})`);
-  if (result.graph.taxonomy) console.log(`Taxonomy assignments: ${result.taxonomyAssignment.diagnostics.assigned} assigned / ${result.taxonomyAssignment.diagnostics.ambiguous} ambiguous`);
+  if (result.graph.taxonomy) console.log(`Taxonomy assignments: ${Object.keys(result.taxonomyAdjudication.assignments).length} assigned / ${result.taxonomyAdjudication.ambiguous.length} ambiguous; adjudicator accepted ${result.taxonomyAdjudication.diagnostics.accepted}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
