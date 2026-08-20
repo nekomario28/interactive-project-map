@@ -1,4 +1,4 @@
-import standardSignalProfile from "../data/standard-taxonomy-signals.v1.json";
+import standardSignalProfile from "../data/standard-taxonomy-signals.v1.json" with { type: "json" };
 import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "./standard-taxonomy.ts";
 import { buildTaxonomyDiscoveryInput } from "./taxonomy.ts";
 import { assignRepositoriesToTaxonomy, TAXONOMY_ASSIGNMENT_VERSION } from "./taxonomy-assignment.ts";
