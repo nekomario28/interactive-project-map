@@ -79,6 +79,17 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(polish, /blankPointers/);
     assert.match(polish, /isGalaxyPresentationStyle/);
     assert.match(polish, /String\(value \|\| ""\)\.startsWith\("galaxy-"\)/);
+    assert.match(polish, /currentSearchContext/);
+    assert.match(polish, /directRepositoryIds/);
+    assert.match(polish, /directCategoryIds/);
+    assert.match(polish, /contextCategoryIds/);
+    assert.match(polish, /categoryMemberIds/);
+    assert.match(polish, /searchAwareMatchesQuery/);
+    assert.match(polish, /searchAwareMatches/);
+    assert.match(polish, /searchAwareNodeOpacity/);
+    assert.match(polish, /ProjectMapSearchContext/);
+    assert.match(polish, /category-context/);
+    assert.match(polish, /category-member/);
     assert.match(polish, /semanticAwareSanitizeGraph/);
     assert.match(polish, /semanticAwareObsidianLayout/);
     assert.match(polish, /semanticAwareRebuildLayout/);
