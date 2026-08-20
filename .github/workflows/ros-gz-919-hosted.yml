@@ -1,9 +1,11 @@
 name: ros_gz #919 hosted validation
 
 on:
-  push:
+  pull_request:
     branches:
       - ci/ros-gz-919-hosted
+    paths:
+      - ".github/ros-gz-919-trigger"
 
 permissions:
   contents: read
