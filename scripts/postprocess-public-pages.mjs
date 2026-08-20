@@ -2,9 +2,9 @@ import { copyFile, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-// Keep generated consumer workflows on a reviewed, immutable main commit.
-// This commit contains standard taxonomy v1 as the default assignment layer plus the reviewed P1/P2/P3 boundaries.
-export const PUBLIC_ACTION_REF = "efc3af6531c505665ee5fc1517d07676cc80cc0a";
+// Keep generated consumer workflows on a reviewed, immutable main implementation commit.
+// This commit includes standard-v1 generalization gates and visible-hierarchy promotion.
+export const PUBLIC_ACTION_REF = "977531824bc7a65c703c692ea4de98b4fed7ca5f";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
