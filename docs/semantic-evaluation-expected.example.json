@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "repositories": {
+    "repo-name": {
+      "categoryId": "robotics",
+      "secondaryTags": ["simulation", "manipulation"]
+    },
+    "another-repo": {
+      "categoryId": "web"
+    }
+  }
+}
