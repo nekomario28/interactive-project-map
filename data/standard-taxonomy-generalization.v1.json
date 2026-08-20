@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "taxonomyId": "ipm-standard-v1",
+  "fixtureKind": "curated-generalization-gate",
+  "note": "Curated multilingual, sparse-metadata, and negative-boundary cases. This complements the balanced conformance corpus and live reviewed portfolio; it is not a population benchmark.",
+  "multilingualCases": [
+    {"id":"ai-es","locale":"es","expectedCategoryId":"ai-ml","repo":{"name":"entrenador-vision","description":"Aprendizaje automático y aprendizaje profundo para una red neuronal de visión por computador."}},
+    {"id":"data-zh","locale":"zh","expectedCategoryId":"data-analytics","repo":{"name":"数据平台","description":"数据分析和数据工程工具，连接数据库与数据仓库。"}},
+    {"id":"viz-ko","locale":"ko","expectedCategoryId":"visualization-knowledge","repo":{"name":"지식지도","description":"데이터 시각화와 정보 시각화로 지식 그래프를 탐색합니다."}},
+    {"id":"apps-de","locale":"de","expectedCategoryId":"applications-services","repo":{"name":"tagebuch-app","description":"Desktop Anwendung und Webanwendung für Endbenutzer zum Organisieren persönlicher Notizen."}},
+    {"id":"dev-zh","locale":"zh","expectedCategoryId":"developer-tools","repo":{"name":"构建助手","description":"开发工具，提供代码生成器、编译器和调试器功能。"}},
+    {"id":"systems-es","locale":"es","expectedCategoryId":"systems-infrastructure","repo":{"name":"infra-nube","description":"Infraestructura en la nube para desplegar un sistema operativo con observabilidad."}},
+    {"id":"security-ko","locale":"ko","expectedCategoryId":"security-privacy","repo":{"name":"보안게이트","description":"보안과 개인정보 보호를 위한 인증 및 암호화 시스템."}},
+    {"id":"network-de","locale":"de","expectedCategoryId":"networking-distributed","repo":{"name":"rpc-bruecke","description":"Verteilte Systeme mit Netzwerkprotokoll und verteiltem Messaging."}},
+    {"id":"hardware-zh","locale":"zh","expectedCategoryId":"hardware-embedded","repo":{"name":"传感器固件","description":"嵌入式固件运行在微控制器上并连接硬件传感器。"}},
+    {"id":"robot-es","locale":"es","expectedCategoryId":"robotics-automation","repo":{"name":"robot-autonomo","description":"Robótica para navegación autónoma y manipulación robótica con ROS2."}},
+    {"id":"game-dev-ko","locale":"ko","expectedCategoryId":"game-development","repo":{"name":"새게임","description":"게임 개발 프로젝트로 게임 엔진과 게임플레이 시스템을 구현합니다."}},
+    {"id":"game-mod-de","locale":"de","expectedCategoryId":"game-modding","repo":{"name":"minecraft-addon","description":"Minecraft Mod und Spiel Mod für einen bestehenden Mod Loader."}},
+    {"id":"science-zh","locale":"zh","expectedCategoryId":"science-engineering","repo":{"name":"数值实验室","description":"科学计算与数值模拟，用于工程数值分析。"}},
+    {"id":"education-es","locale":"es","expectedCategoryId":"education-learning","repo":{"name":"curso-algebra","description":"Curso universitario con tutorial, tarea y material de aprendizaje."}},
+    {"id":"media-ko","locale":"ko","expectedCategoryId":"media-creative","repo":{"name":"미디어편집기","description":"비디오 편집과 이미지 편집, 애니메이션을 위한 미디어 제작 도구."}},
+    {"id":"business-de","locale":"de","expectedCategoryId":"business-productivity","repo":{"name":"team-planer","description":"Produktivität durch Projektmanagement, Geschäftsprozess und Zusammenarbeit im Team."}}
+  ],
+  "sparseCases": [
+    {"id":"sparse-topic-viz","expectedCategoryId":"visualization-knowledge","repo":{"name":"atlas","topics":["data-visualization"]}},
+    {"id":"sparse-topic-network","expectedCategoryId":"networking-distributed","repo":{"name":"bus","topics":["message-broker"]}},
+    {"id":"sparse-readme-ai","expectedCategoryId":"ai-ml","repo":{"name":"trainer","readmeExcerpt":"Machine learning, deep learning, neural network, model training"}},
+    {"id":"sparse-readme-science","expectedCategoryId":"science-engineering","repo":{"name":"solver","readmeExcerpt":"Scientific computing, numerical simulation, numerical analysis, finite element"}},
+    {"id":"sparse-framework-robot","expectedCategoryId":"robotics-automation","repo":{"name":"control","frameworks":["ros2","nav2"]}},
+    {"id":"sparse-prior-mod","expectedCategoryId":"game-modding","repo":{"name":"addon","classification":{"categoryId":"minecraft","categoryLabel":"Minecraft Modding","secondaryTags":[],"confidence":0.9,"method":"deterministic","evidence":[]}}},
+    {"id":"sparse-prior-app","expectedCategoryId":"applications-services","repo":{"name":"portal","classification":{"categoryId":"web-apps","categoryLabel":"Web / Apps","secondaryTags":[],"confidence":0.9,"method":"deterministic","evidence":[]}}},
+    {"id":"sparse-topic-dev","expectedCategoryId":"developer-tools","repo":{"name":"check","topics":["developer-tool"]}}
+  ],
+  "negativeCases": [
+    {"id":"negative-language-python","repo":{"name":"python-stuff","language":"Python","description":"Reusable code."}},
+    {"id":"negative-language-java","repo":{"name":"java-utils","language":"Java","description":"Small utility library."}},
+    {"id":"negative-react-only","repo":{"name":"react-kit","topics":["react"],"description":"Reusable components."}},
+    {"id":"negative-ros2-only","repo":{"name":"ros-package","frameworks":["ros2"],"description":"Package experiment."}},
+    {"id":"negative-docker-only","repo":{"name":"docker-demo","frameworks":["docker"],"description":"Configuration experiment."}},
+    {"id":"negative-tensorflow-only","repo":{"name":"tf-helper","frameworks":["tensorflow"],"description":"Helper package."}},
+    {"id":"negative-github-only","repo":{"name":"github-helper","topics":["github"],"description":"Repository helper."}},
+    {"id":"negative-viz-dev-tie","repo":{"name":"mixed-view","description":"Data visualization developer tool."}},
+    {"id":"negative-robot-science-tie","repo":{"name":"mixed-sim","description":"Robotics scientific computing experiment."}},
+    {"id":"negative-app-business-tie","repo":{"name":"mixed-product","description":"Mobile app productivity experiment."}}
+  ]
+}
