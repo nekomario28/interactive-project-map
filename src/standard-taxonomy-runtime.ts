@@ -1,5 +1,6 @@
 import standardSignalProfile from "../data/standard-taxonomy-signals.v1.json" with { type: "json" };
 import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "./standard-taxonomy.ts";
+import { promoteStandardHierarchy } from "./standard-hierarchy.ts";
 import { buildTaxonomyDiscoveryInput } from "./taxonomy.ts";
 import { assignRepositoriesToTaxonomy, TAXONOMY_ASSIGNMENT_VERSION } from "./taxonomy-assignment.ts";
 import type { GalaxyGraph, GitHubRepo, PortfolioTaxonomy, RepositoryClassification } from "./types";
@@ -188,5 +189,6 @@ export async function attachStandardTaxonomyToGraph(graph: GalaxyGraph, repos: G
   }
   graph.taxonomy = taxonomy;
   graph.taxonomyAssignmentVersion = TAXONOMY_ASSIGNMENT_VERSION;
+  Object.assign(graph, promoteStandardHierarchy(graph));
   return graph;
 }
