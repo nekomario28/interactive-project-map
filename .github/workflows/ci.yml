@@ -45,6 +45,18 @@ jobs:
           grep -q "Radial Tree classic map" .tmp/project-map/galaxy.svg
           grep -q "Radial Tree · Classic" .tmp/project-map/galaxy.svg
 
+      - name: Gate standard taxonomy on reviewed public portfolio
+        run: |
+          node scripts/evaluate-semantic.mjs \
+            --graph .tmp/project-map/graph.json \
+            --expected docs/semantic-evaluation-nekomario28.standard-v1.json \
+            --min-assigned-accuracy 1 \
+            --min-end-to-end-accuracy 1 \
+            --min-coverage 1 \
+            --max-ambiguity-rate 0 \
+            --max-missing-rate 0 \
+            --output .tmp/standard-taxonomy-evaluation.json
+
       - name: Verify
         run: npm run verify
 
