@@ -24,8 +24,8 @@
   "sparseCases": [
     {"id":"sparse-topic-viz","expectedCategoryId":"visualization-knowledge","repo":{"name":"atlas","topics":["data-visualization"]}},
     {"id":"sparse-topic-network","expectedCategoryId":"networking-distributed","repo":{"name":"bus","topics":["message-broker"]}},
-    {"id":"sparse-readme-ai","expectedCategoryId":"ai-ml","repo":{"name":"trainer","readmeExcerpt":"Machine learning neural network model training."}},
-    {"id":"sparse-readme-science","expectedCategoryId":"science-engineering","repo":{"name":"solver","readmeExcerpt":"Scientific computing numerical simulation numerical analysis."}},
+    {"id":"sparse-readme-ai","expectedCategoryId":"ai-ml","repo":{"name":"trainer","readmeExcerpt":"Machine learning, deep learning, neural network, model training"}},
+    {"id":"sparse-readme-science","expectedCategoryId":"science-engineering","repo":{"name":"solver","readmeExcerpt":"Scientific computing, numerical simulation, numerical analysis, finite element"}},
     {"id":"sparse-framework-robot","expectedCategoryId":"robotics-automation","repo":{"name":"control","frameworks":["ros2","nav2"]}},
     {"id":"sparse-prior-mod","expectedCategoryId":"game-modding","repo":{"name":"addon","classification":{"categoryId":"minecraft","categoryLabel":"Minecraft Modding","secondaryTags":[],"confidence":0.9,"method":"deterministic","evidence":[]}}},
     {"id":"sparse-prior-app","expectedCategoryId":"applications-services","repo":{"name":"portal","classification":{"categoryId":"web-apps","categoryLabel":"Web / Apps","secondaryTags":[],"confidence":0.9,"method":"deterministic","evidence":[]}}},
