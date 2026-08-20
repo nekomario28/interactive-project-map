@@ -3,10 +3,12 @@ import test from "node:test";
 import {
   DEFAULT_FORCE_SETTINGS,
   TAU,
+  adaptGalaxyGraph,
   clamp,
   deterministicScatter,
   hashText,
   linkForceEdges,
+  normalizeSpatialGraph,
   normalizeWeightedEdges,
   settleForceLayout,
   stepForceLayout,
@@ -61,4 +63,58 @@ test("force core settles a generic graph and respects a dragged node", () => {
   assert.equal(stepForceLayout(nodes, edges, 0.5, { draggingId: dragged.id }), true);
   assert.deepEqual({ x: dragged.x, y: dragged.y }, before);
   assert.equal(DEFAULT_FORCE_SETTINGS.linkDistance, 138);
+});
+
+test("generic spatial graph keeps structural and relation edges separate", () => {
+  const graph = normalizeSpatialGraph({
+    nodes: [
+      { id: "project:a", label: "A", kind: "project", status: "active", positionHint: { x: 12, y: -8 } },
+      { id: "project:b", label: "B", kind: "project", parentId: "missing" },
+      { id: "project:b", label: "duplicate" },
+    ],
+    structuralEdges: [
+      { source: "project:a", target: "project:b", kind: "contains", directed: true },
+      { source: "project:a", target: "missing", kind: "contains" },
+    ],
+    relationEdges: [
+      { source: "project:b", target: "project:a", kind: "research", weight: 0.8 },
+    ],
+  });
+
+  assert.equal(graph.version, 1);
+  assert.equal(graph.nodes.length, 2);
+  assert.equal(graph.nodes[0].status, "active");
+  assert.deepEqual(graph.nodes[0].positionHint, { x: 12, y: -8 });
+  assert.equal(graph.nodes[1].parentId, undefined);
+  assert.equal(graph.structuralEdges.length, 1);
+  assert.equal(graph.relationEdges.length, 1);
+  assert.equal(graph.relationEdges[0].kind, "research");
+});
+
+test("GalaxyGraph adapter preserves hierarchy while exposing semantics as relations", () => {
+  const spatial = adaptGalaxyGraph({
+    nodes: [
+      { id: "user:yuu", label: "yuu", type: "owner" },
+      { id: "group:robotics", label: "Robotics", type: "group", repositoryCount: 1 },
+      { id: "repository:dual", label: "dual", type: "repository", stars: 7, archived: false, fork: false },
+      { id: "repository:real2sim", label: "real2sim", type: "repository", stars: 3, archived: false, fork: false },
+    ],
+    edges: [
+      { source: "user:yuu", target: "group:robotics", type: "ownership" },
+      { source: "group:robotics", target: "repository:dual", type: "membership" },
+      { source: "group:robotics", target: "repository:real2sim", type: "membership" },
+    ],
+    semanticEdges: [
+      { source: "repository:dual", target: "repository:real2sim", type: "semantic", score: 0.91 },
+    ],
+  });
+
+  const dual = spatial.nodes.find((node) => node.id === "repository:dual");
+  assert.equal(dual.parentId, "group:robotics");
+  assert.equal(dual.status, "original");
+  assert.ok(dual.weight > 1);
+  assert.equal(spatial.structuralEdges.length, 3);
+  assert.equal(spatial.relationEdges.length, 1);
+  assert.equal(spatial.relationEdges[0].kind, "semantic");
+  assert.equal(spatial.relationEdges[0].weight, 0.91);
 });
