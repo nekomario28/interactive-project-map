@@ -11,21 +11,22 @@ const P1_STANDARD_PRIORS = Object.freeze({
 });
 
 const STANDARD_SIGNALS = Object.freeze({
-  "ai-ml": ["machine learning", "deep learning", "generative ai", "computer vision", "pytorch", "tensorflow", "transformers", "llm", "diffusion", "neural network", "機械学習", "深層学習", "画像認識", "生成ai"],
-  "data-analytics": ["data analytics", "data engineering", "database", "etl", "data pipeline", "information retrieval", "search engine", "analytics", "データ分析", "データベース"],
-  "visualization-knowledge": ["data visualization", "information visualization", "project map", "project-map", "knowledge map", "knowledge graph", "graph visualization", "force directed", "force-directed", "treemap", "sunburst", "sankey", "heatmap", "visual analytics", "portfolio map", "可視化", "プロジェクトマップ"],
-  "developer-tools": ["developer tool", "devtool", "build tool", "debugger", "linter", "formatter", "code generator", "codegen", "test runner", "package manager", "sdk", "compiler", "開発ツール"],
-  "systems-infrastructure": ["operating system", "kernel", "container runtime", "kubernetes", "docker", "cloud infrastructure", "observability", "deployment", "storage engine", "system daemon", "インフラ"],
-  "security-privacy": ["security", "privacy", "authentication", "authorization", "cryptography", "malware", "anti-cheat", "anti cheat", "xray detection", "exploit", "セキュリティ", "暗号"],
-  "networking-distributed": ["distributed system", "distributed systems", "network protocol", "networking", "peer to peer", "peer-to-peer", "rpc", "message broker", "transport bridge", "network transport", "分散システム", "ネットワーク"],
-  "hardware-embedded": ["embedded", "firmware", "microcontroller", "arduino", "esp32", "platformio", "gpio", "usb display", "usb-c display", "hardware integration", "device integration", "iot", "組み込み", "マイコン", "電子工作"],
-  "robotics-automation": ["robotics", "robot", "ros2", "ros 2", "gazebo", "moveit", "nav2", "slam", "manipulation", "autonomous", "lidar", "ロボット", "ロボティクス", "自律走行", "マニピュレーション"],
-  "game-development": ["game development", "game engine", "pygame", "godot", "unity", "unreal", "gameplay", "board game", "othello", "reversi", "オセロ", "ゲーム開発", "対戦型ボードゲーム"],
-  "game-modding": ["minecraft mod", "minecraft modding", "neoforge", "minecraft forge", "forgegradle", "fabric loader", "fabric-api", "fabric api", "ftb chunks", "modrinth", "curseforge", "mod loader", "マインクラフト"],
-  "science-engineering": ["scientific computing", "numerical simulation", "numerical analysis", "engineering analysis", "physics simulation", "mathematics", "research software", "数値計算", "科学計算"],
-  "education-learning": ["coursework", "homework", "assignment", "tutorial", "learning project", "teaching", "university course", "課題", "授業", "演習", "学習"],
-  "media-creative": ["audio", "video editing", "image editor", "graphics", "animation", "creative coding", "music", "media production", "画像編集", "動画編集"],
-  "business-productivity": ["productivity", "business workflow", "collaboration", "project management", "crm", "office automation", "commerce", "inventory management", "業務", "生産性"],
+  "ai-ml": ["machine learning", "deep learning", "generative ai", "computer vision", "pytorch", "tensorflow", "transformers", "llm", "diffusion", "neural network", "model training", "model inference", "機械学習", "深層学習", "画像認識", "生成ai"],
+  "data-analytics": ["data analytics", "data engineering", "database", "etl", "data pipeline", "information retrieval", "search engine", "analytics", "data warehouse", "データ分析", "データベース"],
+  "visualization-knowledge": ["data visualization", "information visualization", "project visualization", "project map", "project-map", "knowledge map", "knowledge graph", "graph visualization", "force directed", "force-directed", "treemap", "sunburst", "sankey", "heatmap", "visual analytics", "portfolio map", "可視化", "プロジェクトマップ"],
+  "applications-services": ["end user", "end user application", "end user app", "web app", "desktop app", "mobile app", "self hosted service", "backend service", "api service", "client application", "consumer application", "ユーザー向けアプリ", "アプリケーション"],
+  "developer-tools": ["developer tool", "devtool", "build tool", "debugger", "linter", "formatter", "code generator", "codegen", "test runner", "package manager", "sdk", "compiler", "開発ツール", "コード生成"],
+  "systems-infrastructure": ["operating system", "kernel", "container runtime", "kubernetes", "docker", "cloud infrastructure", "observability", "deployment", "storage engine", "system daemon", "service manager", "インフラ"],
+  "security-privacy": ["security", "privacy", "authentication", "authorization", "cryptography", "malware", "anti-cheat", "anti cheat", "xray detection", "exploit", "セキュリティ", "暗号", "認証"],
+  "networking-distributed": ["distributed system", "distributed systems", "network protocol", "networking", "peer to peer", "peer-to-peer", "rpc", "message broker", "transport bridge", "network transport", "distributed messaging", "分散システム", "ネットワーク"],
+  "hardware-embedded": ["embedded", "firmware", "microcontroller", "arduino", "esp32", "platformio", "gpio", "usb display", "usb-c display", "hardware integration", "device integration", "iot", "sensor", "組み込み", "マイコン", "電子工作"],
+  "robotics-automation": ["robotics", "robot", "ros2", "ros 2", "gazebo", "moveit", "nav2", "slam", "manipulation", "autonomous", "lidar", "robot control", "ロボット", "ロボティクス", "自律走行", "マニピュレーション"],
+  "game-development": ["game development", "game engine", "pygame", "godot", "unity", "unreal", "gameplay", "board game", "othello", "reversi", "original game", "オセロ", "ゲーム開発", "対戦型ボードゲーム"],
+  "game-modding": ["minecraft mod", "minecraft modding", "game mod", "modding", "neoforge", "minecraft forge", "forgegradle", "fabric loader", "fabric-api", "fabric api", "ftb chunks", "modrinth", "curseforge", "mod loader", "マインクラフト"],
+  "science-engineering": ["scientific computing", "numerical simulation", "numerical analysis", "engineering analysis", "physics simulation", "mathematics", "research software", "finite element", "数値計算", "科学計算", "数値解析"],
+  "education-learning": ["coursework", "homework", "assignment", "tutorial", "learning project", "teaching", "university course", "exercise", "課題", "授業", "演習", "学習"],
+  "media-creative": ["audio", "video editing", "image editor", "image editing", "graphics", "animation", "creative coding", "music", "media production", "画像編集", "動画編集", "クリエイティブ"],
+  "business-productivity": ["productivity", "business workflow", "collaboration", "project management", "crm", "office automation", "commerce", "inventory management", "team collaboration", "業務", "生産性", "共同作業", "プロジェクト管理"],
 });
 
 const CATEGORY_BY_ID = new Map(STANDARD_TAXONOMY_CATEGORIES.map((category) => [category.id, category]));
@@ -37,6 +38,10 @@ function normalize(value) {
     .replace(/[^\p{L}\p{M}\p{N}+#.-]+/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
+}
+
+function canonicalSignal(value) {
+  return normalize(value).replace(/[._-]+/gu, " ").replace(/\s+/gu, " ").trim();
 }
 
 function keywordMatches(text, keyword) {
@@ -71,11 +76,12 @@ function signalScores(repo) {
   const description = String(repo.description ?? "");
   const readme = String(repo.readmeExcerpt ?? "");
   const topics = repo.topics ?? [];
+  const canonicalTopics = new Set(topics.map(canonicalSignal).filter(Boolean));
   const frameworkText = [...(repo.frameworks ?? []), ...(repo.manifests ?? [])].join(" ");
 
   for (const [categoryId, aliases] of Object.entries(STANDARD_SIGNALS)) {
     for (const alias of aliases) {
-      if (topics.some((topic) => normalize(topic) === normalize(alias))) scores.set(categoryId, (scores.get(categoryId) ?? 0) + 3);
+      if (canonicalTopics.has(canonicalSignal(alias))) scores.set(categoryId, (scores.get(categoryId) ?? 0) + 3);
       if (keywordMatches(frameworkText, alias)) scores.set(categoryId, (scores.get(categoryId) ?? 0) + 2.5);
       if (keywordMatches(description, alias)) scores.set(categoryId, (scores.get(categoryId) ?? 0) + 2);
       if (keywordMatches(name, alias)) scores.set(categoryId, (scores.get(categoryId) ?? 0) + 1.5);
@@ -99,29 +105,41 @@ function standardFacets(repo, categoryId) {
     add("platform:game");
     if (/minecraft|neoforge|forgegradle|fabric|ftb[ -]?chunks/u.test(text)) add("ecosystem:minecraft");
     if (/ftb[ -]?chunks|ftbchunks/u.test(text)) add("ecosystem:ftb-chunks");
-  }
+  } else if (/\b(?:library|sdk)\b/u.test(text)) add("artifact:library");
+  else if (/\bframework\b/u.test(text)) add("artifact:framework");
+  else if (/\b(?:cli tool|developer tool|build tool|debugger|linter|formatter|code generator|test runner)\b/u.test(text)) add("artifact:tool");
+  else if (/\b(?:dataset|corpus)\b/u.test(text)) add("artifact:dataset");
+  else if (/\b(?:model|model weights)\b/u.test(text) && categoryId === "ai-ml") add("artifact:model");
+  else if (/\b(?:documentation|docs site)\b/u.test(text)) add("artifact:documentation");
+  else if (/\btemplate\b/u.test(text)) add("artifact:template");
+  else if (/\bfirmware\b/u.test(text)) add("artifact:firmware");
+  else if (/\b(?:service|server|api service)\b/u.test(text)) add("artifact:service");
+  else if (categoryId === "science-engineering" && /research|scientific/u.test(text)) add("artifact:research");
+  else add("artifact:application");
+
   if (categoryId === "robotics-automation") {
     if (/\bros2?\b|rclpy|rclcpp|nav2|moveit|ros-gz|ros_gz/u.test(text)) add("ecosystem:ros2");
     if (/gazebo/u.test(text)) add("topic:gazebo");
     if (/manipulation|moveit/u.test(text)) add("topic:manipulation");
   }
   if (categoryId === "game-development") {
-    add("artifact:application");
     add("platform:game");
     if (/pygame/u.test(text)) add("ecosystem:pygame");
     if (/othello|reversi|オセロ|board game/u.test(text)) add("topic:board-game");
   }
   if (categoryId === "visualization-knowledge") {
-    add("artifact:application");
     if (/github/u.test(text)) add("ecosystem:github");
     if (/project[ -]?map|portfolio map|プロジェクトマップ/u.test(text)) add("topic:project-visualization");
-    if (/react|nextjs|svelte|vue|html|css|github pages/u.test(text)) add("platform:web");
   }
-  if (categoryId === "hardware-embedded") {
-    if (/firmware/u.test(text)) add("artifact:firmware");
-    else add("artifact:application");
-    if (/usb|serial|display|screen/u.test(text)) add("topic:device-integration");
-  }
+  if (categoryId === "hardware-embedded" && /usb|serial|display|screen|device/u.test(text)) add("topic:device-integration");
+
+  if (/react|nextjs|next\.js|svelte|vue|browser|web app|github pages/u.test(text)) add("platform:web");
+  if (/desktop app|electron|qt|gtk|windows app|macos app/u.test(text)) add("platform:desktop");
+  if (/mobile app|android|ios|iphone/u.test(text)) add("platform:mobile");
+  if (/\bcli\b|command line/u.test(text)) add("platform:cli");
+  if (/rest api|graphql|api service/u.test(text)) add("platform:api");
+  if (/server|backend service|self hosted service/u.test(text)) add("platform:server");
+  if (/embedded|firmware|microcontroller|arduino|esp32/u.test(text)) add("platform:embedded");
 
   for (const raw of repo.classification?.secondaryTags ?? []) {
     const tag = canonicalFacet(raw);
@@ -143,8 +161,6 @@ export function standardizeRepositoryClassification(repo) {
   if (!category) return { ...repo, classification: undefined };
   const priorConfidence = Number(repo.classification?.confidence ?? 0);
   const rawConfidence = 0.68 + Math.min(0.2, topScore * 0.02) + Math.min(0.1, Math.max(0, topScore - secondScore) * 0.02) + priorConfidence * 0.05;
-  // Reaching this point already passed the standard mapper's independent score+margin gate.
-  // Calibrate accepted deterministic mappings to the unchanged P3B1 >=0.90 contract instead of lowering that contract.
   const confidence = Math.round(Math.max(0.9, Math.min(0.99, rawConfidence)) * 1000) / 1000;
   return {
     ...repo,
