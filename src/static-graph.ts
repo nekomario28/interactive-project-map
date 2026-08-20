@@ -6,6 +6,7 @@ import type {
   GalaxyNode,
   GitHubRepo,
   RepositoryClassification,
+  SemanticEdge,
 } from "./types.ts";
 
 const REPO_NAME_RE = /^[A-Za-z0-9._-]{1,100}$/;
@@ -13,6 +14,7 @@ const CATEGORY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const MAX_STATIC_BYTES = 2_000_000;
 const MAX_REPOSITORIES = 400;
 const MAX_CLASSIFICATION_EVIDENCE = 24;
+const MAX_SEMANTIC_EDGES = 1200;
 const EVIDENCE_SOURCES = new Set<ClassificationEvidenceSource>([
   "name", "description", "topic", "readme", "manifest", "dependency", "fork-source", "embedding", "llm", "override",
 ]);
@@ -98,9 +100,33 @@ function validatedRepositoryUrl(value: unknown, username: string, repoName: stri
   }
 }
 
+function safeSemanticEdges(value: unknown, repositoryIds: Set<string>): SemanticEdge[] {
+  if (!Array.isArray(value)) return [];
+  const byPair = new Map<string, SemanticEdge>();
+  for (const raw of value.slice(0, MAX_SEMANTIC_EDGES * 2)) {
+    if (!raw || typeof raw !== "object") continue;
+    const item = raw as Record<string, unknown>;
+    const source = safeString(item.source, 220);
+    const target = safeString(item.target, 220);
+    const score = item.score;
+    if (item.type !== "semantic" || source === target) continue;
+    if (!repositoryIds.has(source) || !repositoryIds.has(target)) continue;
+    if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 1) continue;
+    const left = source < target ? source : target;
+    const right = source < target ? target : source;
+    const key = `${left}\u0000${right}`;
+    const edge: SemanticEdge = { source: left, target: right, type: "semantic", score: Math.round(score * 1_000_000) / 1_000_000 };
+    const existing = byPair.get(key);
+    if (!existing || edge.score > existing.score) byPair.set(key, edge);
+  }
+  return [...byPair.values()]
+    .sort((a, b) => b.score - a.score || a.source.localeCompare(b.source) || a.target.localeCompare(b.target))
+    .slice(0, MAX_SEMANTIC_EDGES);
+}
+
 export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGraph | null {
   if (!value || typeof value !== "object") return null;
-  const candidate = value as { owner?: unknown; generatedAt?: unknown; nodes?: unknown; classificationVersion?: unknown };
+  const candidate = value as { owner?: unknown; generatedAt?: unknown; nodes?: unknown; classificationVersion?: unknown; semanticEdges?: unknown };
   if (typeof candidate.owner !== "string" || candidate.owner.toLowerCase() !== username.toLowerCase()) return null;
   if (!Array.isArray(candidate.nodes)) return null;
 
@@ -146,6 +172,9 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
     && candidate.classificationVersion <= 100) {
     graph.classificationVersion = candidate.classificationVersion;
   }
+  const repositoryIds = new Set(graph.nodes.filter((node) => node.type === "repository").map((node) => node.id));
+  const semanticEdges = safeSemanticEdges(candidate.semanticEdges, repositoryIds);
+  if (semanticEdges.length) graph.semanticEdges = semanticEdges;
   return graph;
 }
 
