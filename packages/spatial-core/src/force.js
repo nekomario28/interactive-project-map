@@ -9,10 +9,17 @@ export const DEFAULT_FORCE_SETTINGS = Object.freeze({
   cooling: 0.986,
 });
 
+function hintedPosition(raw, fallback) {
+  const x = raw?.positionHint?.x;
+  const y = raw?.positionHint?.y;
+  return Number.isFinite(x) && Number.isFinite(y) ? { x: Number(x), y: Number(y) } : fallback;
+}
+
 export function createForceNodes(rawNodes, options = {}) {
   const nodes = Array.isArray(rawNodes) ? rawNodes : [];
   return nodes.map((raw, index) => {
-    const position = deterministicScatter(raw?.id ?? index, index, nodes.length, options.scatter);
+    const fallback = deterministicScatter(raw?.id ?? index, index, nodes.length, options.scatter);
+    const position = hintedPosition(raw, fallback);
     return { ...raw, x: position.x, y: position.y, vx: 0, vy: 0 };
   });
 }
