@@ -1,1 +1,3 @@
 ros_gz #919 baseline and fixed validation
+run: 2
+rosidl-generator-type-description: explicit
