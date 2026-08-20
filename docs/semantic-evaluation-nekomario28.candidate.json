@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "repositories": {
+    "turing-smart-screen-python-owl": {
+      "categoryId": "hardware-integration"
+    },
+    "lime_tidyup": {
+      "categoryId": "robotics"
+    },
+    "ProjExD_Group10": {
+      "categoryId": "game-development"
+    },
+    "BuyClaimChunks": {
+      "categoryId": "minecraft-modding"
+    },
+    "antifullbright": {
+      "categoryId": "minecraft-modding"
+    },
+    "FTBPublicClaims": {
+      "categoryId": "minecraft-modding"
+    },
+    "recruits": {
+      "categoryId": "minecraft-modding"
+    },
+    "workers": {
+      "categoryId": "minecraft-modding"
+    },
+    "OffHandCombat": {
+      "categoryId": "minecraft-modding"
+    },
+    "sable": {
+      "categoryId": "minecraft-modding"
+    },
+    "interactive-project-map": {
+      "categoryId": "developer-tools"
+    },
+    "ros_gz": {
+      "categoryId": "robotics"
+    }
+  }
+}
