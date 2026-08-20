@@ -1,4 +1,5 @@
 import { buildGraph } from "./graph.ts";
+import { sanitizePortfolioTaxonomy } from "./taxonomy.ts";
 import type {
   ClassificationEvidence,
   ClassificationEvidenceSource,
@@ -126,7 +127,7 @@ function safeSemanticEdges(value: unknown, repositoryIds: Set<string>): Semantic
 
 export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGraph | null {
   if (!value || typeof value !== "object") return null;
-  const candidate = value as { owner?: unknown; generatedAt?: unknown; nodes?: unknown; classificationVersion?: unknown; semanticEdges?: unknown };
+  const candidate = value as { owner?: unknown; generatedAt?: unknown; nodes?: unknown; classificationVersion?: unknown; semanticEdges?: unknown; taxonomy?: unknown };
   if (typeof candidate.owner !== "string" || candidate.owner.toLowerCase() !== username.toLowerCase()) return null;
   if (!Array.isArray(candidate.nodes)) return null;
 
@@ -175,6 +176,8 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
   const repositoryIds = new Set(graph.nodes.filter((node) => node.type === "repository").map((node) => node.id));
   const semanticEdges = safeSemanticEdges(candidate.semanticEdges, repositoryIds);
   if (semanticEdges.length) graph.semanticEdges = semanticEdges;
+  const taxonomy = sanitizePortfolioTaxonomy(candidate.taxonomy);
+  if (taxonomy) graph.taxonomy = taxonomy;
   return graph;
 }
 
