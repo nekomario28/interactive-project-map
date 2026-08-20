@@ -1,5 +1,5 @@
 "use strict";
-/* global canvas, state, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, nodeOpacity, draw */
+/* global canvas, state, searchInput, detailsMeta, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, nodeOpacity, draw */
 
 (() => {
   const style = document.body.dataset.mapStyle;
@@ -52,6 +52,57 @@
     return value === "obsidian" || isGalaxyPresentationStyle(value);
   }
 
+  function cleanSearchString(value, max = 160) {
+    return typeof value === "string" ? value.slice(0, max) : "";
+  }
+
+  // Preserve only the browser-safe taxonomy subset needed for search. The raw
+  // graph stays immutable, and every viewer still owns its primary sanitizer.
+  if (typeof sanitizeGraph === "function") {
+    const baseSearchSanitizeGraph = sanitizeGraph;
+    sanitizeGraph = function searchMetadataAwareSanitizeGraph(value) {
+      const safe = baseSearchSanitizeGraph(value);
+      if (!safe || !value || typeof value !== "object") return safe;
+
+      const rawNodes = new Map(
+        (Array.isArray(value.nodes) ? value.nodes : [])
+          .filter((node) => node && typeof node === "object" && typeof node.id === "string")
+          .slice(0, 520)
+          .map((node) => [node.id, node]),
+      );
+      for (const node of Array.isArray(safe.nodes) ? safe.nodes : []) {
+        if (node?.type !== "repository") continue;
+        const raw = rawNodes.get(node.id);
+        const facets = Array.isArray(raw?.taxonomyAssignment?.secondaryTags)
+          ? raw.taxonomyAssignment.secondaryTags
+              .filter((item) => typeof item === "string")
+              .slice(0, 16)
+              .map((item) => cleanSearchString(item, 120))
+              .filter(Boolean)
+          : [];
+        if (facets.length) node.searchFacets = [...new Set(facets)];
+      }
+
+      const categories = (Array.isArray(value.taxonomy?.categories) ? value.taxonomy.categories : [])
+        .filter((category) => category && typeof category === "object")
+        .slice(0, 80)
+        .map((category) => ({
+          id: cleanSearchString(category.id, 120),
+          label: cleanSearchString(category.label, 120),
+          aliases: Array.isArray(category.aliases)
+            ? category.aliases
+                .filter((item) => typeof item === "string")
+                .slice(0, 24)
+                .map((item) => cleanSearchString(item, 120))
+                .filter(Boolean)
+            : [],
+        }))
+        .filter((category) => category.id && category.label);
+      if (categories.length) safe.searchTaxonomy = { categories };
+      return safe;
+    };
+  }
+
   // Shared search semantics for every interactive preset. The viewer-specific
   // geometry remains untouched; this layer only widens match context so a
   // direct repository hit carries its standard category with it, while a
@@ -75,6 +126,28 @@
     return values.filter(Boolean).join(" ").normalize("NFKC").toLocaleLowerCase("en-US");
   }
 
+  function directMatchReasons(repo, query) {
+    const reasons = [];
+    const add = (reason) => { if (reason && !reasons.includes(reason)) reasons.push(reason); };
+    if (searchText([repo.label]).includes(query)) add("repo name");
+    if (searchText([repo.description]).includes(query)) add("description");
+    if (searchText([repo.language]).includes(query) && repo.language) add(`language:${repo.language}`);
+    for (const topic of Array.isArray(repo.topics) ? repo.topics : []) {
+      const reason = `topic:${topic}`;
+      if (searchText([topic, reason]).includes(query)) add(reason);
+    }
+    for (const facet of Array.isArray(repo.searchFacets) ? repo.searchFacets : []) {
+      if (searchText([facet]).includes(query)) add(facet);
+    }
+    return reasons;
+  }
+
+  function categoryMatches(group, query, taxonomyById) {
+    const id = String(group.id || "").replace(/^group:/, "");
+    const category = taxonomyById.get(id);
+    return searchText([group.label, id, ...(category?.aliases || [])]).includes(query);
+  }
+
   function currentSearchContext() {
     const query = normalizedSearch(state.query);
     const graph = state.graph;
@@ -88,17 +161,25 @@
     const directCategoryIds = new Set();
     const contextCategoryIds = new Set();
     const categoryMemberIds = new Set();
+    const matchReasons = new Map();
     const repositories = graphNodes.filter((node) => node?.type === "repository");
     const groups = graphNodes.filter((node) => node?.type === "group");
+    const taxonomyById = new Map(
+      (Array.isArray(graph?.searchTaxonomy?.categories) ? graph.searchTaxonomy.categories : [])
+        .map((category) => [category.id, category]),
+    );
 
     if (query) {
       for (const repo of repositories) {
-        const text = searchText([repo.label, repo.description, repo.language, ...(repo.topics || [])]);
-        if (text.includes(query)) directRepositoryIds.add(repo.id);
+        const reasons = directMatchReasons(repo, query);
+        if (!reasons.length) continue;
+        directRepositoryIds.add(repo.id);
+        matchReasons.set(repo.id, reasons);
       }
       for (const group of groups) {
-        const text = searchText([group.label, String(group.id || "").replace(/^group:/, "")]);
-        if (text.includes(query)) directCategoryIds.add(group.id);
+        if (!categoryMatches(group, query, taxonomyById)) continue;
+        directCategoryIds.add(group.id);
+        matchReasons.set(group.id, ["category"]);
       }
 
       for (const repo of repositories) {
@@ -135,6 +216,7 @@
       directCategoryIds,
       contextCategoryIds,
       categoryMemberIds,
+      matchReasons,
     };
     return cachedSearchContext;
   }
@@ -157,6 +239,17 @@
   function searchContextMatches(node) {
     const level = searchLevel(node);
     return level !== "none";
+  }
+
+  function searchReasons(nodeOrId) {
+    const id = typeof nodeOrId === "string" ? nodeOrId : nodeOrId?.id;
+    return [...(currentSearchContext().matchReasons.get(id) || [])];
+  }
+
+  function directRepositoryNodes() {
+    const context = currentSearchContext();
+    const nodes = Array.isArray(state.nodes) ? state.nodes : Array.isArray(state.graph?.nodes) ? state.graph.nodes : [];
+    return nodes.filter((node) => node?.type === "repository" && context.directRepositoryIds.has(node.id));
   }
 
   if (typeof matchesQuery === "function") {
@@ -189,6 +282,53 @@
     };
   }
 
+  if (typeof updateDetails === "function") {
+    const baseUpdateDetails = updateDetails;
+    updateDetails = function searchAwareUpdateDetails(node) {
+      baseUpdateDetails(node);
+      if (!node || !state.query || typeof detailsMeta === "undefined" || !detailsMeta) return;
+      const reasons = searchReasons(node);
+      if (!reasons.length) return;
+      const reasonText = `Match: ${reasons.join(" · ")}`;
+      detailsMeta.textContent = detailsMeta.textContent ? `${detailsMeta.textContent} · ${reasonText}` : reasonText;
+    };
+  }
+
+  function navigateDirectSearch(step) {
+    const hits = directRepositoryNodes();
+    if (!hits.length || typeof updateDetails !== "function") return null;
+    const selectedId = state.selected?.id;
+    const current = hits.findIndex((node) => node.id === selectedId);
+    const next = current < 0
+      ? (step > 0 ? 0 : hits.length - 1)
+      : (current + step + hits.length) % hits.length;
+    const target = hits[next];
+    updateDetails(target);
+    if (typeof draw === "function") draw();
+    return target;
+  }
+
+  if (typeof searchInput !== "undefined" && searchInput) {
+    searchInput.addEventListener("input", () => {
+      if (state.selected && typeof updateDetails === "function") updateDetails(state.selected);
+    });
+    searchInput.addEventListener("keydown", (event) => {
+      if (event.isComposing) return;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        navigateDirectSearch(event.key === "ArrowDown" ? 1 : -1);
+        return;
+      }
+      if (event.key !== "Enter") return;
+      const hits = directRepositoryNodes();
+      if (!hits.length) return;
+      event.preventDefault();
+      const target = hits.find((node) => node.id === state.selected?.id) || hits[0];
+      if (state.selected?.id !== target.id && typeof updateDetails === "function") updateDetails(target);
+      if (target.url) window.open(target.url, "_blank", "noopener");
+    });
+  }
+
   window.ProjectMapSearchContext = {
     snapshot() {
       const context = currentSearchContext();
@@ -198,6 +338,7 @@
         directCategoryIds: [...context.directCategoryIds].sort(),
         contextCategoryIds: [...context.contextCategoryIds].sort(),
         categoryMemberIds: [...context.categoryMemberIds].sort(),
+        matchReasons: Object.fromEntries([...context.matchReasons.entries()].sort(([a], [b]) => a.localeCompare(b))),
       };
     },
     level(nodeOrId) {
@@ -211,6 +352,12 @@
       const nodes = Array.isArray(state.graph?.nodes) ? state.graph.nodes : Array.isArray(state.nodes) ? state.nodes : [];
       const node = typeof nodeOrId === "object" && nodeOrId ? nodeOrId : nodes.find((item) => item.id === id);
       return searchContextMatches(node);
+    },
+    reasons(nodeOrId) {
+      return searchReasons(nodeOrId);
+    },
+    directRepositories() {
+      return directRepositoryNodes().map((node) => node.id);
     },
   };
 
