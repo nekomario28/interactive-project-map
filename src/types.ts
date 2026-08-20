@@ -38,6 +38,17 @@ export interface RepositoryClassification {
   evidence: ClassificationEvidence[];
 }
 
+export interface RepositoryTaxonomyAssignment {
+  categoryId: string;
+  categoryLabel: string;
+  secondaryTags: string[];
+  confidence: number;
+  method: "override" | "deterministic" | "semantic";
+  evidence: ClassificationEvidence[];
+  score?: number;
+  margin?: number;
+}
+
 export interface GitHubRepo {
   id: number;
   name: string;
@@ -184,11 +195,18 @@ export interface TaxonomyDiscoveryProvider {
   discover(input: TaxonomyDiscoveryInput): Promise<unknown>;
 }
 
+export interface TaxonomyRepositoryOverride {
+  categoryId: string;
+  secondaryTags?: string[];
+}
+
 export interface TaxonomyOverrideFile {
   version: number;
   forceRediscovery?: boolean;
   /** When present, categories are authoritative and discovery is skipped. */
   categories?: TaxonomyCategory[];
+  /** Repository-name keyed assignment overrides; normalized to lowercase names. */
+  repositories?: Record<string, TaxonomyRepositoryOverride>;
 }
 
 export type TaxonomyResolutionReason =
@@ -226,6 +244,30 @@ export interface TaxonomyResolutionResult {
   error?: string;
 }
 
+export interface TaxonomyAssignmentDiagnostics {
+  documents: number;
+  categories: number;
+  assigned: number;
+  ambiguous: number;
+  overridden: number;
+  deterministic: number;
+  semantic: number;
+  providerId: string;
+  model: string;
+  disabled: boolean;
+  repositoryCacheHits: number;
+  repositoryEmbedded: number;
+  categoryCacheHits: number;
+  categoryEmbedded: number;
+}
+
+export interface TaxonomyAssignmentResult {
+  assignments: Record<string, RepositoryTaxonomyAssignment>;
+  ambiguous: string[];
+  diagnostics: TaxonomyAssignmentDiagnostics;
+  error?: string;
+}
+
 export type GalaxyNodeType = "owner" | "group" | "repository";
 
 export interface GalaxyNode {
@@ -245,6 +287,7 @@ export interface GalaxyNode {
   groupLabel?: string;
   repositoryCount?: number;
   classification?: RepositoryClassification;
+  taxonomyAssignment?: RepositoryTaxonomyAssignment;
 }
 
 export interface GalaxyEdge {
@@ -263,4 +306,5 @@ export interface GalaxyGraph {
   classificationVersion?: number;
   semanticEdges?: SemanticEdge[];
   taxonomy?: PortfolioTaxonomy;
+  taxonomyAssignmentVersion?: number;
 }
