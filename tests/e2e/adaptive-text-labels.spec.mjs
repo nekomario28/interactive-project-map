@@ -79,7 +79,30 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     expect(initial.repoLabels).toBeLessThanOrEqual(64);
     expect(initial.totalLabels).toBeGreaterThan(initial.repoLabels);
     expect(Object.values(initial.anchors).reduce((sum, value) => sum + value, 0)).toBe(initial.totalLabels);
+    expect(initial.typography.categoryFontSize).toBeGreaterThan(initial.typography.repositoryFontSize * 1.3);
+    expect(initial.typography.categoryFontSize).toBeLessThanOrEqual(21);
+    expect(initial.typography.categoryToRepositoryRatio).toBeGreaterThan(1.3);
+    if (style === "galaxy-systems") {
+      expect(initial.typography.categoryCountFontSize).toBeLessThan(initial.typography.categoryFontSize);
+    }
     expect(await page.evaluate(geometrySnapshot())).toEqual(before);
+
+    const hierarchy = await page.evaluate(() => {
+      const originalZoom = state.zoom;
+      state.zoom = 0.80;
+      draw();
+      const far = window.ProjectMapAdaptiveLabels.snapshot().typography;
+      state.zoom = 2.10;
+      draw();
+      const near = window.ProjectMapAdaptiveLabels.snapshot().typography;
+      state.zoom = originalZoom;
+      draw();
+      return { far, near };
+    });
+    expect(hierarchy.far.categoryToRepositoryRatio).toBeGreaterThan(hierarchy.near.categoryToRepositoryRatio);
+    expect(hierarchy.far.categoryToRepositoryRatio).toBeGreaterThan(1.5);
+    expect(hierarchy.near.categoryToRepositoryRatio).toBeGreaterThan(1.3);
+    expect((await page.evaluate(geometrySnapshot())).nodes).toEqual(before.nodes);
 
     await page.locator("#galaxy").screenshot({ path: resolve(`.tmp/playwright-visual/adaptive-labels/${style}-overview.png`) });
 
@@ -95,6 +118,7 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     await expect.poll(() => page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot().viewport.width)).toBe(520);
     const compact = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
     expect(compact.repoBudget).toBeLessThanOrEqual(initial.repoBudget);
+    expect(compact.typography.categoryToRepositoryRatio).toBeGreaterThan(1.3);
     expect((await page.evaluate(geometrySnapshot())).nodes).toEqual(before.nodes);
   });
 }

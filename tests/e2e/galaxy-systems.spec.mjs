@@ -134,8 +134,11 @@ test("Galaxy Systems uses an adaptive repository label budget across zoom levels
   expect(far.adaptive?.active).toBe(true);
   for (const [id, label] of groupDefs) {
     const count = repositories.filter((repo) => repo[1] === id).length;
-    expect(far.labels).toContain(`${label} · ${count}`);
+    expect(far.labels).toContain(label);
+    expect(far.labels).toContain(`· ${count}`);
+    expect(far.labels).not.toContain(`${label} · ${count}`);
   }
+  expect(far.adaptive.typography.categoryCountFontSize).toBeLessThan(far.adaptive.typography.categoryFontSize);
   const farRepos = repositories.filter(([name]) => far.labels.includes(name)).map(([name]) => name);
   expect(farRepos.length).toBeGreaterThan(0);
   expect(far.adaptive.repoLabels).toBe(farRepos.length);
