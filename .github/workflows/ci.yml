@@ -1,23 +1,24 @@
-name: Verify
+name: One-shot branch cleanup
 
 on:
-  push:
-    branches: [main]
   pull_request:
-
-concurrency:
-  group: verify-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  verify:
+  cleanup:
+    if: github.repository == 'nekomario28/interactive-project-map' && github.head_ref == 'maintenance/branch-cleanup-once'
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout cleanup head
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -25,79 +26,8 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Install dependencies
-        run: npm install --ignore-scripts
-
-      - name: Smoke test local project-map action default
-        uses: ./
-        with:
-          github_token: ${{ github.token }}
-          username: ${{ github.repository_owner }}
-          max_repos: "60"
-          forks: "true"
-          archived: "false"
-          output_dir: .tmp/project-map
-
-      - name: Check action outputs
-        run: |
-          test -s .tmp/project-map/galaxy.svg
-          test -s .tmp/project-map/graph.json
-          grep -q "Radial Tree classic map" .tmp/project-map/galaxy.svg
-          grep -q "Radial Tree · Classic" .tmp/project-map/galaxy.svg
-
-      - name: Gate standard taxonomy on reviewed public portfolio
-        run: |
-          node scripts/evaluate-semantic.mjs \
-            --graph .tmp/project-map/graph.json \
-            --expected docs/semantic-evaluation-nekomario28.standard-v1.json \
-            --min-assigned-accuracy 1 \
-            --min-end-to-end-accuracy 1 \
-            --min-coverage 1 \
-            --max-ambiguity-rate 0 \
-            --max-missing-rate 0 \
-            --output .tmp/standard-taxonomy-evaluation.json
-
-      - name: Verify
-        run: npm run verify
-
-      - name: Render twelve-preset comparison
-        run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
-
-      - name: Upload preset comparison
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: preset-comparison
-          path: .tmp/preset-comparison
-          if-no-files-found: error
-          retention-days: 3
-
-  browser-e2e:
-    needs: verify
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --user 1001 --ipc=host
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Install dependencies
-        run: npm install --ignore-scripts
-
-      - name: Chromium browser E2E
-        run: npm run test:e2e
-
-      - name: iPhone WebKit smoke
-        run: npm run test:e2e:webkit
-
-      - name: Upload browser E2E evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-e2e
-          path: |
-            .tmp/playwright-visual
-            .tmp/playwright-report
-            test-results
-          if-no-files-found: warn
-          retention-days: 3
+      - name: Delete verified stale branches and self-remove
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/cleanup-stale-branches-once.mjs
