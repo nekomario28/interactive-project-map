@@ -123,7 +123,7 @@ test("Galaxy Systems uses slow category motion and slower local repository orbit
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-slow.png", fullPage: true });
 });
 
-test("Galaxy Systems uses an adaptive repository label budget across zoom levels", async ({ page }) => {
+test("Galaxy Systems keeps overview labels semantic and progressively discloses repository text", async ({ page }) => {
   await installGraph(page);
   await page.goto("/u/?username=example&style=galaxy-systems");
   await expect(page.locator("#status")).toBeHidden();
@@ -132,6 +132,7 @@ test("Galaxy Systems uses an adaptive repository label budget across zoom levels
   expect(far.mode).toBe("categories");
   expect(far.visible).toHaveLength(0);
   expect(far.adaptive?.active).toBe(true);
+  expect(far.adaptive.mode).toBe("semantic-lod-motion");
   for (const [id, label] of groupDefs) {
     const count = repositories.filter((repo) => repo[1] === id).length;
     expect(far.labels).toContain(label);
@@ -140,15 +141,17 @@ test("Galaxy Systems uses an adaptive repository label budget across zoom levels
   }
   expect(far.adaptive.typography.categoryCountFontSize).toBeLessThan(far.adaptive.typography.categoryFontSize);
   const farRepos = repositories.filter(([name]) => far.labels.includes(name)).map(([name]) => name);
-  expect(farRepos.length).toBeGreaterThan(0);
-  expect(far.adaptive.repoLabels).toBe(farRepos.length);
+  expect(far.adaptive.repoBudget).toBe(0);
+  expect(farRepos).toHaveLength(0);
+  expect(far.adaptive.repoLabels).toBe(0);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-far.png", fullPage: true });
 
   const middle = await canvasLabelsAtZoom(page, 1.50);
   expect(middle.mode).toBe("featured");
   expect(middle.visible).toHaveLength(8);
-  expect(middle.adaptive.repoBudget).toBeGreaterThanOrEqual(far.adaptive.repoBudget);
+  expect(middle.adaptive.repoBudget).toBeGreaterThan(far.adaptive.repoBudget);
   expect(middle.adaptive.repoLabels).toBeGreaterThan(0);
+  expect(middle.adaptive.repoLabels).toBeLessThanOrEqual(middle.adaptive.repoBudget);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-middle.png", fullPage: true });
 
   const near = await canvasLabelsAtZoom(page, 2.10);
