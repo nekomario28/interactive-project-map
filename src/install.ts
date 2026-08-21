@@ -20,7 +20,7 @@ export function normalizeGeneratorRef(value: string | null | undefined): string 
   const normalized = String(value ?? "").trim().toLowerCase();
   if (!normalized || normalized === STABLE_REUSABLE_REF) return STABLE_REUSABLE_REF;
   if (!COMMIT_SHA_RE.test(normalized)) {
-    throw new Error("Invalid generator_ref: expected v1 or a 40-character commit SHA");
+    throw new URIError("Invalid generator_ref: expected v1 or a 40-character commit SHA");
   }
   return normalized;
 }
