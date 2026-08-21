@@ -112,6 +112,8 @@ body[data-map-style="obsidian"] .legend {
 .controls {
   display: flex;
   align-items: end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 7px;
 }
 
@@ -159,6 +161,38 @@ body[data-map-style="obsidian"] .legend {
 
 .toolbar button:hover {
   border-color: var(--muted);
+}
+
+.toolbar button[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+
+.toolbar button[aria-pressed="false"] {
+  opacity: 0.55;
+}
+
+.toolbar button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+#focusControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+#focusControls[hidden] {
+  display: none;
+}
+
+#resultCount {
+  align-self: center;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 .workspace {
