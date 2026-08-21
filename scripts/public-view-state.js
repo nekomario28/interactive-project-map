@@ -47,6 +47,25 @@
     const resultCount = document.getElementById("resultCount");
     if (!statusButtons.length || !motionButton || !activityButton || !shareButton) return;
 
+    function groupControls(label, elements, className) {
+      const first = elements.find(Boolean);
+      if (!first?.parentNode) return null;
+      const group = document.createElement("span");
+      group.className = `control-cluster ${className}`;
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", label);
+      const groupLabel = document.createElement("span");
+      groupLabel.className = "control-cluster-label";
+      groupLabel.textContent = label;
+      first.parentNode.insertBefore(group, first);
+      group.append(groupLabel);
+      for (const element of elements) if (element) group.append(element);
+      return group;
+    }
+
+    groupControls("Repositories", statusButtons, "repository-filters");
+    groupControls("View", [motionButton, activityButton], "view-options");
+
     function parseStatuses(value) {
       if (!value) return new Set(STATUS_VALUES);
       const aliases = { o: "original", f: "fork", a: "archived" };
@@ -71,6 +90,25 @@
     function statusVisible(node) {
       const value = repositoryStatus(node);
       return !value || statuses.has(value);
+    }
+
+    function statusCounts() {
+      const counts = { original: 0, fork: 0, archived: 0 };
+      for (const node of state.graph?.nodes || []) {
+        const value = repositoryStatus(node);
+        if (value) counts[value] += 1;
+      }
+      return counts;
+    }
+
+    function normalizeStatuses(counts) {
+      if (!state.graph) return;
+      const available = STATUS_VALUES.filter((value) => counts[value] > 0);
+      if (!available.length) return;
+      for (const value of STATUS_VALUES) if (counts[value] === 0) statuses.delete(value);
+      if (!available.some((value) => statuses.has(value))) {
+        for (const value of available) statuses.add(value);
+      }
     }
 
     function relationEdges(graph) {
@@ -148,7 +186,9 @@
 
     function syncUrl() {
       const url = new URL(location.href);
-      const defaultStatuses = STATUS_VALUES.every((value) => statuses.has(value));
+      const counts = statusCounts();
+      const defaults = state.graph ? STATUS_VALUES.filter((value) => counts[value] > 0) : STATUS_VALUES;
+      const defaultStatuses = defaults.length > 0 && defaults.every((value) => statuses.has(value)) && statuses.size === defaults.length;
       if (defaultStatuses) url.searchParams.delete("status");
       else url.searchParams.set("status", STATUS_VALUES.filter((value) => statuses.has(value)).join(","));
       if (userMotionOff) url.searchParams.set("motion", "off");
@@ -176,9 +216,22 @@
     }
 
     function updateControls() {
+      const counts = statusCounts();
+      normalizeStatuses(counts);
       for (const button of statusButtons) {
-        const active = statuses.has(button.dataset.statusFilter);
+        const value = button.dataset.statusFilter;
+        const count = counts[value] || 0;
+        const active = statuses.has(value);
+        const label = value === "original" ? "Original" : value === "fork" ? "Fork" : "Archived";
+        button.classList.add("status-chip", `status-${value}`);
+        button.dataset.statusCount = String(count);
+        button.disabled = Boolean(state.graph) && count === 0;
         button.setAttribute("aria-pressed", String(active));
+        button.setAttribute("aria-label", `${label} repositories: ${count}. ${count ? "Toggle visibility." : "None are available in this map."}`);
+        button.textContent = `${label} ${count}`;
+        button.title = count
+          ? `${count} ${label.toLowerCase()} repositories in this map.`
+          : `No ${label.toLowerCase()} repositories are available in this map. Regenerate with them enabled if they were excluded.`;
       }
       const effectiveMotionOff = motionOff();
       motionButton.setAttribute("aria-pressed", String(!effectiveMotionOff));
@@ -199,9 +252,10 @@
       }
       if (resultCount) {
         const visible = visibleRepositories().length;
-        const total = state.nodes.filter((node) => node?.type === "repository" && statusVisible(node)).length;
-        resultCount.textContent = state.query ? `${visible} matches` : `${visible} repos`;
-        resultCount.title = `${visible} visible of ${total} status-visible repositories`;
+        const scopeTotal = state.nodes.filter((node) => node?.type === "repository").length;
+        const statusVisibleCount = state.nodes.filter((node) => node?.type === "repository" && statusVisible(node)).length;
+        resultCount.textContent = state.query ? `${visible} matches · ${statusVisibleCount}/${scopeTotal} repos` : `${statusVisibleCount} / ${scopeTotal} repos`;
+        resultCount.title = `${statusVisibleCount} visible of ${scopeTotal} repositories in the current scope`;
       }
     }
 
@@ -306,7 +360,7 @@
     for (const button of statusButtons) {
       button.addEventListener("click", () => {
         const value = button.dataset.statusFilter;
-        if (!STATUS_VALUES.includes(value)) return;
+        if (!STATUS_VALUES.includes(value) || button.disabled) return;
         if (statuses.has(value)) {
           if (statuses.size === 1) return;
           statuses.delete(value);
@@ -316,6 +370,7 @@
         const root = state.graph?.nodes?.find((node) => node.id === focusRoot);
         if (root && !statusVisible(root)) focusRoot = "";
         if (state.selected && !statusVisible(state.selected) && typeof updateDetails === "function") updateDetails(null);
+        if (state.hovered && !statusVisible(state.hovered)) state.hovered = null;
         if (focusRoot) rebuildForFocus();
         else {
           syncUrl();
@@ -395,6 +450,7 @@
       snapshot() {
         return {
           statuses: STATUS_VALUES.filter((value) => statuses.has(value)),
+          statusCounts: statusCounts(),
           motionOff: motionOff(),
           activity,
           focusRoot: focusRoot || null,
