@@ -3,8 +3,8 @@ import { boolParam, intParam } from "./params.ts";
 import { normalizeUsername } from "./hosted-options.ts";
 
 const CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // actions/checkout v7.0.1
-const UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"; // actions/upload-artifact v7.0.1
 const DOWNLOAD_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"; // actions/download-artifact v8.0.1
+const REUSABLE_REF = "v1";
 
 export interface InstallOptions {
   username: string;
@@ -40,6 +40,7 @@ export function staticAssetUrls(origin: string, options: InstallOptions) {
 
 export function renderInstallWorkflow(options: InstallOptions): string {
   return `name: Update project map
+# Stable generator baseline: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF} ; inner uses: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
 
 on:
   workflow_dispatch:
@@ -51,31 +52,15 @@ permissions:
 
 jobs:
   generate:
-    runs-on: ubuntu-latest
     permissions:
       contents: read
-    steps:
-      - name: Checkout profile repository
-        uses: actions/checkout@${CHECKOUT_SHA} # v7.0.1
-
-      - name: Generate project map
-        uses: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
-        with:
-          github_token: \${{ github.token }}
-          username: \${{ github.repository_owner }}
-          theme: ${options.theme}
-          max_repos: "${options.maxRepos}"
-          forks: "${options.includeForks}"
-          archived: "${options.includeArchived}"
-          output_dir: project-map
-
-      - name: Transfer generated files to publish job
-        uses: actions/upload-artifact@${UPLOAD_SHA} # v7.0.1
-        with:
-          name: project-map-generated
-          path: project-map
-          if-no-files-found: error
-          retention-days: 1
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@${REUSABLE_REF}
+    with:
+      theme: ${options.theme}
+      style: radial
+      max_repos: "${options.maxRepos}"
+      forks: ${options.includeForks}
+      archived: ${options.includeArchived}
 
   publish:
     needs: generate

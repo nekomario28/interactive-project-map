@@ -1,0 +1,57 @@
+name: Generate project map
+
+on:
+  workflow_call:
+    inputs:
+      theme:
+        description: Viewer theme
+        required: true
+        type: string
+      style:
+        description: Project-map style
+        required: true
+        type: string
+      max_repos:
+        description: Maximum repositories to include
+        required: true
+        type: string
+      forks:
+        description: Include fork repositories in generated data
+        required: true
+        type: boolean
+      archived:
+        description: Include archived repositories in generated data
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout profile repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate project map
+        uses: nekomario28/interactive-project-map@caeca4b7b33603109bbadd860a68fdae476c7482
+        with:
+          github_token: ${{ github.token }}
+          username: ${{ github.repository_owner }}
+          theme: ${{ inputs.theme }}
+          style: ${{ inputs.style }}
+          max_repos: ${{ inputs.max_repos }}
+          forks: ${{ inputs.forks }}
+          archived: ${{ inputs.archived }}
+          output_dir: project-map
+
+      - name: Transfer generated files to publish job
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: project-map-generated
+          path: project-map
+          if-no-files-found: error
+          retention-days: 1

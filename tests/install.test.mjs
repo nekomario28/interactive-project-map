@@ -28,7 +28,7 @@ test("static asset URLs use the profile repository default branch and per-user v
   assert.equal(urls.viewer, "https://maps.example/u/octocat?max_repos=80&forks=false&archived=true");
 });
 
-test("generated workflow isolates custom action from write permission and pins it immutably", () => {
+test("generated workflow delegates read-only generation and keeps write publishing local", () => {
   const workflow = renderInstallWorkflow({
     username: "octocat",
     theme: "dark",
@@ -38,13 +38,14 @@ test("generated workflow isolates custom action from write permission and pins i
   });
 
   assert.match(workflow, /generate:\n[\s\S]*permissions:\n      contents: read/);
+  assert.match(workflow, /uses: nekomario28\/interactive-project-map\/\.github\/workflows\/generate-project-map\.yml@v1/);
+  assert.match(workflow, new RegExp(`# Stable generator baseline: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
+  assert.match(workflow, /style: radial/);
+  assert.match(workflow, /max_repos: "100"/);
+  assert.doesNotMatch(workflow, /actions\/upload-artifact@/);
+
   assert.match(workflow, /publish:\n[\s\S]*permissions:\n      actions: read\n      contents: write/);
-  assert.match(workflow, new RegExp(`uses: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
-  assert.doesNotMatch(workflow, /interactive-project-map@v1/);
-  assert.match(workflow, /github_token: \$\{\{ github\.token \}\}/);
-  assert.match(workflow, /username: \$\{\{ github\.repository_owner \}\}/);
   assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
-  assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
   assert.match(workflow, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
   assert.match(workflow, /if git diff --cached --quiet/);
 
