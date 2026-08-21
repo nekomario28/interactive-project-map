@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 import { installOptionsFromUrl, renderInstallWorkflow, staticAssetUrls } from "../src/install.ts";
 
 test("install options preserve generator choices", () => {
@@ -27,7 +28,7 @@ test("static asset URLs use the profile repository default branch and per-user v
   assert.equal(urls.viewer, "https://maps.example/u/octocat?max_repos=80&forks=false&archived=true");
 });
 
-test("generated workflow isolates custom action from write permission", () => {
+test("generated workflow isolates custom action from write permission and pins it immutably", () => {
   const workflow = renderInstallWorkflow({
     username: "octocat",
     theme: "dark",
@@ -38,7 +39,8 @@ test("generated workflow isolates custom action from write permission", () => {
 
   assert.match(workflow, /generate:\n[\s\S]*permissions:\n      contents: read/);
   assert.match(workflow, /publish:\n[\s\S]*permissions:\n      actions: read\n      contents: write/);
-  assert.match(workflow, /uses: nekomario28\/interactive-project-map@v1/);
+  assert.match(workflow, new RegExp(`uses: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
+  assert.doesNotMatch(workflow, /interactive-project-map@v1/);
   assert.match(workflow, /github_token: \$\{\{ github\.token \}\}/);
   assert.match(workflow, /username: \$\{\{ github\.repository_owner \}\}/);
   assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
