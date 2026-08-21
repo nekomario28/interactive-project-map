@@ -1,103 +1,57 @@
-name: Verify
+name: Cleanup finished branches
 
 on:
-  push:
-    branches: [main]
   pull_request:
-
-concurrency:
-  group: verify-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
-  verify:
+  cleanup:
+    if: github.repository == 'nekomario28/interactive-project-map' && github.head_ref == 'maintenance/cleanup-after-100'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Smoke test local project-map action default
-        uses: ./
-        with:
-          github_token: ${{ github.token }}
-          username: ${{ github.repository_owner }}
-          max_repos: "60"
-          forks: "true"
-          archived: "false"
-          output_dir: .tmp/project-map
-
-      - name: Check action outputs
+      - name: Delete only reviewed stale branches, close this PR, and self-remove
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          test -s .tmp/project-map/galaxy.svg
-          test -s .tmp/project-map/graph.json
-          grep -q "Radial Tree classic map" .tmp/project-map/galaxy.svg
-          grep -q "Radial Tree · Classic" .tmp/project-map/galaxy.svg
-
-      - name: Gate standard taxonomy on reviewed public portfolio
-        run: |
-          node scripts/evaluate-semantic.mjs \
-            --graph .tmp/project-map/graph.json \
-            --expected docs/semantic-evaluation-nekomario28.standard-v1.json \
-            --min-assigned-accuracy 1 \
-            --min-end-to-end-accuracy 1 \
-            --min-coverage 1 \
-            --max-ambiguity-rate 0 \
-            --max-missing-rate 0 \
-            --output .tmp/standard-taxonomy-evaluation.json
-
-      - name: Verify
-        run: npm run verify
-
-      - name: Render twelve-preset comparison
-        run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
-
-      - name: Upload preset comparison
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: preset-comparison
-          path: .tmp/preset-comparison
-          if-no-files-found: error
-          retention-days: 3
-
-  browser-e2e:
-    needs: verify
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --user 1001 --ipc=host
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Chromium browser E2E
-        run: npm run test:e2e
-
-      - name: iPhone WebKit smoke
-        run: npm run test:e2e:webkit
-
-      - name: Upload browser E2E evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-e2e
-          path: |
-            .tmp/playwright-visual
-            .tmp/playwright-report
-            test-results
-          if-no-files-found: warn
-          retention-days: 3
+          set -euo pipefail
+          api="https://api.github.com/repos/$REPO"
+          branches=(
+            chore/npm-maintenance-current-main
+            chore/pin-pages-actions
+            feat-view-controls-focus
+            fix/pin-reusable-caller-sha
+            maintenance/verify-pages-deploy
+            onboarding-reusable-workflow
+            refactor/view-state-scope
+            tmp-unused
+            viewer-state-focus-main
+          )
+          for branch in "${branches[@]}"; do
+            case "$branch" in
+              main|v1|maintenance/cleanup-after-100) echo "refusing protected branch $branch" >&2; exit 1 ;;
+            esac
+            echo "delete $branch"
+            curl --fail-with-body --silent --show-error -L -X DELETE \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$api/git/refs/heads/$branch"
+          done
+          curl --fail-with-body --silent --show-error -L -X PATCH \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api/pulls/$PR_NUMBER" \
+            -d '{"state":"closed"}' >/dev/null
+          curl --fail-with-body --silent --show-error -L -X DELETE \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api/git/refs/heads/maintenance/cleanup-after-100"
