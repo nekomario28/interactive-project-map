@@ -238,17 +238,17 @@ async function jsonBody(response: Response): Promise<Record<string, unknown>> {
   return parsed as Record<string, unknown>;
 }
 
-async function exchangeOAuthCode(code: string, env: GitHubAppInstallerEnv, fetchImpl: typeof fetch): Promise<string> {
+async function exchangeOAuthCode(code: string, callbackUrl: string, env: GitHubAppInstallerEnv, fetchImpl: typeof fetch): Promise<string> {
   const clientId = requireConfiguredValue(env.GITHUB_APP_CLIENT_ID, "GITHUB_APP_CLIENT_ID");
   const clientSecret = requireConfiguredValue(env.GITHUB_APP_CLIENT_SECRET, "GITHUB_APP_CLIENT_SECRET");
-  const body = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code });
+  const body = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: callbackUrl });
   const response = await fetchImpl(OAUTH_TOKEN_URL, {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
   const data = await jsonBody(response);
-  if (!response.ok || typeof data.access_token !== "string" || !data.access_token) {
+  if (!response.ok || typeof data.access_token !== "string" || !data.access_token.startsWith("ghu_")) {
     throw new InstallerError("GitHub user authorization failed", 403, "oauth_exchange_failed");
   }
   return data.access_token;
@@ -377,7 +377,8 @@ export async function completeGitHubAppInstall(request: Request, env: GitHubAppI
   if (!code || !state) throw new InstallerError("GitHub authorization callback is missing code or state", 400, "invalid_callback");
   const payload = await verifyInstallState(state, requireStateSecret(env.INSTALL_STATE_SECRET), readCookie(request.headers.get("Cookie"), INSTALL_NONCE_COOKIE), runtime);
   const fetchImpl = runtime.fetchImpl ?? fetch;
-  const token = await exchangeOAuthCode(code, env, fetchImpl);
+  const callbackUrl = new URL("/api/install/callback", url.origin).toString();
+  const token = await exchangeOAuthCode(code, callbackUrl, env, fetchImpl);
   const repository = await findProfileRepository(fetchImpl, token, payload.username);
   const workflowBody = `${MANAGED_WORKFLOW_MARKER}\n${renderInstallWorkflow(payload)}`;
   const workflow = await upsertManagedWorkflow(fetchImpl, token, repository, workflowBody);
