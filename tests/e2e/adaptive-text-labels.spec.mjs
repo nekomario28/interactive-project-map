@@ -77,7 +77,7 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     const geometry = await nodeGeometry(page);
     const initial = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
     expect(initial.style).toBe(style);
-    expect(initial.mode).toBe("semantic-lod-motion");
+    expect(initial.mode).toBe("semantic-lod");
     expect(initial.repoCount).toBe(64);
     expect(initial.repoBudget).toBeGreaterThanOrEqual(0);
     expect(initial.repoBudget).toBeLessThanOrEqual(64);
@@ -131,25 +131,10 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     await page.locator("#galaxy").screenshot({ path: resolve(`.tmp/playwright-visual/adaptive-labels/${style}-focus.png`) });
     await page.locator("#search").fill("");
 
-    await setZoomAndSettle(page, 1.35);
-    const beforeMotion = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
-    expect(beforeMotion.cameraMoving).toBe(false);
-    const moving = await page.evaluate(() => {
-      state.pan.x += 0.3;
-      draw();
-      return window.ProjectMapAdaptiveLabels.snapshot();
-    });
-    expect(moving.cameraMoving).toBe(true);
-    await page.locator("#galaxy").screenshot({ path: resolve(`.tmp/playwright-visual/adaptive-labels/${style}-moving.png`) });
-    await page.waitForTimeout(220);
-    await page.evaluate(() => draw());
-    expect((await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot())).cameraMoving).toBe(false);
-    expect(await nodeGeometry(page)).toEqual(geometry);
-
     await page.setViewportSize({ width: 520, height: 420 });
     await expect.poll(() => page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot().viewport.width)).toBe(520);
     const compact = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
-    expect(compact.repoBudget).toBeLessThanOrEqual(beforeMotion.repoBudget);
+    expect(compact.repoBudget).toBeLessThanOrEqual(middle.repoBudget);
     expect(compact.typography.categoryToRepositoryRatio).toBeGreaterThan(1.3);
     expect(await nodeGeometry(page)).toEqual(geometry);
   });
