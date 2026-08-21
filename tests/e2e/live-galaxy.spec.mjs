@@ -50,6 +50,14 @@ async function capturedCanvasLabels(page) {
   });
 }
 
+async function obsidianPositions(page) {
+  return page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
+}
+
+function maximumDisplacement(before, after) {
+  return Math.max(...Object.keys(before).map((id) => Math.hypot(after[id].x - before[id].x, after[id].y - before[id].y)));
+}
+
 test.beforeAll(async () => { await mkdir(".tmp/playwright-visual/dark", { recursive: true }); });
 
 test("Galaxy Classic keeps normal-size repository labels visible while orbiting globally", async ({ page }) => {
@@ -70,25 +78,50 @@ test("Galaxy Classic keeps normal-size repository labels visible while orbiting 
   expect(failures).toEqual([]);
 });
 
-test("Obsidian is pre-settled and still at rest before interaction", async ({ page }) => {
-  await installGraph(page); const failures = browserErrors(page);
+test("Obsidian opens as a live force spawn and cools instead of appearing pre-settled", async ({ page }) => {
+  await installGraph(page);
+  const failures = browserErrors(page);
   await page.goto("/u/?username=example&style=obsidian");
-  await expect(page.locator("#status")).toBeHidden(); await expect(page.locator("#subtitle")).toContainText("settled at rest"); await page.waitForTimeout(250);
-  const before = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
-  await page.waitForTimeout(900);
-  const after = await page.evaluate(() => Object.fromEntries(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }])));
-  const displacement = Math.max(...Object.keys(before).map((id) => Math.hypot(after[id].x - before[id].x, after[id].y - before[id].y)));
-  expect(displacement).toBeLessThan(0.05); expect(failures).toEqual([]);
+  await expect(page.locator("#status")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.ProjectMapObsidianRuntime?.snapshot().active)).toBe(true);
+  await expect(page.locator("#subtitle")).toContainText("live settling");
+
+  const initialRuntime = await page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot());
+  const before = await obsidianPositions(page);
+  expect(initialRuntime.phase).toBe("settling");
+  expect(initialRuntime.alpha).toBeGreaterThan(0.5);
+  expect(initialRuntime.spawnCount).toBe(1);
+  expect(initialRuntime.nodeCount).toBe(graph.nodes.length);
+  expect(initialRuntime.edgeCount).toBe(graph.edges.length);
+
+  await page.waitForTimeout(650);
+  const after = await obsidianPositions(page);
+  const laterRuntime = await page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot());
+  expect(maximumDisplacement(before, after)).toBeGreaterThan(1);
+  expect(laterRuntime.alpha).toBeLessThan(initialRuntime.alpha);
+  expect(laterRuntime.alpha).toBeGreaterThan(0);
+  await page.screenshot({ path: ".tmp/playwright-visual/dark/obsidian-live-spawn.png", fullPage: true });
+  expect(failures).toEqual([]);
 });
 
 test("Obsidian drag reheats the whole graph with no release anchor", async ({ page }) => {
   await installGraph(page); const failures = browserErrors(page);
-  await page.goto("/u/?username=example&style=obsidian"); await expect(page.locator("#status")).toBeHidden(); await page.waitForTimeout(300);
+  await page.goto("/u/?username=example&style=obsidian"); await expect(page.locator("#status")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.ProjectMapObsidianRuntime?.snapshot().active)).toBe(true);
+  await page.waitForTimeout(1600);
+  const runtimeBefore = await page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot());
+  expect(runtimeBefore.alpha).toBeLessThan(0.55);
   const before = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one"), neighbor = state.byId.get("group:robotics"), distant = state.byId.get("repository:ai-three"), point = worldToScreen(dragged.x, dragged.y), rect = document.getElementById("galaxy").getBoundingClientRect();
     return { screen: { x: rect.left + point.x, y: rect.top + point.y }, dragged: { x: dragged.x, y: dragged.y }, neighbor: { x: neighbor.x, y: neighbor.y }, distant: { x: distant.x, y: distant.y } };
   });
-  await page.mouse.move(before.screen.x, before.screen.y); await page.mouse.down(); await page.mouse.move(before.screen.x + 110, before.screen.y + 60, { steps: 12 }); await page.waitForTimeout(260); await page.mouse.up(); await page.waitForTimeout(850);
+  await page.mouse.move(before.screen.x, before.screen.y); await page.mouse.down(); await page.mouse.move(before.screen.x + 110, before.screen.y + 60, { steps: 12 });
+  const duringDrag = await page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot());
+  expect(duringDrag.phase).toBe("dragging");
+  expect(duringDrag.alpha).toBeGreaterThan(runtimeBefore.alpha);
+  expect(duringDrag.alpha).toBeGreaterThan(0.52);
+  expect(duringDrag.draggingId).toBe("repository:robot-one");
+  await page.waitForTimeout(260); await page.mouse.up(); await page.waitForTimeout(850);
   const after = await page.evaluate(() => {
     const dragged = state.byId.get("repository:robot-one"), neighbor = state.byId.get("group:robotics"), distant = state.byId.get("repository:ai-three");
     return { dragged: { x: dragged.x, y: dragged.y }, neighbor: { x: neighbor.x, y: neighbor.y }, distant: { x: distant.x, y: distant.y } };

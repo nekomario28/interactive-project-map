@@ -2,9 +2,9 @@
 /* global state, canvas, hash, clamp, hitTest, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
 
 (() => {
-  // Rebuild Obsidian from the original profile-map behavior boundary:
-  // one global force system with four concepts only: center, repel, link, distance.
-  // Node types affect appearance, not their physical anchoring or force law.
+  // Obsidian-like runtime: one global force system with four user-facing
+  // concepts only: center, repel, link, and distance. Node types affect
+  // appearance, not physical anchoring or force law.
   const settings = {
     center: 0.0026,
     repel: 9200,
@@ -13,11 +13,15 @@
     damping: 0.855,
     cooling: 0.986,
   };
+  const SPAWN_ALPHA = 0.6;
+  const REDUCED_MOTION_SETTLE_STEPS = 120;
 
   const runtime = {
     nodesRef: null,
     edges: [],
     alpha: 0,
+    pendingSpawnAlpha: 0,
+    spawnCount: 0,
     dragging: null,
     panning: false,
     pointerStart: null,
@@ -28,18 +32,15 @@
     pinchConsumed: false,
   };
 
+  function reducedMotionRequested() {
+    return typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
   function physicsRadius(node) {
     if (node.type === "owner") return 19;
     if (node.type === "group") return 15;
     return 9 + Math.min(3, Number(node.stars || 0));
-  }
-
-  function deterministicScatter(raw, index, count) {
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    const jitter = (hash(String(raw.id)) % 1000) / 1000;
-    const angle = index * golden + jitter * 0.7;
-    const radius = 42 + Math.sqrt((index + 1) / Math.max(1, count)) * 265;
-    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
   }
 
   function linkedEdges(graph, nodes) {
@@ -47,6 +48,23 @@
     return graph.edges
       .map((edge) => ({ ...edge, sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) }))
       .filter((edge) => edge.sourceNode && edge.targetNode);
+  }
+
+  function compactSpawnPoint(node, index, count) {
+    // Obsidian's worker has been observed creating unseen nodes at one origin.
+    // That detail causes violent first frames and makes moving nodes difficult
+    // to click. Graph Spawn demonstrates that supplying initial positions is a
+    // supported way to retain Obsidian's own live force lifecycle without that
+    // initialization defect. Keep the seed deterministic and scale its area
+    // roughly with node count so future repository growth does not collapse
+    // initial screen-space density.
+    const safeCount = Math.max(1, count);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const jitter = (hash(`${node.id}:obsidian-spawn`) % 1000) / 1000;
+    const angle = index * golden + jitter * 0.55;
+    const radialSpan = clamp(60 * Math.sqrt(safeCount), 120, 520);
+    const radius = 36 + Math.sqrt((index + 1) / safeCount) * radialSpan;
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
   }
 
   function applyForceStep(nodes, edges, alpha, dragging = null) {
@@ -83,7 +101,7 @@
     }
 
     // Structural and relation edges are drawn differently, but physics treats
-    // every edge equally, matching the original Obsidian-like baseline.
+    // every edge equally, matching the Obsidian-style global force baseline.
     for (const edge of edges) {
       const a = edge.sourceNode;
       const b = edge.targetNode;
@@ -119,22 +137,36 @@
     }
   }
 
-  buildObsidianLayout = function originalObsidianForceLayout(graph) {
-    const rawNodes = graph.nodes;
-    const nodes = rawNodes.map((raw, index) => {
-      const position = deterministicScatter(raw, index, rawNodes.length);
-      return { ...raw, x: position.x, y: position.y, vx: 0, vy: 0 };
+  buildObsidianLayout = function liveObsidianForceSpawn(graph) {
+    const count = graph.nodes.length;
+    const nodes = graph.nodes.map((raw, index) => {
+      const point = compactSpawnPoint(raw, index, count);
+      return { ...raw, x: point.x, y: point.y, vx: 0, vy: 0 };
     });
-    const edges = linkedEdges(graph, nodes);
-    let alpha = 1;
-    for (let stepIndex = 0; stepIndex < 120; stepIndex += 1) {
-      applyForceStep(nodes, edges, alpha);
-      alpha *= settings.cooling;
+
+    if (reducedMotionRequested()) {
+      // Keep reduced-motion users out of an automatic force animation. Build a
+      // stable snapshot with the same force law, then expose it at rest. This is
+      // intentionally a reduced-motion-only path; normal viewing still opens at
+      // SPAWN_ALPHA and visibly settles on screen.
+      const edges = linkedEdges(graph, nodes);
+      let alpha = SPAWN_ALPHA;
+      for (let stepIndex = 0; stepIndex < REDUCED_MOTION_SETTLE_STEPS; stepIndex += 1) {
+        applyForceStep(nodes, edges, alpha);
+        alpha *= settings.cooling;
+      }
+      for (const node of nodes) {
+        node.vx = 0;
+        node.vy = 0;
+      }
+      runtime.pendingSpawnAlpha = 0;
+      return nodes;
     }
-    for (const node of nodes) {
-      node.vx = 0;
-      node.vy = 0;
-    }
+
+    // Preserve a real live spawn instead of hiding convergence in a synchronous
+    // pre-settle. 0.6 is also the alpha used by Graph Spawn when handing seeded
+    // positions back to Obsidian's own worker.
+    runtime.pendingSpawnAlpha = SPAWN_ALPHA;
     return nodes;
   };
 
@@ -143,7 +175,9 @@
     if (runtime.nodesRef === state.nodes) return true;
     runtime.nodesRef = state.nodes;
     runtime.edges = linkedEdges({ edges: state.edges }, state.nodes);
-    runtime.alpha = 0;
+    runtime.alpha = Math.max(0, runtime.pendingSpawnAlpha);
+    runtime.pendingSpawnAlpha = 0;
+    runtime.spawnCount += 1;
     runtime.dragging = null;
     runtime.panning = false;
     runtime.pointerStart = null;
@@ -152,19 +186,27 @@
     runtime.pinchDistance = 0;
     runtime.pinchMidpoint = null;
     runtime.pinchConsumed = false;
-    for (const node of state.nodes) {
-      node.vx = 0;
-      node.vy = 0;
-    }
     return true;
   }
 
   function reheat(value = 0.55) {
+    if (reducedMotionRequested()) {
+      runtime.alpha = 0;
+      return;
+    }
     runtime.alpha = Math.max(runtime.alpha, value);
   }
 
   function step() {
     if (!ensureRuntime()) return false;
+    if (reducedMotionRequested()) {
+      runtime.alpha = 0;
+      for (const node of state.nodes) {
+        node.vx = 0;
+        node.vy = 0;
+      }
+      return false;
+    }
     if (runtime.alpha < 0.001 && !runtime.dragging) {
       runtime.alpha = 0;
       for (const node of state.nodes) {
@@ -176,6 +218,11 @@
     applyForceStep(state.nodes, runtime.edges, Math.max(runtime.alpha, runtime.dragging ? 0.55 : 0), runtime.dragging);
     runtime.alpha *= runtime.dragging ? 0.992 : settings.cooling;
     return true;
+  }
+
+  function phase() {
+    if (runtime.dragging) return "dragging";
+    return runtime.alpha >= 0.001 ? "settling" : "settled";
   }
 
   function canvasPoint(event) {
@@ -312,18 +359,37 @@
     if (runtime.pointers.has(event.pointerId)) finishPointer(event, true);
   }, { capture: true });
 
+  window.ProjectMapObsidianRuntime = Object.freeze({
+    snapshot() {
+      return {
+        active: state.style === "obsidian" && runtime.nodesRef === state.nodes,
+        phase: phase(),
+        alpha: runtime.alpha,
+        spawnCount: runtime.spawnCount,
+        nodeCount: state.style === "obsidian" ? state.nodes.length : 0,
+        edgeCount: state.style === "obsidian" ? runtime.edges.length : 0,
+        draggingId: runtime.dragging?.id || null,
+        panning: runtime.panning,
+      };
+    },
+  });
+
   window.addEventListener("DOMContentLoaded", () => {
     function frame() {
       if (state.style === "obsidian") {
-        if (subtitle) subtitle.textContent = "Obsidian Graph-like · global center / repel / link physics · settled at rest";
+        const currentPhase = phase();
+        if (subtitle) subtitle.textContent = `Obsidian Graph-like · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
         if (!state.selected && detailsDescription) {
-          detailsDescription.textContent = "Obsidian-style force graph: every node follows the same center, repel, link and distance forces. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
+          detailsDescription.textContent = reducedMotionRequested()
+            ? "Obsidian-style force graph: reduced-motion mode presents a stable force-layout snapshot. Dragging moves the selected node without automatically reheating the whole graph."
+            : "Obsidian-style force graph: nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
         }
         if (step()) draw();
       } else {
         runtime.nodesRef = null;
         runtime.edges = [];
         runtime.alpha = 0;
+        runtime.pendingSpawnAlpha = 0;
         clearGesture();
       }
       requestAnimationFrame(frame);
