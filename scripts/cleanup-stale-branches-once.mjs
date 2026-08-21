@@ -1,8 +1,9 @@
 const repository = process.env.GITHUB_REPOSITORY;
 const token = process.env.GITHUB_TOKEN;
+const prNumber = process.env.PR_NUMBER;
 
-if (!repository || !token) {
-  throw new Error("GITHUB_REPOSITORY and GITHUB_TOKEN are required");
+if (!repository || !token || !prNumber) {
+  throw new Error("GITHUB_REPOSITORY, GITHUB_TOKEN, and PR_NUMBER are required");
 }
 
 const keep = new Set([
@@ -69,6 +70,7 @@ for (const branch of targets) {
 const headers = {
   Accept: "application/vnd.github+json",
   Authorization: `Bearer ${token}`,
+  "Content-Type": "application/json",
   "X-GitHub-Api-Version": "2022-11-28",
   "User-Agent": "interactive-project-map-branch-cleanup",
 };
@@ -89,6 +91,19 @@ async function deleteBranch(branch) {
   throw new Error(`failed to delete ${branch}: ${response.status} ${body.slice(0, 300)}`);
 }
 
+async function closeCleanupPr() {
+  const response = await fetch(`https://api.github.com/repos/${repository}/pulls/${encodeURIComponent(prNumber)}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ state: "closed" }),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`failed to close cleanup PR: ${response.status} ${body.slice(0, 300)}`);
+  }
+  console.log(`closed cleanup PR #${prNumber}`);
+}
+
 let deleted = 0;
 let absent = 0;
 for (const branch of targets.filter((branch) => branch !== "maintenance/branch-cleanup-once")) {
@@ -98,4 +113,5 @@ for (const branch of targets.filter((branch) => branch !== "maintenance/branch-c
 }
 
 console.log(`cleanup summary before self-delete: deleted=${deleted} absent=${absent}`);
+await closeCleanupPr();
 await deleteBranch("maintenance/branch-cleanup-once");
