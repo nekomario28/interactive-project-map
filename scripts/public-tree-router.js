@@ -1,5 +1,5 @@
 "use strict";
-/* global state, rebuildLayout, draw, worldToScreen, nodeRadius, palette, ctx */
+/* global state, rebuildLayout, draw, worldToScreen, nodeRadius, palette, ctx, queueMicrotask */
 
 (() => {
   const visibleStyles = new Set(["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
