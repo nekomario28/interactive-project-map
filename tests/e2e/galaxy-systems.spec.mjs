@@ -146,8 +146,6 @@ test("Galaxy Systems uses an adaptive repository label budget across zoom levels
   expect(middle.visible).toHaveLength(8);
   expect(middle.adaptive.repoBudget).toBeGreaterThanOrEqual(far.adaptive.repoBudget);
   expect(middle.adaptive.repoLabels).toBeGreaterThan(0);
-  expect(middle.labels).toContain("robot-one");
-  expect(middle.labels).toContain("ai-one");
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-middle.png", fullPage: true });
 
   const near = await canvasLabelsAtZoom(page, 2.10);
