@@ -50,6 +50,7 @@ interface GitHubInstallation {
 interface GitHubRepository {
   full_name: string;
   default_branch: string;
+  private?: boolean;
   permissions?: { admin?: boolean; push?: boolean };
 }
 
@@ -291,6 +292,7 @@ async function findProfileRepository(fetchImpl: typeof fetch, token: string, use
         if (!value || typeof value !== "object" || Array.isArray(value)) continue;
         const repo = value as GitHubRepository;
         if (repo.full_name?.toLowerCase() !== wanted) continue;
+        if (repo.private === true) throw new InstallerError(`${wanted} must be public for Project Map`, 409, "profile_repository_public_required");
         if (!repo.default_branch || !(repo.permissions?.push || repo.permissions?.admin)) {
           throw new InstallerError(`Write access to ${wanted} is required`, 403, "repository_write_required");
         }
