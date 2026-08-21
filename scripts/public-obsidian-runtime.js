@@ -1,10 +1,10 @@
 "use strict";
-/* global state, canvas, hash, clamp, hitTest, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
+/* global state, canvas, hash, clamp, hitTest, nodeRadius, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
 
 (() => {
   // Obsidian-like runtime: one global force system with four user-facing
-  // concepts only: center, repel, link, and distance. Node types affect
-  // appearance, not physical anchoring or force law.
+  // concepts only: center, repel, link, and distance. Repository importance is
+  // derived from visible graph connectivity rather than GitHub popularity.
   const settings = {
     center: 0.0026,
     repel: 9200,
@@ -15,6 +15,8 @@
   };
   const SPAWN_ALPHA = 0.6;
   const REDUCED_MOTION_SETTLE_STEPS = 120;
+  const baseNodeRadius = nodeRadius;
+  const repositoryDegrees = new Map();
 
   const runtime = {
     nodesRef: null,
@@ -37,10 +39,39 @@
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
+  function indexRepositoryDegrees(graph) {
+    repositoryDegrees.clear();
+    const nodes = Array.isArray(graph?.nodes) ? graph.nodes : [];
+    const repositoryIds = new Set(nodes.filter((node) => node?.type === "repository").map((node) => node.id));
+    const neighbors = new Map([...repositoryIds].map((id) => [id, new Set()]));
+    for (const edge of Array.isArray(graph?.edges) ? graph.edges : []) {
+      const source = typeof edge?.source === "string" ? edge.source : "";
+      const target = typeof edge?.target === "string" ? edge.target : "";
+      if (!source || !target || source === target) continue;
+      if (repositoryIds.has(source)) neighbors.get(source).add(target);
+      if (repositoryIds.has(target)) neighbors.get(target).add(source);
+    }
+    for (const [id, adjacent] of neighbors) repositoryDegrees.set(id, adjacent.size);
+  }
+
+  function repositoryDegree(node) {
+    if (!node || node.type !== "repository") return 0;
+    return Math.max(0, Number(repositoryDegrees.get(node.id) || 0));
+  }
+
+  function repositoryVisualRadius(node) {
+    return clamp(5.5 + Math.log2(repositoryDegree(node) + 1) * 1.65, 5.5, 12);
+  }
+
+  nodeRadius = function obsidianDegreeNodeRadius(node) {
+    if (state.style === "obsidian" && node?.type === "repository") return repositoryVisualRadius(node);
+    return baseNodeRadius(node);
+  };
+
   function physicsRadius(node) {
     if (node.type === "owner") return 19;
     if (node.type === "group") return 15;
-    return 9 + Math.min(3, Number(node.stars || 0));
+    return repositoryVisualRadius(node) + 3.5;
   }
 
   function linkedEdges(graph, nodes) {
@@ -138,6 +169,7 @@
   }
 
   buildObsidianLayout = function liveObsidianForceSpawn(graph) {
+    indexRepositoryDegrees(graph);
     const count = graph.nodes.length;
     const nodes = graph.nodes.map((raw, index) => {
       const point = compactSpawnPoint(raw, index, count);
@@ -368,6 +400,7 @@
         spawnCount: runtime.spawnCount,
         nodeCount: state.style === "obsidian" ? state.nodes.length : 0,
         edgeCount: state.style === "obsidian" ? runtime.edges.length : 0,
+        repositoryDegrees: Object.fromEntries([...repositoryDegrees.entries()].sort(([a], [b]) => a.localeCompare(b))),
         draggingId: runtime.dragging?.id || null,
         panning: runtime.panning,
       };
@@ -378,11 +411,11 @@
     function frame() {
       if (state.style === "obsidian") {
         const currentPhase = phase();
-        if (subtitle) subtitle.textContent = `Obsidian Graph-like · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
+        if (subtitle) subtitle.textContent = `Obsidian Graph-like · connectivity-weighted nodes · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
         if (!state.selected && detailsDescription) {
           detailsDescription.textContent = reducedMotionRequested()
-            ? "Obsidian-style force graph: reduced-motion mode presents a stable force-layout snapshot. Dragging moves the selected node without automatically reheating the whole graph."
-            : "Obsidian-style force graph: nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
+            ? "Obsidian-style force graph: repository size follows visible link connectivity; reduced-motion mode presents a stable force-layout snapshot without automatic reheating."
+            : "Obsidian-style force graph: repository size follows visible link connectivity. Nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system; dragging reheats the graph.";
         }
         if (step()) draw();
       } else {
