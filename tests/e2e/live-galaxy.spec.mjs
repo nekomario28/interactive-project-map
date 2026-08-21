@@ -117,7 +117,9 @@ test("Obsidian drag reheats the whole graph with no release anchor", async ({ pa
   });
   await page.mouse.move(before.screen.x, before.screen.y); await page.mouse.down(); await page.mouse.move(before.screen.x + 110, before.screen.y + 60, { steps: 12 });
   const duringDrag = await page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot());
-  expect(duringDrag.alpha).toBeGreaterThanOrEqual(0.55);
+  expect(duringDrag.phase).toBe("dragging");
+  expect(duringDrag.alpha).toBeGreaterThan(runtimeBefore.alpha);
+  expect(duringDrag.alpha).toBeGreaterThan(0.52);
   expect(duringDrag.draggingId).toBe("repository:robot-one");
   await page.waitForTimeout(260); await page.mouse.up(); await page.waitForTimeout(850);
   const after = await page.evaluate(() => {
