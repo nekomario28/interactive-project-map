@@ -1,5 +1,5 @@
 "use strict";
-/* global state, canvas, hash, clamp, hitTest, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
+/* global state, canvas, hash, clamp, hitTest, worldToScreen, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
 
 (() => {
   // Obsidian-like runtime: one global force system with four user-facing
@@ -14,6 +14,7 @@
     cooling: 0.986,
   };
   const SPAWN_ALPHA = 0.6;
+  const baseHitTest = hitTest;
 
   const runtime = {
     nodesRef: null,
@@ -186,6 +187,28 @@
     if (runtime.dragging) return "dragging";
     return runtime.alpha >= 0.001 ? "settling" : "settled";
   }
+
+  // A live force graph can move a few screen pixels between the frame a user
+  // targets and pointer-down. Keep the normal hit-test authoritative, then add
+  // only a small settling-time screen-space grace area. It shrinks with alpha
+  // and disappears entirely once the simulation settles, so static behavior is
+  // exactly the original viewer contract.
+  hitTest = function obsidianSettlingHitTest(screenX, screenY) {
+    const exact = baseHitTest(screenX, screenY);
+    if (exact || state.style !== "obsidian" || runtime.alpha < 0.001) return exact;
+    const tolerance = clamp(10 + runtime.alpha * 10, 10, 16);
+    let nearest = null;
+    let nearestDistance = tolerance;
+    for (const node of state.nodes) {
+      const point = worldToScreen(node.x, node.y);
+      const distance = Math.hypot(point.x - screenX, point.y - screenY);
+      if (distance <= nearestDistance) {
+        nearest = node;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
+  };
 
   function canvasPoint(event) {
     const rect = canvas.getBoundingClientRect();
