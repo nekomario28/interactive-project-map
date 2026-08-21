@@ -4,7 +4,8 @@
   const visibleStyles = new Set(["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const dedicatedStyles = new Set(["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const styleSelect = document.getElementById("style");
-  const params = new URL(location.href).searchParams;
+  const currentUrl = new URL(location.href);
+  const params = currentUrl.searchParams;
 
   function normalize(style) {
     if (style === "galaxy") return "galaxy-systems";
@@ -15,6 +16,10 @@
     const normalized = normalize(style);
     const route = dedicatedStyles.has(normalized) ? `../${normalized}/` : "../u/";
     const url = new URL(route, location.href);
+    for (const [key, value] of currentUrl.searchParams) {
+      if (key === "style" || key === "username") continue;
+      url.searchParams.append(key, value);
+    }
     if (username) url.searchParams.set("username", username);
     url.searchParams.set("style", normalized);
     return url;
