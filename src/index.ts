@@ -9,6 +9,7 @@ import {
 } from "./github-app-installer.ts";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
 import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
+import { enforceInstallerRateLimit } from "./installer-rate-limit.ts";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
@@ -72,12 +73,14 @@ export default {
       }
 
       if (url.pathname === "/api/install/start") {
+        await enforceInstallerRateLimit(request, env, "start");
         const options = installOptionsFromUrl(url);
         return await beginGitHubAppInstall(request, env, options);
       }
 
       if (url.pathname === "/api/install/callback") {
         try {
+          await enforceInstallerRateLimit(request, env, "callback");
           const result = await completeGitHubAppInstall(request, env);
           return new Response(null, {
             status: 303,
