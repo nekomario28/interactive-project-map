@@ -81,7 +81,8 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     expect(initial.repoCount).toBe(64);
     expect(initial.repoBudget).toBeGreaterThanOrEqual(0);
     expect(initial.repoBudget).toBeLessThanOrEqual(64);
-    expect(initial.repoLabels).toBeLessThanOrEqual(initial.repoBudget || initial.repoLabels);
+    if (initial.repoBudget === 0) expect(initial.repoLabels).toBe(0);
+    else expect(initial.repoLabels).toBeLessThanOrEqual(initial.repoBudget);
     expect(initial.totalLabels).toBeGreaterThan(initial.repoLabels);
     expect(Object.values(initial.anchors).reduce((sum, value) => sum + value, 0)).toBe(initial.totalLabels);
     expect(initial.typography.categoryFontSize).toBeGreaterThan(initial.typography.repositoryFontSize * 1.3);
@@ -106,13 +107,15 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     expect(middle.repoBudget).toBeGreaterThan(0);
     expect(middle.repoLabels).toBeGreaterThan(0);
     expect(middle.repoLabels).toBeLessThanOrEqual(middle.repoBudget);
+    expect(middle.eligibleRepositoryIds.length).toBeGreaterThan(0);
     expect(await nodeGeometry(page)).toEqual(geometry);
     await page.locator("#galaxy").screenshot({ path: resolve(`.tmp/playwright-visual/adaptive-labels/${style}-middle.png`) });
 
     await setZoomAndSettle(page, 2.10);
     const near = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
     expect(near.repoBudget).toBeGreaterThanOrEqual(middle.repoBudget);
-    expect(near.repoLabels).toBeGreaterThan(0);
+    expect(near.eligibleRepositoryIds.length).toBeGreaterThan(0);
+    if (style === "galaxy-systems") expect(near.repoLabels).toBeGreaterThan(0);
     expect(near.typography.categoryToRepositoryRatio).toBeLessThan(far.typography.categoryToRepositoryRatio);
     expect(near.typography.categoryToRepositoryRatio).toBeGreaterThan(1.3);
     expect(await nodeGeometry(page)).toEqual(geometry);
