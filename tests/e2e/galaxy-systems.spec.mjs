@@ -78,7 +78,12 @@ async function canvasLabelsAtZoom(page, zoom) {
     } finally {
       ctx.fillText = original;
     }
-    return { labels: seen, mode: window.GalaxySystemsLabelLOD.mode(), visible: window.GalaxySystemsLabelLOD.visibleRepositoryIds() };
+    return {
+      labels: seen,
+      mode: window.GalaxySystemsLabelLOD.mode(),
+      visible: window.GalaxySystemsLabelLOD.visibleRepositoryIds(),
+      adaptive: window.ProjectMapAdaptiveLabels?.snapshot() || null,
+    };
   }, zoom);
 }
 
@@ -118,7 +123,7 @@ test("Galaxy Systems uses slow category motion and slower local repository orbit
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-slow.png", fullPage: true });
 });
 
-test("Galaxy Systems reveals repository names progressively as the user zooms in", async ({ page }) => {
+test("Galaxy Systems uses an adaptive repository label budget across zoom levels", async ({ page }) => {
   await installGraph(page);
   await page.goto("/u/?username=example&style=galaxy-systems");
   await expect(page.locator("#status")).toBeHidden();
@@ -126,28 +131,28 @@ test("Galaxy Systems reveals repository names progressively as the user zooms in
   const far = await canvasLabelsAtZoom(page, 0.80);
   expect(far.mode).toBe("categories");
   expect(far.visible).toHaveLength(0);
+  expect(far.adaptive?.active).toBe(true);
   for (const [id, label] of groupDefs) {
     const count = repositories.filter((repo) => repo[1] === id).length;
     expect(far.labels).toContain(`${label} · ${count}`);
   }
-  for (const [name] of repositories) expect(far.labels).not.toContain(name);
+  const farRepos = repositories.filter(([name]) => far.labels.includes(name)).map(([name]) => name);
+  expect(farRepos.length).toBeGreaterThan(0);
+  expect(far.adaptive.repoLabels).toBe(farRepos.length);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-far.png", fullPage: true });
 
   const middle = await canvasLabelsAtZoom(page, 1.50);
   expect(middle.mode).toBe("featured");
   expect(middle.visible).toHaveLength(8);
-  expect(middle.labels).toContain("robot-one");
-  expect(middle.labels).toContain("robot-two");
-  expect(middle.labels).not.toContain("robot-three");
-  expect(middle.labels).toContain("ai-one");
-  expect(middle.labels).toContain("ai-two");
-  expect(middle.labels).not.toContain("ai-three");
+  expect(middle.adaptive.repoBudget).toBeGreaterThanOrEqual(far.adaptive.repoBudget);
+  expect(middle.adaptive.repoLabels).toBeGreaterThan(0);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-middle.png", fullPage: true });
 
   const near = await canvasLabelsAtZoom(page, 2.10);
   expect(near.mode).toBe("all");
   expect(near.visible).toHaveLength(repositories.length);
-  for (const [name] of repositories) expect(near.labels).toContain(name);
+  expect(near.adaptive.repoBudget).toBeGreaterThanOrEqual(middle.adaptive.repoBudget);
+  expect(near.adaptive.repoLabels).toBeGreaterThan(0);
   await page.screenshot({ path: ".tmp/playwright-visual/dark/galaxy-systems-labels-near.png", fullPage: true });
 
   const selectedVisible = await page.evaluate(() => {
