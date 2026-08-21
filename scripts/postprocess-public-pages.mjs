@@ -41,6 +41,7 @@ const HYBRID_SCRIPT = '<script src="../galaxy-hybrid-runtime.js" defer></script>
 const OBSIDIAN_SCRIPT = '<script src="../obsidian-runtime.js" defer></script>';
 const EDGE_SCRIPT = '<script src="../galaxy-edge-policy.js" defer></script>';
 const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
+const OBSIDIAN_HOVER_SCRIPT = '<script src="../obsidian-hover.js" defer></script>';
 const ADAPTIVE_LABELS_SCRIPT = '<script src="../adaptive-labels.js" defer></script>';
 const SEARCH_EMPHASIS_SCRIPT = '<script src="../search-emphasis.js" defer></script>';
 const DEDICATED_VIEWERS = new Map([
@@ -136,15 +137,16 @@ async function emitGalaxyRuntimes(outputDir) {
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
   if (!html.includes(VIEWER_SCRIPT)) throw new Error("Shared viewer script tag not found");
-  const runtimeBlock = [COMMON_SCRIPT, CLASSIC_SCRIPT, SYSTEMS_SCRIPT, HYBRID_SCRIPT, OBSIDIAN_SCRIPT, EDGE_SCRIPT, POLISH_SCRIPT, ADAPTIVE_LABELS_SCRIPT].join("\n");
+  const runtimeBlock = [COMMON_SCRIPT, CLASSIC_SCRIPT, SYSTEMS_SCRIPT, HYBRID_SCRIPT, OBSIDIAN_SCRIPT, EDGE_SCRIPT, POLISH_SCRIPT, OBSIDIAN_HOVER_SCRIPT, ADAPTIVE_LABELS_SCRIPT].join("\n");
   const next = html.includes(COMMON_SCRIPT) ? html : html.replace(VIEWER_SCRIPT, `${VIEWER_SCRIPT}\n${runtimeBlock}`);
-  if (!next.includes(CLASSIC_SCRIPT) || !next.includes(SYSTEMS_SCRIPT) || !next.includes(HYBRID_SCRIPT) || !next.includes(ADAPTIVE_LABELS_SCRIPT)) throw new Error("Could not attach Galaxy family runtimes");
+  if (!next.includes(CLASSIC_SCRIPT) || !next.includes(SYSTEMS_SCRIPT) || !next.includes(HYBRID_SCRIPT) || !next.includes(OBSIDIAN_HOVER_SCRIPT) || !next.includes(ADAPTIVE_LABELS_SCRIPT)) throw new Error("Could not attach Galaxy family runtimes");
   if (next !== html) await writeFile(htmlPath, next);
 }
 
 async function emitObsidianRuntime(outputDir) {
-  const sourcePath = resolve(process.cwd(), "scripts/public-obsidian-runtime.js");
-  await copyFile(sourcePath, join(outputDir, "obsidian-runtime.js"));
+  const sourceDir = resolve(process.cwd(), "scripts");
+  await copyFile(join(sourceDir, "public-obsidian-runtime.js"), join(outputDir, "obsidian-runtime.js"));
+  await copyFile(join(sourceDir, "public-obsidian-hover.js"), join(outputDir, "obsidian-hover.js"));
 }
 
 async function emitInteractionPolish(outputDir) {
