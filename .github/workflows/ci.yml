@@ -33,26 +33,13 @@ jobs:
           from pathlib import Path
           path = Path('scripts/public-view-state.js')
           source = path.read_text()
-          block = '''      searchInput.addEventListener("keydown", (event) => {
-            if (!state.query || !["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
-            const ids = window.ProjectMapSearchContext?.directRepositories?.() || [];
-            const hits = ids.map((id) => state.byId.get(id)).filter((node) => node && statusVisible(node));
-            if (!hits.length) return;
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            const current = hits.findIndex((node) => node.id === state.selected?.id);
-            const step = event.key === "ArrowUp" ? -1 : 1;
-            const index = event.key === "Enter"
-              ? (current >= 0 ? current : 0)
-              : current < 0 ? (step > 0 ? 0 : hits.length - 1) : (current + step + hits.length) % hits.length;
-            const target = hits[index];
-            if (typeof updateDetails === "function") updateDetails(target);
-            if (event.key === "Enter" && target.url) window.open(target.url, "_blank", "noopener");
-          }, true);
-          '''
-          if source.count(block) != 1:
-              raise SystemExit('expected exactly one search keydown block')
-          path.write_text(source.replace(block, ''))
+          start_marker = '      searchInput.addEventListener("keydown", (event) => {'
+          end_marker = '      }, true);\n'
+          if source.count(start_marker) != 1:
+              raise SystemExit('expected exactly one search keydown start marker')
+          start = source.index(start_marker)
+          end = source.index(end_marker, start) + len(end_marker)
+          path.write_text(source[:start] + source[end:])
           PY
           git checkout origin/main -- .github/workflows/ci.yml
           git add -- scripts/public-view-state.js .github/workflows/ci.yml
