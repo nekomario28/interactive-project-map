@@ -250,7 +250,7 @@ The Worker implementation remains available for API/fallback experiments but is 
 <a href="https://github.com/nekomario28"><img src="https://github.com/nekomario28.png?size=96" width="72" alt="@nekomario28"/><br/><sub><b>Yuu / nekomario28</b></sub></a><br/><sub>Maintainer · implementation</sub>
 </td>
 <td align="center" width="180">
-<br/><strong>SYUN</strong><br/><sub>Project contributor</sub>
+<a href="https://github.com/syun88"><img src="https://github.com/syun88.png?size=96" width="72" alt="@syun88"/><br/><sub><b>SYUN / syun88</b></sub></a><br/><sub>Project contributor</sub>
 </td>
 </tr>
 </table>
