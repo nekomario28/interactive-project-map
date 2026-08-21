@@ -14,7 +14,7 @@ on:
       max_repos:
         description: Maximum repositories to include
         required: true
-        type: number
+        type: string
       forks:
         description: Include fork repositories in generated data
         required: true
