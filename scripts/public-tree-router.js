@@ -5,6 +5,7 @@
   const visibleStyles = new Set(["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const dedicatedStyles = new Set(["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const statusValues = ["original", "fork", "archived"];
+  const statusLabels = { original: "Original", fork: "Fork", archived: "Archived" };
   const styleSelect = document.getElementById("style");
   const currentUrl = new URL(location.href);
   const params = currentUrl.searchParams;
@@ -53,6 +54,7 @@
 
     const baseRebuildLayout = rebuildLayout;
     const baseDraw = draw;
+    const knownStatusCounts = { original: 0, fork: 0, archived: 0 };
     let rebuilding = false;
     let lastStatusKey = "";
     let lastActivityOverlayCount = 0;
@@ -61,7 +63,7 @@
       const value = window.ProjectMapViewState?.snapshot?.();
       return value && typeof value === "object"
         ? value
-        : { statuses: statusValues, activity: false };
+        : { statuses: statusValues, activity: false, query: "" };
     }
 
     function repositoryStatus(node) {
@@ -70,9 +72,51 @@
       return node.fork === true ? "fork" : "original";
     }
 
+    function rememberStatusCounts(graph) {
+      const counts = { original: 0, fork: 0, archived: 0 };
+      for (const node of graph?.nodes || []) {
+        const status = repositoryStatus(node);
+        if (status) counts[status] += 1;
+      }
+      for (const value of statusValues) knownStatusCounts[value] = Math.max(knownStatusCounts[value], counts[value]);
+    }
+
     function statusKey() {
       const statuses = Array.isArray(viewSnapshot().statuses) ? viewSnapshot().statuses : statusValues;
       return statusValues.filter((value) => statuses.includes(value)).join(",");
+    }
+
+    function refreshControlSummary() {
+      const snapshot = viewSnapshot();
+      const active = new Set(Array.isArray(snapshot.statuses) ? snapshot.statuses : statusValues);
+      const buttons = [...document.querySelectorAll("[data-status-filter]")];
+      for (const button of buttons) {
+        const value = button.dataset.statusFilter;
+        if (!statusValues.includes(value)) continue;
+        const count = knownStatusCounts[value];
+        const label = statusLabels[value];
+        button.dataset.statusCount = String(count);
+        button.disabled = count === 0;
+        button.setAttribute("aria-pressed", String(active.has(value)));
+        button.setAttribute("aria-label", `${label} repositories: ${count}. ${count ? "Toggle visibility." : "None are available in this map."}`);
+        button.textContent = `${label} ${count}`;
+        button.title = count
+          ? `${count} ${label.toLowerCase()} repositories in this map.`
+          : `No ${label.toLowerCase()} repositories are available in this map. Regenerate with them enabled if they were excluded.`;
+      }
+
+      const resultCount = document.getElementById("resultCount");
+      if (!resultCount) return;
+      const visibleRepositories = (state.nodes || []).filter((node) => node?.type === "repository");
+      const total = statusValues.reduce((sum, value) => sum + knownStatusCounts[value], 0);
+      const query = String(snapshot.query || "");
+      if (query) {
+        const matches = visibleRepositories.filter((node) => window.ProjectMapSearchContext?.matches?.(node) ?? true).length;
+        resultCount.textContent = `${matches} matches · ${visibleRepositories.length}/${total} repos`;
+      } else {
+        resultCount.textContent = `${visibleRepositories.length} / ${total} repos`;
+      }
+      resultCount.title = `${visibleRepositories.length} visible of ${total} repositories in this map`;
     }
 
     function projectStatuses(graph) {
@@ -124,6 +168,7 @@
         return;
       }
       const sourceGraph = state.graph;
+      rememberStatusCounts(sourceGraph);
       const projected = projectStatuses(sourceGraph);
       rebuilding = true;
       lastStatusKey = statusKey();
@@ -133,6 +178,7 @@
       } finally {
         state.graph = sourceGraph;
         rebuilding = false;
+        queueMicrotask(refreshControlSummary);
       }
     };
 
@@ -166,6 +212,7 @@
     draw = function projectedDraw(...args) {
       const nextStatusKey = statusKey();
       if (!rebuilding && state.graph && nextStatusKey !== lastStatusKey) {
+        rememberStatusCounts(state.graph);
         lastStatusKey = nextStatusKey;
         rebuildLayout({ fit: false });
         return;
@@ -181,6 +228,7 @@
           statuses: lastStatusKey ? lastStatusKey.split(",") : [],
           repositories: state.nodes?.filter((node) => node?.type === "repository").map((node) => node.id) || [],
           activityOverlayCount: lastActivityOverlayCount,
+          statusCounts: { ...knownStatusCounts },
         };
       },
     });
