@@ -3,6 +3,7 @@ import { TAU, background, clamp, displayLabel, esc, groupMembers, hash, legend, 
 
 const ANIMATED_LIMIT = 80;
 const REPRESENTATIVE_LIMIT = 2;
+const STATIC_LABEL_STROKE_WIDTH = 1.4;
 
 function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -50,7 +51,7 @@ function compareRepresentativePriority(a, b) {
 }
 
 function categoryMarkup(group, colors) {
-  return `<g data-static-category="${esc(group.id)}">${nodeMarkup(group, 0, 0, colors)}</g>`;
+  return `<g data-static-category="${esc(group.id)}">${nodeMarkup(group, 0, 0, colors, { labelStrokeWidth: STATIC_LABEL_STROKE_WIDTH })}</g>`;
 }
 
 function representativeLabelMarkup(repo, phase, colors) {
@@ -60,7 +61,7 @@ function representativeLabelMarkup(repo, phase, colors) {
   const x = dx * distance;
   const y = dy * distance + 3;
   const anchor = dx > 0.3 ? "start" : dx < -0.3 ? "end" : "middle";
-  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${colors.fg}" font-size="9.2" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="2.3" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
+  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${colors.fg}" font-size="9.2" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
 }
 
 function denseFallback(graph, theme, width, height) {
