@@ -73,12 +73,18 @@ function addHomeStylePreset(html) {
   return html.replace("style-src 'unsafe-inline'", "style-src 'self' 'unsafe-inline'").replace("</head>", '<link rel="stylesheet" href="./presets.css">\n</head>').replace(marker, `${stylePresetGallery()}\n${marker}\n${control}`);
 }
 
+function exploratoryControls() {
+  return '<button type="button" data-status-filter="original" aria-pressed="true">Original</button><button type="button" data-status-filter="fork" aria-pressed="true">Fork</button><button type="button" data-status-filter="archived" aria-pressed="true">Archived</button><button id="motionToggle" type="button" aria-pressed="true">Motion On</button><button id="activityToggle" type="button" aria-pressed="false">Activity</button><span id="focusControls" hidden><span id="focusLabel">Focus</span><button type="button" data-focus-depth="1" aria-pressed="true">1</button><button type="button" data-focus-depth="2" aria-pressed="false">2</button><button type="button" data-focus-depth="3" aria-pressed="false">3</button><button id="exitFocus" type="button">Exit focus</button></span><button id="shareView" type="button">Copy link</button><span id="resultCount" aria-live="polite"></span>';
+}
+
 function viewerBody({ mode = "graph" } = {}) {
   const activeStyle = mode === "graph" ? "galaxy-systems" : mode;
   const scripts = DEDICATED_STYLES.includes(mode)
     ? `<script src="../tree-nav.js" defer></script>\n<script src="../${mode}-viewer.js" defer></script>`
-    : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>';
-  return `<body data-map-style="${activeStyle}"><main class="app"><header class="toolbar"><div class="title-block"><h1 id="title">Interactive Project Map</h1><p id="subtitle">Loading project graph…</p></div><div class="controls"><label class="field"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off"></label><label class="field"><span>Style</span><select id="style">${styleOptions(activeStyle)}</select></label><button id="fit" type="button">Fit</button><button id="reset" type="button">Reset</button></div></header><section class="workspace"><canvas id="galaxy" tabindex="0" aria-label="Interactive project graph"></canvas><aside id="details" class="details" aria-live="polite"><button id="detailsClose" class="details-close" type="button" aria-label="Close project details">×</button><h2 id="detailsTitle">Project map</h2><p id="detailsDescription">Select a project to inspect it.</p><dl id="detailsMeta" hidden></dl><a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a></aside><div class="legend"><span><i class="owner"></i>Owner</span><span><i class="group"></i>Category</span><span><i class="original"></i>Original</span><span><i class="fork"></i>Fork</span><span><i class="archived"></i>Archived</span><span><i class="relation"></i>Relation</span></div><div id="tip" class="tip" role="status" hidden></div><div id="status" class="status">Loading map…</div><div id="error" class="error" role="alert"><div id="errorText">Could not load project map.</div><a id="setup" href="../">Generate setup</a></div></section><footer><span>Static graph from the profile repository · no shared GitHub REST request while viewing</span><span class="shortcuts"><kbd>0</kbd> Fit · <kbd>+</kbd>/<kbd>−</kbd> Zoom · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span></footer></main>${scripts}</body>`;
+    : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>\n<script src="../view-state.js" defer></script>';
+  const extraControls = mode === "graph" ? exploratoryControls() : "";
+  const focusAction = mode === "graph" ? '<a id="focusButton" href="#" hidden>Focus</a>' : "";
+  return `<body data-map-style="${activeStyle}"><main class="app"><header class="toolbar"><div class="title-block"><h1 id="title">Interactive Project Map</h1><p id="subtitle">Loading project graph…</p></div><div class="controls"><label class="field"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off"></label><label class="field"><span>Style</span><select id="style">${styleOptions(activeStyle)}</select></label><button id="fit" type="button">Fit</button><button id="reset" type="button">Reset</button>${extraControls}</div></header><section class="workspace"><canvas id="galaxy" tabindex="0" aria-label="Interactive project graph"></canvas><aside id="details" class="details" aria-live="polite"><button id="detailsClose" class="details-close" type="button" aria-label="Close project details">×</button><h2 id="detailsTitle">Project map</h2><p id="detailsDescription">Select a project to inspect it.</p><dl id="detailsMeta" hidden></dl><a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>${focusAction}</aside><div class="legend"><span><i class="owner"></i>Owner</span><span><i class="group"></i>Category</span><span><i class="original"></i>Original</span><span><i class="fork"></i>Fork</span><span><i class="archived"></i>Archived</span><span><i class="relation"></i>Relation</span></div><div id="tip" class="tip" role="status" hidden></div><div id="status" class="status">Loading map…</div><div id="error" class="error" role="alert"><div id="errorText">Could not load project map.</div><a id="setup" href="../">Generate setup</a></div></section><footer><span>Static graph from the profile repository · no shared GitHub REST request while viewing</span><span class="shortcuts"><kbd>0</kbd> Fit · <kbd>+</kbd>/<kbd>−</kbd> Zoom · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span></footer></main>${scripts}</body>`;
 }
 
 function enhanceViewer(html, options = {}) {
@@ -93,6 +99,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   const sourceDir = join(process.cwd(), "scripts");
   const homeScript = (await readFile(join(sourceDir, "public-home.js"), "utf8")).replaceAll("__PROJECT_MAP_ACTION_REF__", PUBLIC_ACTION_REF);
   const viewerScript = await readFile(join(sourceDir, "public-viewer.js"), "utf8");
+  const viewStateScript = await readFile(join(sourceDir, "public-view-state.js"), "utf8");
   const routerScript = await readFile(join(sourceDir, "public-tree-router.js"), "utf8");
   const navScript = await readFile(join(sourceDir, "public-tree-nav.js"), "utf8");
   const viewerCss = await readFile(join(sourceDir, "public-viewer.css"), "utf8");
@@ -104,6 +111,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await writeFile(join(outputDir, "app.js"), homeScript);
   await writeFile(join(outputDir, "presets.css"), presetCss);
   await writeFile(join(outputDir, "viewer.js"), viewerScript);
+  await writeFile(join(outputDir, "view-state.js"), viewStateScript);
   await writeFile(join(outputDir, "tree-router.js"), routerScript);
   await writeFile(join(outputDir, "tree-nav.js"), navScript);
   await writeFile(join(outputDir, "viewer.css"), viewerCss);
