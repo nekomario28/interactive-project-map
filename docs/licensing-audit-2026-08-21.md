@@ -21,6 +21,12 @@ Therefore the current Pages output does **not** bundle Playwright, ESLint, HTML-
 
 If a future distribution starts shipping `node_modules`, a prebuilt toolchain image, or copied third-party source, re-run this audit because notice obligations will change.
 
+### README-derived classification data
+
+Repository README excerpts are fetched as bounded classification input, but the current generated `GalaxyGraph` does **not** serialize `readmeExcerpt`. Deterministic README evidence stores only the matched Project Map taxonomy alias (for example `ros2` or `minecraft`), not the source README sentence. The public node retains ordinary GitHub metadata such as repository description/topics and the derived classification result.
+
+This avoids redistributing substantial third-party README text through `graph.json`. Preserve this boundary: if a future feature starts publishing README excerpts, generated summaries containing long source quotations, or source snippets, perform a separate copyright/content audit first.
+
 ## Direct development dependencies
 
 Current root direct dev dependencies and their upstream license families:
@@ -104,6 +110,7 @@ Research citations/credits should remain even where legally optional; they impro
 
 - **No identified copyleft contamination in shipped code.**
 - **No identified bundled third-party runtime library.**
+- **No identified redistribution of raw README excerpts in generated graph output.**
 - **No current need to relicense the repository away from MIT.**
 - **Low trademark risk**, provided `Obsidian-like` remains clearly descriptive/non-affiliated and no protected brand assets are used.
 - **One metadata/ownership item to confirm:** whether `SYUN` is the intended copyright-holder text.
@@ -117,4 +124,5 @@ For every external implementation considered for direct reuse:
 2. record whether reuse is `dependency`, `copied/adapted code`, or `concept only`;
 3. preserve required notices for copied permissive code;
 4. reject or isolate copyleft/source-available code unless compatibility is intentionally accepted;
-5. prefer project-native reimplementation when the useful idea is small and doing so avoids unnecessary dependency/notice complexity.
+5. preserve the current rule that bounded source text used for classification is not automatically republished;
+6. prefer project-native reimplementation when the useful idea is small and doing so avoids unnecessary dependency/notice complexity.
