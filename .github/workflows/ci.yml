@@ -13,51 +13,6 @@ permissions:
   contents: read
 
 jobs:
-  pin-reusable-callers-once:
-    if: github.repository == 'nekomario28/interactive-project-map' && github.head_ref == 'fix/pin-reusable-caller-sha'
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout PR head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Pin generated reusable workflow callers and restore CI
-        shell: bash
-        env:
-          REUSABLE_SHA: 151b9cabd5968cdfb602115fc440795c14f88745
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          sha = os.environ['REUSABLE_SHA']
-          replacements = {
-              Path('src/install.ts'): [('const REUSABLE_REF = "v1";', f'const REUSABLE_REF = "{sha}";')],
-              Path('scripts/public-home.js'): [("const PROJECT_MAP_REUSABLE_REF='v1';", f"const PROJECT_MAP_REUSABLE_REF='{sha}';")],
-              Path('scripts/validate-pages.mjs'): [('generate-project-map.yml@v1', f'generate-project-map.yml@{sha}')],
-              Path('tests/install.test.mjs'): [('generate-project-map\\.yml@v1', f'generate-project-map\\.yml@{sha}')],
-          }
-          for path, pairs in replacements.items():
-              source = path.read_text()
-              for old, new in pairs:
-                  if source.count(old) != 1:
-                      raise SystemExit(f'{path}: expected exactly one {old!r}')
-                  source = source.replace(old, new)
-              path.write_text(source)
-          PY
-          ! grep -R --line-number --fixed-strings 'generate-project-map.yml@v1' src scripts tests
-          git checkout origin/main -- .github/workflows/ci.yml
-          git add -- src/install.ts scripts/public-home.js scripts/validate-pages.mjs tests/install.test.mjs .github/workflows/ci.yml
-          git diff --cached --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "fix: pin reusable workflow callers immutably"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
-
   verify:
     runs-on: ubuntu-latest
     steps:
