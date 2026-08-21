@@ -240,6 +240,52 @@ CI also invokes the local `action.yml` **without a `style` input** and confirms 
 
 The Worker implementation remains available for API/fallback experiments but is not required by the recommended GitHub Pages flow.
 
+## Contributors & credits
+
+### Project contributors
+
+<table>
+<tr>
+<td align="center" width="180">
+<a href="https://github.com/nekomario28"><img src="https://github.com/nekomario28.png?size=96" width="72" alt="@nekomario28"/><br/><sub><b>Yuu / nekomario28</b></sub></a><br/><sub>Maintainer · implementation</sub>
+</td>
+<td align="center" width="180">
+<br/><strong>SYUN</strong><br/><sub>Project contributor</sub>
+</td>
+</tr>
+</table>
+
+GitHub's automatic **Contributors** view remains commit-authorship-driven. The credits below acknowledge projects and people whose public work informed design decisions; they are **not** presented as Git co-authors or bundled dependencies.
+
+<details>
+<summary><b>Research & upstream credits</b></summary>
+
+<br/>
+<table>
+<tr>
+<td align="center" valign="top" width="25%"><a href="https://github.com/tjqscott/obsidian-graph-spawn"><img src="https://github.com/tjqscott.png?size=96" width="64" alt="tjqscott"/><br/><sub><b>Graph Spawn</b></sub></a><br/><sub>spawn lifecycle · MIT</sub></td>
+<td align="center" valign="top" width="25%"><a href="https://github.com/Sanqui/obsidian-persistent-graph"><img src="https://github.com/Sanqui.png?size=96" width="64" alt="Sanqui"/><br/><sub><b>Persistent Graph</b></sub></a><br/><sub>simulation lifecycle · MIT</sub></td>
+<td align="center" valign="top" width="25%"><a href="https://github.com/CalfMoon/node-factor"><img src="https://github.com/CalfMoon.png?size=96" width="64" alt="CalfMoon"/><br/><sub><b>Node Factor</b></sub></a><br/><sub>connectivity sizing · MIT</sub></td>
+<td align="center" valign="top" width="25%"><a href="https://github.com/d3/d3-force"><img src="https://github.com/d3.png?size=96" width="64" alt="d3"/><br/><sub><b>d3-force</b></sub></a><br/><sub>force behavior reference · ISC</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top"><a href="https://github.com/jacomyal/sigma.js"><img src="https://github.com/jacomyal.png?size=96" width="64" alt="jacomyal"/><br/><sub><b>Sigma.js</b></sub></a><br/><sub>label density / LOD · MIT</sub></td>
+<td align="center" valign="top"><a href="https://github.com/microsoft/msagljs"><img src="https://github.com/microsoft.png?size=96" width="64" alt="Microsoft"/><br/><sub><b>MSAGLJS</b></sub></a><br/><sub>semantic zoom · MIT</sub></td>
+<td align="center" valign="top"><a href="https://github.com/cytoscape/cytoscape.js"><img src="https://github.com/cytoscape.png?size=96" width="64" alt="Cytoscape"/><br/><sub><b>Cytoscape.js</b></sub></a><br/><sub>label visibility threshold · MIT</sub></td>
+<td align="center" valign="top"><a href="https://github.com/maplibre/maplibre-gl-js"><img src="https://github.com/maplibre.png?size=96" width="64" alt="MapLibre"/><br/><sub><b>MapLibre GL JS</b></sub></a><br/><sub>scale / collision policy · BSD-3-Clause</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top"><a href="https://github.com/Stellarium/stellarium"><img src="https://github.com/Stellarium.png?size=96" width="64" alt="Stellarium"/><br/><sub><b>Stellarium</b></sub></a><br/><sub>FOV label disclosure · GPL-2.0 concept only</sub></td>
+<td align="center" valign="top"><a href="https://github.com/kenforthewin/atomic"><img src="https://github.com/kenforthewin.png?size=96" width="64" alt="kenforthewin"/><br/><sub><b>Atomic</b></sub></a><br/><sub>semantic-unit model · MIT</sub></td>
+<td align="center" valign="top"><a href="https://github.com/juanceresa/sift-kg"><img src="https://github.com/juanceresa.png?size=96" width="64" alt="juanceresa"/><br/><sub><b>sift-kg</b></sub></a><br/><sub>schema discovery · MIT</sub></td>
+<td align="center" valign="top"><a href="https://github.com/microsoft/graphrag"><img src="https://github.com/microsoft.png?size=96" width="64" alt="Microsoft"/><br/><sub><b>GraphRAG</b></sub></a><br/><sub>hierarchical community reference · MIT</sub></td>
+</tr>
+</table>
+
+Detailed adoption and licensing boundaries are recorded in [`docs/licensing-audit-2026-08-21.md`](docs/licensing-audit-2026-08-21.md) and the corresponding research notes. Reference-only projects are credited here even when attribution is not legally required.
+
+</details>
+
 ## License
 
-MIT
+MIT — copyright held collectively by the `interactive-project-map` contributors.
