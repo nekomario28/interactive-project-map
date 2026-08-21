@@ -8,8 +8,9 @@ function esc(value: string): string {
   }[char] ?? char));
 }
 
-export function renderHome(origin: string): string {
+export function renderHome(origin: string, oneClickInstall = false): string {
   const safeOrigin = esc(origin);
+  const oneClickAction = oneClickInstall ? '<a id="one-click-install" class="primary" href="#">Install with GitHub App</a>' : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -45,9 +46,9 @@ export function renderHome(origin: string): string {
 
 <div id="result" class="result">
 <div class="preview"><span class="badge">Hosted preview</span><img id="preview" alt="Generated GitHub project galaxy preview" /></div>
-<div class="actions"><a id="open-map" class="button" target="_blank" rel="noopener">Open your interactive map ↗</a></div>
+<div class="actions"><a id="open-map" class="button" target="_blank" rel="noopener">Open your interactive map ↗</a>${oneClickAction}</div>
 <div class="steps">
-<section class="panel"><h2>1. Add this GitHub Actions workflow</h2><p>Create <code>.github/workflows/project-map.yml</code> in your public <code>USERNAME/USERNAME</code> profile repository. The generator job has read-only permissions; a separate publish job writes only the generated files.</p><textarea id="workflow" class="code workflow" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="workflow">Copy workflow</button></div></section>
+<section class="panel"><h2>1. Add this GitHub Actions workflow</h2><p>Create <code>.github/workflows/project-map.yml</code> in your public <code>USERNAME/USERNAME</code> profile repository. The generator job has read-only permissions; a separate publish job writes only the generated files. When the GitHub App button is available, it performs this step and starts the first run automatically; the workflow below remains the manual fallback.</p><textarea id="workflow" class="code workflow" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="workflow">Copy workflow</button></div></section>
 <section class="panel"><h2>2. Add this to your profile README</h2><p>The image is served from your own repository. Clicking it opens the shared interactive viewer, which prefers your static graph and only falls back to the hosted GitHub API when no valid static graph exists.</p><textarea id="html-embed" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="html-embed">Copy HTML</button><button class="button" type="button" data-copy="markdown-embed">Copy Markdown</button></div><textarea id="markdown-embed" class="code" readonly hidden></textarea></section>
 <section class="panel"><h2>3. Static outputs</h2><p>These resolve through the profile repository's default branch.</p><textarea id="static-urls" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="static-urls">Copy URLs</button></div></section>
 </div>
@@ -73,11 +74,12 @@ const statusEl=document.getElementById('status');
 const resultEl=document.getElementById('result');
 const preview=document.getElementById('preview');
 const openMap=document.getElementById('open-map');
+const oneClickInstall=document.getElementById('one-click-install');
 const usernameRe=/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 
 function values(){const username=usernameInput.value.trim().toLowerCase();const theme=themeInput.value==='light'?'light':'dark';const maxRepos=Math.max(1,Math.min(300,Math.round(Number(maxReposInput.value)||100)));return{username,theme,maxRepos,forks:forksInput.checked,archived:archivedInput.checked}}
 function query(v){const p=new URLSearchParams();p.set('username',v.username);p.set('theme',v.theme);p.set('max_repos',String(v.maxRepos));p.set('forks',String(v.forks));p.set('archived',String(v.archived));return p}
-function urls(v){const p=query(v);const previewUrl=new URL('/api/galaxy.svg',serviceOrigin);previewUrl.search=p.toString();const installUrl=new URL('/api/install-workflow',serviceOrigin);installUrl.search=p.toString();const raw='https://raw.githubusercontent.com/'+encodeURIComponent(v.username)+'/'+encodeURIComponent(v.username)+'/HEAD/project-map';const viewer=new URL('/u/'+encodeURIComponent(v.username),serviceOrigin);viewer.searchParams.set('max_repos',String(v.maxRepos));viewer.searchParams.set('forks',String(v.forks));viewer.searchParams.set('archived',String(v.archived));return{preview:previewUrl.toString(),install:installUrl.toString(),svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()}}
+function urls(v){const p=query(v);const previewUrl=new URL('/api/galaxy.svg',serviceOrigin);previewUrl.search=p.toString();const installUrl=new URL('/api/install-workflow',serviceOrigin);installUrl.search=p.toString();const oneClickUrl=new URL('/api/install/start',serviceOrigin);oneClickUrl.search=p.toString();const raw='https://raw.githubusercontent.com/'+encodeURIComponent(v.username)+'/'+encodeURIComponent(v.username)+'/HEAD/project-map';const viewer=new URL('/u/'+encodeURIComponent(v.username),serviceOrigin);viewer.searchParams.set('max_repos',String(v.maxRepos));viewer.searchParams.set('forks',String(v.forks));viewer.searchParams.set('archived',String(v.archived));return{preview:previewUrl.toString(),install:installUrl.toString(),oneClick:oneClickUrl.toString(),svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()}}
 function htmlUrl(value){return value.replaceAll('&','&amp;')}
 function updateShare(v){const share=new URL(location.href);share.search=query(v).toString();history.replaceState(null,'',share)}
 
@@ -85,7 +87,7 @@ async function generate(){
   const v=values();maxReposInput.value=String(v.maxRepos);
   if(!usernameRe.test(v.username)){statusEl.textContent='Enter a valid GitHub username.';statusEl.classList.add('error');resultEl.classList.remove('visible');return}
   statusEl.textContent='Loading hosted preview and install workflow…';statusEl.classList.remove('error');const u=urls(v);
-  preview.src=u.preview;openMap.href=u.viewer;
+  preview.src=u.preview;openMap.href=u.viewer;if(oneClickInstall)oneClickInstall.href=u.oneClick;
   document.getElementById('html-embed').value='<p align="center">\n  <a href="'+htmlUrl(u.viewer)+'">\n    <img width="740" src="'+u.svg+'" alt="'+v.username+' project galaxy" />\n  </a>\n</p>';
   document.getElementById('markdown-embed').value='[!['+v.username+' project galaxy]('+u.svg+')]('+u.viewer+')';
   document.getElementById('static-urls').value='SVG: '+u.svg+'\nGraph: '+u.graph+'\nInteractive: '+u.viewer;

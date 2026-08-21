@@ -1,10 +1,21 @@
 import { renderHome } from "./home";
+import {
+  beginGitHubAppInstall,
+  clearInstallNonceCookie,
+  completeGitHubAppInstall,
+  installerErrorStatus,
+  isGitHubAppInstallerConfigured,
+  type GitHubAppInstallerEnv,
+} from "./github-app-installer.ts";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
 import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
+import { enforceInstallerRateLimit } from "./installer-rate-limit.ts";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
 import { renderViewer } from "./viewer";
+
+type WorkerEnv = Env & GitHubAppInstallerEnv;
 
 function corsHeaders(extra: Record<string, string> = {}): Headers {
   return new Headers({
@@ -17,25 +28,25 @@ function corsHeaders(extra: Record<string, string> = {}): Headers {
 
 function errorResponse(error: unknown): Response {
   const message = error instanceof Error ? error.message : "Unknown error";
-  let status = 500;
+  let status = installerErrorStatus(error) ?? 500;
 
-  if (message.includes("Invalid GitHub username") || error instanceof URIError) status = 400;
-  else if (message.includes("not found")) status = 404;
-  else if (message.includes("rate limit") || message.includes("Too many uncached") || message.includes("service is busy")) status = 429;
-  else if (message.startsWith("GitHub API returned")) status = 502;
+  if (status === 500 && (message.includes("Invalid GitHub username") || error instanceof URIError)) status = 400;
+  else if (status === 500 && message.includes("not found")) status = 404;
+  else if (status === 500 && (message.includes("rate limit") || message.includes("Too many uncached") || message.includes("service is busy"))) status = 429;
+  else if (status === 500 && message.startsWith("GitHub API returned")) status = 502;
 
   return Response.json({ error: message }, { status, headers: corsHeaders({ "Cache-Control": "no-store" }) });
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: WorkerContext): Promise<Response> {
+  async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     if (request.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
 
     try {
       if (url.pathname === "/") {
-        return new Response(renderHome(url.origin), {
+        return new Response(renderHome(url.origin, isGitHubAppInstallerConfigured(env)), {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",
@@ -59,6 +70,32 @@ export default {
             "X-Content-Type-Options": "nosniff",
           }),
         });
+      }
+
+      if (url.pathname === "/api/install/start") {
+        await enforceInstallerRateLimit(request, env, "start");
+        const options = installOptionsFromUrl(url);
+        return await beginGitHubAppInstall(request, env, options);
+      }
+
+      if (url.pathname === "/api/install/callback") {
+        try {
+          await enforceInstallerRateLimit(request, env, "callback");
+          const result = await completeGitHubAppInstall(request, env);
+          return new Response(null, {
+            status: 303,
+            headers: {
+              Location: result.viewerUrl,
+              "Set-Cookie": clearInstallNonceCookie(),
+              "Cache-Control": "no-store",
+              "Referrer-Policy": "no-referrer",
+            },
+          });
+        } catch (error) {
+          const response = errorResponse(error);
+          response.headers.append("Set-Cookie", clearInstallNonceCookie());
+          return response;
+        }
       }
 
       if (url.pathname === "/api/graph") {
