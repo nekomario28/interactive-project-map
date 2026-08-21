@@ -384,22 +384,6 @@
         syncUrl();
         updateControls();
       });
-      searchInput.addEventListener("keydown", (event) => {
-        if (!state.query || !["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
-        const ids = window.ProjectMapSearchContext?.directRepositories?.() || [];
-        const hits = ids.map((id) => state.byId.get(id)).filter((node) => node && statusVisible(node));
-        if (!hits.length) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const current = hits.findIndex((node) => node.id === state.selected?.id);
-        const step = event.key === "ArrowUp" ? -1 : 1;
-        const index = event.key === "Enter"
-          ? (current >= 0 ? current : 0)
-          : current < 0 ? (step > 0 ? 0 : hits.length - 1) : (current + step + hits.length) % hits.length;
-        const target = hits[index];
-        if (typeof updateDetails === "function") updateDetails(target);
-        if (event.key === "Enter" && target.url) window.open(target.url, "_blank", "noopener");
-      }, true);
     }
 
     syncUrl();
