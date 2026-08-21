@@ -28,9 +28,9 @@ const graph = {
   ],
 };
 
-async function installFixture(page) {
+async function installFixture(page, fixture = graph) {
   await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fixture) });
   });
 }
 
@@ -38,17 +38,47 @@ function repoIds() {
   return state.nodes.filter((node) => node.type === "repository").map((node) => node.id).sort();
 }
 
-test("shared view controls compose status, motion, activity, search and local depth without new data fetches", async ({ page }) => {
+async function hitRepository(page, id) {
+  return page.evaluate((repositoryId) => {
+    const node = state.byId.get(repositoryId);
+    if (!node) return null;
+    const point = worldToScreen(node.x, node.y);
+    return hitTest(point.x, point.y)?.id || null;
+  }, id);
+}
+
+test("shared view controls visibly filter every repository status and compose with motion, activity, search and local depth", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await installFixture(page);
   await page.goto("/u/?username=example&style=obsidian");
   await expect(page.locator("#status")).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.ProjectMapViewState?.snapshot?.().statuses?.length ?? -1)).toBe(3);
 
-  await expect(page.locator("#resultCount")).toHaveText("4 repos");
-  await page.getByRole("button", { name: "Archived" }).click();
+  await expect(page.getByRole("group", { name: "Repositories" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "View" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Original repositories: 2/ })).toHaveText("Original 2");
+  await expect(page.getByRole("button", { name: /^Fork repositories: 1/ })).toHaveText("Fork 1");
+  await expect(page.getByRole("button", { name: /^Archived repositories: 1/ })).toHaveText("Archived 1");
+  await expect(page.locator("#resultCount")).toHaveText("4 / 4 repos");
+
+  for (const [label, id] of [
+    ["Original", "repository:alpha"],
+    ["Fork", "repository:beta"],
+    ["Archived", "repository:gamma"],
+  ]) {
+    const button = page.getByRole("button", { name: new RegExp(`^${label} repositories:`) });
+    await page.evaluate((repositoryId) => { state.hovered = state.byId.get(repositoryId); }, id);
+    await button.click();
+    expect(await hitRepository(page, id)).not.toBe(id);
+    expect(await page.evaluate(() => state.hovered?.id || null)).toBeNull();
+    await button.click();
+    expect(await hitRepository(page, id)).toBe(id);
+  }
+
+  const archivedButton = page.getByRole("button", { name: /^Archived repositories:/ });
+  await archivedButton.click();
   expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().statuses)).toEqual(["original", "fork"]);
-  await expect(page.locator("#resultCount")).toHaveText("3 repos");
+  await expect(page.locator("#resultCount")).toHaveText("3 / 4 repos");
   expect(new URL(page.url()).searchParams.get("status")).toBe("original,fork");
 
   await page.getByRole("button", { name: "Motion On" }).click();
@@ -60,7 +90,7 @@ test("shared view controls compose status, motion, activity, search and local de
   expect(new URL(page.url()).searchParams.get("activity")).toBe("1");
 
   await page.locator("#search").fill("beta");
-  await expect(page.locator("#resultCount")).toHaveText("1 matches");
+  await expect(page.locator("#resultCount")).toHaveText("1 matches · 3/4 repos");
   expect(new URL(page.url()).searchParams.get("q")).toBe("beta");
   await page.locator("#search").fill("");
 
@@ -75,7 +105,7 @@ test("shared view controls compose status, motion, activity, search and local de
   // status visibility is applied before relation-depth traversal.
   await expect.poll(() => page.evaluate(repoIds)).toEqual(["repository:alpha", "repository:beta"]);
 
-  await page.getByRole("button", { name: "Archived" }).click();
+  await archivedButton.click();
   await expect.poll(() => page.evaluate(repoIds)).toEqual(["repository:alpha", "repository:beta", "repository:gamma"]);
   expect(await page.evaluate(() => state.nodes.some((node) => node.id === "repository:delta"))).toBe(false);
   expect(new URL(page.url()).searchParams.get("depth")).toBe("2");
@@ -87,5 +117,29 @@ test("shared view controls compose status, motion, activity, search and local de
     "repository:delta",
     "repository:gamma",
   ]);
+  await expect(page.locator("#resultCount")).toHaveText("4 / 4 repos");
   expect(new URL(page.url()).searchParams.has("focus")).toBe(false);
+});
+
+test("a status with zero repositories is disabled instead of looking like a broken filter", async ({ page }) => {
+  const nodes = graph.nodes.filter((node) => node.id !== "repository:gamma");
+  const fixture = {
+    ...graph,
+    repositoryCount: 3,
+    nodes,
+    edges: graph.edges.filter((edge) => edge.source !== "repository:gamma" && edge.target !== "repository:gamma"),
+    semanticEdges: graph.semanticEdges.filter((edge) => edge.source !== "repository:gamma" && edge.target !== "repository:gamma"),
+  };
+  await installFixture(page, fixture);
+  await page.goto("/u/?username=example&style=galaxy-systems");
+  await expect(page.locator("#status")).toBeHidden();
+
+  const archivedButton = page.getByRole("button", { name: /^Archived repositories: 0/ });
+  await expect(archivedButton).toBeDisabled();
+  await expect(archivedButton).toHaveText("Archived 0");
+  await expect(archivedButton).toHaveAttribute("title", /No archived repositories are available/);
+  await expect(page.locator("#resultCount")).toHaveText("3 / 3 repos");
+  expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().statusCounts)).toEqual({ original: 2, fork: 1, archived: 0 });
+  expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().statuses)).toEqual(["original", "fork"]);
+  expect(new URL(page.url()).searchParams.has("status")).toBe(false);
 });
