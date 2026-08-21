@@ -1,5 +1,5 @@
 import { normalizeUsername } from "./hosted-options.ts";
-import { renderInstallWorkflow, staticAssetUrls, type InstallOptions } from "./install.ts";
+import { normalizeGeneratorRef, renderInstallWorkflow, staticAssetUrls, type InstallOptions } from "./install.ts";
 
 const GITHUB_API = "https://api.github.com";
 const GITHUB_API_VERSION = "2026-03-10";
@@ -129,16 +129,25 @@ function randomNonce(): string {
   return bytesToBase64Url(crypto.getRandomValues(new Uint8Array(24)));
 }
 
+function normalizedGeneratorRef(value: unknown): string {
+  try {
+    return normalizeGeneratorRef(typeof value === "string" ? value : null);
+  } catch {
+    throw new InstallerError("Invalid installer state options", 400, "invalid_state");
+  }
+}
+
 function validInstallOptions(payload: Record<string, unknown>): InstallOptions {
   const username = normalizeUsername(typeof payload.username === "string" ? payload.username : "");
   const theme = payload.theme === "light" ? "light" : payload.theme === "dark" ? "dark" : null;
   const maxRepos = payload.maxRepos;
   const includeForks = payload.includeForks;
   const includeArchived = payload.includeArchived;
+  const generatorRef = normalizedGeneratorRef(payload.generatorRef);
   if (!theme || !Number.isInteger(maxRepos) || Number(maxRepos) < 1 || Number(maxRepos) > 300 || typeof includeForks !== "boolean" || typeof includeArchived !== "boolean") {
     throw new InstallerError("Invalid installer state options", 400, "invalid_state");
   }
-  return { username, theme, maxRepos: Number(maxRepos), includeForks, includeArchived };
+  return { username, theme, maxRepos: Number(maxRepos), includeForks, includeArchived, generatorRef };
 }
 
 export async function createInstallState(options: InstallOptions, secret: string, runtime: InstallerRuntime = {}): Promise<{ state: string; nonce: string }> {
@@ -149,6 +158,7 @@ export async function createInstallState(options: InstallOptions, secret: string
   const payload: InstallStatePayload = {
     v: INSTALL_STATE_VERSION,
     ...options,
+    generatorRef: normalizedGeneratorRef(options.generatorRef),
     nonce,
     issuedAt: nowSeconds,
     expiresAt: nowSeconds + INSTALL_STATE_TTL_SECONDS,
