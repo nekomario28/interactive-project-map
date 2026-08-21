@@ -173,7 +173,59 @@ body[data-map-style="obsidian"] .legend {
 
 .toolbar button:disabled {
   cursor: default;
-  opacity: 0.55;
+  opacity: 0.38;
+}
+
+.control-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+}
+
+.control-cluster-label {
+  margin: 0 3px 0 4px;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.control-cluster .status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-inline: 8px;
+}
+
+.control-cluster .status-chip::before {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--status-color);
+  content: "";
+}
+
+.control-cluster .status-original { --status-color: var(--original); }
+.control-cluster .status-fork { --status-color: var(--fork); }
+.control-cluster .status-archived { --status-color: var(--archived); }
+
+.repository-filters .status-chip[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--status-color) 12%, var(--panel-elevated));
+}
+
+.repository-filters .status-chip[aria-pressed="false"] {
+  opacity: 0.48;
+}
+
+.repository-filters .status-chip:disabled {
+  opacity: 0.30;
 }
 
 #focusControls {
@@ -192,6 +244,7 @@ body[data-map-style="obsidian"] .legend {
   align-self: center;
   color: var(--muted);
   font-size: 10px;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -441,6 +494,15 @@ kbd {
   .controls {
     align-items: stretch;
     flex-wrap: wrap;
+  }
+
+  .control-cluster {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+  }
+
+  .repository-filters {
+    flex-basis: 100%;
   }
 
   .field:first-child {
