@@ -93,7 +93,10 @@ test("Obsidian opens at neutral camera, explicit Fit still works, and Galaxy kee
   });
 
   await page.locator("#style").selectOption("galaxy-classic");
-  await expect.poll(() => page.evaluate(() => state.style)).toBe("galaxy-classic");
+  await expect(page).toHaveURL(/style=galaxy-classic/);
+  await page.waitForLoadState("domcontentloaded");
+  await expect(page.locator("#status")).toBeHidden();
+  await expect.poll(() => camera(page)).toMatchObject({ style: "galaxy-classic" });
   const galaxy = await camera(page);
   expect(Math.abs(galaxy.zoom - 1) > 0.05 || Math.abs(galaxy.pan.x) > 1 || Math.abs(galaxy.pan.y) > 1).toBe(true);
 });
