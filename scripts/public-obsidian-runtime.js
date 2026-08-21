@@ -13,7 +13,7 @@
     damping: 0.855,
     cooling: 0.986,
   };
-  const SPAWN_WARMUP_STEPS = 3;
+  const SPAWN_ALPHA = 0.6;
 
   const runtime = {
     nodesRef: null,
@@ -44,6 +44,23 @@
       .filter((edge) => edge.sourceNode && edge.targetNode);
   }
 
+  function compactSpawnPoint(node, index, count) {
+    // Obsidian's worker has been observed creating unseen nodes at one origin.
+    // That detail causes violent first frames and makes moving nodes difficult
+    // to click. Graph Spawn demonstrates that supplying initial positions is a
+    // supported way to retain Obsidian's own live force lifecycle without that
+    // initialization defect. Keep the seed deterministic and scale its area
+    // roughly with node count so future repository growth does not collapse
+    // initial screen-space density.
+    const safeCount = Math.max(1, count);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const jitter = (hash(`${node.id}:obsidian-spawn`) % 1000) / 1000;
+    const angle = index * golden + jitter * 0.55;
+    const radialSpan = clamp(60 * Math.sqrt(safeCount), 120, 520);
+    const radius = 36 + Math.sqrt((index + 1) / safeCount) * radialSpan;
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+  }
+
   function applyForceStep(nodes, edges, alpha, dragging = null) {
     if (alpha < 0.001 || !nodes.length) return;
 
@@ -55,9 +72,6 @@
         let dy = b.y - a.y;
         let distanceSquared = dx * dx + dy * dy;
         if (distanceSquared < 1) {
-          // Obsidian's observed worker starts unseen nodes at the origin. Keep
-          // that spawn model, but break the coincident-node symmetry
-          // deterministically so reloads do not reshuffle the graph.
           const angle = (hash(`${a.id}:${b.id}:obsidian-force`) % 6283) / 1000;
           dx = Math.cos(angle);
           dy = Math.sin(angle);
@@ -118,22 +132,15 @@
   }
 
   buildObsidianLayout = function liveObsidianForceSpawn(graph) {
-    // Obsidian's current worker has been observed creating unseen nodes at the
-    // origin with zero velocity. Start from the same state rather than hiding a
-    // complete force solve before first paint.
-    const nodes = graph.nodes.map((raw) => ({ ...raw, x: 0, y: 0, vx: 0, vy: 0 }));
-    const edges = linkedEdges(graph, nodes);
-
-    // A zero-area layout cannot be fit meaningfully. Run only a tiny warm-up so
-    // coincident nodes separate enough to establish bounds, then carry the
-    // remaining alpha into the animation-frame runtime. This is deliberately
-    // not a pre-settle pass.
-    let alpha = 1;
-    for (let stepIndex = 0; stepIndex < SPAWN_WARMUP_STEPS; stepIndex += 1) {
-      applyForceStep(nodes, edges, alpha);
-      alpha *= settings.cooling;
-    }
-    runtime.pendingSpawnAlpha = alpha;
+    const count = graph.nodes.length;
+    const nodes = graph.nodes.map((raw, index) => {
+      const point = compactSpawnPoint(raw, index, count);
+      return { ...raw, x: point.x, y: point.y, vx: 0, vy: 0 };
+    });
+    // Preserve a real live spawn instead of hiding convergence in a synchronous
+    // pre-settle. 0.6 is also the alpha used by Graph Spawn when handing seeded
+    // positions back to Obsidian's own worker.
+    runtime.pendingSpawnAlpha = SPAWN_ALPHA;
     return nodes;
   };
 
@@ -335,7 +342,7 @@
         const currentPhase = phase();
         if (subtitle) subtitle.textContent = `Obsidian Graph-like · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
         if (!state.selected && detailsDescription) {
-          detailsDescription.textContent = "Obsidian-style force graph: nodes spawn together and settle under one global center, repel, link and distance system. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
+          detailsDescription.textContent = "Obsidian-style force graph: nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
         }
         if (step()) draw();
       } else {
