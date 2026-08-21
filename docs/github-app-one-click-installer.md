@@ -32,6 +32,8 @@ Register a public GitHub App with:
   - Actions: **Read and write**
 - Do not request unrelated organization/account permissions.
 
+Ask users to select only their `USERNAME/USERNAME` profile repository during installation. The callback still independently verifies that exact repository before writing anything.
+
 GitHub's documentation states that editing `.github/workflows` requires the Workflows permission in addition to the content-write capability, and creating a workflow dispatch requires Actions write. User access tokens are additionally limited by the authorizing user's own repository access.
 
 With “Request user authorization during installation” enabled, GitHub redirects to the OAuth callback rather than a separate setup URL.
@@ -40,6 +42,7 @@ References:
 
 - https://docs.github.com/en/apps/maintaining-github-apps/modifying-a-github-app-registration
 - https://docs.github.com/en/apps/sharing-github-apps/sharing-your-github-app
+- https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app
 - https://docs.github.com/en/rest/apps/installations
 - https://docs.github.com/en/rest/repos/contents
 - https://docs.github.com/en/rest/actions/workflows
@@ -78,18 +81,19 @@ Worker
   v
 https://github.com/apps/<slug>/installations/new?state=...
   |
-  | GitHub install + user OAuth authorization
+  | GitHub install + automatic user OAuth authorization
   v
 GET /api/install/callback?code=...&state=...
   |
   |-- verify HMAC, expiry and nonce cookie
-  |-- exchange code for ephemeral GitHub App user token
+  |-- exchange code with the exact registered callback redirect_uri
+  |-- require a GitHub App user token (`ghu_...`)
   |-- GET /user/installations
   |-- require a User installation whose login == requested username
   |-- GET /user/installations/{id}/repositories
   |-- require explicit USERNAME/USERNAME access + push/admin capability
   |-- GET .github/workflows/project-map.yml
-  |-- create it, or update it only when it contains our managed marker
+  |-- create it, or update it only when it is our managed workflow
   |-- POST workflow_dispatch (short retry only for just-created 404 race)
   |-- discard user token
   v
@@ -106,9 +110,15 @@ GitHub explicitly warns that an `installation_id` query parameter can be spoofed
 
 The install state is HMAC-signed and expires after 15 minutes. In addition, a random nonce inside the signed state must equal an HttpOnly `SameSite=Lax` cookie set when installation begins. A copied callback URL is therefore insufficient on its own.
 
+### OAuth code exchange is callback-bound
+
+The token exchange sends `redirect_uri=https://<worker-origin>/api/install/callback`, which must exactly match a registered GitHub App callback URL. The returned access token must also have GitHub App user-token form (`ghu_...`).
+
+GitHub strongly recommends PKCE for OAuth web flows. The selected one-step installation mode is different: when **Request user authorization (OAuth) during installation** is enabled, GitHub itself starts the authorization request as `.../login/oauth/authorize?client_id=CLIENT_ID`; the application does not construct that authorization URL, and current GitHub documentation does not expose a way to attach our `code_challenge` to that automatic transition. We therefore do not invent undocumented parameters. If GitHub later exposes PKCE for the automatic install-OAuth transition, add it. The alternative today is a longer setup-URL → explicit OAuth flow solely to regain control of the authorization URL; that is intentionally not introduced without a demonstrated security or product need.
+
 ### Existing workflows are not blindly replaced
 
-`.github/workflows/project-map.yml` is updated only when it contains:
+`.github/workflows/project-map.yml` is updated only when it contains the Project Map managed marker:
 
 ```text
 # Managed by interactive-project-map one-click installer v1
@@ -128,21 +138,26 @@ Code-only gates, which require no GitHub App credentials:
 2. tamper rejection.
 3. expiry rejection.
 4. nonce-cookie mismatch rejection.
-5. installation account verification.
-6. explicit `USERNAME/USERNAME` repository verification.
-7. unmanaged-workflow overwrite refusal.
-8. immutable reusable-workflow SHA retained in installed YAML.
-9. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
-10. Worker typecheck/dry-run and the existing full project verification suite.
+5. exact OAuth callback `redirect_uri` binding.
+6. reject non-`ghu_` token types.
+7. installation account verification.
+8. explicit `USERNAME/USERNAME` repository verification.
+9. unmanaged-workflow overwrite refusal.
+10. immutable reusable-workflow SHA retained in installed YAML.
+11. managed workflow update/no-op behavior.
+12. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
+13. installer start/callback reuse the existing Worker API rate limiter.
+14. Worker typecheck/dry-run and the existing full project verification suite.
 
 The final production gate requires a real GitHub App registration and Worker secrets:
 
 1. start from the hosted UI;
-2. install the App on a disposable/public profile repository;
+2. install the App on a disposable/public profile repository, selecting only that repository;
 3. return through the OAuth callback;
 4. confirm exactly one managed workflow file is created;
 5. confirm its first workflow run starts;
 6. confirm only `project-map/galaxy.svg` and `project-map/graph.json` are published;
-7. remove App access and confirm the already-installed scheduled workflow continues independently.
+7. run the one-click path again and confirm the managed workflow is updated/no-op rather than duplicated;
+8. remove App access and confirm the already-installed scheduled workflow continues independently.
 
 Do not weaken the code-only gates to compensate for a registration or permission error. Use GitHub's `X-Accepted-GitHub-Permissions` response header to diagnose missing App permissions.
