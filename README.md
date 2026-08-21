@@ -89,6 +89,8 @@ Hybrid uses the same focus-only ownership/membership edge policy as Systems and 
 
 A deterministic force-directed graph using the original global center / repel / link physics. It prioritizes exploratory relationships over strict hierarchy and remains physically independent from all Galaxy runtimes.
 
+This is an independently implemented approximation and is not affiliated with or endorsed by Obsidian or Dynalist Inc. Obsidian is a trademark of Dynalist Inc.
+
 ### Tree
 
 An explicit top-down `Owner → Category → Repository` hierarchy. Subtree-size allocation and wrapping make structural relationships immediately visible.

@@ -2,6 +2,8 @@
 
 Issues and pull requests are welcome.
 
+Unless explicitly stated otherwise, contributions submitted to this repository are provided under the repository's MIT License.
+
 For changes to grouping or rendering behavior, please keep these constraints in mind:
 
 1. Public API responses should remain backwards-compatible where practical.
