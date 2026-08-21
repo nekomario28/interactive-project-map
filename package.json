@@ -24,5 +24,5 @@
     "build:pages": "node scripts/build-public-pages.mjs && node scripts/postprocess-public-pages.mjs",
     "build:pages:catalog": "node scripts/build.mjs"
   },
-  "devDependencies": { "@playwright/test": "1.62.1", "eslint": "10.8.0", "html-validate": "11.6.0", "stylelint": "17.14.1", "typescript": "^7.0.2", "wrangler": "^4.118.0" }
+  "devDependencies": { "@playwright/test": "1.62.1", "eslint": "10.8.1", "html-validate": "11.8.0", "stylelint": "17.14.1", "typescript": "^7.0.2", "wrangler": "^4.118.0" }
 }
