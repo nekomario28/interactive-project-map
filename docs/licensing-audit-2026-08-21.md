@@ -5,13 +5,21 @@ This document records the current licensing boundary of `interactive-project-map
 ## Project license
 
 - Repository license: **MIT** (`LICENSE`).
-- Current copyright notice: `Copyright (c) 2026 SYUN`.
-- Root `package.json` and private `@interactive-project-map/spatial-core` package now declare SPDX metadata `"license": "MIT"` so automated tooling does not report the packages as unlicensed/unknown.
+- Current copyright notice: `Copyright (c) 2026 interactive-project-map contributors`.
+- `SYUN` is a project contributor, not the sole copyright holder; the collective notice avoids incorrectly singling out one contributor while preserving contributor attribution separately in repository history and documentation.
+- Root `package.json` and private `@interactive-project-map/spatial-core` package declare SPDX metadata `"license": "MIT"` so automated tooling does not report the packages as unlicensed/unknown.
 - `private: true` only prevents accidental npm publishing; it does not conflict with the repository-level MIT grant.
 
-### Ownership check
+### Contributor and credit model
 
-The audit does **not** change the copyright-holder string in `LICENSE`. `SYUN` should be confirmed by the rights holder as the intended name/pseudonym. If it is stale or incorrect, correct that notice before a formal release; the MIT notice is supposed to identify the copyright holder whose grant is being preserved.
+GitHub's automatic **Contributors** view remains driven by commit authorship. The project does not manufacture contributor status for external projects that were only researched or used as conceptual references.
+
+README credits therefore distinguish two groups:
+
+- **Project Contributors** — people who actually contributed to this repository, including `SYUN` and the maintainers represented by repository history.
+- **Research & Upstream Credits** — external projects/authors whose public implementations or research informed design decisions. These acknowledgements do not claim Git co-authorship, copied source, or a runtime dependency.
+
+This separation is intentional: it gives visible credit without creating false authorship metadata or implying that reference-only projects contributed code to this repository.
 
 ## Runtime / shipped-code boundary
 
@@ -113,7 +121,7 @@ Research citations/credits should remain even where legally optional; they impro
 - **No identified redistribution of raw README excerpts in generated graph output.**
 - **No current need to relicense the repository away from MIT.**
 - **Low trademark risk**, provided `Obsidian-like` remains clearly descriptive/non-affiliated and no protected brand assets are used.
-- **One metadata/ownership item to confirm:** whether `SYUN` is the intended copyright-holder text.
+- **Copyright-holder metadata corrected:** `SYUN` is recorded as one project contributor rather than the sole holder; `LICENSE` now uses the collective `interactive-project-map contributors` notice.
 - **One reproducibility weakness:** no committed dependency lockfile, so exact transitive licenses are not frozen.
 
 ## Future merge rule
@@ -125,4 +133,5 @@ For every external implementation considered for direct reuse:
 3. preserve required notices for copied permissive code;
 4. reject or isolate copyleft/source-available code unless compatibility is intentionally accepted;
 5. preserve the current rule that bounded source text used for classification is not automatically republished;
-6. prefer project-native reimplementation when the useful idea is small and doing so avoids unnecessary dependency/notice complexity.
+6. credit meaningful research/upstream influences without misrepresenting them as Git co-authors;
+7. prefer project-native reimplementation when the useful idea is small and doing so avoids unnecessary dependency/notice complexity.
