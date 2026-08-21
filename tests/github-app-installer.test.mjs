@@ -83,7 +83,7 @@ test("callback verifies the user's installation, installs only the managed profi
       const body = JSON.parse(init.body);
       const workflow = Buffer.from(body.content, "base64").toString("utf8");
       assert.ok(workflow.startsWith(MANAGED_WORKFLOW_MARKER));
-      assert.match(workflow, /generate-project-map\.yml@[0-9a-f]{40}/);
+      assert.match(workflow, /generate-project-map\.yml@v1/);
       assert.match(workflow, /contents: write/);
       return json({ content: { path: ".github/workflows/project-map.yml" }, commit: { sha: "abc" } }, 201);
     }
