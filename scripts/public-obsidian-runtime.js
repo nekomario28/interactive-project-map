@@ -1,5 +1,5 @@
 "use strict";
-/* global state, canvas, hash, clamp, hitTest, nodeRadius, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
+/* global state, canvas, ctx, hash, clamp, hitTest, nodeRadius, nodeOpacity, nodeColor, worldToScreen, screenToWorld, boxesOverlap, labelBox, matchesQuery, drawNodesAndLabels, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
 
 (() => {
   // Obsidian-like runtime: one global force system with four user-facing
@@ -15,7 +15,10 @@
   };
   const SPAWN_ALPHA = 0.6;
   const REDUCED_MOTION_SETTLE_STEPS = 120;
+  const TEXT_FADE_START_ZOOM = 0.36;
+  const TEXT_FADE_FULL_ZOOM = 0.72;
   const baseNodeRadius = nodeRadius;
+  const baseDrawNodesAndLabels = drawNodesAndLabels;
   const repositoryDegrees = new Map();
 
   const runtime = {
@@ -54,9 +57,10 @@
     for (const [id, adjacent] of neighbors) repositoryDegrees.set(id, adjacent.size);
   }
 
-  function repositoryDegree(node) {
-    if (!node || node.type !== "repository") return 0;
-    return Math.max(0, Number(repositoryDegrees.get(node.id) || 0));
+  function repositoryDegree(nodeOrId) {
+    const id = typeof nodeOrId === "string" ? nodeOrId : nodeOrId?.id;
+    if (!id) return 0;
+    return Math.max(0, Number(repositoryDegrees.get(id) || 0));
   }
 
   function repositoryVisualRadius(node) {
@@ -66,6 +70,107 @@
   nodeRadius = function obsidianDegreeNodeRadius(node) {
     if (state.style === "obsidian" && node?.type === "repository") return repositoryVisualRadius(node);
     return baseNodeRadius(node);
+  };
+
+  function directSearchHit(node) {
+    if (!state.query || node?.type !== "repository") return false;
+    return window.ProjectMapSearchContext?.level?.(node) === "direct";
+  }
+
+  function repositoryTextFade(node, highlighted) {
+    if (node?.type !== "repository" || highlighted || directSearchHit(node)) return 1;
+    const progress = clamp(
+      (state.zoom - TEXT_FADE_START_ZOOM) / (TEXT_FADE_FULL_ZOOM - TEXT_FADE_START_ZOOM),
+      0,
+      1,
+    );
+    // Smoothstep gives the same qualitative behavior as Obsidian's text-fade
+    // control: names become translucent before disappearing instead of crossing
+    // a hard zoom cutoff.
+    return progress * progress * (3 - 2 * progress);
+  }
+
+  function obsidianLabelPriority(node, highlighted) {
+    if (highlighted) return 100;
+    if (node.type === "owner") return 90;
+    if (node.type === "group") return 80;
+    return repositoryDegree(node) + 1;
+  }
+
+  drawNodesAndLabels = function obsidianTextFadeDrawNodesAndLabels(colors) {
+    if (state.style !== "obsidian") {
+      baseDrawNodesAndLabels(colors);
+      return;
+    }
+
+    const candidates = [];
+    for (const node of state.nodes) {
+      const point = worldToScreen(node.x, node.y);
+      const highlighted = node === state.selected || node === state.hovered;
+      const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
+      const opacity = nodeOpacity(node);
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = nodeColor(node, colors);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (node.type === "repository" && node.archived) {
+        ctx.strokeStyle = colors.archived;
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius + 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (highlighted) {
+        ctx.globalAlpha = Math.max(opacity, 0.72);
+        ctx.strokeStyle = colors.selection;
+        ctx.lineWidth = node === state.selected ? 2 : 1.2;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const labelFade = repositoryTextFade(node, highlighted);
+      if (node.type !== "repository" || labelFade > 0.015 || directSearchHit(node)) {
+        const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 11) * Math.sqrt(state.zoom), 9, 15);
+        candidates.push({
+          node,
+          point,
+          radius,
+          fontSize,
+          opacity,
+          labelFade,
+          priority: obsidianLabelPriority(node, highlighted),
+        });
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    candidates.sort((a, b) => b.priority - a.priority || a.node.label.localeCompare(b.node.label));
+    const occupied = [];
+    for (const candidate of candidates) {
+      const box = labelBox(candidate.node, candidate.point, candidate.radius, candidate.fontSize);
+      const direct = directSearchHit(candidate.node);
+      const forced = candidate.node === state.selected
+        || candidate.node === state.hovered
+        || candidate.node.type === "owner"
+        || direct;
+      if (!forced && occupied.some((other) => boxesOverlap(box, other, 4))) continue;
+      occupied.push(box);
+      ctx.globalAlpha = Math.max(candidate.opacity * candidate.labelFade, forced ? 0.82 : 0);
+      ctx.font = `${candidate.node.type === "owner" ? 700 : candidate.node.type === "group" ? 600 : 500} ${candidate.fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = colors.background;
+      ctx.strokeText(box.text, candidate.point.x, box.top + 2);
+      ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
+      ctx.fillText(box.text, candidate.point.x, box.top + 2);
+    }
+    ctx.globalAlpha = 1;
   };
 
   function physicsRadius(node) {
@@ -131,8 +236,6 @@
       }
     }
 
-    // Structural and relation edges are drawn differently, but physics treats
-    // every edge equally, matching the Obsidian-style global force baseline.
     for (const edge of edges) {
       const a = edge.sourceNode;
       const b = edge.targetNode;
@@ -152,7 +255,6 @@
       }
     }
 
-    // No owner/category anchors: every node gets the same center law.
     for (const node of nodes) {
       if (node === dragging) {
         node.vx = 0;
@@ -177,10 +279,6 @@
     });
 
     if (reducedMotionRequested()) {
-      // Keep reduced-motion users out of an automatic force animation. Build a
-      // stable snapshot with the same force law, then expose it at rest. This is
-      // intentionally a reduced-motion-only path; normal viewing still opens at
-      // SPAWN_ALPHA and visibly settles on screen.
       const edges = linkedEdges(graph, nodes);
       let alpha = SPAWN_ALPHA;
       for (let stepIndex = 0; stepIndex < REDUCED_MOTION_SETTLE_STEPS; stepIndex += 1) {
@@ -195,9 +293,6 @@
       return nodes;
     }
 
-    // Preserve a real live spawn instead of hiding convergence in a synchronous
-    // pre-settle. 0.6 is also the alpha used by Graph Spawn when handing seeded
-    // positions back to Obsidian's own worker.
     runtime.pendingSpawnAlpha = SPAWN_ALPHA;
     return nodes;
   };
@@ -392,6 +487,9 @@
   }, { capture: true });
 
   window.ProjectMapObsidianRuntime = Object.freeze({
+    degree(nodeOrId) {
+      return repositoryDegree(nodeOrId);
+    },
     snapshot() {
       return {
         active: state.style === "obsidian" && runtime.nodesRef === state.nodes,
@@ -411,11 +509,11 @@
     function frame() {
       if (state.style === "obsidian") {
         const currentPhase = phase();
-        if (subtitle) subtitle.textContent = `Obsidian Graph-like · connectivity-weighted nodes · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
+        if (subtitle) subtitle.textContent = `Obsidian Graph-like · connectivity-weighted nodes · zoom-fading labels · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
         if (!state.selected && detailsDescription) {
           detailsDescription.textContent = reducedMotionRequested()
-            ? "Obsidian-style force graph: repository size follows visible link connectivity; reduced-motion mode presents a stable force-layout snapshot without automatic reheating."
-            : "Obsidian-style force graph: repository size follows visible link connectivity. Nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system; dragging reheats the graph.";
+            ? "Obsidian-style force graph: repository size follows visible link connectivity and note labels fade continuously with zoom; reduced-motion mode presents a stable force-layout snapshot."
+            : "Obsidian-style force graph: repository size follows visible link connectivity and note labels fade continuously with zoom. Nodes settle under one global center, repel, link and distance system.";
         }
         if (step()) draw();
       } else {

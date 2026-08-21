@@ -84,7 +84,7 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(obsidian, /window\.ProjectMapObsidianRuntime/);
     assert.match(obsidian, /reheat\(0\.55\)/);
     assert.doesNotMatch(obsidian, /SPAWN_WARMUP_STEPS|stepIndex < 120/);
-    assert.doesNotMatch(obsidian, /baseHitTest|obsidianSettlingHitTest|worldToScreen/);
+    assert.doesNotMatch(obsidian, /baseHitTest|obsidianSettlingHitTest/);
     assert.doesNotMatch(obsidian, /anchorX|anchorY|nodeActivity|neighborhoodLevels|releaseAnchor/);
 
     assert.match(polish, /readableRadialRepoLabels/);
