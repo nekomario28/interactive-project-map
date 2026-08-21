@@ -60,7 +60,7 @@ async function generateWorkflowFixture() {
   vm.createContext(context);
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
   const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'galaxy-hybrid',maxRepos:100,forks:true,archived:false})", context);
-  if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@151b9cabd5968cdfb602115fc440795c14f88745")) throw new Error("Generated installer workflow must call the stable reusable generator");
+  if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@v1")) throw new Error("Generated installer workflow must call the stable v1 reusable generator channel");
   if (!workflow.includes(`# Stable generator baseline: nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`)) throw new Error("Generated installer workflow must expose the reviewed immutable generator baseline");
   if (workflow.includes("actions/upload-artifact@")) throw new Error("Generated caller must not duplicate reusable generator artifact-upload steps");
   if (!workflow.includes("contents: write") || !workflow.includes("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c")) throw new Error("Generated caller must keep the fixed write-capable publisher local and pinned");
@@ -74,4 +74,4 @@ await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateExternalCss(join(siteDir, "viewer.css"));
 await validateExternalCss(join(siteDir, "presets.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS, twelve style presets and reusable browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, twelve style presets and stable-v1 reusable browser installer runtime validated.");
