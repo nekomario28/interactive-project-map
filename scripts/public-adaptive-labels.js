@@ -15,6 +15,12 @@ window.addEventListener("DOMContentLoaded", () => {
     placedRepositoryIds: [],
     zoom: 1,
     viewport: { width: 0, height: 0 },
+    typography: {
+      repositoryFontSize: 0,
+      categoryFontSize: 0,
+      categoryCountFontSize: 0,
+      categoryToRepositoryRatio: 0,
+    },
   };
 
   function overlap(a, b, padding = 3) {
@@ -25,10 +31,13 @@ window.addEventListener("DOMContentLoaded", () => {
     return box.left >= margin && box.top >= margin && box.right <= width - margin && box.bottom <= height - margin;
   }
 
-  function textMetrics(text, fontSize, weight) {
+  function setFont(weight, fontSize) {
     ctx.font = `${weight} ${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
-    const measured = ctx.measureText(text);
-    return { width: Math.ceil(measured.width) + 10, height: fontSize + 7 };
+  }
+
+  function measuredWidth(text, fontSize, weight) {
+    setFont(weight, fontSize);
+    return Math.ceil(ctx.measureText(text).width);
   }
 
   function anchorBoxes(point, radius, width, height) {
@@ -54,15 +63,59 @@ window.addEventListener("DOMContentLoaded", () => {
     return 100 + Math.min(200, node.stars || 0) * 3 + (node.fork ? 0 : 18) + (node.archived ? -12 : 0);
   }
 
-  function labelText(node) {
-    if (state.style === "galaxy-systems" && node.type === "group") return `${displayLabel(node)} · ${node.repositoryCount || 0}`;
-    return displayLabel(node);
+  function repositoryFontSize() {
+    return clamp(11 * Math.sqrt(state.zoom), 9, 15);
+  }
+
+  function categoryFontScale() {
+    const zoom = Math.max(0.5, state.zoom);
+    return clamp(1.6 - Math.log2(zoom) * 0.16, 1.3, 1.62);
+  }
+
+  function categoryFontSize() {
+    return clamp(repositoryFontSize() * categoryFontScale(), 14, 21);
+  }
+
+  function categoryCountFontSize(titleFontSize) {
+    return clamp(titleFontSize * 0.72, 10, 14);
+  }
+
+  function fontSizeFor(node) {
+    if (node.type === "owner") return clamp(14 * Math.sqrt(state.zoom), 11, 18);
+    if (node.type === "group") return categoryFontSize();
+    return repositoryFontSize();
   }
 
   function fontWeight(node) {
     if (node.type === "owner") return 700;
-    if (node.type === "group") return state.style === "galaxy-systems" ? 650 : 600;
+    if (node.type === "group") return 700;
     return 500;
+  }
+
+  function labelPresentation(node, fontSize, weight) {
+    const title = displayLabel(node);
+    if (state.style === "galaxy-systems" && node.type === "group") {
+      const count = `· ${node.repositoryCount || 0}`;
+      const countFontSize = categoryCountFontSize(fontSize);
+      const titleWidth = measuredWidth(title, fontSize, weight);
+      const countWidth = measuredWidth(count, countFontSize, 550);
+      return {
+        title,
+        count,
+        countFontSize,
+        titleWidth,
+        width: titleWidth + 6 + countWidth + 10,
+        height: fontSize + 8,
+      };
+    }
+    return {
+      title,
+      count: "",
+      countFontSize: 0,
+      titleWidth: 0,
+      width: measuredWidth(title, fontSize, weight) + 10,
+      height: fontSize + 7,
+    };
   }
 
   function adaptiveRepoBudget(area, repoCount) {
@@ -72,6 +125,42 @@ window.addEventListener("DOMContentLoaded", () => {
     const zoomGain = clamp(0.72 + state.zoom * 1.35, 0.72, 2.2);
     const raw = (area / 14500) * densityPenalty * zoomGain;
     return Math.min(repoCount, Math.max(12, Math.round(raw)));
+  }
+
+  function categoryColor(colors) {
+    return state.style === "galaxy-systems" ? colors.group : colors.muted;
+  }
+
+  function drawCandidateLabel(candidate, chosen, colors, forced) {
+    ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.86 : 0);
+    ctx.textBaseline = "top";
+    ctx.lineWidth = candidate.node.type === "group"
+      ? (state.style === "galaxy-systems" ? 3.8 : 3.5)
+      : (state.style === "galaxy-systems" ? 3.1 : 3);
+    ctx.strokeStyle = colors.background;
+
+    if (candidate.presentation.count) {
+      const startX = chosen.left + 5;
+      ctx.textAlign = "left";
+      setFont(candidate.weight, candidate.fontSize);
+      ctx.strokeText(candidate.presentation.title, startX, chosen.y);
+      ctx.fillStyle = categoryColor(colors);
+      ctx.fillText(candidate.presentation.title, startX, chosen.y);
+
+      const countX = startX + candidate.presentation.titleWidth + 6;
+      setFont(550, candidate.presentation.countFontSize);
+      const countY = chosen.y + Math.max(1, (candidate.fontSize - candidate.presentation.countFontSize) * 0.34);
+      ctx.strokeText(candidate.presentation.count, countX, countY);
+      ctx.fillStyle = categoryColor(colors);
+      ctx.fillText(candidate.presentation.count, countX, countY);
+      return;
+    }
+
+    setFont(candidate.weight, candidate.fontSize);
+    ctx.textAlign = chosen.align;
+    ctx.fillStyle = candidate.node.type === "group" ? categoryColor(colors) : colors.text;
+    ctx.strokeText(candidate.presentation.title, chosen.x, chosen.y);
+    ctx.fillText(candidate.presentation.title, chosen.x, chosen.y);
   }
 
   function drawAdaptiveLabels(colors) {
@@ -90,10 +179,9 @@ window.addEventListener("DOMContentLoaded", () => {
       const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.14 : 1));
       const opacity = typeof nodeOpacity === "function" ? nodeOpacity(node) : (node.archived ? 0.72 : 1);
       const directMatch = directIds.has(node.id);
-      const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 11) * Math.sqrt(state.zoom), 9, 15);
+      const fontSize = fontSizeFor(node);
       const weight = fontWeight(node);
-      const text = labelText(node);
-      const measured = textMetrics(text, fontSize, weight);
+      const presentation = labelPresentation(node, fontSize, weight);
       candidates.push({
         node,
         point,
@@ -103,8 +191,7 @@ window.addEventListener("DOMContentLoaded", () => {
         directMatch,
         fontSize,
         weight,
-        text,
-        measured,
+        presentation,
         priority: labelPriority(node, highlighted, directMatch),
       });
     }
@@ -119,7 +206,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const forced = candidate.highlighted || candidate.node.type !== "repository" || candidate.directMatch;
       if (candidate.node.type === "repository" && !forced && repoLabels >= repoBudget) continue;
 
-      const boxes = anchorBoxes(candidate.point, candidate.radius, candidate.measured.width, candidate.measured.height);
+      const boxes = anchorBoxes(candidate.point, candidate.radius, candidate.presentation.width, candidate.presentation.height);
       const order = candidate.node.type === "group" ? [2, 0, 1, 3] : [0, 1, 2, 3];
       let chosen = null;
       for (const index of order) {
@@ -140,20 +227,12 @@ window.addEventListener("DOMContentLoaded", () => {
         placedRepositoryIds.push(candidate.node.id);
       }
 
-      ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.86 : 0);
-      ctx.font = `${candidate.weight} ${candidate.fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
-      ctx.textAlign = chosen.align;
-      ctx.textBaseline = "top";
-      ctx.lineWidth = state.style === "galaxy-systems" ? 3.1 : 3;
-      ctx.strokeStyle = colors.background;
-      ctx.strokeText(candidate.text, chosen.x, chosen.y);
-      ctx.fillStyle = candidate.node.type === "group"
-        ? (state.style === "galaxy-systems" ? colors.group : colors.muted)
-        : colors.text;
-      ctx.fillText(candidate.text, chosen.x, chosen.y);
+      drawCandidateLabel(candidate, chosen, colors, forced);
     }
     ctx.globalAlpha = 1;
 
+    const repoFont = repositoryFontSize();
+    const groupFont = categoryFontSize();
     lastSnapshot = {
       active: true,
       style: state.style,
@@ -165,6 +244,12 @@ window.addEventListener("DOMContentLoaded", () => {
       placedRepositoryIds: [...placedRepositoryIds],
       zoom: state.zoom,
       viewport: { width, height },
+      typography: {
+        repositoryFontSize: repoFont,
+        categoryFontSize: groupFont,
+        categoryCountFontSize: categoryCountFontSize(groupFont),
+        categoryToRepositoryRatio: groupFont / repoFont,
+      },
     };
   }
 
@@ -198,6 +283,7 @@ window.addEventListener("DOMContentLoaded", () => {
         anchors: { ...lastSnapshot.anchors },
         placedRepositoryIds: [...lastSnapshot.placedRepositoryIds],
         viewport: { ...lastSnapshot.viewport },
+        typography: { ...lastSnapshot.typography },
       };
     },
   });
