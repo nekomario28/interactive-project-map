@@ -64,6 +64,7 @@ const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
 const OBSIDIAN_HOVER_SCRIPT = '<script src="../obsidian-hover.js" defer></script>';
 const ADAPTIVE_LABELS_SCRIPT = '<script src="../adaptive-labels.js" defer></script>';
 const SEARCH_EMPHASIS_SCRIPT = '<script src="../search-emphasis.js" defer></script>';
+const DEDICATED_VIEW_STATE_SCRIPT = '<script src="../dedicated-view-state.js" defer></script>';
 const DEDICATED_VIEWERS = new Map([
   ["radial", '<script src="../radial-viewer.js" defer></script>'],
   ["tree", '<script src="../tree-viewer.js" defer></script>'],
@@ -225,18 +226,21 @@ async function emitObsidianRuntime(outputDir) {
 async function emitInteractionPolish(outputDir) {
   const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
   const emphasisSourcePath = resolve(process.cwd(), "scripts/public-search-emphasis.js");
+  const dedicatedViewStatePath = resolve(process.cwd(), "scripts/public-dedicated-view-state.js");
   const source = await readFile(sourcePath, "utf8");
   await writeFile(join(outputDir, "interaction-polish.js"), tuneInteractionPolish(source));
   await copyFile(emphasisSourcePath, join(outputDir, "search-emphasis.js"));
+  await copyFile(dedicatedViewStatePath, join(outputDir, "dedicated-view-state.js"));
   for (const [route, viewerScript] of DEDICATED_VIEWERS) {
     const htmlPath = join(outputDir, route, "index.html");
     const html = await readFile(htmlPath, "utf8");
     if (!html.includes(viewerScript)) throw new Error(`Viewer script tag not found before interaction polish in ${htmlPath}`);
     let next = html;
+    if (!next.includes(DEDICATED_VIEW_STATE_SCRIPT)) next = next.replace(viewerScript, `${DEDICATED_VIEW_STATE_SCRIPT}\n${viewerScript}`);
     if (!next.includes(SPATIAL_CORE_SCRIPT)) next = next.replace(viewerScript, `${viewerScript}\n${SPATIAL_CORE_SCRIPT}`);
     if (!next.includes(POLISH_SCRIPT)) next = next.replace(SPATIAL_CORE_SCRIPT, `${SPATIAL_CORE_SCRIPT}\n${POLISH_SCRIPT}`);
     if (!next.includes(SEARCH_EMPHASIS_SCRIPT)) next = next.replace(POLISH_SCRIPT, `${POLISH_SCRIPT}\n${SEARCH_EMPHASIS_SCRIPT}`);
-    if (!next.includes(SPATIAL_CORE_SCRIPT) || !next.includes(SEARCH_EMPHASIS_SCRIPT)) throw new Error(`Could not attach Spatial Core and search emphasis runtimes in ${htmlPath}`);
+    if (!next.includes(DEDICATED_VIEW_STATE_SCRIPT) || !next.includes(SPATIAL_CORE_SCRIPT) || !next.includes(SEARCH_EMPHASIS_SCRIPT)) throw new Error(`Could not attach dedicated view-state, Spatial Core and search emphasis runtimes in ${htmlPath}`);
     if (next !== html) await writeFile(htmlPath, next);
   }
 }
