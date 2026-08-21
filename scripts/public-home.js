@@ -2,7 +2,7 @@ const USERNAME_RE=/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const CHECKOUT_SHA='3d3c42e5aac5ba805825da76410c181273ba90b1';
 const DOWNLOAD_SHA='3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
 const PROJECT_MAP_ACTION_REF='__PROJECT_MAP_ACTION_REF__';
-const PROJECT_MAP_REUSABLE_REF='151b9cabd5968cdfb602115fc440795c14f88745';
+const PROJECT_MAP_REUSABLE_REF='v1';
 const STYLE_VALUES=new Set(['radial','galaxy-classic','galaxy-systems','galaxy-hybrid','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey']);
 const form=document.getElementById('form'),usernameInput=document.getElementById('username'),themeInput=document.getElementById('theme'),styleInput=document.getElementById('mapStyle'),maxReposInput=document.getElementById('maxRepos'),forksInput=document.getElementById('forks'),archivedInput=document.getElementById('archived'),statusEl=document.getElementById('status'),resultEl=document.getElementById('result'),preview=document.getElementById('preview'),previewMessage=document.getElementById('previewMessage'),openMap=document.getElementById('openMap'),presetCards=[...document.querySelectorAll('[data-style-preset]')];
 function normalizeStyle(value){if(value==='galaxy')return'galaxy-systems';return STYLE_VALUES.has(value)?value:'radial';}
