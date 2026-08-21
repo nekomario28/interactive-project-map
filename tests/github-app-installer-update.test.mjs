@@ -11,6 +11,7 @@ const env = {
   INSTALL_STATE_SECRET: secret,
 };
 const options = { username: "octocat", theme: "light", maxRepos: 80, includeForks: false, includeArchived: true };
+const PINNED_REF = "151b9cabd5968cdfb602115fc440795c14f88745";
 const nowMs = Date.UTC(2026, 7, 22, 1, 0, 0);
 
 function json(value, status = 200) {
@@ -56,6 +57,20 @@ test("managed workflow is updated in place with its current blob SHA", async () 
   const installed = Buffer.from(putBody.content, "base64").toString("utf8");
   assert.ok(installed.startsWith(MANAGED_WORKFLOW_MARKER));
   assert.match(installed, /generate-project-map\.yml@v1/);
+  assert.equal(dispatched, 1);
+});
+
+test("signed one-click update preserves an immutable generator pin", async () => {
+  const state = await createInstallState({ ...options, generatorRef: PINNED_REF }, secret, { nowMs, nonce: "pinned-browser" });
+  let putBody;
+  let dispatched = 0;
+  const fetchImpl = commonFetch(`${MANAGED_WORKFLOW_MARKER}\nname: Stable managed Project Map\n`, (body) => { putBody = body; }, () => { dispatched += 1; });
+  const result = await completeGitHubAppInstall(request(state.state, state.nonce), env, { nowMs, fetchImpl, sleep: async () => {} });
+
+  assert.equal(result.workflow, "updated");
+  const installed = Buffer.from(putBody.content, "base64").toString("utf8");
+  assert.match(installed, new RegExp(`generate-project-map\\.yml@${PINNED_REF}`));
+  assert.match(installed, new RegExp(`# Project Map generator policy: pinned-${PINNED_REF}`));
   assert.equal(dispatched, 1);
 });
 

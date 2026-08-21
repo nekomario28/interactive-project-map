@@ -4,9 +4,8 @@ import { normalizeUsername } from "./hosted-options.ts";
 
 const CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // actions/checkout v7.0.1
 const DOWNLOAD_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"; // actions/download-artifact v8.0.1
-// The reusable workflow is read-only. General installs follow the reviewed v1
-// stable channel, while its inner third-party/action dependencies remain SHA-pinned.
-const REUSABLE_REF = "v1";
+export const STABLE_REUSABLE_REF = "v1";
+const COMMIT_SHA_RE = /^[0-9a-f]{40}$/;
 
 export interface InstallOptions {
   username: string;
@@ -14,6 +13,16 @@ export interface InstallOptions {
   maxRepos: number;
   includeForks: boolean;
   includeArchived: boolean;
+  generatorRef?: string;
+}
+
+export function normalizeGeneratorRef(value: string | null | undefined): string {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized || normalized === STABLE_REUSABLE_REF) return STABLE_REUSABLE_REF;
+  if (!COMMIT_SHA_RE.test(normalized)) {
+    throw new URIError("Invalid generator_ref: expected v1 or a 40-character commit SHA");
+  }
+  return normalized;
 }
 
 export function installOptionsFromUrl(url: URL): InstallOptions {
@@ -23,6 +32,7 @@ export function installOptionsFromUrl(url: URL): InstallOptions {
     maxRepos: intParam(url, "max_repos", 100, 1, 300),
     includeForks: boolParam(url, "forks", true),
     includeArchived: boolParam(url, "archived", false),
+    generatorRef: normalizeGeneratorRef(url.searchParams.get("generator_ref")),
   };
 }
 
@@ -41,8 +51,11 @@ export function staticAssetUrls(origin: string, options: InstallOptions) {
 }
 
 export function renderInstallWorkflow(options: InstallOptions): string {
+  const generatorRef = normalizeGeneratorRef(options.generatorRef);
+  const generatorPolicy = generatorRef === STABLE_REUSABLE_REF ? "stable-v1" : `pinned-${generatorRef}`;
   return `name: Update project map
-# Stable generator baseline: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF} ; inner uses: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
+# Project Map generator policy: ${generatorPolicy}
+# Reviewed immutable inner Action baseline: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
 
 on:
   workflow_dispatch:
@@ -56,7 +69,7 @@ jobs:
   generate:
     permissions:
       contents: read
-    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@${REUSABLE_REF}
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@${generatorRef}
     with:
       theme: ${options.theme}
       style: radial
