@@ -11,7 +11,7 @@ import {
 
 // Keep generated consumer workflows on a reviewed, immutable main implementation commit.
 // This commit includes standard-v1 generalization gates and visible-hierarchy promotion.
-export const PUBLIC_ACTION_REF = "977531824bc7a65c703c692ea4de98b4fed7ca5f";
+export const PUBLIC_ACTION_REF = "caeca4b7b33603109bbadd860a68fdae476c7482";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
