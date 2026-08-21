@@ -4,6 +4,7 @@ import {
   clearInstallNonceCookie,
   completeGitHubAppInstall,
   installerErrorStatus,
+  isGitHubAppInstallerConfigured,
   type GitHubAppInstallerEnv,
 } from "./github-app-installer.ts";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
@@ -44,7 +45,7 @@ export default {
 
     try {
       if (url.pathname === "/") {
-        return new Response(renderHome(url.origin), {
+        return new Response(renderHome(url.origin, isGitHubAppInstallerConfigured(env)), {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",
