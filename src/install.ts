@@ -1,3 +1,4 @@
+import { PROJECT_MAP_ACTION_REF } from "./action-ref.ts";
 import { boolParam, intParam } from "./params.ts";
 import { normalizeUsername } from "./hosted-options.ts";
 
@@ -57,10 +58,8 @@ jobs:
       - name: Checkout profile repository
         uses: actions/checkout@${CHECKOUT_SHA} # v7.0.1
 
-      # v1 is convenient. For the strongest supply-chain guarantee,
-      # replace v1 with a reviewed full commit SHA from this repository.
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@v1
+        uses: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
         with:
           github_token: \${{ github.token }}
           username: \${{ github.repository_owner }}
