@@ -221,6 +221,10 @@
       drawActivityOverlay();
     };
 
+    document.getElementById("search")?.addEventListener("input", () => {
+      queueMicrotask(refreshControlSummary);
+    });
+
     lastStatusKey = statusKey();
     window.ProjectMapRenderProjection = Object.freeze({
       snapshot() {
