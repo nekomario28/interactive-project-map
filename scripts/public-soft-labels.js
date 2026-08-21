@@ -48,6 +48,9 @@ window.addEventListener("DOMContentLoaded", () => {
       const height = Math.max(1, rect.height);
       const area = width * height;
       const repoCount = state.nodes.filter((node) => node.type === "repository").length;
+      const nominalSlots = Math.max(1, area / 15000);
+      const density = repoCount / nominalSlots;
+      const densityZoomFloor = clamp(0.24 + Math.log2(1 + density) * 0.11, 0.26, 0.68);
       const searchApi = window.ProjectMapSearchContext;
       const directIds = new Set(searchApi?.snapshot?.().directRepositoryIds || []);
       const candidates = [];
@@ -83,7 +86,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
         const directMatch = directIds.has(node.id);
         const always = node.type !== "repository" || highlighted || directMatch;
-        const densityZoomFloor = repoCount > 140 ? 0.63 : repoCount > 90 ? 0.52 : repoCount > 55 ? 0.40 : 0.30;
         if (!always && state.zoom < densityZoomFloor) continue;
 
         const fontSize = clamp((node.type === "owner" ? 14 : node.type === "group" ? 12 : 10.5) * Math.sqrt(state.zoom), 8.5, 15);
@@ -97,9 +99,10 @@ window.addEventListener("DOMContentLoaded", () => {
       candidates.sort((a, b) => b.priority - a.priority || a.node.label.localeCompare(b.node.label));
       const occupied = [];
       let repoLabels = 0;
-      const adaptiveBudget = clamp(Math.floor(area / 16500), 18, 78);
-      const zoomBudget = Math.max(1, state.zoom / 0.42);
-      const repoBudget = Math.min(repoCount, Math.round(adaptiveBudget * clamp(zoomBudget, 0.72, 1.9)));
+      const crowding = Math.sqrt(Math.max(1, density));
+      const adaptiveBudget = clamp(Math.round(nominalSlots / crowding), 14, 82);
+      const zoomScale = clamp(Math.pow(state.zoom / Math.max(0.28, densityZoomFloor), 0.75), 0.72, 1.9);
+      const repoBudget = Math.min(repoCount, Math.max(1, Math.round(adaptiveBudget * zoomScale)));
 
       for (const candidate of candidates) {
         const forced = candidate.highlighted || candidate.node.type !== "repository" || candidate.directMatch;
@@ -138,6 +141,8 @@ window.addEventListener("DOMContentLoaded", () => {
         repoLabels,
         totalLabels: occupied.length,
         zoom: state.zoom,
+        density,
+        densityZoomFloor,
         viewport: { width, height },
       };
     };
