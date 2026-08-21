@@ -329,7 +329,7 @@ async function readExistingWorkflow(fetchImpl: typeof fetch, token: string, repo
 
 async function upsertManagedWorkflow(fetchImpl: typeof fetch, token: string, repository: GitHubRepository, workflow: string): Promise<InstallCompletion["workflow"]> {
   const existing = await readExistingWorkflow(fetchImpl, token, repository.full_name, repository.default_branch);
-  if (existing && !existing.content.includes(MANAGED_WORKFLOW_MARKER)) {
+  if (existing && !existing.content.startsWith(`${MANAGED_WORKFLOW_MARKER}\n`)) {
     throw new InstallerError(`${WORKFLOW_PATH} already exists and is not managed by Project Map`, 409, "workflow_conflict");
   }
   if (existing?.content === workflow) return "unchanged";
