@@ -41,6 +41,7 @@ const HYBRID_SCRIPT = '<script src="../galaxy-hybrid-runtime.js" defer></script>
 const OBSIDIAN_SCRIPT = '<script src="../obsidian-runtime.js" defer></script>';
 const EDGE_SCRIPT = '<script src="../galaxy-edge-policy.js" defer></script>';
 const POLISH_SCRIPT = '<script src="../interaction-polish.js" defer></script>';
+const ADAPTIVE_LABELS_SCRIPT = '<script src="../adaptive-labels.js" defer></script>';
 const SEARCH_EMPHASIS_SCRIPT = '<script src="../search-emphasis.js" defer></script>';
 const DEDICATED_VIEWERS = new Map([
   ["radial", '<script src="../radial-viewer.js" defer></script>'],
@@ -125,6 +126,7 @@ async function emitGalaxyRuntimes(outputDir) {
   await copyFile(join(sourceDir, "public-galaxy-common.js"), join(outputDir, "galaxy-common.js"));
   await copyFile(join(sourceDir, "public-galaxy-hybrid.js"), join(outputDir, "galaxy-hybrid-runtime.js"));
   await copyFile(join(sourceDir, "public-galaxy-edge-policy.js"), join(outputDir, "galaxy-edge-policy.js"));
+  await copyFile(join(sourceDir, "public-adaptive-labels.js"), join(outputDir, "adaptive-labels.js"));
 
   const classicTemplate = await readFile(join(sourceDir, "public-galaxy-classic.js"), "utf8");
   const systemsTemplate = await readFile(join(sourceDir, "public-galaxy-systems.js"), "utf8");
@@ -134,9 +136,9 @@ async function emitGalaxyRuntimes(outputDir) {
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
   if (!html.includes(VIEWER_SCRIPT)) throw new Error("Shared viewer script tag not found");
-  const runtimeBlock = [COMMON_SCRIPT, CLASSIC_SCRIPT, SYSTEMS_SCRIPT, HYBRID_SCRIPT, OBSIDIAN_SCRIPT, EDGE_SCRIPT, POLISH_SCRIPT].join("\n");
+  const runtimeBlock = [COMMON_SCRIPT, CLASSIC_SCRIPT, SYSTEMS_SCRIPT, HYBRID_SCRIPT, OBSIDIAN_SCRIPT, EDGE_SCRIPT, POLISH_SCRIPT, ADAPTIVE_LABELS_SCRIPT].join("\n");
   const next = html.includes(COMMON_SCRIPT) ? html : html.replace(VIEWER_SCRIPT, `${VIEWER_SCRIPT}\n${runtimeBlock}`);
-  if (!next.includes(CLASSIC_SCRIPT) || !next.includes(SYSTEMS_SCRIPT) || !next.includes(HYBRID_SCRIPT)) throw new Error("Could not attach Galaxy family runtimes");
+  if (!next.includes(CLASSIC_SCRIPT) || !next.includes(SYSTEMS_SCRIPT) || !next.includes(HYBRID_SCRIPT) || !next.includes(ADAPTIVE_LABELS_SCRIPT)) throw new Error("Could not attach Galaxy family runtimes");
   if (next !== html) await writeFile(htmlPath, next);
 }
 
