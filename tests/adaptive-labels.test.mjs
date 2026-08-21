@@ -19,6 +19,13 @@ test("adaptive label runtime is text-only and bounded to Systems/Hybrid", async 
   assert.match(source, /ctx\.fillText = \(\) => \{\}/);
   assert.match(source, /ctx\.strokeText = \(\) => \{\}/);
 
+  // Category labels are a stronger typographic tier, while repository labels retain the same adaptive engine.
+  assert.match(source, /function categoryFontScale\(/);
+  assert.match(source, /function categoryCountFontSize\(/);
+  assert.match(source, /categoryToRepositoryRatio/);
+  assert.match(source, /if \(node\.type === "group"\) return 700/);
+  assert.match(source, /const count = `· \$\{node\.repositoryCount \|\| 0\}`/);
+
   // The runtime may read node geometry to place text, but must never mutate layout/view state.
   assert.doesNotMatch(source, /node\.x\s*=/);
   assert.doesNotMatch(source, /node\.y\s*=/);
