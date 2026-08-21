@@ -1,5 +1,5 @@
 "use strict";
-/* global state, canvas, hash, clamp, hitTest, worldToScreen, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
+/* global state, canvas, hash, clamp, hitTest, screenToWorld, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
 
 (() => {
   // Obsidian-like runtime: one global force system with four user-facing
@@ -14,7 +14,7 @@
     cooling: 0.986,
   };
   const SPAWN_ALPHA = 0.6;
-  const baseHitTest = hitTest;
+  const REDUCED_MOTION_SETTLE_STEPS = 120;
 
   const runtime = {
     nodesRef: null,
@@ -31,6 +31,11 @@
     pinchMidpoint: null,
     pinchConsumed: false,
   };
+
+  function reducedMotionRequested() {
+    return typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
 
   function physicsRadius(node) {
     if (node.type === "owner") return 19;
@@ -138,6 +143,26 @@
       const point = compactSpawnPoint(raw, index, count);
       return { ...raw, x: point.x, y: point.y, vx: 0, vy: 0 };
     });
+
+    if (reducedMotionRequested()) {
+      // Keep reduced-motion users out of an automatic force animation. Build a
+      // stable snapshot with the same force law, then expose it at rest. This is
+      // intentionally a reduced-motion-only path; normal viewing still opens at
+      // SPAWN_ALPHA and visibly settles on screen.
+      const edges = linkedEdges(graph, nodes);
+      let alpha = SPAWN_ALPHA;
+      for (let stepIndex = 0; stepIndex < REDUCED_MOTION_SETTLE_STEPS; stepIndex += 1) {
+        applyForceStep(nodes, edges, alpha);
+        alpha *= settings.cooling;
+      }
+      for (const node of nodes) {
+        node.vx = 0;
+        node.vy = 0;
+      }
+      runtime.pendingSpawnAlpha = 0;
+      return nodes;
+    }
+
     // Preserve a real live spawn instead of hiding convergence in a synchronous
     // pre-settle. 0.6 is also the alpha used by Graph Spawn when handing seeded
     // positions back to Obsidian's own worker.
@@ -165,11 +190,23 @@
   }
 
   function reheat(value = 0.55) {
+    if (reducedMotionRequested()) {
+      runtime.alpha = 0;
+      return;
+    }
     runtime.alpha = Math.max(runtime.alpha, value);
   }
 
   function step() {
     if (!ensureRuntime()) return false;
+    if (reducedMotionRequested()) {
+      runtime.alpha = 0;
+      for (const node of state.nodes) {
+        node.vx = 0;
+        node.vy = 0;
+      }
+      return false;
+    }
     if (runtime.alpha < 0.001 && !runtime.dragging) {
       runtime.alpha = 0;
       for (const node of state.nodes) {
@@ -187,28 +224,6 @@
     if (runtime.dragging) return "dragging";
     return runtime.alpha >= 0.001 ? "settling" : "settled";
   }
-
-  // A live force graph can move a few screen pixels between the frame a user
-  // targets and pointer-down. Keep the normal hit-test authoritative, then add
-  // only a small settling-time screen-space grace area. It shrinks with alpha
-  // and disappears entirely once the simulation settles, so static behavior is
-  // exactly the original viewer contract.
-  hitTest = function obsidianSettlingHitTest(screenX, screenY) {
-    const exact = baseHitTest(screenX, screenY);
-    if (exact || state.style !== "obsidian" || runtime.alpha < 0.001) return exact;
-    const tolerance = clamp(10 + runtime.alpha * 10, 10, 16);
-    let nearest = null;
-    let nearestDistance = tolerance;
-    for (const node of state.nodes) {
-      const point = worldToScreen(node.x, node.y);
-      const distance = Math.hypot(point.x - screenX, point.y - screenY);
-      if (distance <= nearestDistance) {
-        nearest = node;
-        nearestDistance = distance;
-      }
-    }
-    return nearest;
-  };
 
   function canvasPoint(event) {
     const rect = canvas.getBoundingClientRect();
@@ -365,7 +380,9 @@
         const currentPhase = phase();
         if (subtitle) subtitle.textContent = `Obsidian Graph-like · global center / repel / link physics · ${currentPhase === "settled" ? "settled" : "live settling"}`;
         if (!state.selected && detailsDescription) {
-          detailsDescription.textContent = "Obsidian-style force graph: nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
+          detailsDescription.textContent = reducedMotionRequested()
+            ? "Obsidian-style force graph: reduced-motion mode presents a stable force-layout snapshot. Dragging moves the selected node without automatically reheating the whole graph."
+            : "Obsidian-style force graph: nodes start from a deterministic compact seed and settle under one global center, repel, link and distance system. Dragging reheats the whole graph; release lets it settle naturally from the dropped position.";
         }
         if (step()) draw();
       } else {
