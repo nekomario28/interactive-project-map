@@ -33,6 +33,18 @@ const MOBILE_FIX = `
 
 const VIEWER_FIT_OLD = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.25, 2.2);";
 const VIEWER_FIT_NEW = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);";
+const VIEWER_AUTO_FIT_OLD = "  if (fit) fitView();";
+const VIEWER_AUTO_FIT_NEW = `  if (fit && state.style === "obsidian") {
+    // Native Obsidian opens the graph around its centered spawn at a neutral
+    // camera scale instead of continuously fitting current graph bounds. Keep
+    // the explicit Fit command available, but do not hide the live bloom on open.
+    state.zoom = 1;
+    state.pan.x = 0;
+    state.pan.y = 0;
+    state.fitted = true;
+  } else if (fit) {
+    fitView();
+  }`;
 const VIEWER_SCRIPT = '<script src="../viewer.js" defer></script>';
 const COMMON_SCRIPT = '<script src="../galaxy-common.js" defer></script>';
 const CLASSIC_SCRIPT = '<script src="../galaxy-classic-runtime.js" defer></script>';
@@ -87,11 +99,14 @@ async function hardenSharedViewer(outputDir) {
   const viewerPath = join(outputDir, "viewer.js");
   const source = await readFile(viewerPath, "utf8");
   if (!source.includes(VIEWER_FIT_OLD) && !source.includes(VIEWER_FIT_NEW)) throw new Error("Could not locate shared viewer Fit zoom contract");
+  if (!source.includes(VIEWER_AUTO_FIT_OLD) && !source.includes(VIEWER_AUTO_FIT_NEW)) throw new Error("Could not locate shared viewer initial-fit contract");
   const patched = patchViewerStyles(source)
     .replace(VIEWER_FIT_OLD, VIEWER_FIT_NEW)
+    .replace(VIEWER_AUTO_FIT_OLD, VIEWER_AUTO_FIT_NEW)
     .replaceAll(", 0.2, 4.5)", ", 0.04, 4.5)");
   if (!patched.includes('"galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"')) throw new Error("Could not expand shared viewer Galaxy style contract");
   if (!patched.includes(VIEWER_FIT_NEW) || patched.includes(VIEWER_FIT_OLD)) throw new Error("Could not lower shared viewer minimum zoom");
+  if (!patched.includes(VIEWER_AUTO_FIT_NEW) || patched.includes(VIEWER_AUTO_FIT_OLD)) throw new Error("Could not isolate Obsidian initial viewport from auto-fit");
   if (patched !== source) await writeFile(viewerPath, patched);
 }
 
