@@ -72,16 +72,19 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(obsidian, /linkDistance: 138/);
     assert.match(obsidian, /damping: 0\.855/);
     assert.match(obsidian, /const SPAWN_ALPHA = 0\.6;/);
+    assert.match(obsidian, /const REDUCED_MOTION_SETTLE_STEPS = 120;/);
+    assert.match(obsidian, /function reducedMotionRequested/);
+    assert.match(obsidian, /prefers-reduced-motion: reduce/);
     assert.match(obsidian, /function compactSpawnPoint/);
     assert.match(obsidian, /60 \* Math\.sqrt\(safeCount\)/);
     assert.match(obsidian, /buildObsidianLayout = function liveObsidianForceSpawn/);
+    assert.match(obsidian, /stepIndex < REDUCED_MOTION_SETTLE_STEPS/);
+    assert.match(obsidian, /runtime\.pendingSpawnAlpha = 0/);
     assert.match(obsidian, /runtime\.pendingSpawnAlpha = SPAWN_ALPHA/);
-    assert.match(obsidian, /const baseHitTest = hitTest;/);
-    assert.match(obsidian, /hitTest = function obsidianSettlingHitTest/);
-    assert.match(obsidian, /clamp\(10 \+ runtime\.alpha \* 10, 10, 16\)/);
     assert.match(obsidian, /window\.ProjectMapObsidianRuntime/);
     assert.match(obsidian, /reheat\(0\.55\)/);
     assert.doesNotMatch(obsidian, /SPAWN_WARMUP_STEPS|stepIndex < 120/);
+    assert.doesNotMatch(obsidian, /baseHitTest|obsidianSettlingHitTest|worldToScreen/);
     assert.doesNotMatch(obsidian, /anchorX|anchorY|nodeActivity|neighborhoodLevels|releaseAnchor/);
 
     assert.match(polish, /readableRadialRepoLabels/);
