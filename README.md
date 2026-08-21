@@ -226,7 +226,7 @@ Verification includes:
 - actionlint on repository workflows and the browser-generated installer workflow
 - Galaxy Classic preservation checks
 - Galaxy Systems speed, nested-orbit, focus-edge, and SVG fallback checks
-- Galaxy Hybrid spiral/elliptical-orbit, and SVG fallback checks
+- Galaxy Hybrid spiral/elliptical-orbit and SVG fallback checks
 - dense 300-repository regression tests across all 12 presets
 - Treemap bounds/coverage checks
 - Sunburst segment checks
