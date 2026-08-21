@@ -93,7 +93,7 @@ GET /api/install/callback?code=...&state=...
   |-- GET /user/installations/{id}/repositories
   |-- require explicit USERNAME/USERNAME access + push/admin capability
   |-- GET .github/workflows/project-map.yml
-  |-- create it, or update it only when it is our managed workflow
+  |-- create it, or update it only when it begins with our managed marker
   |-- POST workflow_dispatch (short retry only for just-created 404 race)
   |-- discard user token
   v
@@ -118,13 +118,13 @@ GitHub strongly recommends PKCE for OAuth web flows. The selected one-step insta
 
 ### Existing workflows are not blindly replaced
 
-`.github/workflows/project-map.yml` is updated only when it contains the Project Map managed marker:
+`.github/workflows/project-map.yml` is updated only when its first line is exactly:
 
 ```text
 # Managed by interactive-project-map one-click installer v1
 ```
 
-An unrelated file at that path produces a conflict instead of being overwritten. Repair/migration of legacy workflow names is a separate explicit phase.
+A marker appearing later in an unrelated file does not grant installer ownership. An unrelated file at that path produces a conflict instead of being overwritten. Repair/migration of legacy workflow names is a separate explicit phase.
 
 ### The recurring path stays App-independent
 
@@ -142,7 +142,7 @@ Code-only gates, which require no GitHub App credentials:
 6. reject non-`ghu_` token types.
 7. installation account verification.
 8. explicit `USERNAME/USERNAME` repository verification.
-9. unmanaged-workflow overwrite refusal.
+9. strict first-line managed-workflow ownership and unrelated-workflow overwrite refusal.
 10. immutable reusable-workflow SHA retained in installed YAML.
 11. managed workflow update/no-op behavior.
 12. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
