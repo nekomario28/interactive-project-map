@@ -38,7 +38,7 @@ test("generated workflow delegates read-only generation and keeps write publishi
   });
 
   assert.match(workflow, /generate:\n[\s\S]*permissions:\n      contents: read/);
-  assert.match(workflow, /uses: nekomario28\/interactive-project-map\/\.github\/workflows\/generate-project-map\.yml@v1/);
+  assert.match(workflow, /uses: nekomario28\/interactive-project-map\/\.github\/workflows\/generate-project-map\.yml@151b9cabd5968cdfb602115fc440795c14f88745/);
   assert.match(workflow, new RegExp(`# Stable generator baseline: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
   assert.match(workflow, /style: radial/);
   assert.match(workflow, /max_repos: "100"/);
