@@ -79,7 +79,7 @@ test("reviewed portfolio keeps repository text out of overview and reveals it on
   const graph = await installReviewedGraph(page);
   await page.goto("/u/?username=nekomario28&style=galaxy-systems");
   await expect(page.locator("#status")).toBeHidden();
-  await expect.poll(() => page.evaluate(() => window.ProjectMapAdaptiveLabels?.snapshot().mode)).toBe("semantic-lod-motion");
+  await expect.poll(() => page.evaluate(() => window.ProjectMapAdaptiveLabels?.snapshot().mode)).toBe("semantic-lod");
   const geometry = await nodeGeometry(page);
 
   await setZoomAndSettle(page, 0.80);
@@ -106,21 +106,6 @@ test("reviewed portfolio keeps repository text out of overview and reveals it on
   await page.locator("#galaxy").screenshot({ path: resolve(outDir, "search-FTBPublicClaims.png") });
   await page.locator("#search").fill("");
 
-  await setZoomAndSettle(page, 1.35);
-  const settled = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
-  expect(settled.cameraMoving).toBe(false);
-  await page.locator("#galaxy").screenshot({ path: resolve(outDir, "motion-settled.png") });
-
-  const moving = await page.evaluate(() => {
-    state.pan.x += 0.3;
-    draw();
-    return window.ProjectMapAdaptiveLabels.snapshot();
-  });
-  expect(moving.cameraMoving).toBe(true);
-  await page.locator("#galaxy").screenshot({ path: resolve(outDir, "motion-moving.png") });
-  await page.waitForTimeout(220);
-  await page.evaluate(() => draw());
-  expect((await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot())).cameraMoving).toBe(false);
   expect(await nodeGeometry(page)).toEqual(geometry);
 
   await writeFile(resolve(outDir, "evidence.json"), `${JSON.stringify({

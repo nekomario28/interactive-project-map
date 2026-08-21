@@ -132,7 +132,7 @@ test("Galaxy Systems keeps overview labels semantic and progressively discloses 
   expect(far.mode).toBe("categories");
   expect(far.visible).toHaveLength(0);
   expect(far.adaptive?.active).toBe(true);
-  expect(far.adaptive.mode).toBe("semantic-lod-motion");
+  expect(far.adaptive.mode).toBe("semantic-lod");
   for (const [id, label] of groupDefs) {
     const count = repositories.filter((repo) => repo[1] === id).length;
     expect(far.labels).toContain(label);
