@@ -39,6 +39,6 @@ test("generated Galaxy page always emits adaptive labels after interaction polis
   const source = await readFile(postprocessPath, "utf8");
   assert.match(source, /public-adaptive-labels\.js/);
   assert.match(source, /adaptive-labels\.js/);
-  assert.match(source, /POLISH_SCRIPT, ADAPTIVE_LABELS_SCRIPT/);
+  assert.match(source, /POLISH_SCRIPT, OBSIDIAN_HOVER_SCRIPT, ADAPTIVE_LABELS_SCRIPT/);
   assert.match(source, /next\.includes\(ADAPTIVE_LABELS_SCRIPT\)/);
 });
