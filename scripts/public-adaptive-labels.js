@@ -5,12 +5,10 @@ window.addEventListener("DOMContentLoaded", () => {
   const supportedStyles = new Set(["galaxy-systems", "galaxy-hybrid"]);
   const baseDrawNodesAndLabels = drawNodesAndLabels;
   const eligibleRepositoryIds = new Set();
-  let lastCamera = null;
-  let cameraMovingUntil = 0;
   let lastSnapshot = {
     active: false,
     style: null,
-    mode: "semantic-lod-motion",
+    mode: "semantic-lod",
     repoCount: 0,
     repoBudget: 0,
     repoLabels: 0,
@@ -18,7 +16,6 @@ window.addEventListener("DOMContentLoaded", () => {
     anchors: {},
     placedRepositoryIds: [],
     eligibleRepositoryIds: [],
-    cameraMoving: false,
     zoom: 1,
     viewport: { width: 0, height: 0 },
     typography: {
@@ -139,22 +136,6 @@ window.addEventListener("DOMContentLoaded", () => {
     return Math.min(repoCount, fractional, screenCapacity);
   }
 
-  function cameraMotionState(now) {
-    const next = {
-      zoom: state.zoom,
-      x: state.pan?.x || 0,
-      y: state.pan?.y || 0,
-    };
-    if (lastCamera) {
-      const changed = Math.abs(next.zoom - lastCamera.zoom) > 0.0005
-        || Math.abs(next.x - lastCamera.x) > 0.25
-        || Math.abs(next.y - lastCamera.y) > 0.25;
-      if (changed) cameraMovingUntil = now + 180;
-    }
-    lastCamera = next;
-    return now < cameraMovingUntil;
-  }
-
   function semanticScore(candidate, densityPenalty) {
     const stars = Math.max(0, candidate.node.stars || 0);
     const importance = Math.min(1.8, Math.log2(stars + 1) * 0.28) + (candidate.node.fork ? -0.15 : 0);
@@ -184,12 +165,10 @@ window.addEventListener("DOMContentLoaded", () => {
     return state.style === "galaxy-systems" ? colors.group : colors.muted;
   }
 
-  function drawCandidateLabel(candidate, chosen, colors, forced, cameraMoving) {
-    let semanticAlpha = 1;
-    if (!forced && candidate.node.type === "repository") {
-      semanticAlpha = candidate.semanticAlpha ?? 1;
-      if (cameraMoving) semanticAlpha *= 0.12;
-    }
+  function drawCandidateLabel(candidate, chosen, colors, forced) {
+    const semanticAlpha = !forced && candidate.node.type === "repository"
+      ? (candidate.semanticAlpha ?? 1)
+      : 1;
     ctx.globalAlpha = Math.max(candidate.opacity * semanticAlpha, forced ? 0.86 : 0);
     ctx.textBaseline = "top";
     ctx.lineWidth = candidate.node.type === "group"
@@ -229,7 +208,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const repoCount = state.nodes.filter((node) => node.type === "repository").length;
     const directIds = directRepositoryIds();
     const candidates = [];
-    const cameraMoving = cameraMotionState(performance.now());
 
     for (const node of state.nodes) {
       const point = worldToScreen(node.x, node.y);
@@ -290,7 +268,7 @@ window.addEventListener("DOMContentLoaded", () => {
         placedRepositoryIds.push(candidate.node.id);
       }
 
-      drawCandidateLabel(candidate, chosen, colors, forced, cameraMoving);
+      drawCandidateLabel(candidate, chosen, colors, forced);
     }
     ctx.globalAlpha = 1;
 
@@ -299,7 +277,7 @@ window.addEventListener("DOMContentLoaded", () => {
     lastSnapshot = {
       active: true,
       style: state.style,
-      mode: "semantic-lod-motion",
+      mode: "semantic-lod",
       repoCount,
       repoBudget,
       repoLabels,
@@ -307,7 +285,6 @@ window.addEventListener("DOMContentLoaded", () => {
       anchors: { ...anchorCounts },
       placedRepositoryIds: [...placedRepositoryIds],
       eligibleRepositoryIds: [...eligibleRepositoryIds].sort(),
-      cameraMoving,
       zoom: state.zoom,
       viewport: { width, height },
       typography: {
