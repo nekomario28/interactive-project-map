@@ -226,7 +226,7 @@ Verification includes:
 - actionlint on repository workflows and the browser-generated installer workflow
 - Galaxy Classic preservation checks
 - Galaxy Systems speed, nested-orbit, focus-edge, and SVG fallback checks
-- Galaxy Hybrid spiral/elliptical-orbit and SVG fallback checks
+- Galaxy Hybrid spiral/elliptical-orbit, and SVG fallback checks
 - dense 300-repository regression tests across all 12 presets
 - Treemap bounds/coverage checks
 - Sunburst segment checks
@@ -250,7 +250,7 @@ The Worker implementation remains available for API/fallback experiments but is 
 <a href="https://github.com/nekomario28"><img src="https://github.com/nekomario28.png?size=96" width="72" alt="@nekomario28"/><br/><sub><b>Yuu / nekomario28</b></sub></a><br/><sub>Maintainer · implementation</sub>
 </td>
 <td align="center" width="180">
-<br/><strong>SYUN</strong><br/><sub>Project contributor</sub>
+<a href="https://github.com/syun88"><img src="https://github.com/syun88.png?size=96" width="72" alt="@syun88"/><br/><sub><b>SYUN / syun88</b></sub></a><br/><sub>Project contributor</sub>
 </td>
 </tr>
 </table>
