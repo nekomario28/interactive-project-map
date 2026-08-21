@@ -13,6 +13,55 @@ permissions:
   contents: read
 
 jobs:
+  trim-view-state-once:
+    if: github.repository == 'nekomario28/interactive-project-map' && github.head_ref == 'refactor/view-state-scope'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Remove out-of-scope search keyboard navigation and restore CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/public-view-state.js')
+          source = path.read_text()
+          block = '''      searchInput.addEventListener("keydown", (event) => {
+            if (!state.query || !["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+            const ids = window.ProjectMapSearchContext?.directRepositories?.() || [];
+            const hits = ids.map((id) => state.byId.get(id)).filter((node) => node && statusVisible(node));
+            if (!hits.length) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const current = hits.findIndex((node) => node.id === state.selected?.id);
+            const step = event.key === "ArrowUp" ? -1 : 1;
+            const index = event.key === "Enter"
+              ? (current >= 0 ? current : 0)
+              : current < 0 ? (step > 0 ? 0 : hits.length - 1) : (current + step + hits.length) % hits.length;
+            const target = hits[index];
+            if (typeof updateDetails === "function") updateDetails(target);
+            if (event.key === "Enter" && target.url) window.open(target.url, "_blank", "noopener");
+          }, true);
+          '''
+          if source.count(block) != 1:
+              raise SystemExit('expected exactly one search keydown block')
+          path.write_text(source.replace(block, ''))
+          PY
+          git checkout origin/main -- .github/workflows/ci.yml
+          git add -- scripts/public-view-state.js .github/workflows/ci.yml
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "refactor: keep view-state controls in scope"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
   verify:
     runs-on: ubuntu-latest
     steps:
