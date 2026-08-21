@@ -22,21 +22,23 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     const classicPath = join(dir, "galaxy-classic-runtime.js");
     const systemsPath = join(dir, "galaxy-systems-runtime.js");
     const hybridPath = join(dir, "galaxy-hybrid-runtime.js");
+    const spatialCorePath = join(dir, "spatial-core-runtime.js");
     const edgePath = join(dir, "galaxy-edge-policy.js");
     const obsidianPath = join(dir, "obsidian-runtime.js");
     const polishPath = join(dir, "interaction-polish.js");
     const classic = await readFile(classicPath, "utf8");
     const systems = await readFile(systemsPath, "utf8");
     const hybrid = await readFile(hybridPath, "utf8");
+    const spatialCore = await readFile(spatialCorePath, "utf8");
     const edgePolicy = await readFile(edgePath, "utf8");
     const obsidian = await readFile(obsidianPath, "utf8");
     const polish = await readFile(polishPath, "utf8");
 
-    assert.match(sharedHtml, /galaxy-common\.js[\s\S]*galaxy-classic-runtime\.js[\s\S]*galaxy-systems-runtime\.js[\s\S]*galaxy-hybrid-runtime\.js[\s\S]*obsidian-runtime\.js[\s\S]*galaxy-edge-policy\.js[\s\S]*interaction-polish\.js/);
+    assert.match(sharedHtml, /galaxy-common\.js[\s\S]*galaxy-classic-runtime\.js[\s\S]*galaxy-systems-runtime\.js[\s\S]*galaxy-hybrid-runtime\.js[\s\S]*spatial-core-runtime\.js[\s\S]*obsidian-runtime\.js[\s\S]*galaxy-edge-policy\.js[\s\S]*interaction-polish\.js/);
     assert.doesNotMatch(sharedHtml, /shared-runtime\.js/);
     for (const route of dedicatedRoutes) {
       const html = await readFile(join(dir, route, "index.html"), "utf8");
-      assert.match(html, new RegExp(`${route}-viewer\\.js[\\s\\S]*interaction-polish\\.js`));
+      assert.match(html, new RegExp(`${route}-viewer\\.js[\\s\\S]*spatial-core-runtime\\.js[\\s\\S]*interaction-polish\\.js`));
     }
 
     assert.match(classic, /state\.style !== "galaxy-classic"/);
@@ -55,6 +57,14 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(hybrid, /480 \+ lane \* 240/);
     assert.match(hybrid, /semiMinor = semiMajor \* 0\.68/);
 
+    assert.match(spatialCore, /window\.ProjectMapSpatialCore/);
+    assert.match(spatialCore, /center":0\.0026/);
+    assert.match(spatialCore, /repel":9200/);
+    assert.match(spatialCore, /linkDistance":138/);
+    assert.match(spatialCore, /function normalizeWeightedEdges/);
+    assert.match(spatialCore, /function linkForceEdges/);
+    assert.match(spatialCore, /function stepForceLayout/);
+
     assert.match(edgePolicy, /if \(!focus\) return relation \? \(state\.style === "galaxy-hybrid" \? 0\.12 : 0\.16\) : 0;/);
     assert.match(edgePolicy, /focusMembership/);
     assert.match(edgePolicy, /categoryOwnership/);
@@ -66,11 +76,10 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(edgePolicy, /state\.query && matchesQuery\(node\)/);
     assert.match(edgePolicy, /window\.GalaxySystemsLabelLOD/);
 
-    assert.match(obsidian, /center: 0\.0026/);
-    assert.match(obsidian, /repel: 9200/);
-    assert.match(obsidian, /link: 0\.022/);
-    assert.match(obsidian, /linkDistance: 138/);
-    assert.match(obsidian, /damping: 0\.855/);
+    assert.match(obsidian, /ProjectMapSpatialCore\.DEFAULT_FORCE_SETTINGS/);
+    assert.match(obsidian, /ProjectMapSpatialCore\.linkForceEdges/);
+    assert.match(obsidian, /ProjectMapSpatialCore\.stepForceLayout/);
+    assert.doesNotMatch(obsidian, /center: 0\.0026|repel: 9200|for \(let first = 0; first < nodes\.length/);
     assert.match(obsidian, /const SPAWN_ALPHA = 0\.6;/);
     assert.match(obsidian, /const REDUCED_MOTION_SETTLE_STEPS = 120;/);
     assert.match(obsidian, /function reducedMotionRequested/);
@@ -103,6 +112,9 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(polish, /category-context/);
     assert.match(polish, /category-member/);
     assert.match(polish, /semanticAwareSanitizeGraph/);
+    assert.match(polish, /ProjectMapSpatialCore/);
+    assert.match(polish, /normalizeWeightedEdges/);
+    assert.doesNotMatch(polish, /const deduped = new Map\(\)/);
     assert.match(polish, /semanticAwareObsidianLayout/);
     assert.match(polish, /semanticAwareRebuildLayout/);
     assert.match(polish, /installSemanticDrawLayer/);
@@ -112,7 +124,7 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(polish, /state\.edges = \[\.\.\.state\.graph\.edges, \.\.\.state\.graph\.semanticEdges\]/);
     assert.doesNotMatch(polish, /releaseAnchor|duration: 520/);
 
-    for (const path of [commonPath, classicPath, systemsPath, hybridPath, edgePath, obsidianPath, polishPath]) {
+    for (const path of [commonPath, classicPath, systemsPath, hybridPath, spatialCorePath, edgePath, obsidianPath, polishPath]) {
       const checked = spawnSync(process.execPath, ["--check", path], { encoding: "utf8" });
       assert.equal(checked.status, 0, `${path} failed syntax check:\n${checked.stderr}`);
     }
