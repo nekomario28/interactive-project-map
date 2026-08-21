@@ -76,6 +76,9 @@ test("three Galaxy runtimes and Obsidian stay isolated while interaction polish 
     assert.match(obsidian, /60 \* Math\.sqrt\(safeCount\)/);
     assert.match(obsidian, /buildObsidianLayout = function liveObsidianForceSpawn/);
     assert.match(obsidian, /runtime\.pendingSpawnAlpha = SPAWN_ALPHA/);
+    assert.match(obsidian, /const baseHitTest = hitTest;/);
+    assert.match(obsidian, /hitTest = function obsidianSettlingHitTest/);
+    assert.match(obsidian, /clamp\(10 \+ runtime\.alpha \* 10, 10, 16\)/);
     assert.match(obsidian, /window\.ProjectMapObsidianRuntime/);
     assert.match(obsidian, /reheat\(0\.55\)/);
     assert.doesNotMatch(obsidian, /SPAWN_WARMUP_STEPS|stepIndex < 120/);
