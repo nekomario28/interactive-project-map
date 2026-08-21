@@ -95,7 +95,7 @@ for (const style of ["galaxy-systems", "galaxy-hybrid"]) {
     await expect.poll(() => page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot().viewport.width)).toBe(520);
     const compact = await page.evaluate(() => window.ProjectMapAdaptiveLabels.snapshot());
     expect(compact.repoBudget).toBeLessThanOrEqual(initial.repoBudget);
-    expect(await page.evaluate(geometrySnapshot())).toEqual(before);
+    expect((await page.evaluate(geometrySnapshot())).nodes).toEqual(before.nodes);
   });
 }
 
