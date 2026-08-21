@@ -4,15 +4,21 @@
 window.addEventListener("DOMContentLoaded", () => {
   const supportedStyles = new Set(["galaxy-systems", "galaxy-hybrid"]);
   const baseDrawNodesAndLabels = drawNodesAndLabels;
+  const eligibleRepositoryIds = new Set();
+  let lastCamera = null;
+  let cameraMovingUntil = 0;
   let lastSnapshot = {
     active: false,
     style: null,
+    mode: "semantic-lod-motion",
     repoCount: 0,
     repoBudget: 0,
     repoLabels: 0,
     totalLabels: 0,
     anchors: {},
     placedRepositoryIds: [],
+    eligibleRepositoryIds: [],
+    cameraMoving: false,
     zoom: 1,
     viewport: { width: 0, height: 0 },
     typography: {
@@ -29,6 +35,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function visibleBox(box, width, height, margin = 5) {
     return box.left >= margin && box.top >= margin && box.right <= width - margin && box.bottom <= height - margin;
+  }
+
+  function smoothstep(edge0, edge1, value) {
+    const t = clamp((value - edge0) / Math.max(0.0001, edge1 - edge0), 0, 1);
+    return t * t * (3 - 2 * t);
   }
 
   function setFont(weight, fontSize) {
@@ -118,21 +129,68 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function adaptiveRepoBudget(area, repoCount) {
+  function semanticRepoBudget(area, repoCount) {
     if (repoCount <= 0) return 0;
+    const detail = smoothstep(10.7, 14.8, repositoryFontSize());
     const density = repoCount / Math.max(1, area / 100000);
-    const densityPenalty = 1 / Math.sqrt(Math.max(1, density / 8));
-    const zoomGain = clamp(0.72 + state.zoom * 1.35, 0.72, 2.2);
-    const raw = (area / 14500) * densityPenalty * zoomGain;
-    return Math.min(repoCount, Math.max(12, Math.round(raw)));
+    const densityPenalty = 1 / Math.sqrt(Math.max(1, density / 7));
+    const fractional = Math.round(repoCount * Math.pow(detail, 1.55));
+    const screenCapacity = Math.max(1, Math.floor((area / 39000) * (0.55 + detail * 0.9) * densityPenalty));
+    return Math.min(repoCount, fractional, screenCapacity);
+  }
+
+  function cameraMotionState(now) {
+    const next = {
+      zoom: state.zoom,
+      x: state.pan?.x || 0,
+      y: state.pan?.y || 0,
+    };
+    if (lastCamera) {
+      const changed = Math.abs(next.zoom - lastCamera.zoom) > 0.0005
+        || Math.abs(next.x - lastCamera.x) > 0.25
+        || Math.abs(next.y - lastCamera.y) > 0.25;
+      if (changed) cameraMovingUntil = now + 180;
+    }
+    lastCamera = next;
+    return now < cameraMovingUntil;
+  }
+
+  function semanticScore(candidate, densityPenalty) {
+    const stars = Math.max(0, candidate.node.stars || 0);
+    const importance = Math.min(1.8, Math.log2(stars + 1) * 0.28) + (candidate.node.fork ? -0.15 : 0);
+    return candidate.fontSize + Math.min(0.9, candidate.radius * 0.08) + importance - densityPenalty;
+  }
+
+  function updateSemanticEligibility(candidates, area, repoCount) {
+    const density = repoCount / Math.max(1, area / 100000);
+    const densityPenalty = clamp(Math.log2(Math.max(1, density / 8)) * 0.35, 0, 1.2);
+    const liveIds = new Set();
+    for (const candidate of candidates) {
+      if (candidate.node.type !== "repository") continue;
+      liveIds.add(candidate.node.id);
+      const score = semanticScore(candidate, densityPenalty);
+      const wasEligible = eligibleRepositoryIds.has(candidate.node.id);
+      const threshold = wasEligible ? 12.05 : 12.65;
+      if (score >= threshold) eligibleRepositoryIds.add(candidate.node.id);
+      else eligibleRepositoryIds.delete(candidate.node.id);
+      candidate.semanticAlpha = smoothstep(11.7, 13.5, score);
+    }
+    for (const id of [...eligibleRepositoryIds]) {
+      if (!liveIds.has(id)) eligibleRepositoryIds.delete(id);
+    }
   }
 
   function categoryColor(colors) {
     return state.style === "galaxy-systems" ? colors.group : colors.muted;
   }
 
-  function drawCandidateLabel(candidate, chosen, colors, forced) {
-    ctx.globalAlpha = Math.max(candidate.opacity, forced ? 0.86 : 0);
+  function drawCandidateLabel(candidate, chosen, colors, forced, cameraMoving) {
+    let semanticAlpha = 1;
+    if (!forced && candidate.node.type === "repository") {
+      semanticAlpha = candidate.semanticAlpha ?? 1;
+      if (cameraMoving) semanticAlpha *= 0.12;
+    }
+    ctx.globalAlpha = Math.max(candidate.opacity * semanticAlpha, forced ? 0.86 : 0);
     ctx.textBaseline = "top";
     ctx.lineWidth = candidate.node.type === "group"
       ? (state.style === "galaxy-systems" ? 3.8 : 3.5)
@@ -169,9 +227,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const height = Math.max(1, rect.height);
     const area = width * height;
     const repoCount = state.nodes.filter((node) => node.type === "repository").length;
-    const repoBudget = adaptiveRepoBudget(area, repoCount);
     const directIds = directRepositoryIds();
     const candidates = [];
+    const cameraMoving = cameraMotionState(performance.now());
 
     for (const node of state.nodes) {
       const point = worldToScreen(node.x, node.y);
@@ -196,6 +254,8 @@ window.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    updateSemanticEligibility(candidates, area, repoCount);
+    const repoBudget = semanticRepoBudget(area, repoCount);
     candidates.sort((a, b) => b.priority - a.priority || a.node.label.localeCompare(b.node.label));
     const occupied = [];
     const anchorCounts = {};
@@ -204,7 +264,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
     for (const candidate of candidates) {
       const forced = candidate.highlighted || candidate.node.type !== "repository" || candidate.directMatch;
-      if (candidate.node.type === "repository" && !forced && repoLabels >= repoBudget) continue;
+      if (candidate.node.type === "repository" && !forced) {
+        if (!eligibleRepositoryIds.has(candidate.node.id)) continue;
+        if (repoLabels >= repoBudget) continue;
+      }
 
       const boxes = anchorBoxes(candidate.point, candidate.radius, candidate.presentation.width, candidate.presentation.height);
       const order = candidate.node.type === "group" ? [2, 0, 1, 3] : [0, 1, 2, 3];
@@ -227,7 +290,7 @@ window.addEventListener("DOMContentLoaded", () => {
         placedRepositoryIds.push(candidate.node.id);
       }
 
-      drawCandidateLabel(candidate, chosen, colors, forced);
+      drawCandidateLabel(candidate, chosen, colors, forced, cameraMoving);
     }
     ctx.globalAlpha = 1;
 
@@ -236,12 +299,15 @@ window.addEventListener("DOMContentLoaded", () => {
     lastSnapshot = {
       active: true,
       style: state.style,
+      mode: "semantic-lod-motion",
       repoCount,
       repoBudget,
       repoLabels,
       totalLabels: occupied.length,
       anchors: { ...anchorCounts },
       placedRepositoryIds: [...placedRepositoryIds],
+      eligibleRepositoryIds: [...eligibleRepositoryIds].sort(),
+      cameraMoving,
       zoom: state.zoom,
       viewport: { width, height },
       typography: {
@@ -282,6 +348,7 @@ window.addEventListener("DOMContentLoaded", () => {
         ...lastSnapshot,
         anchors: { ...lastSnapshot.anchors },
         placedRepositoryIds: [...lastSnapshot.placedRepositoryIds],
+        eligibleRepositoryIds: [...lastSnapshot.eligibleRepositoryIds],
         viewport: { ...lastSnapshot.viewport },
         typography: { ...lastSnapshot.typography },
       };
