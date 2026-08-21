@@ -78,7 +78,7 @@ test.beforeAll(async () => {
   await mkdir(".tmp/playwright-visual/mobile", { recursive: true });
 });
 
-test("generator exposes twelve visual presets and emits the selected immutable setup", async ({ page }) => {
+test("generator exposes twelve visual presets and emits the selected stable setup", async ({ page }) => {
   await installRawFixture(page);
   const browserErrors = watchBrowserErrors(page);
   await page.goto("/");
@@ -103,7 +103,7 @@ test("generator exposes twelve visual presets and emits the selected immutable s
   expect(workflow).toContain("style: galaxy-hybrid");
   expect(workflow).toContain('max_repos: "300"');
   expect(workflow).toContain("theme: light");
-  expect(workflow).toMatch(/uses: nekomario28\/interactive-project-map@[0-9a-f]{40}/);
+  expect(workflow).toContain("uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@v1");
   const staticUrls = await page.locator("#staticUrls").inputValue();
   expect(staticUrls).toContain("/u/?username=example&style=galaxy-hybrid");
   await expect(page).toHaveURL(/style=galaxy-hybrid/);

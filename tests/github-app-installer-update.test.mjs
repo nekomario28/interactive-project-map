@@ -55,7 +55,7 @@ test("managed workflow is updated in place with its current blob SHA", async () 
   assert.equal(putBody.sha, "existing-sha");
   const installed = Buffer.from(putBody.content, "base64").toString("utf8");
   assert.ok(installed.startsWith(MANAGED_WORKFLOW_MARKER));
-  assert.match(installed, /generate-project-map\.yml@[0-9a-f]{40}/);
+  assert.match(installed, /generate-project-map\.yml@v1/);
   assert.equal(dispatched, 1);
 });
 

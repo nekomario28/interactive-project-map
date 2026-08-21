@@ -4,7 +4,9 @@ import { normalizeUsername } from "./hosted-options.ts";
 
 const CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // actions/checkout v7.0.1
 const DOWNLOAD_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"; // actions/download-artifact v8.0.1
-const REUSABLE_REF = "151b9cabd5968cdfb602115fc440795c14f88745";
+// The reusable workflow is read-only. General installs follow the reviewed v1
+// stable channel, while its inner third-party/action dependencies remain SHA-pinned.
+const REUSABLE_REF = "v1";
 
 export interface InstallOptions {
   username: string;
