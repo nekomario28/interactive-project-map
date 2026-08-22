@@ -274,12 +274,11 @@
     restoreUserQuery();
     const rendered = node?.id ? renderedNode(node.id) || node : node;
     let result;
-    if (rendered?.type === "group" && !supportsDirectSelection(rendered)) {
+    if (rendered && !supportsDirectSelection(rendered)) {
       result = baseUpdateDetails(null);
       applyFallbackFocus(rendered);
     } else {
       result = baseUpdateDetails(rendered);
-      if (rendered && !supportsDirectSelection(rendered)) applyFallbackFocus(rendered);
     }
     queueMicrotask(() => render({ force: true }));
     return result;
