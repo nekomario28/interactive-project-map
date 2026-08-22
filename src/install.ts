@@ -6,10 +6,14 @@ const CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // actions/chec
 const DOWNLOAD_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"; // actions/download-artifact v8.0.1
 export const STABLE_REUSABLE_REF = "v1";
 const COMMIT_SHA_RE = /^[0-9a-f]{40}$/;
+export const MAP_STYLES = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"] as const;
+export type MapStyle = typeof MAP_STYLES[number];
+const MAP_STYLE_VALUES = new Set<string>(MAP_STYLES);
 
 export interface InstallOptions {
   username: string;
   theme: "dark" | "light";
+  style: MapStyle;
   maxRepos: number;
   includeForks: boolean;
   includeArchived: boolean;
@@ -25,10 +29,18 @@ export function normalizeGeneratorRef(value: string | null | undefined): string 
   return normalized;
 }
 
+export function normalizeStyle(value: string | null | undefined): MapStyle {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized || normalized === "galaxy") return normalized === "galaxy" ? "galaxy-systems" : "radial";
+  if (!MAP_STYLE_VALUES.has(normalized)) throw new URIError("Invalid style");
+  return normalized as MapStyle;
+}
+
 export function installOptionsFromUrl(url: URL): InstallOptions {
   return {
     username: normalizeUsername(url.searchParams.get("username") ?? ""),
     theme: url.searchParams.get("theme") === "light" ? "light" : "dark",
+    style: normalizeStyle(url.searchParams.get("style")),
     maxRepos: intParam(url, "max_repos", 100, 1, 300),
     includeForks: boolParam(url, "forks", true),
     includeArchived: boolParam(url, "archived", false),
@@ -40,6 +52,7 @@ export function staticAssetUrls(origin: string, options: InstallOptions) {
   const owner = encodeURIComponent(options.username);
   const rawBase = `https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map`;
   const viewer = new URL(`/u/${owner}`, origin);
+  viewer.searchParams.set("style", normalizeStyle(options.style));
   viewer.searchParams.set("max_repos", String(options.maxRepos));
   viewer.searchParams.set("forks", String(options.includeForks));
   viewer.searchParams.set("archived", String(options.includeArchived));
@@ -52,6 +65,7 @@ export function staticAssetUrls(origin: string, options: InstallOptions) {
 
 export function renderInstallWorkflow(options: InstallOptions): string {
   const generatorRef = normalizeGeneratorRef(options.generatorRef);
+  const style = normalizeStyle(options.style);
   const generatorPolicy = generatorRef === STABLE_REUSABLE_REF ? "stable-v1" : `pinned-${generatorRef}`;
   return `name: Update project map
 # Project Map generator policy: ${generatorPolicy}
@@ -72,7 +86,7 @@ jobs:
     uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@${generatorRef}
     with:
       theme: ${options.theme}
-      style: radial
+      style: ${style}
       max_repos: "${options.maxRepos}"
       forks: ${options.includeForks}
       archived: ${options.includeArchived}

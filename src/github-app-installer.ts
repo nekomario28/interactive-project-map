@@ -1,5 +1,5 @@
 import { normalizeUsername } from "./hosted-options.ts";
-import { normalizeGeneratorRef, renderInstallWorkflow, staticAssetUrls, type InstallOptions } from "./install.ts";
+import { normalizeGeneratorRef, normalizeStyle, renderInstallWorkflow, staticAssetUrls, type InstallOptions } from "./install.ts";
 
 const GITHUB_API = "https://api.github.com";
 const GITHUB_API_VERSION = "2026-03-10";
@@ -137,9 +137,18 @@ function normalizedGeneratorRef(value: unknown): string {
   }
 }
 
+function normalizedStyle(value: unknown): InstallOptions["style"] {
+  try {
+    return normalizeStyle(typeof value === "string" ? value : null);
+  } catch {
+    throw new InstallerError("Invalid installer state options", 400, "invalid_state");
+  }
+}
+
 function validInstallOptions(payload: Record<string, unknown>): InstallOptions {
   const username = normalizeUsername(typeof payload.username === "string" ? payload.username : "");
   const theme = payload.theme === "light" ? "light" : payload.theme === "dark" ? "dark" : null;
+  const style = normalizedStyle(payload.style);
   const maxRepos = payload.maxRepos;
   const includeForks = payload.includeForks;
   const includeArchived = payload.includeArchived;
@@ -147,7 +156,7 @@ function validInstallOptions(payload: Record<string, unknown>): InstallOptions {
   if (!theme || !Number.isInteger(maxRepos) || Number(maxRepos) < 1 || Number(maxRepos) > 300 || typeof includeForks !== "boolean" || typeof includeArchived !== "boolean") {
     throw new InstallerError("Invalid installer state options", 400, "invalid_state");
   }
-  return { username, theme, maxRepos: Number(maxRepos), includeForks, includeArchived, generatorRef };
+  return { username, theme, style, maxRepos: Number(maxRepos), includeForks, includeArchived, generatorRef };
 }
 
 export async function createInstallState(options: InstallOptions, secret: string, runtime: InstallerRuntime = {}): Promise<{ state: string; nonce: string }> {
@@ -158,6 +167,7 @@ export async function createInstallState(options: InstallOptions, secret: string
   const payload: InstallStatePayload = {
     v: INSTALL_STATE_VERSION,
     ...options,
+    style: normalizedStyle(options.style),
     generatorRef: normalizedGeneratorRef(options.generatorRef),
     nonce,
     issuedAt: nowSeconds,
