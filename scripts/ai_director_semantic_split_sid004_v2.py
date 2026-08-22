@@ -12,6 +12,7 @@ from gradio_client import Client
 ROOT = Path('.tmp/ai-director-semantic-split-sid004-v2')
 ROOT.mkdir(parents=True, exist_ok=True)
 RESULT = ROOT / 'result.json'
+SPACE = 'Upsampler/ltx-video'
 
 subprompts = [
     'Close-up cinematic shot of a realistic hand cleanly inserting one coin into the slot of a street parking meter. Physically correct hand, coin, and slot contact. The coin visibly enters the slot.',
@@ -22,7 +23,7 @@ subprompts = [
 result = {
     'pid': 'sid_004',
     'action': 'SEMANTIC_SPLIT_REGEN',
-    'space': 'Lightricks/LTX-2-3',
+    'space': SPACE,
     'endpoint': '/generate_video',
     'duration_each_sec': 1.0,
     'height': 512,
@@ -32,7 +33,7 @@ result = {
 }
 RESULT.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
 
-client = Client('Lightricks/LTX-2-3', verbose=False)
+client = Client(SPACE, verbose=False)
 outputs = []
 
 for i, prompt in enumerate(subprompts, 1):
