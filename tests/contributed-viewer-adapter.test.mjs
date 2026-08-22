@@ -32,11 +32,28 @@ test("C4a shared HTML adds one Contributed control idempotently", () => {
 });
 
 test("C4a runtime is installed in shared viewer before username startup and graph fetch", () => {
-  const source = `"use strict";\nfunction sanitizeGraph(value) { return value; }\nfunction nodeStatus(node) { return node.type; }\nfunction palette() { return {}; }\nfunction drawEdges() {}\nfunction updateDetails() {}\n\ntry {\n  username = normalizeUsername(query.get("username"));\n}\n\nif (username) { fetch("graph.json"); }\n`;
+  const source = `"use strict";
+function sanitizeGraph(value) { return value; }
+function nodeStatus(node) {
+  if (node.type !== "repository") return node.type;
+  if (node.archived) return "archived";
+  return node.fork ? "fork" : "original";
+}
+function palette() { return {}; }
+function drawEdges() {}
+function updateDetails() {}
+
+try {
+  username = normalizeUsername(query.get("username"));
+}
+
+if (username) { fetch("graph.json"); }
+`;
   const patched = patchSharedViewerRuntime(source);
   const marker = patched.indexOf("Project Map Contributed shared-viewer contract");
   const startup = patched.indexOf('username = normalizeUsername(query.get("username"))');
   assert.ok(marker >= 0 && marker < startup);
+  assert.match(patched, /node\.relation === "contributed"/);
   assert.match(patched, /raw\.relation !== "contributed"/);
   assert.match(patched, /type: "contribution"/);
   assert.match(patched, /return "contributed"/);
