@@ -25,7 +25,7 @@ export function patchSharedViewState(source) {
     "shared status aliases");
   next = replaceRequired(next,
     'return typeof nodeStatus === "function" ? nodeStatus(node) : node.archived ? "archived" : node.fork ? "fork" : "original";',
-    'return node.relation === "contributed" ? "contributed" : typeof nodeStatus === "function" ? nodeStatus(node) : node.archived ? "archived" : node.fork ? "fork" : "original";',
+    'return node.relation === "contributed" || (typeof node.label === "string" && node.label.includes("/") && Array.isArray(state.graph?.edges) && state.graph.edges.some((edge) => edge?.type === "contribution" && edge.target === node.id)) ? "contributed" : typeof nodeStatus === "function" ? nodeStatus(node) : node.archived ? "archived" : node.fork ? "fork" : "original";',
     "shared repository status precedence");
   next = replaceRequired(next,
     'const counts = { original: 0, fork: 0, archived: 0 };',
@@ -145,6 +145,16 @@ function contributedRuntime() {
     return node;
   }
 
+  function contributionTargets() {
+    return new Set((state.graph?.edges || []).filter((edge) => edge?.type === "contribution").map((edge) => edge.target));
+  }
+
+  function isContributedNode(node) {
+    if (!node || node.type !== "repository") return false;
+    if (node.relation === "contributed") return true;
+    return typeof node.label === "string" && node.label.includes("/") && contributionTargets().has(node.id);
+  }
+
   if (typeof sanitizeGraph === "function") {
     const baseSanitizeGraph = sanitizeGraph;
     sanitizeGraph = function contributedAwareSanitizeGraph(value) {
@@ -170,21 +180,6 @@ function contributedRuntime() {
       safe.contributedRepositoryCount = contributed.length;
       safe.externalContributions = diagnostics;
       return safe;
-    };
-  }
-
-  if (typeof nodeStatus === "function") {
-    const baseNodeStatus = nodeStatus;
-    nodeStatus = function contributedAwareNodeStatus(node) {
-      if (node?.type === "repository" && node.relation === "contributed") return "contributed";
-      return baseNodeStatus(node);
-    };
-  }
-
-  if (typeof palette === "function") {
-    const basePalette = palette;
-    palette = function contributedAwarePalette() {
-      return { ...basePalette(), contributed: document.body.dataset.mapStyle === "obsidian" ? "#62c8ba" : "#55c7d7" };
     };
   }
 
@@ -236,10 +231,10 @@ function contributedRuntime() {
     const baseUpdateDetails = updateDetails;
     updateDetails = function contributedAwareUpdateDetails(node) {
       const result = baseUpdateDetails(node);
-      if (node?.type !== "repository" || node.relation !== "contributed" || !detailsMeta) return result;
+      if (!isContributedNode(node) || !detailsMeta) return result;
       const kind = [...detailsMeta.querySelectorAll("dt")].find((item) => item.textContent === "Kind");
       if (kind?.nextElementSibling) kind.nextElementSibling.textContent = "Contributed";
-      appendDetailRow("External owner", node.repositoryOwner);
+      appendDetailRow("External owner", node.repositoryOwner || String(node.label || "").split("/")[0]);
       appendDetailRow("Commits", \`\${node.contribution?.commits ?? 0}\${node.contribution?.commitsTruncated ? "+" : ""}\`);
       appendDetailRow("Pull requests", \`\${node.contribution?.pullRequests ?? 0}\${node.contribution?.pullRequestsTruncated ? "+" : ""}\`);
       appendDetailRow("Merged PRs", node.contribution?.mergedPullRequests ?? 0);
@@ -253,10 +248,13 @@ function contributedRuntime() {
   }
 
   window.ProjectMapContributedViewer = Object.freeze({
-    snapshot: () => ({
-      contributedRepositories: (state.graph?.nodes || []).filter((node) => node?.relation === "contributed").map((node) => node.id).sort(),
-      contributionEdges: (state.graph?.edges || []).filter((edge) => edge?.type === "contribution").map((edge) => ({ ...edge })),
-    }),
+    snapshot: () => {
+      const targets = contributionTargets();
+      return {
+        contributedRepositories: (state.graph?.nodes || []).filter((node) => targets.has(node?.id)).map((node) => node.id).sort(),
+        contributionEdges: (state.graph?.edges || []).filter((edge) => edge?.type === "contribution").map((edge) => ({ ...edge })),
+      };
+    },
   });
 })();`;
 }
@@ -265,9 +263,17 @@ export function patchSharedViewerRuntime(source) {
   let next = replaceRequired(
     source,
     'function nodeStatus(node) {\n  if (node.type !== "repository") return node.type;\n  if (node.archived) return "archived";\n  return node.fork ? "fork" : "original";\n}',
-    'function nodeStatus(node) {\n  if (node.type !== "repository") return node.type;\n  if (node.relation === "contributed") return "contributed";\n  if (node.archived) return "archived";\n  return node.fork ? "fork" : "original";\n}',
+    'function nodeStatus(node) {\n  if (node.type !== "repository") return node.type;\n  if (node.relation === "contributed" || (typeof node.label === "string" && node.label.includes("/"))) return "contributed";\n  if (node.archived) return "archived";\n  return node.fork ? "fork" : "original";\n}',
     "shared node status precedence",
   );
+  next = replaceRequired(next,
+    '      archived: "#b97a7a",\n      selection: "#ffffff",',
+    '      archived: "#b97a7a",\n      contributed: "#62c8ba",\n      selection: "#ffffff",',
+    "obsidian contributed palette");
+  next = replaceRequired(next,
+    '    archived: "#d9847b",\n    selection: "#ffffff",',
+    '    archived: "#d9847b",\n    contributed: "#55c7d7",\n    selection: "#ffffff",',
+    "galaxy contributed palette");
   if (next.includes(RUNTIME_MARKER)) return next;
   const anchor = '\ntry {\n  username = normalizeUsername(query.get("username"));';
   if (!next.includes(anchor)) throw new Error("Could not locate shared viewer startup boundary");
