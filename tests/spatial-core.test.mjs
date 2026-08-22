@@ -4,6 +4,7 @@ import {
   DEFAULT_FORCE_SETTINGS,
   TAU,
   adaptGalaxyGraph,
+  adaptVisualBlockIr,
   clamp,
   createForceNodes,
   deterministicScatter,
@@ -121,4 +122,62 @@ test("GalaxyGraph adapter preserves hierarchy while exposing semantics as relati
   assert.equal(spatial.relationEdges.length, 1);
   assert.equal(spatial.relationEdges[0].kind, "semantic");
   assert.equal(spatial.relationEdges[0].weight, 0.91);
+});
+
+test("Visual Block IR adapter namespaces repeated item ids and preserves relations", () => {
+  const spatial = adaptVisualBlockIr({
+    schemaVersion: 1,
+    documentId: "incubator",
+    title: "Project Incubator",
+    themeRef: "semantic-galaxy-v1",
+    sources: [{ id: "ideas", kind: "REGISTRY", locator: "registry/ideas.yaml", authority: "CANONICAL" }],
+    blocks: [
+      {
+        id: "status",
+        kind: "STATUS_GRID",
+        title: "Research Status",
+        items: [
+          { id: "IDEA-001", label: "Flight Recorder", status: "EXPERIMENT_READY", value: 1, weight: 4 },
+        ],
+      },
+      {
+        id: "portfolio",
+        kind: "RELATION_GRAPH",
+        title: "Portfolio Systems",
+        items: [
+          { id: "IDEA-001", label: "Flight Recorder", status: "PILOT_DRAFT", group: "pilot", weight: 2 },
+          { id: "repo:map", label: "interactive-project-map", status: "NATIVE_EXISTING", group: "native", href: "https://github.com/nekomario28/interactive-project-map" },
+        ],
+        edges: [
+          { source: "IDEA-001", target: "repo:map", kind: "projects-to", weight: 0.9, directed: true },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(spatial.version, 1);
+  assert.equal(spatial.nodes.length, 6);
+  assert.equal(spatial.structuralEdges.length, 5);
+  assert.equal(spatial.relationEdges.length, 1);
+
+  const statusIdea = spatial.nodes.find((node) => node.id === "visual:status:IDEA-001");
+  const portfolioIdea = spatial.nodes.find((node) => node.id === "visual:portfolio:IDEA-001");
+  const repo = spatial.nodes.find((node) => node.id === "visual:portfolio:repo:map");
+
+  assert.ok(statusIdea);
+  assert.ok(portfolioIdea);
+  assert.notEqual(statusIdea.id, portfolioIdea.id);
+  assert.equal(statusIdea.parentId, "visual-block:status");
+  assert.equal(statusIdea.status, "EXPERIMENT_READY");
+  assert.equal(statusIdea.weight, 4);
+  assert.equal(statusIdea.metadata.value, 1);
+  assert.equal(portfolioIdea.parentId, "visual-block:portfolio");
+  assert.equal(repo.metadata.href, "https://github.com/nekomario28/interactive-project-map");
+
+  const relation = spatial.relationEdges[0];
+  assert.equal(relation.source, "visual:portfolio:IDEA-001");
+  assert.equal(relation.target, "visual:portfolio:repo:map");
+  assert.equal(relation.kind, "projects-to");
+  assert.equal(relation.weight, 0.9);
+  assert.equal(relation.directed, true);
 });
