@@ -66,20 +66,41 @@ export interface TaxonomyAdjudicationRepository {
 export interface TaxonomyAdjudicationCategory { id: string; label: string; description: string; aliases: string[]; parentId?: string; }
 export interface TaxonomyAdjudicationCase { repoName: string; repository: TaxonomyAdjudicationRepository; categories: TaxonomyAdjudicationCategory[]; }
 export interface TaxonomyAdjudicationProvider { id: string; model: string; adjudicate(cases: TaxonomyAdjudicationCase[]): Promise<unknown>; }
+
 export interface TaxonomyAdjudicationDiagnostics {
   eligible: number; attempted: number; accepted: number; declined: number; invalid: number; remaining: number; capped: boolean; calls: number;
   providerId: string; model: string; disabled: boolean;
 }
 export interface TaxonomyAdjudicationResult { assignments: Record<string, RepositoryTaxonomyAssignment>; ambiguous: string[]; diagnostics: TaxonomyAdjudicationDiagnostics; error?: string; }
 
+export interface ContributionSummary {
+  commits: number;
+  pullRequests: number;
+  mergedPullRequests: number;
+  commitsTruncated: boolean;
+  pullRequestsTruncated: boolean;
+}
+export interface ExternalContributionWindow { from: string; to: string; }
+export interface ExternalContributionDiagnostics {
+  window: ExternalContributionWindow;
+  cap: number;
+  candidateRepositories: number;
+  includedRepositories: number;
+  omittedRepositories: number;
+  truncatedRepositories: number;
+}
+
 export type GalaxyNodeType = "owner" | "group" | "repository";
+export type RepositoryRelation = "contributed";
 export interface GalaxyNode {
   id: string; label: string; type: GalaxyNodeType; url?: string; description?: string; language?: string | null; topics?: string[]; stars?: number; forks?: number;
-  fork?: boolean; archived?: boolean; updatedAt?: string; groupId?: string; groupLabel?: string; repositoryCount?: number; classification?: RepositoryClassification;
+  fork?: boolean; archived?: boolean; createdAt?: string; updatedAt?: string; groupId?: string; groupLabel?: string; repositoryCount?: number; classification?: RepositoryClassification;
   taxonomyAssignment?: RepositoryTaxonomyAssignment;
+  relation?: RepositoryRelation; repositoryOwner?: string; repositoryName?: string; contribution?: ContributionSummary;
 }
-export interface GalaxyEdge { source: string; target: string; type: "ownership" | "membership"; }
+export interface GalaxyEdge { source: string; target: string; type: "ownership" | "membership" | "contribution"; }
 export interface GalaxyGraph {
   owner: string; generatedAt: string; repositoryCount: number; groupCount: number; nodes: GalaxyNode[]; edges: GalaxyEdge[];
+  contributedRepositoryCount?: number; externalContributions?: ExternalContributionDiagnostics;
   classificationVersion?: number; semanticEdges?: SemanticEdge[]; taxonomy?: PortfolioTaxonomy; taxonomyAssignmentVersion?: number;
 }
