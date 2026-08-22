@@ -1,0 +1,1 @@
+Trigger the isolated AI Director outcome workflow at the current exact head.
