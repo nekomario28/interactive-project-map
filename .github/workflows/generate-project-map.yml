@@ -27,6 +27,11 @@ on:
 permissions:
   contents: read
 
+# Release chain:
+# - OUTER release target: this reusable workflow, consumed as @v1 or an explicit workflow commit SHA.
+# - INNER release target: the immutable Project Map Action SHA in the Generate project map step below.
+# Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
+# then promote @v1 to the reviewed reusable-workflow commit.
 jobs:
   generate:
     runs-on: ubuntu-latest
