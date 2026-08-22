@@ -126,9 +126,15 @@ GitHub strongly recommends PKCE for OAuth web flows. The selected one-step insta
 
 A marker appearing later in an unrelated file does not grant installer ownership. An unrelated file at that path produces a conflict instead of being overwritten. Repair/migration of legacy workflow names is a separate explicit phase.
 
-### The recurring path stays App-independent
+### Stable Auto is the normal update channel; immutable pinning is explicit
 
-The installed workflow calls the reviewed reusable generator by immutable commit SHA. The GitHub App is used only for install/update/repair operations; scheduled generation continues with the target repository's own `GITHUB_TOKEN`.
+The normal installed workflow calls the reusable generator through the validated stable `v1` reference. `v1` moves only with reviewed compatible releases, so ordinary users receive stable integration updates without following raw `main`.
+
+Advanced callers may instead supply a full 40-character commit SHA. That `generator_ref` is validated, included in the signed installer state, and written to the managed workflow without being widened to a branch or arbitrary ref.
+
+The reusable generator itself remains read-only with respect to the caller repository, and its internal Project Map Action / third-party Actions stay pinned to reviewed commit SHAs. The write-capable publication job remains local to the user's repository.
+
+The GitHub App is used only for install/update/repair operations; scheduled generation continues with the target repository's own `GITHUB_TOKEN` even if App access is later removed.
 
 ## Validation gates
 
@@ -143,11 +149,12 @@ Code-only gates, which require no GitHub App credentials:
 7. installation account verification.
 8. explicit `USERNAME/USERNAME` repository verification.
 9. strict first-line managed-workflow ownership and unrelated-workflow overwrite refusal.
-10. immutable reusable-workflow SHA retained in installed YAML.
-11. managed workflow update/no-op behavior.
-12. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
-13. installer start/callback reuse the existing Worker API rate limiter.
-14. Worker typecheck/dry-run and the existing full project verification suite.
+10. default generated workflow uses stable `v1`; Advanced mode accepts only `v1` or a full commit SHA.
+11. signed Advanced SHA survives start → callback → managed workflow update unchanged.
+12. managed workflow create/update/no-op behavior.
+13. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
+14. installer start/callback reuse the existing Worker API rate limiter.
+15. Worker typecheck/dry-run and the existing full project verification suite.
 
 The final production gate requires a real GitHub App registration and Worker secrets:
 
