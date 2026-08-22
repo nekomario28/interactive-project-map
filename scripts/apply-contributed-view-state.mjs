@@ -356,8 +356,8 @@ export async function applyContributedViewState(outputDir = resolve(process.cwd(
 
   const cssPath = join(outputDir, "viewer.css");
   const css = await readFile(cssPath, "utf8");
-  const cssAppend = '\n:root { --contributed: var(--relation); }\n.control-cluster .status-contributed { --status-color: var(--contributed); }\n.legend .contributed { background: var(--contributed); }\n';
-  if (!css.includes("--contributed:")) await writeFile(cssPath, css + cssAppend);
+  const cssAppend = '\n.control-cluster .status-contributed { --status-color: var(--relation); }\n.legend .contributed { background: var(--relation); }\n';
+  if (!css.includes(".status-contributed")) await writeFile(cssPath, css + cssAppend);
 
   const sharedPath = join(outputDir, "u", "index.html");
   const sharedHtml = await readFile(sharedPath, "utf8");
