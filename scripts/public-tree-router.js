@@ -4,8 +4,8 @@
 (() => {
   const visibleStyles = new Set(["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const dedicatedStyles = new Set(["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
-  const statusValues = ["original", "fork", "archived"];
-  const statusLabels = { original: "Original", fork: "Fork", archived: "Archived" };
+  const statusValues = ["original", "fork", "archived", "contributed"];
+  const statusLabels = { original: "Original", fork: "Fork", archived: "Archived", contributed: "Contributed" };
   const styleSelect = document.getElementById("style");
   const currentUrl = new URL(location.href);
   const params = currentUrl.searchParams;
@@ -54,7 +54,7 @@
 
     const baseRebuildLayout = rebuildLayout;
     const baseDraw = draw;
-    const knownStatusCounts = { original: 0, fork: 0, archived: 0 };
+    const knownStatusCounts = { original: 0, fork: 0, archived: 0, contributed: 0 };
     let rebuilding = false;
     let lastStatusKey = "";
     let lastActivityOverlayCount = 0;
@@ -68,12 +68,13 @@
 
     function repositoryStatus(node) {
       if (!node || node.type !== "repository") return null;
+      if (node.relation === "contributed") return "contributed";
       if (node.archived === true) return "archived";
       return node.fork === true ? "fork" : "original";
     }
 
     function rememberStatusCounts(graph) {
-      const counts = { original: 0, fork: 0, archived: 0 };
+      const counts = { original: 0, fork: 0, archived: 0, contributed: 0 };
       for (const node of graph?.nodes || []) {
         const status = repositoryStatus(node);
         if (status) counts[status] += 1;
