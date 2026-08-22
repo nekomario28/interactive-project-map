@@ -14,8 +14,9 @@ function repo(id, name, overrides = {}) {
 }
 
 test("action config reads INPUT variables, normalizes and clamps inputs", () => {
-  const config = actionConfigFromEnv({ INPUT_USERNAME: " OctoCat ", INPUT_THEME: "light", INPUT_STYLE: "obsidian", INPUT_MAX_REPOS: "999", INPUT_FORKS: "false", INPUT_ARCHIVED: "yes", INPUT_WIDTH: "200", INPUT_HEIGHT: "9999", INPUT_OUTPUT_DIR: "./project-map/custom" });
-  assert.equal(config.username, "octocat"); assert.equal(config.theme, "light"); assert.equal(config.style, "obsidian"); assert.equal(config.maxRepos, 300); assert.equal(config.includeForks, false); assert.equal(config.includeArchived, true); assert.equal(config.width, 420); assert.equal(config.height, 1000); assert.equal(config.outputDir, "project-map/custom");
+  const config = actionConfigFromEnv({ INPUT_USERNAME: " OctoCat ", INPUT_THEME: "light", INPUT_STYLE: "obsidian", INPUT_MAX_REPOS: "999", INPUT_FORKS: "false", INPUT_ARCHIVED: "yes", INPUT_CONTRIBUTED: "true", INPUT_WIDTH: "200", INPUT_HEIGHT: "9999", INPUT_OUTPUT_DIR: "./project-map/custom" });
+  assert.equal(config.username, "octocat"); assert.equal(config.theme, "light"); assert.equal(config.style, "obsidian"); assert.equal(config.maxRepos, 300); assert.equal(config.includeForks, false); assert.equal(config.includeArchived, true); assert.equal(config.includeContributed, true); assert.equal(config.width, 420); assert.equal(config.height, 1000); assert.equal(config.outputDir, "project-map/custom");
+  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "octocat" }).includeContributed, false);
 });
 
 test("action accepts twelve visible presets and maps legacy galaxy to systems", () => {
@@ -39,8 +40,40 @@ test("static action writes graph.json and tree SVG without needing write access"
     assert.deepEqual(received, { username: "example", token: "read-token", maxRepos: 100, options: { includeForks: false, includeArchived: false } });
     assert.equal(result.svgPath, "project-map/galaxy.svg"); assert.equal(result.graphPath, "project-map/graph.json");
     const graph = JSON.parse(await readFile(join(cwd, result.graphPath), "utf8")); const svg = await readFile(join(cwd, result.svgPath), "utf8");
-    assert.equal(graph.owner, "example"); assert.equal(graph.repositoryCount, 2); assert.equal(graph.nodes.find((node) => node.type === "repository")?.createdAt, "2025-08-18T00:00:00Z");
+    assert.equal(graph.owner, "example"); assert.equal(graph.repositoryCount, 2); assert.equal(graph.contributedRepositoryCount, undefined); assert.equal(graph.nodes.find((node) => node.type === "repository")?.createdAt, "2025-08-18T00:00:00Z");
     assert.match(svg, /Tree-style map/); assert.match(svg, />Original<\/text>/); assert.match(svg, />Fork<\/text>/); assert.match(svg, />Archived<\/text>/);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+test("C3 opt-in generator fetches once, ranks after owned graph creation, and serializes Contributed", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "project-map-contributed-"));
+  try {
+    const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_CONTRIBUTED: "true", INPUT_STYLE: "radial", INPUT_OUTPUT_DIR: "project-map" });
+    const fetchRepos = async () => [repo(1, "alpha"), repo(2, "beta"), repo(3, "example")];
+    let calls = 0;
+    const fetchContributions = async (username, token) => {
+      calls += 1;
+      assert.equal(username, "example");
+      assert.equal(token, "read-token");
+      return {
+        window: { from: "2025-08-22T00:00:00.000Z", to: "2026-08-22T00:00:00.000Z" },
+        repositories: [
+          { nameWithOwner: "upstream/core", owner: "upstream", name: "core", url: "https://github.com/upstream/core", description: "robotics runtime", language: "C++", topics: ["robotics"], stars: 10, forks: 2, fork: false, archived: false, createdAt: "2020-01-01T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", commits: 0, pullRequests: 1, mergedPullRequests: 1, commitsTruncated: false, pullRequestsTruncated: false },
+          { nameWithOwner: "upstream/second", owner: "upstream", name: "second", url: "https://github.com/upstream/second", description: "second contribution", language: "Rust", topics: [], stars: 0, forks: 0, fork: false, archived: false, createdAt: "2020-01-01T00:00:00Z", updatedAt: "2026-08-19T00:00:00Z", commits: 2, pullRequests: 0, mergedPullRequests: 0, commitsTruncated: false, pullRequestsTruncated: false },
+        ],
+        diagnostics: { maxRepositories: 100, returnedRepositories: 2, truncatedRepositories: 0 },
+      };
+    };
+    const result = await generateStaticMap(config, { cwd, token: "read-token", fetchRepos, contributionOptions: { fetchContributions } });
+    assert.equal(calls, 1);
+    assert.equal(result.graph.repositoryCount, 2, "profile repository remains excluded from owned count");
+    assert.equal(result.graph.contributedRepositoryCount, 2);
+    assert.equal(result.graph.externalContributions.cap, 4, "C1 cap uses the built owned repository count");
+    assert.equal(result.graph.nodes.filter((node) => node.relation === "contributed").length, 2);
+    assert.deepEqual(result.graph.edges.filter((edge) => edge.type === "contribution").map((edge) => edge.target).sort(), ["repository:upstream/core", "repository:upstream/second"]);
+    const serialized = JSON.parse(await readFile(join(cwd, result.graphPath), "utf8"));
+    assert.equal(serialized.contributedRepositoryCount, 2);
+    assert.equal(serialized.nodes.find((node) => node.id === "repository:upstream/core")?.contribution.mergedPullRequests, 1);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 
