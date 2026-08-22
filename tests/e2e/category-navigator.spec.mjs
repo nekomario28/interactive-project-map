@@ -86,11 +86,34 @@ test("search expands matching categories and status filters remove hidden reposi
   await page.locator("#search").fill("");
   await expect(web.locator(".category-nav-repositories")).toBeHidden();
 
-  await expect(navigator.locator('[data-repository-id="repository:gamma"]')).toHaveCount(0);
-  await navigator.locator('[data-category-id="group:robotics"]').locator("xpath=ancestor::section").locator(".category-nav-disclosure").click();
-  await expect(navigator.locator('[data-repository-id="repository:gamma"]')).toHaveCount(1);
+  const gamma = navigator.locator('[data-repository-id="repository:gamma"]');
+  await expect(gamma).toHaveCount(1);
+  await expect(gamma).toBeHidden();
+  await robotics.locator(".category-nav-disclosure").click();
+  await expect(gamma).toBeVisible();
 
   await page.getByRole("button", { name: /^Archived repositories: 1/ }).click();
   await expect(navigator.locator('[data-repository-id="repository:gamma"]')).toHaveCount(0);
   await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · 3 repos");
+});
+
+test("aggregate viewers use search dimming as a category-focus fallback", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 760 });
+  await installFixture(page);
+  await page.goto("/treemap/?username=example&style=treemap");
+  await expect(page.locator("#status")).toBeHidden();
+
+  const navigator = page.getByRole("complementary", { name: "Category navigator" });
+  const robotics = navigator.locator('[data-category-id="group:robotics"]');
+  await robotics.click();
+
+  await expect(robotics).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · Focus: Robotics");
+  expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus?.id)).toBe("group:robotics");
+  expect(await page.evaluate(() => state.query)).toBe("robotics");
+  await expect(page.locator("#detailsTitle")).toHaveText("Project treemap");
+
+  await navigator.getByRole("button", { name: "Clear focus" }).click();
+  expect(await page.evaluate(() => state.query)).toBe("");
+  expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus)).toBeNull();
 });
