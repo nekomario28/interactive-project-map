@@ -13,34 +13,39 @@ permissions:
   contents: read
 
 jobs:
-  ai-director-local-repair:
+  ai-director-backtrack-provider-probe:
     if: github.head_ref == 'exp/ai-director-spotlight-outcomes'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Checkout exact experiment head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - name: Install clients and ffmpeg
+      - name: Install Gradio client
+        run: python -m pip install --disable-pip-version-check -q gradio_client
+      - name: Probe non-ZeroGPU LTX I2V API
         run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check -q huggingface_hub gradio_client
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
-      - name: Execute real sid004 localized inpaint repair
-        continue-on-error: true
-        run: python scripts/ai_director_local_repair_sid004.py
-      - name: Remove duplicate raw source before upload
-        if: always()
-        run: rm -rf .tmp/ai-director-local-repair-sid004/raw
-      - name: Upload repair evidence
+          mkdir -p .tmp/ai-director-provider-probe
+          python - <<'PY' | tee .tmp/ai-director-provider-probe/api.txt
+          from gradio_client import Client
+          spaces = [
+              'khuramullah/LTX2.3-10Eros-image-to-video',
+              'WeReCooking/ltx-2.3-cpu',
+          ]
+          for space in spaces:
+              print('===', space, '===')
+              try:
+                  c=Client(space, verbose=False)
+                  print(c.view_api(all_endpoints=True, print_info=False, return_format='dict'))
+              except Exception as e:
+                  print('ERROR', type(e).__name__, str(e))
+          PY
+      - name: Upload provider API evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-local-repair-sid004
-          path: .tmp/ai-director-local-repair-sid004
+          name: ai-director-backtrack-provider-probe
+          path: .tmp/ai-director-provider-probe
           if-no-files-found: error
           retention-days: 3
