@@ -53,6 +53,11 @@
     return Array.isArray(state.graph?.nodes) ? state.graph.nodes : [];
   }
 
+  function repositoryVisible(node) {
+    const checker = window.ProjectMapViewState?.statusVisible;
+    return typeof checker === "function" ? checker(node) : true;
+  }
+
   function visibleNode(id) {
     return state.byId?.get?.(id)
       || state.nodes?.find?.((node) => node?.id === id)
@@ -64,7 +69,9 @@
     const key = normalizedGroupId(group.id);
     const raw = String(group.id || "").replace(/^group:/, "");
     return graphNodes()
-      .filter((node) => node?.type === "repository" && (normalizedGroupId(node.groupId) === key || node.groupId === raw))
+      .filter((node) => node?.type === "repository"
+        && repositoryVisible(node)
+        && (normalizedGroupId(node.groupId) === key || node.groupId === raw))
       .sort((a, b) => (b.stars || 0) - (a.stars || 0) || String(a.label || "").localeCompare(String(b.label || "")));
   }
 
@@ -107,7 +114,7 @@
 
   function focusNode(id) {
     const node = visibleNode(id);
-    if (!node) return;
+    if (!node || (node.type === "repository" && !repositoryVisible(node))) return;
     updateDetails(node);
     canvas.focus({ preventScroll: true });
   }
@@ -184,8 +191,10 @@
     try {
       const groups = graphNodes()
         .filter((node) => node?.type === "group")
-        .sort((a, b) => String(a.label || "").localeCompare(String(b.label || "")));
-      const signature = groupSignature(groups);
+        .map((group) => ({ group, repositories: repositoriesFor(group) }))
+        .filter(({ repositories }) => repositories.length > 0)
+        .sort((a, b) => String(a.group.label || "").localeCompare(String(b.group.label || "")));
+      const signature = groupSignature(groups.map(({ group }) => group));
       const query = activeQuery();
       const selectedId = state.selected?.id || "";
       const renderKey = `${signature}::${query}::${selectedId}::${[...manualExpanded].sort().join(",")}::${panelOpen}`;
@@ -194,14 +203,13 @@
 
       list.replaceChildren();
       if (!groups.length) {
-        summary.textContent = state.graph ? "No categories" : "Loading…";
+        summary.textContent = state.graph ? "No visible categories" : "Loading…";
         clearButton.disabled = !state.selected;
         return;
       }
 
       let repositoryTotal = 0;
-      for (const group of groups) {
-        const repositories = repositoriesFor(group);
+      for (const { group, repositories } of groups) {
         repositoryTotal += repositories.length;
         list.append(createGroupEntry(group, repositories, query));
       }
@@ -235,10 +243,9 @@
     };
   }
 
-  const nativeResize = () => {
+  window.addEventListener("resize", () => {
     if (window.innerWidth < 700 && panelOpen) setPanelOpen(false);
-  };
-  window.addEventListener("resize", nativeResize, { passive: true });
+  }, { passive: true });
 
   setPanelOpen(panelOpen);
   render({ force: true });
