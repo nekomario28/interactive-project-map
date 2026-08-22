@@ -1,156 +1,63 @@
-# GitHub Project Galaxy
+<p align="center">
+  <a href="https://nekomario28.github.io/interactive-project-map/u/?username=nekomario28&style=galaxy-systems">
+    <img width="760" src="https://raw.githubusercontent.com/nekomario28/nekomario28/HEAD/project-map/galaxy.svg" alt="Interactive Project Map — live Galaxy Systems example" />
+  </a>
+</p>
 
-Turn a GitHub user's public repositories into a reusable project map with:
+<h1 align="center">GitHub Project Galaxy</h1>
 
-- a static SVG for GitHub profile READMEs
-- user-owned static `project-map/graph.json`
-- interactive GitHub Pages viewers with search, details, pan, zoom, pinch, and repository links
-- **12 visual presets**: Radial Tree, Galaxy Classic, Galaxy Systems, Galaxy Hybrid, Obsidian-like, Tree, Treemap, Timeline, Cluster / Bubble, Sunburst, Matrix / Heatmap, and Sankey
-- visual example cards in the public generator before setup generation
-- explicit Original / Fork / Archived semantics
-- a static-first architecture with no shared GitHub REST request during normal viewing
+<p align="center">
+  Turn a GitHub portfolio into a static profile graphic and an interactive project map.<br/>
+  <strong>One user-owned graph. Twelve visual views. No shared API call during normal viewing.</strong>
+</p>
 
-## Architecture
+<p align="center">
+  <a href="https://github.com/nekomario28/interactive-project-map/actions/workflows/ci.yml"><img alt="Verify" src="https://github.com/nekomario28/interactive-project-map/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/nekomario28/interactive-project-map/actions/workflows/deploy-pages.yml"><img alt="Pages" src="https://github.com/nekomario28/interactive-project-map/actions/workflows/deploy-pages.yml/badge.svg" /></a>
+  <img alt="12 visual presets" src="https://img.shields.io/badge/visual%20presets-12-7c3aed?style=flat-square" />
+  <img alt="Static first" src="https://img.shields.io/badge/runtime-static--first-0ea5e9?style=flat-square" />
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
+</p>
 
-```text
-https://nekomario28.github.io/interactive-project-map/
-        ↓ generate setup
-USERNAME/USERNAME profile repository
-        ↓ scheduled GitHub Action
-project-map/galaxy.svg
-project-map/graph.json
-        ↓
-GitHub profile README ──click──> github.io viewer
-                                  ↓
-                    raw.githubusercontent.com
-                                  ↓
-              USERNAME/USERNAME/HEAD/project-map/graph.json
-```
+<p align="center">
+  <a href="https://nekomario28.github.io/interactive-project-map/"><strong>Open generator</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://nekomario28.github.io/interactive-project-map/u/?username=nekomario28&style=galaxy-systems">Live demo</a>
+  &nbsp;·&nbsp;
+  <a href="#quick-start">Quick start</a>
+  &nbsp;·&nbsp;
+  <a href="#12-visual-presets">Presets</a>
+  &nbsp;·&nbsp;
+  <a href="docs/current-roadmap.md">Roadmap</a>
+</p>
 
-The REST API is used when the user's Action refreshes repository metadata. README views and interactive-map views consume the generated static files instead.
+---
 
-## Presets
+<table>
+<tr>
+<td width="25%" valign="top"><strong>🪐 One graph, 12 views</strong><br/><sub>Radial, three Galaxy variants, Obsidian-like, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix and Sankey.</sub></td>
+<td width="25%" valign="top"><strong>📦 User-owned artifacts</strong><br/><sub>Your profile repository stores <code>project-map/galaxy.svg</code> and <code>project-map/graph.json</code>.</sub></td>
+<td width="25%" valign="top"><strong>⚡ Static-first</strong><br/><sub>README and viewer traffic read generated files instead of spending a shared GitHub REST quota.</sub></td>
+<td width="25%" valign="top"><strong>🔎 Interactive exploration</strong><br/><sub>Search, focus, local graph depth, pan/zoom/pinch, activity overlay and repository-status filters.</sub></td>
+</tr>
+</table>
 
-`radial` remains the default for workflows that omit `style`. The former explicit `style=galaxy` value is retained as a compatibility alias and normalizes to `galaxy-systems`; it is intentionally not shown as a thirteenth preset.
+## What it does
 
-| Style | Viewer | Best use |
-|---|---|---|
-| `radial` | `/radial/?username=USER&style=radial` | compact profile README / general default |
-| `galaxy-classic` | `/u/?username=USER&style=galaxy-classic` | original one-galaxy atmosphere and global motion |
-| `galaxy-systems` | `/u/?username=USER&style=galaxy-systems` | clearest category → repository spatial membership |
-| `galaxy-hybrid` | `/u/?username=USER&style=galaxy-hybrid` | spiral-galaxy atmosphere plus readable local category systems |
-| `obsidian` | `/u/?username=USER&style=obsidian` | organic force-directed exploration |
-| `tree` | `/tree/?username=USER&style=tree` | explicit Owner → Category → Repository hierarchy |
-| `treemap` | `/treemap/?username=USER&style=treemap` | dense portfolio composition and relative emphasis |
-| `timeline` | `/timeline/?username=USER&style=timeline` | repository creation history by category |
-| `cluster` | `/cluster/?username=USER&style=cluster` | category concentration in large repository sets |
-| `sunburst` | `/sunburst/?username=USER&style=sunburst` | compact proportional hierarchy |
-| `matrix` | `/matrix/?username=USER&style=matrix` | Category × Language technical composition |
-| `sankey` | `/sankey/?username=USER&style=sankey` | Owner → Category → Original/Fork/Archived flow |
+Project Galaxy turns public GitHub repositories into a reusable portfolio graph. The same generated `graph.json` drives both a compact SVG for a profile README and twelve browser visualizations.
 
-### Radial Tree (Classic)
+The generated data keeps repository status explicit: **Original**, **Fork**, and **Archived** are never silently merged into one ownership meaning. Work contributed to repositories owned by other people or organizations is being developed as an explicit **Contributed** relation rather than being misrepresented as owned work; see [`docs/current-roadmap.md`](docs/current-roadmap.md) and [`docs/external-contributions-research.md`](docs/external-contributions-research.md).
 
-Owner is centered, categories occupy the middle ring, and repositories sit around the outside. It is deliberately compact at the default 740×420 profile size.
+## Quick start
 
-### Galaxy Classic
+1. Open the **[public generator](https://nekomario28.github.io/interactive-project-map/)**.
+2. Enter your GitHub username and choose a theme, preset and repository filters.
+3. If you do not yet have the special `USERNAME/USERNAME` profile repository, use the guided **Step 0** link to create it as a public repository.
+4. Use **Step 1** to copy the generated workflow and open GitHub's new-file editor at `.github/workflows/project-map.yml`.
+5. Commit the workflow, then use **Step 2** to run **Update project map** once.
+6. Add the generated SVG to your profile README and link it to the interactive viewer.
 
-Preserves the pre-Galaxy-Systems Living Galaxy behavior: one global galaxy, differential repository motion, spiral atmosphere, and category positions derived from the moving portfolio. It is intentionally kept as an independent runtime so later Systems/Hybrid tuning cannot silently change the original presentation.
-
-The static Classic SVG is non-animated and uses the original bounded Galaxy renderer.
-
-### Galaxy Systems
-
-The owner is the center of the map. Categories form local systems and orbit the owner extremely slowly; repositories orbit only their own category. Category membership is therefore readable from position without following a permanent spoke network.
-
-Interactive timing is deliberately calm:
-
-- category orbit: about **30 minutes per revolution**
-- repository lane 0: **6 minutes per revolution**
-- each additional lane: **+3 minutes**
-- all repositories inside one category use the same hashed direction
-
-Owner → Category and Category → Repository edges are hidden when nothing is focused. Selecting or hovering a repository reveals its explanatory `Owner → Category → Repository` path; category selection reveals that category's ownership/membership edges. Repository relation edges remain faintly visible without focus.
-
-For static SVGs with at most 80 repositories, the same hierarchy uses script-free declarative SVG animation. Renderers that ignore SVG animation still receive a correct initial frame. Above 80 repositories it automatically uses the bounded non-animated dense fallback.
-
-### Galaxy Hybrid
-
-Combines the two ideas rather than replacing either one. Categories occupy one, two, or three spiral arms depending on category count, so the portfolio still reads as one galaxy. Each category remains a local system whose repositories follow elliptical orbits aligned with the arm.
-
-Interactive timing:
-
-- whole spiral/category structure: about **40 minutes per revolution**
-- local repository lane 0: **8 minutes per revolution**
-- each additional lane: **+4 minutes**
-
-Hybrid uses the same focus-only ownership/membership edge policy as Systems and adds nucleus glow, spiral dust, category halos, and elliptical lane guides. Static Hybrid SVG animation is likewise script-free for up to 80 repositories and falls back to the bounded dense renderer above that limit.
-
-### Obsidian-like
-
-A deterministic force-directed graph using the original global center / repel / link physics. It prioritizes exploratory relationships over strict hierarchy and remains physically independent from all Galaxy runtimes.
-
-This is an independently implemented approximation and is not affiliated with or endorsed by Obsidian or Dynalist Inc. Obsidian is a trademark of Dynalist Inc.
-
-### Tree
-
-An explicit top-down `Owner → Category → Repository` hierarchy. Subtree-size allocation and wrapping make structural relationships immediately visible.
-
-### Treemap
-
-Each category receives a region containing repository tiles. Stars have only a weak influence on tile area so one popular repository cannot dominate the complete portfolio. Small tiles suppress labels rather than overlap them.
-
-### Timeline
-
-Repositories are positioned on category lanes using GitHub creation time. `graph.json` stores `createdAt` in addition to `updatedAt`; older graph files fall back to `updatedAt` until regenerated.
-
-### Cluster / Bubble
-
-Each category forms a large boundary containing its repositories. This is aimed at large 100–300 repository profiles where domain concentration matters more than explicit edges.
-
-### Sunburst
-
-A concentric `Owner → Category → Repository` hierarchy using proportional sectors. Narrow outer sectors suppress repository labels. Dense category labels can still be less readable than Tree or Radial, which is an intentional tradeoff of the compact circular form.
-
-### Matrix / Heatmap
-
-Rows are categories and columns are the most-used languages. Cell intensity represents repository count; the small status bar inside each populated cell shows Original / Fork / Archived composition.
-
-### Sankey
-
-A flow diagram from Owner to Category to repository status. Band widths preserve repository counts, making it easy to compare where work is concentrated and how much is Original, Forked, or Archived.
-
-All presets preserve the same status colors. Archived repositories receive an additional dashed treatment where the visualization renders individual repository marks.
-
-## Installation
-
-Open the public generator:
-
-```text
-https://nekomario28.github.io/interactive-project-map/
-```
-
-Enter a GitHub username, compare the preset cards, choose theme/style/repository filters, then copy the generated workflow into the user's profile repository:
-
-```text
-USERNAME/USERNAME/.github/workflows/project-map.yml
-```
-
-The generated workflow intentionally isolates permissions:
-
-```text
-generate
-  contents: read
-  interactive-project-map Action
-       ↓ artifact
-publish
-  actions: read
-  contents: write
-  pinned GitHub-maintained Actions + git commit/push
-```
-
-The custom project-map Action never receives a write-capable token. The public generator pins it to a reviewed immutable commit SHA.
-
-Run **Update project map** once. It creates:
+The first run creates:
 
 ```text
 project-map/
@@ -158,34 +65,119 @@ project-map/
 └── graph.json
 ```
 
-`galaxy.svg` is kept as the filename for backward compatibility regardless of the chosen preset.
+`galaxy.svg` remains the filename for backward compatibility regardless of the selected visual preset.
 
-## Static viewer validation
+### Embed it in a profile README
 
-Every dedicated viewer reads:
+```html
+<p align="center">
+  <a href="https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy-systems">
+    <img width="740" src="https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/galaxy.svg" alt="USERNAME project map" />
+  </a>
+</p>
+```
+
+## 12 visual presets
+
+`radial` remains the backward-compatible default. The legacy `style=galaxy` value aliases to `galaxy-systems` and is intentionally not a thirteenth preset.
+
+| Preset | Viewer route | Best for |
+|---|---|---|
+| `radial` | `/radial/` | compact profile README and general default |
+| `galaxy-classic` | `/u/` | original one-galaxy atmosphere and global motion |
+| `galaxy-systems` | `/u/` | clearest category → repository spatial membership |
+| `galaxy-hybrid` | `/u/` | spiral atmosphere plus readable local systems |
+| `obsidian` | `/u/` | organic force-directed exploration |
+| `tree` | `/tree/` | explicit Owner → Category → Repository hierarchy |
+| `treemap` | `/treemap/` | dense portfolio composition |
+| `timeline` | `/timeline/` | repository creation history by category |
+| `cluster` | `/cluster/` | category concentration in large portfolios |
+| `sunburst` | `/sunburst/` | compact proportional hierarchy |
+| `matrix` | `/matrix/` | Category × Language composition |
+| `sankey` | `/sankey/` | Owner → Category → repository-status flow |
+
+All presets consume the same graph and preserve the same repository-status semantics. Archived repositories receive an additional dashed treatment where individual repository marks are drawn.
+
+### Galaxy Systems
+
+Galaxy Systems is the default showcase because it makes hierarchy readable without leaving a permanent spoke network on screen. The owner is the center; categories form local systems; repositories orbit only their category. Hover/focus reveals the explanatory path when it is useful.
+
+For static SVGs with at most 80 repositories, Galaxy Systems and Galaxy Hybrid can use script-free declarative SVG motion. Dense portfolios automatically fall back to bounded non-animated rendering.
+
+### Obsidian-like
+
+The Obsidian-like view is an independently implemented deterministic force-directed graph. It is not affiliated with or endorsed by Obsidian or Dynalist Inc.; Obsidian is a trademark of Dynalist Inc.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A[Public setup generator] --> B[USERNAME / USERNAME profile repository]
+  B --> C[Scheduled GitHub Action]
+  C --> D[project-map/galaxy.svg]
+  C --> E[project-map/graph.json]
+  D --> F[GitHub profile README]
+  F -->|click| G[GitHub Pages viewer]
+  G --> H[raw.githubusercontent.com]
+  H --> E
+```
+
+The GitHub REST API is used when the user's Action refreshes repository metadata. Normal README views and interactive-map views consume the generated static files instead.
+
+The generated caller workflow also isolates permissions:
+
+```text
+generate
+  contents: read
+  reusable interactive-project-map workflow
+       ↓ artifact
+publish
+  actions: read
+  contents: write
+  pinned GitHub-maintained Actions + fixed project-map paths
+```
+
+The reusable generator never receives the caller's write-capable publish token.
+
+## Interactive view controls
+
+Shared Galaxy/Obsidian views support:
+
+- **Original / Fork / Archived** visibility controls
+- **Activity** freshness overlay using the already-generated `updatedAt`
+- **Focus / Local Graph** with bounded depth
+- search across repository metadata and taxonomy context
+- shareable semantic URL state
+- Motion **ON / OFF**
+
+Dedicated views use the same repository-status projection rules, including removal of now-empty category nodes after filtering.
+
+## Static graph validation
+
+Every viewer reads:
 
 ```text
 https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/graph.json
 ```
 
-and validates the graph before rendering. In particular:
+before rendering, and applies bounded validation. Among other checks:
 
 - the requested username must be valid
 - graph owner must match that username
-- repository URLs must remain under `https://github.com/USERNAME/REPO`
-- labels, topics, node counts, and edge counts are bounded
-- malformed nodes/URLs and unknown edges are discarded
+- repository URLs must point to the expected public GitHub repository identity
+- labels, topics, node counts and edge counts are bounded
+- malformed nodes/URLs and unsupported edges are discarded
 
-If the graph is missing or invalid, the viewer shows a setup/recovery message instead of consuming a shared API quota.
+If the graph is missing or invalid, the viewer shows setup/recovery guidance instead of falling back to a shared API call.
 
 ## Action inputs
 
 | Input | Default | Meaning |
 |---|---:|---|
-| `github_token` | required | token used to read public repository metadata |
+| `github_token` | required | token used to read public GitHub metadata |
 | `username` | caller owner | GitHub user to visualize |
 | `theme` | `dark` | `dark` or `light` static SVG theme |
-| `style` | `radial` | one of the 12 visible preset IDs above; legacy `galaxy` aliases to `galaxy-systems` |
+| `style` | `radial` | one of the 12 visible preset IDs; legacy `galaxy` aliases to `galaxy-systems` |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
@@ -193,52 +185,33 @@ If the graph is missing or invalid, the viewer shows a setup/recovery message in
 | `height` | `420` | SVG height, `260`–`1000` |
 | `output_dir` | `project-map` | relative output directory |
 
-## GitHub Pages
+Stable installs use the reusable generator channel `@v1`. Advanced users may pin a full reviewed 40-character generator commit SHA.
 
-For the upstream repository, configure **Settings → Pages → Build and deployment → Source → GitHub Actions** once. The Pages workflow then builds only static frontend files.
+## GitHub Pages and optional Cloudflare
 
-Local frontend build:
+The recommended path is GitHub-owned:
+
+```text
+GitHub repository + GitHub Actions + GitHub Pages
+```
+
+The Cloudflare Worker / GitHub App path remains available as an **optional** one-click/fallback surface; it is not required for generation or normal viewing. Runtime secrets stay outside the public repository. See [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
+
+## Development
 
 ```bash
+npm ci --ignore-scripts
 npm run build:pages
-```
-
-The previous configured multi-user catalog builder remains available for experiments:
-
-```bash
-npm run build:pages:catalog
-```
-
-## Verification
-
-```bash
 npm run verify
 ```
 
-Verification includes:
+Verification includes TypeScript checking, Wrangler dry-run, Node syntax checks, HTML validation, ESLint, Stylelint, actionlint, static graph validation, permission-isolation tests, dense 300-repository regressions, and renderer-specific gates across all twelve presets.
 
-- TypeScript type checking
-- Wrangler Worker dry-run
-- Node 24 syntax checks for the Action, all static renderers, and browser viewers
-- HTML-Validate on emitted Pages HTML
-- ESLint on emitted browser JavaScript
-- Stylelint on emitted CSS
-- actionlint on repository workflows and the browser-generated installer workflow
-- Galaxy Classic preservation checks
-- Galaxy Systems speed, nested-orbit, focus-edge, and SVG fallback checks
-- Galaxy Hybrid spiral/elliptical-orbit and SVG fallback checks
-- dense 300-repository regression tests across all 12 presets
-- Treemap bounds/coverage checks
-- Sunburst segment checks
-- Matrix aggregation checks
-- Sankey flow-total checks
-- static graph validation and permission-isolation tests
+CI also renders all twelve presets from the same graph and uploads a visual comparison artifact on relevant changes.
 
-CI also invokes the local `action.yml` **without a `style` input** and confirms that Radial Tree remains the backward-compatible default. On preset-development PRs it additionally renders all 12 presets from the same current `graph.json` and uploads a visual comparison artifact.
+## Project status
 
-## Optional Cloudflare Worker
-
-The Worker implementation remains available for API/fallback experiments but is not required by the recommended GitHub Pages flow.
+The current roadmap, completed foundation work, and remaining `Contributed` promotion work are tracked in [`docs/current-roadmap.md`](docs/current-roadmap.md).
 
 ## Contributors & credits
 
@@ -255,7 +228,7 @@ The Worker implementation remains available for API/fallback experiments but is 
 </tr>
 </table>
 
-GitHub's automatic **Contributors** view remains commit-authorship-driven. The credits below acknowledge projects and people whose public work informed design decisions; they are **not** presented as Git co-authors or bundled dependencies.
+GitHub's automatic **Contributors** view remains commit-authorship-driven. Research credits acknowledge public work that informed design decisions; they are not presented as Git co-authors or bundled dependencies.
 
 <details>
 <summary><b>Research & upstream credits</b></summary>
@@ -282,7 +255,7 @@ GitHub's automatic **Contributors** view remains commit-authorship-driven. The c
 </tr>
 </table>
 
-Detailed adoption and licensing boundaries are recorded in [`docs/licensing-audit-2026-08-21.md`](docs/licensing-audit-2026-08-21.md) and the corresponding research notes. Reference-only projects are credited here even when attribution is not legally required.
+Detailed adoption and licensing boundaries are recorded in [`docs/licensing-audit-2026-08-21.md`](docs/licensing-audit-2026-08-21.md) and the corresponding research notes.
 
 </details>
 
