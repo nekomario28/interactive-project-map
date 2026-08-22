@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  patchInteractionPolish,
   patchSharedViewState,
   patchSharedViewerHtml,
+  patchSharedViewerRuntime,
   patchViewerCss,
 } from "../scripts/apply-contributed-viewer.mjs";
 
@@ -31,16 +31,18 @@ test("C4a shared HTML adds one Contributed control idempotently", () => {
   assert.equal(patchSharedViewerHtml(patched), patched);
 });
 
-test("C4a interaction adapter injects strict Contributed runtime before existing polish", () => {
-  const source = `"use strict";\n/* global canvas, state, searchInput, detailsMeta, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, nodeOpacity, draw */\n\n(() => {\n  return true;\n})();\n`;
-  const patched = patchInteractionPolish(source);
-  assert.match(patched, /Project Map Contributed shared-viewer contract/);
+test("C4a runtime is installed in shared viewer before username startup and graph fetch", () => {
+  const source = `"use strict";\nfunction sanitizeGraph(value) { return value; }\nfunction nodeStatus(node) { return node.type; }\nfunction palette() { return {}; }\nfunction drawEdges() {}\nfunction updateDetails() {}\n\ntry {\n  username = normalizeUsername(query.get("username"));\n}\n\nif (username) { fetch("graph.json"); }\n`;
+  const patched = patchSharedViewerRuntime(source);
+  const marker = patched.indexOf("Project Map Contributed shared-viewer contract");
+  const startup = patched.indexOf('username = normalizeUsername(query.get("username"))');
+  assert.ok(marker >= 0 && marker < startup);
   assert.match(patched, /raw\.relation !== "contributed"/);
   assert.match(patched, /type: "contribution"/);
   assert.match(patched, /return "contributed"/);
   assert.match(patched, /External owner/);
-  assert.match(patched, /nodeStatus, palette/);
-  assert.equal(patchInteractionPolish(patched), patched);
+  assert.match(patched, /if \(!contributionEdges\.length\) return baseDrawEdges\(colors\)/);
+  assert.equal(patchSharedViewerRuntime(patched), patched);
 });
 
 test("C4a Contributed status CSS is idempotent", () => {
