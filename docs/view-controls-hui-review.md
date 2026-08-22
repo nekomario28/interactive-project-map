@@ -6,11 +6,24 @@ This note records the usability review behind the Project Map viewer-control cha
 
 ### Repository status filtering had two different problems
 
-The shared Galaxy / Obsidian viewer already had a working status projection for `Original`, `Fork`, and `Archived`. Its earlier browser gate verified state changes and Focus-depth composition, but it did **not** prove that a hidden repository also disappeared from normal canvas hit-testing. The regression gate now checks all three statuses directly at the rendered-node interaction boundary.
+The first implementation changed status state correctly but did not reliably prove that the rendered graph changed with it. The regression gate now checks `Original`, `Fork`, and `Archived` at the actual rendered/canvas interaction boundary rather than treating internal state changes as sufficient evidence.
 
 The second problem was feedback. A generated graph may legitimately contain zero repositories of a status. For example, a workflow can exclude archived repositories during collection. An enabled-looking `Archived` toggle with no archived data cannot change the map and therefore looks broken even when the filter code is correct.
 
 The viewer now reports the count for each status and disables zero-count statuses with an explanation. Collection policy remains separate from display filtering: the viewer does not perform new GitHub API requests merely to make a disabled filter active.
+
+### Empty categories must disappear with their last visible repository
+
+A repository-status projection is a graph projection, not only a repository paint filter. If filtering removes the final visible repository from a category, leaving the category node and its owner edge behind creates an empty parent with no user-visible meaning.
+
+All preset families therefore apply the same structural rule:
+
+1. select the visible repository set;
+2. retain only categories that still own at least one visible repository;
+3. remove ownership/membership/relation edges whose endpoint was removed;
+4. derive layout and aggregate views from that projected graph.
+
+Galaxy/Obsidian perform this before the shared interactive layout. Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix, and Sankey use one dedicated-view projection adapter before their existing layout/render path. Dedicated renderers do not carry eight separate copies of the filtering rule.
 
 ### The toolbar had a weak information hierarchy
 
@@ -57,9 +70,11 @@ These are immediate visibility toggles in a graph toolbar. The existing native `
 
 Do not move repository visibility into an overflow menu, drawer, modal, or settings dialog. Filtering is a primary exploration action and should remain one interaction away.
 
-### Preserve the mental map for status changes
+### Status filtering projects structure, not only paint
 
-Status filtering does not rebuild the layout. Hidden repositories retain their positions so toggling a status back on does not rearrange the entire graph. Focus / Local Graph is different: it intentionally rebuilds the projected subgraph because the user explicitly changed exploration scope.
+The current shared path applies repository status before layout and then draws Activity after the runtime-specific renderer. The dedicated path projects the fetched static graph before its existing renderer consumes it. This is intentional: a hidden repository must not keep an empty category, ownership edge, aggregate Matrix cell, or Sankey flow alive.
+
+The shared status change uses a bounded rebuild with `fit: false`, so filtering changes graph structure without forcing a camera reset. Focus / Local Graph remains a separate scope projection and can intentionally rebuild/fit when the user changes focus scope.
 
 ### Do not fetch missing statuses from the viewer
 
@@ -69,30 +84,47 @@ Status filtering does not rebuild the layout. Hidden repositories retain their p
 
 If a status change hides the currently hovered or selected repository, that interaction state is cleared. An invisible repository must not continue to produce hover emphasis or details.
 
-## Remaining consistency gap: dedicated presets
+### Keep Activity scoped to node-based shared views
 
-The shared `/u/` viewer hosts Galaxy Classic, Galaxy Systems, Galaxy Hybrid, and Obsidian and now applies the repository controls correctly.
+Activity/Freshness is currently a repository-node overlay for Galaxy Classic, Galaxy Systems, Galaxy Hybrid, and Obsidian. It uses the existing `updatedAt` / `generatedAt` timestamps and requires no additional GitHub API request.
 
-The dedicated Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix, and Sankey routes currently preserve semantic URL parameters when navigating between styles, but they do not render/apply the repository-status controls themselves. That makes a cross-style feature appear to disappear when the user changes visualization.
+Do **not** add an Activity control to Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix, or Sankey merely for toolbar symmetry. Several of those views aggregate repositories or encode a different hierarchy, so the same ring overlay has no clear equivalent meaning. The `activity` URL state may remain preserved while navigating styles so it resumes when returning to a supported shared view.
 
-This should be fixed, but **not** by copying status logic into eight viewer runtimes.
+A dedicated-view Activity encoding should be added only if a preset-specific representation has a clear user task and measured value.
 
-The preferred next implementation is one shared dedicated-view projection adapter that:
+## Cross-style status consistency — resolved
 
-1. parses the same `status` URL contract;
-2. projects a sanitized `graph.json` before each dedicated layout consumes it;
-3. injects the same `Repositories` common-region control into dedicated toolbars;
-4. recomputes the dedicated layout from the retained source graph when a status changes;
-5. keeps aggregate views (Matrix/Sankey) derived from exactly the same filtered repository set;
-6. is attached to all dedicated viewers in one build/postprocess step rather than eight hand-maintained implementations.
+Repository status filtering is now a Project Map feature across all twelve presets:
 
-Before implementing that adapter, a Gate must prove one fixture produces the same filtered repository IDs in every preset. This is the smallest way to make repository visibility a true Project Map feature rather than a shared-view-only feature.
+- shared `/u/`: Galaxy Classic, Galaxy Systems, Galaxy Hybrid, Obsidian;
+- dedicated routes: Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix, Sankey.
+
+One fixture is gated across all dedicated routes, and real-canvas gates cover the shared path. Zero-child categories are pruned rather than rendered as empty parents.
+
+The shared and dedicated integrations remain separate because their integration boundaries differ: shared views compose an in-memory status projection with Focus before layout, while dedicated views project the static graph at the fetch boundary and reload from shareable URL state. Creating another browser runtime only to share a short filter function would add more wiring than it removes. Common semantics are enforced by the cross-preset gates instead.
+
+## Feature-freeze guidance
+
+The current v1 viewer-control set is sufficient for normal portfolio exploration. New hierarchy layers, renderer-wide controls, or graph frameworks should not be added by default.
+
+The large-portfolio local-cluster experiment in issue #61 / PR #108 is a measured NO-GO: no tested global threshold from 0.72 through 0.90 made either deterministic candidate pass the 80/150/300 repository clear+blurred promotion gates. Existing standard taxonomy plus Local Graph focus remains the lower-complexity baseline.
+
+For v1, prefer:
+
+- real user-reported UX fixes;
+- accessibility/readability fixes;
+- correctness and regression gates;
+- installer/release reliability;
+- removal of duplicated implementation paths.
+
+Do not add a feature merely because another visualization product has it. Promotion should require a concrete user task or measured improvement over the existing controls.
 
 ## Rejected alternatives
 
 - **Eight separate status-filter implementations:** duplicates semantics and guarantees drift.
 - **A new graph/UI framework:** the existing graph and renderer paths are sufficient.
-- **Re-layout on every shared-view status toggle:** breaks spatial continuity for no benefit.
+- **A new common runtime solely to share the short status projection helper:** the shared and dedicated integration points differ; cross-preset semantic gates provide the useful common contract without another script/build layer.
 - **Hide filters in a menu:** saves toolbar space at the cost of discoverability and an extra interaction.
 - **Viewer-side GitHub fallback for a zero-count status:** breaks the static-first/API-budget architecture.
 - **Color-only status feedback:** counts, labels, pressed state, and disabled state remain visible in addition to status colors.
+- **Activity on every preset for symmetry:** aggregate/hierarchy views need a task-specific encoding rather than a copied repository-node ring.
