@@ -80,27 +80,33 @@
     graphLoaded = true;
     normalizeStatuses();
 
-    const nodes = value.nodes.filter((node) => {
+    const statusNodes = value.nodes.filter((node) => {
       const status = repositoryStatus(node);
       return !status || statuses.has(status);
     });
-    const ids = new Set(nodes.map((node) => node?.id).filter(Boolean));
     const groupCounts = new Map();
-    for (const node of nodes) {
+    for (const node of statusNodes) {
       if (node?.type !== "repository") continue;
       const groupId = String(node.groupId || "");
       if (!groupId) continue;
       const normalized = groupId.startsWith("group:") ? groupId : `group:${groupId}`;
       groupCounts.set(normalized, (groupCounts.get(normalized) || 0) + 1);
     }
-    const normalizedNodes = nodes.map((node) => node?.type === "group"
-      ? { ...node, repositoryCount: groupCounts.get(node.id) || 0 }
-      : node);
+
+    // A category is contextual structure, not an independently visible item.
+    // Once status filtering removes its last repository, remove the category and
+    // its ownership edge as well so every dedicated layout sees the same graph.
+    const normalizedNodes = statusNodes
+      .filter((node) => node?.type !== "group" || (groupCounts.get(node.id) || 0) > 0)
+      .map((node) => node?.type === "group"
+        ? { ...node, repositoryCount: groupCounts.get(node.id) || 0 }
+        : node);
+    const ids = new Set(normalizedNodes.map((node) => node?.id).filter(Boolean));
     const filtered = {
       ...value,
       nodes: normalizedNodes,
       repositoryCount: normalizedNodes.filter((node) => node?.type === "repository").length,
-      groupCount: normalizedNodes.filter((node) => node?.type === "group" && (groupCounts.get(node.id) || 0) > 0).length,
+      groupCount: normalizedNodes.filter((node) => node?.type === "group").length,
     };
     if (Array.isArray(value.edges)) filtered.edges = value.edges.filter((edge) => ids.has(edge?.source) && ids.has(edge?.target));
     if (Array.isArray(value.semanticEdges)) filtered.semanticEdges = value.semanticEdges.filter((edge) => ids.has(edge?.source) && ids.has(edge?.target));
