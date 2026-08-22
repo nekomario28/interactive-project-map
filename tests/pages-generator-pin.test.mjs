@@ -24,6 +24,7 @@ function element(id) {
 test("Pages setup keeps stable v1 hidden by default and accepts only immutable SHA pins", async () => {
   const source = await readFile(new URL("../scripts/public-home.js", import.meta.url), "utf8");
   const elements = new Map();
+  const actions = { querySelector() { return null; }, insertBefore() {} };
   const context = {
     URL,
     Set,
@@ -34,7 +35,9 @@ test("Pages setup keeps stable v1 hidden by default and accepts only immutable S
     navigator: { clipboard: { async writeText() {} } },
     document: {
       getElementById(id) { if (!elements.has(id)) elements.set(id, element(id)); return elements.get(id); },
+      querySelector(selector) { return selector === ".actions" ? actions : null; },
       querySelectorAll() { return []; },
+      createElement(tag) { return element(tag); },
       execCommand() { return true; },
     },
   };
