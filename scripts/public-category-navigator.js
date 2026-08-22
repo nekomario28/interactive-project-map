@@ -136,7 +136,7 @@
       label: node.label,
       groupId: node.type === "group" ? node.id : node.groupId,
     };
-    state.query = normalizedText(node.type === "group" ? node.label : node.label);
+    state.query = normalizedText(node.label);
     if (typeof draw === "function") draw();
   }
 
@@ -273,8 +273,14 @@
     fallbackFocus = null;
     restoreUserQuery();
     const rendered = node?.id ? renderedNode(node.id) || node : node;
-    const result = baseUpdateDetails(rendered);
-    if (rendered && !supportsDirectSelection(rendered)) applyFallbackFocus(rendered);
+    let result;
+    if (rendered?.type === "group" && !supportsDirectSelection(rendered)) {
+      result = baseUpdateDetails(null);
+      applyFallbackFocus(rendered);
+    } else {
+      result = baseUpdateDetails(rendered);
+      if (rendered && !supportsDirectSelection(rendered)) applyFallbackFocus(rendered);
+    }
     queueMicrotask(() => render({ force: true }));
     return result;
   };
