@@ -6,22 +6,24 @@ const graph = {
   owner: "example",
   generatedAt: "2026-08-22T00:00:00Z",
   repositoryCount: 4,
-  groupCount: 2,
+  groupCount: 3,
   nodes: [
     { id: "user:example", label: "example", type: "owner", url: "https://github.com/example" },
-    { id: "group:robotics", label: "Robotics", type: "group", repositoryCount: 3 },
+    { id: "group:robotics", label: "Robotics", type: "group", repositoryCount: 2 },
     { id: "group:web", label: "Web", type: "group", repositoryCount: 1 },
+    { id: "group:legacy", label: "Legacy", type: "group", repositoryCount: 1 },
     { id: "repository:alpha", label: "alpha", type: "repository", url: "https://github.com/example/alpha", language: "Python", fork: false, archived: false, createdAt: "2025-01-01T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", groupId: "robotics", groupLabel: "Robotics" },
     { id: "repository:beta", label: "beta", type: "repository", url: "https://github.com/example/beta", language: "C++", fork: true, archived: false, createdAt: "2025-02-01T00:00:00Z", updatedAt: "2026-07-01T00:00:00Z", groupId: "robotics", groupLabel: "Robotics" },
-    { id: "repository:gamma", label: "gamma", type: "repository", url: "https://github.com/example/gamma", language: "Rust", fork: false, archived: true, createdAt: "2025-03-01T00:00:00Z", updatedAt: "2025-03-01T00:00:00Z", groupId: "robotics", groupLabel: "Robotics" },
+    { id: "repository:gamma", label: "gamma", type: "repository", url: "https://github.com/example/gamma", language: "Rust", fork: false, archived: true, createdAt: "2025-03-01T00:00:00Z", updatedAt: "2025-03-01T00:00:00Z", groupId: "legacy", groupLabel: "Legacy" },
     { id: "repository:delta", label: "delta", type: "repository", url: "https://github.com/example/delta", language: "TypeScript", fork: false, archived: false, createdAt: "2025-04-01T00:00:00Z", updatedAt: "2026-08-10T00:00:00Z", groupId: "web", groupLabel: "Web" },
   ],
   edges: [
     { source: "user:example", target: "group:robotics", type: "ownership" },
     { source: "user:example", target: "group:web", type: "ownership" },
+    { source: "user:example", target: "group:legacy", type: "ownership" },
     { source: "group:robotics", target: "repository:alpha", type: "membership" },
     { source: "group:robotics", target: "repository:beta", type: "membership" },
-    { source: "group:robotics", target: "repository:gamma", type: "membership" },
+    { source: "group:legacy", target: "repository:gamma", type: "membership" },
     { source: "group:web", target: "repository:delta", type: "membership" },
   ],
   semanticEdges: [
@@ -36,12 +38,20 @@ async function installFixture(page, value = graph) {
   });
 }
 
-async function projectedRepositoryIds(page) {
+async function projectedGraphShape(page) {
   return page.evaluate(async () => {
     const response = await fetch("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", { cache: "no-cache" });
     const value = await response.json();
-    return value.nodes.filter((node) => node.type === "repository").map((node) => node.id).sort();
+    return {
+      repositories: value.nodes.filter((node) => node.type === "repository").map((node) => node.id).sort(),
+      groups: value.nodes.filter((node) => node.type === "group").map((node) => node.id).sort(),
+      groupCount: value.groupCount,
+    };
   });
+}
+
+async function projectedRepositoryIds(page) {
+  return (await projectedGraphShape(page)).repositories;
 }
 
 function watchBrowserErrors(page) {
@@ -51,7 +61,7 @@ function watchBrowserErrors(page) {
   return failures;
 }
 
-test("all dedicated viewers apply the same repository-status projection before their existing layout", async ({ browser }) => {
+test("all dedicated viewers apply status projection and prune categories with zero visible repositories", async ({ browser }) => {
   for (const style of styles) {
     await test.step(style, async () => {
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -65,7 +75,11 @@ test("all dedicated viewers apply the same repository-status projection before t
       await expect(page.getByRole("button", { name: /Archived repositories: 1/ })).toHaveText("Archived 1");
       await expect(page.locator("#resultCount")).toHaveText("2 / 4 repos");
       await expect.poll(() => page.evaluate(() => window.ProjectMapDedicatedViewState?.snapshot?.().statuses || [])).toEqual(["original"]);
-      await expect.poll(() => projectedRepositoryIds(page)).toEqual(["repository:alpha", "repository:delta"]);
+      await expect.poll(() => projectedGraphShape(page)).toEqual({
+        repositories: ["repository:alpha", "repository:delta"],
+        groups: ["group:robotics", "group:web"],
+        groupCount: 2,
+      });
       expect(browserErrors).toEqual([]);
       await context.close();
     });
@@ -87,7 +101,7 @@ test("dedicated status chips update the shareable URL and reload through the sam
   await expect(page.locator("#resultCount")).toHaveText("4 / 4 repos");
 });
 
-test("dedicated viewers disable a status that is absent from the generated graph", async ({ page }) => {
+test("dedicated viewers disable a status that is absent from the generated graph and do not retain its empty category", async ({ page }) => {
   const noArchived = {
     ...graph,
     repositoryCount: 3,
@@ -101,4 +115,9 @@ test("dedicated viewers disable a status that is absent from the generated graph
   await expect(archived).toBeDisabled();
   await expect(archived).toHaveText("Archived 0");
   await expect(page.locator("#resultCount")).toHaveText("3 / 3 repos");
+  await expect.poll(() => projectedGraphShape(page)).toEqual({
+    repositories: ["repository:alpha", "repository:beta", "repository:delta"],
+    groups: ["group:robotics", "group:web"],
+    groupCount: 2,
+  });
 });
