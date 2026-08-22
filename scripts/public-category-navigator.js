@@ -231,7 +231,7 @@
     rendering = true;
     try {
       const groups = graphNodes()
-        .filter((node) => node?.type === "group")
+        .filter((node) => node?.type === "group" && node.id !== "group:__contributed_view__")
         .map((group) => ({ group, repositories: repositoriesFor(group) }))
         .filter(({ repositories }) => repositories.length > 0)
         .sort((a, b) => String(a.group.label || "").localeCompare(String(b.group.label || "")));
