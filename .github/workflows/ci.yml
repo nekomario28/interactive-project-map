@@ -16,37 +16,22 @@ jobs:
   ai-director-spotlight-outcomes:
     if: github.head_ref == 'exp/ai-director-spotlight-outcomes'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout exact experiment head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Setup Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-
-      - name: Install experiment clients and ffmpeg
-        run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check -q huggingface_hub gradio_client
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
-
-      - name: Run real split, fresh-regenerate, and backtrack outcomes
-        continue-on-error: true
-        run: python scripts/ai_director_spotlight_experiment.py
-
-      - name: Inventory evidence
-        if: always()
-        run: |
-          find .tmp/ai-director -type f -printf '%p %s bytes\n' | sort || true
-
-      - name: Upload outcome evidence
-        if: always()
+      - name: Install dataset client
+        run: python -m pip install --disable-pip-version-check -q huggingface_hub
+      - name: Download paired alternate candidates
+        run: python scripts/ai_director_download_alternates.py
+      - name: Upload alternate candidate evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-spotlight-outcomes
-          path: .tmp/ai-director
+          name: ai-director-spotlight-alternates
+          path: .tmp/ai-director-alternates
           if-no-files-found: error
           retention-days: 3
