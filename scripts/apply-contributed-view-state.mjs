@@ -109,7 +109,7 @@ const COMPAT_SOURCE = String.raw`"use strict";
       relation: "contributed",
       repositoryOwner: owner,
       repositoryName: name,
-      url: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
+      url: "https://github.com/" + encodeURIComponent(owner) + "/" + encodeURIComponent(name),
       description: typeof node.description === "string" ? node.description.slice(0, 2000) : "",
       language: typeof node.language === "string" ? node.language.slice(0, 100) : null,
       topics: Array.isArray(node.topics) ? node.topics.filter((item) => typeof item === "string").slice(0, 40).map((item) => item.slice(0, 80)) : [],
@@ -178,7 +178,7 @@ const COMPAT_SOURCE = String.raw`"use strict";
       return [{
         ...node,
         label: safe.repositoryName,
-        url: `https://github.com/${encodeURIComponent(value.owner)}/${encodeURIComponent(safe.repositoryName)}`,
+        url: "https://github.com/" + encodeURIComponent(value.owner) + "/" + encodeURIComponent(safe.repositoryName),
         fork: false,
         archived: false,
         ...(dedicated ? { groupId: "__contributed_view__", groupLabel: "Contributed" } : { groupId: "", groupLabel: "" }),
