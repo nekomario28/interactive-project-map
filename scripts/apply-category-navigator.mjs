@@ -1,10 +1,12 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { applyContributedViewer } from "./apply-contributed-viewer.mjs";
 
 const VIEWER_DIRS = ["u", "radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const SCRIPT_TAG = '<script src="../category-navigator.js" defer></script>';
 const STYLE_TAG = '<link rel="stylesheet" href="../category-navigator.css">';
+const CONTRIBUTED_BUILD_TARGETS = ["view-state.js", "interaction-polish.js", "viewer.css", join("u", "index.html")];
 
 function attachNavigator(html, mode) {
   let next = html;
@@ -19,9 +21,19 @@ function attachNavigator(html, mode) {
   return next;
 }
 
+async function hasCompletePagesBuild(outputDir) {
+  try {
+    await Promise.all(CONTRIBUTED_BUILD_TARGETS.map((target) => access(join(outputDir, target))));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function applyCategoryNavigator(outputDir = resolve(process.cwd(), "site")) {
   const sourceDir = resolve(process.cwd(), "scripts");
   await mkdir(outputDir, { recursive: true });
+  if (await hasCompletePagesBuild(outputDir)) await applyContributedViewer(outputDir);
   await copyFile(join(sourceDir, "public-category-navigator.js"), join(outputDir, "category-navigator.js"));
   await copyFile(join(sourceDir, "public-category-navigator.css"), join(outputDir, "category-navigator.css"));
 
