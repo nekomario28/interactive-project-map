@@ -15,46 +15,33 @@ function replaceRequired(source, from, to, label) {
 
 export function patchSharedViewState(source) {
   let next = source;
-  next = replaceRequired(
-    next,
+  next = replaceRequired(next,
     'const STATUS_VALUES = ["original", "fork", "archived"];',
     'const STATUS_VALUES = ["original", "fork", "archived", "contributed"];',
-    "shared status values",
-  );
-  next = replaceRequired(
-    next,
+    "shared status values");
+  next = replaceRequired(next,
     'const aliases = { o: "original", f: "fork", a: "archived" };',
     'const aliases = { o: "original", f: "fork", a: "archived", c: "contributed" };',
-    "shared status aliases",
-  );
-  next = replaceRequired(
-    next,
+    "shared status aliases");
+  next = replaceRequired(next,
     'return typeof nodeStatus === "function" ? nodeStatus(node) : node.archived ? "archived" : node.fork ? "fork" : "original";',
     'return typeof nodeStatus === "function" ? nodeStatus(node) : node.relation === "contributed" ? "contributed" : node.archived ? "archived" : node.fork ? "fork" : "original";',
-    "shared repository status fallback",
-  );
-  next = replaceRequired(
-    next,
+    "shared repository status fallback");
+  next = replaceRequired(next,
     'const counts = { original: 0, fork: 0, archived: 0 };',
     'const counts = { original: 0, fork: 0, archived: 0, contributed: 0 };',
-    "shared status counts",
-  );
-  next = replaceRequired(
-    next,
+    "shared status counts");
+  next = replaceRequired(next,
     'const label = value === "original" ? "Original" : value === "fork" ? "Fork" : "Archived";',
     'const label = value === "original" ? "Original" : value === "fork" ? "Fork" : value === "archived" ? "Archived" : "Contributed";',
-    "shared status labels",
-  );
+    "shared status labels");
   return next;
 }
 
 export function patchSharedViewerHtml(source) {
-  let next = source;
-  if (!next.includes(CONTRIBUTED_BUTTON)) {
-    if (!next.includes(ARCHIVED_BUTTON)) throw new Error("Could not locate shared Archived control");
-    next = next.replace(ARCHIVED_BUTTON, `${ARCHIVED_BUTTON}${CONTRIBUTED_BUTTON}`);
-  }
-  return next;
+  if (source.includes(CONTRIBUTED_BUTTON)) return source;
+  if (!source.includes(ARCHIVED_BUTTON)) throw new Error("Could not locate shared Archived control");
+  return source.replace(ARCHIVED_BUTTON, `${ARCHIVED_BUTTON}${CONTRIBUTED_BUTTON}`);
 }
 
 function contributedRuntime() {
@@ -206,7 +193,8 @@ function contributedRuntime() {
     drawEdges = function contributedAwareDrawEdges(colors) {
       const originalEdges = state.edges;
       const contributionEdges = Array.isArray(originalEdges) ? originalEdges.filter((edge) => edge?.type === "contribution") : [];
-      state.edges = Array.isArray(originalEdges) ? originalEdges.filter((edge) => edge?.type !== "contribution") : originalEdges;
+      if (!contributionEdges.length) return baseDrawEdges(colors);
+      state.edges = originalEdges.filter((edge) => edge?.type !== "contribution");
       try {
         baseDrawEdges(colors);
       } finally {
@@ -249,8 +237,7 @@ function contributedRuntime() {
     updateDetails = function contributedAwareUpdateDetails(node) {
       const result = baseUpdateDetails(node);
       if (node?.type !== "repository" || node.relation !== "contributed" || !detailsMeta) return result;
-      const terms = [...detailsMeta.querySelectorAll("dt")];
-      const kind = terms.find((item) => item.textContent === "Kind");
+      const kind = [...detailsMeta.querySelectorAll("dt")].find((item) => item.textContent === "Kind");
       if (kind?.nextElementSibling) kind.nextElementSibling.textContent = "Contributed";
       appendDetailRow("External owner", node.repositoryOwner);
       appendDetailRow("Commits", \`\${node.contribution?.commits ?? 0}\${node.contribution?.commitsTruncated ? "+" : ""}\`);
@@ -274,20 +261,11 @@ function contributedRuntime() {
 })();`;
 }
 
-export function patchInteractionPolish(source) {
-  let next = source;
-  next = replaceRequired(
-    next,
-    '/* global canvas, state, searchInput, detailsMeta, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, nodeOpacity, draw */',
-    '/* global canvas, state, searchInput, detailsMeta, drawRepoLabels, matches, ctx, clamp, hitTest, updateDetails, sanitizeGraph, rebuildLayout, buildObsidianLayout, drawEdges, worldToScreen, matchesQuery, nodeOpacity, draw, nodeStatus, palette */',
-    "interaction-polish globals",
-  );
-  if (!next.includes(RUNTIME_MARKER)) {
-    const anchor = "\n\n(() => {";
-    if (!next.includes(anchor)) throw new Error("Could not locate interaction-polish runtime boundary");
-    next = next.replace(anchor, `\n\n${contributedRuntime()}\n\n(() => {`);
-  }
-  return next;
+export function patchSharedViewerRuntime(source) {
+  if (source.includes(RUNTIME_MARKER)) return source;
+  const anchor = '\ntry {\n  username = normalizeUsername(query.get("username"));';
+  if (!source.includes(anchor)) throw new Error("Could not locate shared viewer startup boundary");
+  return source.replace(anchor, `\n\n${contributedRuntime()}\n${anchor.slice(1)}`);
 }
 
 export function patchViewerCss(source) {
@@ -297,7 +275,7 @@ export function patchViewerCss(source) {
 
 export async function applyContributedViewer(outputDir = resolve(process.cwd(), "site")) {
   const viewStatePath = join(outputDir, "view-state.js");
-  const interactionPath = join(outputDir, "interaction-polish.js");
+  const viewerPath = join(outputDir, "viewer.js");
   const cssPath = join(outputDir, "viewer.css");
   const htmlPath = join(outputDir, "u", "index.html");
 
@@ -305,9 +283,9 @@ export async function applyContributedViewer(outputDir = resolve(process.cwd(), 
   const nextViewState = patchSharedViewState(viewState);
   if (nextViewState !== viewState) await writeFile(viewStatePath, nextViewState);
 
-  const interaction = await readFile(interactionPath, "utf8");
-  const nextInteraction = patchInteractionPolish(interaction);
-  if (nextInteraction !== interaction) await writeFile(interactionPath, nextInteraction);
+  const viewer = await readFile(viewerPath, "utf8");
+  const nextViewer = patchSharedViewerRuntime(viewer);
+  if (nextViewer !== viewer) await writeFile(viewerPath, nextViewer);
 
   const css = await readFile(cssPath, "utf8");
   const nextCss = patchViewerCss(css);
