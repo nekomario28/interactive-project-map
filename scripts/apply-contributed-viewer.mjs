@@ -25,8 +25,8 @@ export function patchSharedViewState(source) {
     "shared status aliases");
   next = replaceRequired(next,
     'return typeof nodeStatus === "function" ? nodeStatus(node) : node.archived ? "archived" : node.fork ? "fork" : "original";',
-    'return typeof nodeStatus === "function" ? nodeStatus(node) : node.relation === "contributed" ? "contributed" : node.archived ? "archived" : node.fork ? "fork" : "original";',
-    "shared repository status fallback");
+    'return node.relation === "contributed" ? "contributed" : typeof nodeStatus === "function" ? nodeStatus(node) : node.archived ? "archived" : node.fork ? "fork" : "original";',
+    "shared repository status precedence");
   next = replaceRequired(next,
     'const counts = { original: 0, fork: 0, archived: 0 };',
     'const counts = { original: 0, fork: 0, archived: 0, contributed: 0 };',
@@ -262,11 +262,17 @@ function contributedRuntime() {
 }
 
 export function patchSharedViewerRuntime(source) {
-  if (source.includes(RUNTIME_MARKER)) return source;
+  let next = replaceRequired(
+    source,
+    'function nodeStatus(node) {\n  if (node.type !== "repository") return node.type;\n  if (node.archived) return "archived";\n  return node.fork ? "fork" : "original";\n}',
+    'function nodeStatus(node) {\n  if (node.type !== "repository") return node.type;\n  if (node.relation === "contributed") return "contributed";\n  if (node.archived) return "archived";\n  return node.fork ? "fork" : "original";\n}',
+    "shared node status precedence",
+  );
+  if (next.includes(RUNTIME_MARKER)) return next;
   const anchor = '\ntry {\n  username = normalizeUsername(query.get("username"));';
-  if (!source.includes(anchor)) throw new Error("Could not locate shared viewer startup boundary");
+  if (!next.includes(anchor)) throw new Error("Could not locate shared viewer startup boundary");
   const runtime = `/* eslint-disable no-func-assign */\n${contributedRuntime()}\n/* eslint-enable no-func-assign */`;
-  return source.replace(anchor, `\n\n${runtime}\n${anchor.slice(1)}`);
+  return next.replace(anchor, `\n\n${runtime}\n${anchor.slice(1)}`);
 }
 
 export function patchViewerCss(source) {
