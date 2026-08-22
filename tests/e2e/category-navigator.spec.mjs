@@ -97,7 +97,7 @@ test("search expands matching categories and status filters remove hidden reposi
   await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · 3 repos");
 });
 
-test("aggregate viewers use search dimming as a category-focus fallback", async ({ page }) => {
+test("aggregate viewers use search dimming as a safe category and repository focus fallback", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 760 });
   await installFixture(page);
   await page.goto("/treemap/?username=example&style=treemap");
@@ -111,6 +111,14 @@ test("aggregate viewers use search dimming as a category-focus fallback", async 
   await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · Focus: Robotics");
   expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus?.id)).toBe("group:robotics");
   expect(await page.evaluate(() => state.query)).toBe("robotics");
+  await expect(page.locator("#detailsTitle")).toHaveText("Project treemap");
+
+  const alpha = navigator.locator('[data-repository-id="repository:alpha"]');
+  await alpha.click();
+  await expect(alpha).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · Focus: alpha");
+  expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus?.id)).toBe("repository:alpha");
+  expect(await page.evaluate(() => state.query)).toBe("alpha");
   await expect(page.locator("#detailsTitle")).toHaveText("Project treemap");
 
   await navigator.getByRole("button", { name: "Clear focus" }).click();
