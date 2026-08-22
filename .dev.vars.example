@@ -1,3 +1,6 @@
+# PUBLIC PLACEHOLDER FILE ONLY. Never replace these values with real credentials in git.
+# Copy this file to the ignored `.dev.vars` for local development and set real values there.
+
 # Optional. Strongly recommended for production to raise GitHub API rate limits.
 GITHUB_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxx
 

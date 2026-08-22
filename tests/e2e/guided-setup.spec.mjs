@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("guided setup copies the workflow and opens the GitHub handoff", async ({ page }) => {
+test("guided setup covers profile-repo creation, workflow handoff, and first run", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -19,16 +19,26 @@ test("guided setup copies the workflow and opens the GitHub handoff", async ({ p
   });
 
   await page.goto("/");
+  await expect(page.locator("#createProfileRepoOnGitHub")).toBeHidden();
   await expect(page.locator("#addWorkflowOnGitHub")).toBeHidden();
   await expect(page.locator("#runWorkflowOnGitHub")).toBeHidden();
 
   await page.locator("#username").fill("example");
   await page.getByRole("button", { name: "Generate setup" }).click();
 
+  const profileLink = page.locator("#createProfileRepoOnGitHub");
   const addButton = page.locator("#addWorkflowOnGitHub");
   const runLink = page.locator("#runWorkflowOnGitHub");
+  await expect(profileLink).toBeVisible();
   await expect(addButton).toBeVisible();
   await expect(runLink).toBeVisible();
+
+  const profileUrl = new URL(await profileLink.getAttribute("href"));
+  expect(profileUrl.origin + profileUrl.pathname).toBe("https://github.com/new");
+  expect(profileUrl.searchParams.get("name")).toBe("example");
+  expect(profileUrl.searchParams.get("owner")).toBe("example");
+  expect(profileUrl.searchParams.get("visibility")).toBe("public");
+  await expect(profileLink).toHaveAttribute("title", /Add README/);
   await expect(runLink).toHaveAttribute("href", "https://github.com/example/example/actions/workflows/project-map.yml");
 
   await addButton.click();
