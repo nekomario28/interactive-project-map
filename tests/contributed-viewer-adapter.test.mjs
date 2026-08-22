@@ -20,6 +20,8 @@ const label = value === "original" ? "Original" : value === "fork" ? "Fork" : "A
   assert.match(patched, /"contributed"/);
   assert.match(patched, /c: "contributed"/);
   assert.match(patched, /node\.relation === "contributed"/);
+  assert.match(patched, /edge\?\.type === "contribution"/);
+  assert.match(patched, /node\.label\.includes\("\/"\)/);
   assert.match(patched, /contributed: 0/);
   assert.match(patched, /"Contributed"/);
   assert.equal(patchSharedViewState(patched), patched);
@@ -40,7 +42,18 @@ function nodeStatus(node) {
   if (node.archived) return "archived";
   return node.fork ? "fork" : "original";
 }
-function palette() { return {}; }
+function palette() {
+  if (state.style === "obsidian") {
+    return {
+      archived: "#b97a7a",
+      selection: "#ffffff",
+    };
+  }
+  return {
+    archived: "#d9847b",
+    selection: "#ffffff",
+  };
+}
 function drawEdges() {}
 function updateDetails() {}
 
@@ -55,9 +68,12 @@ if (username) { fetch("graph.json"); }
   const startup = patched.indexOf('username = normalizeUsername(query.get("username"))');
   assert.ok(marker >= 0 && marker < startup);
   assert.match(patched, /node\.relation === "contributed"/);
+  assert.match(patched, /node\.label\.includes\("\/"\)/);
   assert.match(patched, /raw\.relation !== "contributed"/);
   assert.match(patched, /type: "contribution"/);
-  assert.match(patched, /return "contributed"/);
+  assert.match(patched, /contributionTargets/);
+  assert.match(patched, /contributed: "#62c8ba"/);
+  assert.match(patched, /contributed: "#55c7d7"/);
   assert.match(patched, /External owner/);
   assert.match(patched, /if \(!contributionEdges\.length\) return baseDrawEdges\(colors\)/);
   assert.equal(patchSharedViewerRuntime(patched), patched);
