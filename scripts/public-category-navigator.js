@@ -10,8 +10,9 @@
 
   const manualExpanded = new Set();
   let panelOpen = window.matchMedia?.("(min-width: 980px)")?.matches ?? true;
-  let lastGraphSignature = "";
+  let lastRenderKey = "";
   let rendering = false;
+  let fallbackFocus = null;
 
   const toggleButton = document.createElement("button");
   toggleButton.id = "categoryNavigatorToggle";
@@ -58,11 +59,19 @@
     return typeof checker === "function" ? checker(node) : true;
   }
 
-  function visibleNode(id) {
+  function renderedNode(id) {
     return state.byId?.get?.(id)
       || state.nodes?.find?.((node) => node?.id === id)
+      || state.repos?.find?.((node) => node?.id === id)
+      || state.groups?.find?.((node) => node?.id === id)
       || graphNodes().find((node) => node?.id === id)
       || null;
+  }
+
+  function supportsDirectSelection(node) {
+    if (!node) return false;
+    if (state.byId?.get?.(node.id)) return true;
+    return Boolean(state.nodes?.find?.((candidate) => candidate?.id === node.id));
   }
 
   function repositoriesFor(group) {
@@ -85,12 +94,16 @@
     ].filter(Boolean).join(" "));
   }
 
-  function activeQuery() {
-    return normalizedText(searchInput?.value || state.query || "");
+  function userQuery() {
+    return normalizedText(searchInput?.value || "");
+  }
+
+  function activeFocusId() {
+    return fallbackFocus?.id || state.selected?.id || "";
   }
 
   function selectedGroupId() {
-    const selected = state.selected;
+    const selected = fallbackFocus || state.selected;
     if (!selected) return "";
     if (selected.type === "group") return normalizedGroupId(selected.id);
     if (selected.type === "repository") return normalizedGroupId(selected.groupId);
@@ -112,28 +125,48 @@
     toggleButton.setAttribute("aria-expanded", String(panelOpen));
   }
 
+  function restoreUserQuery() {
+    state.query = userQuery();
+  }
+
+  function applyFallbackFocus(node) {
+    fallbackFocus = {
+      id: node.id,
+      type: node.type,
+      label: node.label,
+      groupId: node.type === "group" ? node.id : node.groupId,
+    };
+    state.query = normalizedText(node.type === "group" ? node.label : node.label);
+    if (typeof draw === "function") draw();
+  }
+
   function focusNode(id) {
-    const node = visibleNode(id);
+    const node = renderedNode(id);
     if (!node || (node.type === "repository" && !repositoryVisible(node))) return;
+    fallbackFocus = null;
+    restoreUserQuery();
     updateDetails(node);
     canvas.focus({ preventScroll: true });
   }
 
   function clearFocus() {
+    fallbackFocus = null;
+    restoreUserQuery();
     updateDetails(null);
+    if (typeof draw === "function") draw();
     canvas.focus({ preventScroll: true });
   }
 
   function createGroupEntry(group, repositories, query) {
     const groupId = normalizedGroupId(group.id);
-    const selected = state.selected;
+    const activeId = activeFocusId();
     const selectedGroup = selectedGroupId();
     const searchOpen = groupMatches(group, repositories, query);
     const expanded = manualExpanded.has(groupId) || selectedGroup === groupId || searchOpen;
 
     const section = document.createElement("section");
     section.className = "category-nav-group";
-    if (selected?.id === group.id) section.classList.add("is-selected");
+    if (activeId === group.id) section.classList.add("is-selected");
     if (selectedGroup === groupId) section.classList.add("has-selected-repository");
 
     const row = document.createElement("div");
@@ -143,7 +176,7 @@
     focus.type = "button";
     focus.className = "category-nav-focus";
     focus.dataset.categoryId = group.id;
-    focus.setAttribute("aria-pressed", String(selected?.id === group.id));
+    focus.setAttribute("aria-pressed", String(activeId === group.id));
     focus.innerHTML = `<span>${group.label}</span><small>${repositories.length}</small>`;
     focus.addEventListener("click", () => focusNode(group.id));
 
@@ -172,7 +205,7 @@
       button.type = "button";
       button.className = "category-nav-repository";
       button.dataset.repositoryId = repo.id;
-      button.setAttribute("aria-pressed", String(selected?.id === repo.id));
+      button.setAttribute("aria-pressed", String(activeId === repo.id));
       if (query && match) button.classList.add("is-search-match");
       if (query && !match) button.classList.add("is-search-muted");
       const status = repo.archived ? "Archived" : repo.fork ? "Fork" : "Original";
@@ -195,16 +228,16 @@
         .filter(({ repositories }) => repositories.length > 0)
         .sort((a, b) => String(a.group.label || "").localeCompare(String(b.group.label || "")));
       const signature = groupSignature(groups.map(({ group }) => group));
-      const query = activeQuery();
-      const selectedId = state.selected?.id || "";
-      const renderKey = `${signature}::${query}::${selectedId}::${[...manualExpanded].sort().join(",")}::${panelOpen}`;
-      if (!force && renderKey === lastGraphSignature) return;
-      lastGraphSignature = renderKey;
+      const query = userQuery();
+      const activeId = activeFocusId();
+      const renderKey = `${signature}::${query}::${activeId}::${[...manualExpanded].sort().join(",")}::${panelOpen}`;
+      if (!force && renderKey === lastRenderKey) return;
+      lastRenderKey = renderKey;
 
       list.replaceChildren();
       if (!groups.length) {
         summary.textContent = state.graph ? "No visible categories" : "Loading…";
-        clearButton.disabled = !state.selected;
+        clearButton.disabled = !activeId;
         return;
       }
 
@@ -213,8 +246,10 @@
         repositoryTotal += repositories.length;
         list.append(createGroupEntry(group, repositories, query));
       }
-      summary.textContent = `${groups.length} categories · ${repositoryTotal} repos`;
-      clearButton.disabled = !state.selected;
+      summary.textContent = fallbackFocus
+        ? `${groups.length} categories · Focus: ${fallbackFocus.label}`
+        : `${groups.length} categories · ${repositoryTotal} repos`;
+      clearButton.disabled = !activeId;
     } finally {
       rendering = false;
     }
@@ -225,11 +260,21 @@
     render({ force: true });
   });
   clearButton.addEventListener("click", clearFocus);
-  searchInput?.addEventListener("input", () => render({ force: true }));
+  searchInput?.addEventListener("input", () => {
+    fallbackFocus = null;
+    queueMicrotask(() => render({ force: true }));
+  });
+  for (const button of document.querySelectorAll("[data-status-filter]")) {
+    button.addEventListener("click", () => queueMicrotask(() => render({ force: true })));
+  }
 
   const baseUpdateDetails = updateDetails;
   updateDetails = function categoryNavigatorUpdateDetails(node) {
-    const result = baseUpdateDetails(node);
+    fallbackFocus = null;
+    restoreUserQuery();
+    const rendered = node?.id ? renderedNode(node.id) || node : node;
+    const result = baseUpdateDetails(rendered);
+    if (rendered && !supportsDirectSelection(rendered)) applyFallbackFocus(rendered);
     queueMicrotask(() => render({ force: true }));
     return result;
   };
@@ -255,5 +300,10 @@
     focusRepository: focusNode,
     clearFocus,
     expandedCategories: () => [...manualExpanded],
+    snapshot: () => ({
+      open: panelOpen,
+      focus: fallbackFocus || state.selected || null,
+      expandedCategories: [...manualExpanded],
+    }),
   });
 })();
