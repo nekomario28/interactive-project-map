@@ -3,6 +3,7 @@ import { isAbsolute, posix, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fetchPublicRepos } from "./github.mjs";
 import { buildGraph } from "./graph.mjs";
+import { attachSelectedContributions } from "./contributed-generation.mjs";
 import { MemoryEmbeddingCache } from "./embedding.mjs";
 import { generateSemanticEdges } from "./semantic-edges.mjs";
 import { TAXONOMY_ASSIGNMENT_VERSION, assignRepositoriesToTaxonomy } from "./taxonomy-assignment.mjs";
@@ -45,7 +46,7 @@ export function actionConfigFromEnv(env = process.env) {
   const username = String(input(env, "USERNAME", "PROJECT_MAP_USERNAME") || env.GITHUB_REPOSITORY_OWNER || "").trim().toLowerCase();
   if (!USERNAME_RE.test(username)) throw new Error("Invalid GitHub username");
   const theme = input(env, "THEME", "PROJECT_MAP_THEME") === "light" ? "light" : "dark";
-  return { username, theme, style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")), maxRepos: boundedInt(input(env, "MAX_REPOS", "PROJECT_MAP_MAX_REPOS"), 100, 1, 300), includeForks: boolValue(input(env, "FORKS", "PROJECT_MAP_FORKS"), true), includeArchived: boolValue(input(env, "ARCHIVED", "PROJECT_MAP_ARCHIVED"), false), width: boundedInt(input(env, "WIDTH", "PROJECT_MAP_WIDTH"), 740, 420, 1600), height: boundedInt(input(env, "HEIGHT", "PROJECT_MAP_HEIGHT"), 420, 260, 1000), outputDir: safeOutputDir(input(env, "OUTPUT_DIR", "PROJECT_MAP_OUTPUT_DIR")) };
+  return { username, theme, style: styleValue(input(env, "STYLE", "PROJECT_MAP_STYLE")), maxRepos: boundedInt(input(env, "MAX_REPOS", "PROJECT_MAP_MAX_REPOS"), 100, 1, 300), includeForks: boolValue(input(env, "FORKS", "PROJECT_MAP_FORKS"), true), includeArchived: boolValue(input(env, "ARCHIVED", "PROJECT_MAP_ARCHIVED"), false), includeContributed: boolValue(input(env, "CONTRIBUTED", "PROJECT_MAP_CONTRIBUTED"), false), width: boundedInt(input(env, "WIDTH", "PROJECT_MAP_WIDTH"), 740, 420, 1600), height: boundedInt(input(env, "HEIGHT", "PROJECT_MAP_HEIGHT"), 420, 260, 1000), outputDir: safeOutputDir(input(env, "OUTPUT_DIR", "PROJECT_MAP_OUTPUT_DIR")) };
 }
 
 function comparableGraph(graph) { return JSON.stringify({ ...graph, generatedAt: "" }); }
@@ -100,14 +101,21 @@ export async function generateStaticMap(config, options = {}) {
   attachTaxonomyAssignments(graph, taxonomyAdjudication.assignments);
   if (!usePortfolioTaxonomy) Object.assign(graph, promoteStandardHierarchy(graph));
 
+  let outputGraph = graph;
+  let contributed;
+  if (config.includeContributed) {
+    contributed = await attachSelectedContributions(graph, config.username, token, options.contributionOptions);
+    outputGraph = contributed.graph;
+  }
+
   await mkdir(outputRoot, { recursive: true });
   const graphPath = posix.join(config.outputDir, "graph.json"); const svgPath = posix.join(config.outputDir, "galaxy.svg"); const taxonomyPath = taxonomy.taxonomy ? posix.join(config.outputDir, "taxonomy.json") : undefined;
   const absoluteGraphPath = resolve(cwd, graphPath);
-  await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, graph);
-  await writeFile(absoluteGraphPath, JSON.stringify(graph, null, 2) + "\n");
+  await preserveGeneratedAtWhenUnchanged(absoluteGraphPath, outputGraph);
+  await writeFile(absoluteGraphPath, JSON.stringify(outputGraph, null, 2) + "\n");
   if (taxonomy.taxonomy) await writeFile(taxonomyStatePath, JSON.stringify(taxonomy.taxonomy, null, 2) + "\n");
-  await writeFile(resolve(cwd, svgPath), renderForStyle(graph, config));
-  return { graphPath, svgPath, taxonomyPath, graph, semantic, taxonomy, taxonomyAssignment, taxonomyAdjudication, taxonomyMode: usePortfolioTaxonomy ? "portfolio" : "standard" };
+  await writeFile(resolve(cwd, svgPath), renderForStyle(outputGraph, config));
+  return { graphPath, svgPath, taxonomyPath, graph: outputGraph, semantic, taxonomy, taxonomyAssignment, taxonomyAdjudication, contributed, taxonomyMode: usePortfolioTaxonomy ? "portfolio" : "standard" };
 }
 
 async function setOutput(name, value) { if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `${name}=${value}\n`); }
@@ -115,8 +123,9 @@ async function main() {
   if (!process.env.INPUT_GITHUB_TOKEN && !process.env.GITHUB_TOKEN) throw new Error("github_token input is required");
   const config = actionConfigFromEnv(); const result = await generateStaticMap(config);
   await setOutput("svg-path", result.svgPath); await setOutput("graph-path", result.graphPath);
-  console.log(`Generated ${result.graph.repositoryCount} repositories for ${config.username} (${config.style})`); console.log(`SVG: ${result.svgPath}`); console.log(`Graph: ${result.graphPath}`);
+  console.log(`Generated ${result.graph.repositoryCount} owned repositories${result.graph.contributedRepositoryCount ? ` + ${result.graph.contributedRepositoryCount} contributed repositories` : ""} for ${config.username} (${config.style})`); console.log(`SVG: ${result.svgPath}`); console.log(`Graph: ${result.graphPath}`);
   if (result.taxonomyPath) console.log(`Taxonomy: ${result.taxonomyPath} (${result.taxonomy.diagnostics.reason}; ${result.taxonomyMode})`);
   if (result.graph.taxonomy) console.log(`Taxonomy assignments: ${Object.keys(result.taxonomyAdjudication.assignments).length} assigned / ${result.taxonomyAdjudication.ambiguous.length} ambiguous; adjudicator accepted ${result.taxonomyAdjudication.diagnostics.accepted}`);
+  if (result.contributed) console.log(`Contributed: ${result.graph.contributedRepositoryCount} included / ${result.contributed.selected.diagnostics.candidateRepositories} public external candidates (${result.contributed.selected.diagnostics.omittedRepositories} omitted by cap)`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });

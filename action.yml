@@ -32,6 +32,10 @@ inputs:
     description: Include archived repositories.
     required: false
     default: "false"
+  contributed:
+    description: Include a bounded public Contributed slice from repositories owned by other users or organizations.
+    required: false
+    default: "false"
   width:
     description: SVG width (420-1600).
     required: false

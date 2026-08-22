@@ -23,6 +23,11 @@ on:
         description: Include archived repositories in generated data
         required: true
         type: boolean
+      contributed:
+        description: Include bounded public contributions to repositories owned by others
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -32,6 +37,11 @@ permissions:
 # - INNER release target: the immutable Project Map Action SHA in the Generate project map step below.
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
+#
+# Contributed staging: the outer input exists before release, but it is intentionally NOT passed
+# to the current inner Action because that immutable release predates the input. The inner-pin
+# promotion commit must update the Action SHA and add `contributed: ${{ inputs.contributed }}`
+# together, then prove the exact reusable-workflow chain before v1 moves.
 jobs:
   generate:
     runs-on: ubuntu-latest
