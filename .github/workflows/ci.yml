@@ -113,8 +113,12 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install public dataset clients
-        run: python -m pip install --disable-pip-version-check -q huggingface_hub gradio_client
+      - name: Install public dataset clients and ffmpeg
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -q huggingface_hub gradio_client
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
 
       - name: Download one real Spotlight video
         run: |
@@ -129,9 +133,10 @@ jobs:
           )
           print(p)
           PY
-          ffprobe -v error -show_entries format=duration,size -of json .tmp/spotlight/test/spotlight/ltx2/sid_003.mp4 | tee .tmp/spotlight/ffprobe.json
+          ffprobe -v error -show_entries format=duration,size -show_entries stream=codec_name,width,height,r_frame_rate -of json .tmp/spotlight/test/spotlight/ltx2/sid_003.mp4 | tee .tmp/spotlight/ffprobe.json
 
       - name: Probe public video generation and repair Spaces
+        if: always()
         run: |
           set -euo pipefail
           python - <<'PY' | tee .tmp/spotlight/spaces.txt
