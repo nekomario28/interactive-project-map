@@ -468,6 +468,18 @@ footer {
   font-size: 10.5px;
 }
 
+footer > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+footer .shortcuts {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 footer a {
   color: inherit;
 }
