@@ -1,6 +1,8 @@
 # Architecture decision: GitHub-only distribution
 
-Status: **Accepted** (2026-08-22)
+Status: **Accepted as the default path** (2026-08-22)
+
+> **Update:** GitHub repository + GitHub Actions + GitHub Pages remains the default and fully supported architecture, but the existing Cloudflare Worker + GitHub App one-click path is now intentionally retained as an **optional** convenience. The Worker-removal sections below are historical research and are superseded by [`optional-cloudflare-public-repo-security.md`](./optional-cloudflare-public-repo-security.md). Cloudflare must never become a dependency of normal Project Map generation or viewing.
 
 ## Goal
 
@@ -31,7 +33,7 @@ The Cloudflare Worker is therefore an optional second implementation of home/vie
 
 **Cost:** separate deployment, four secrets, OAuth callback state/nonce handling, rate limiters, a second TypeScript runtime, Worker-specific tests, App registration/permissions, and an additional production acceptance surface. This infrastructure exists almost entirely to remove a few setup clicks.
 
-**Decision:** reject as the default/product path. The value is too small relative to the permanent operational and security surface.
+**Decision:** reject as the default/product path. The value is too small relative to the permanent operational and security surface. It is nevertheless retained as an optional convenience under the separate public-repository security boundary linked above.
 
 ### B. GitHub Pages + OAuth/PKCE with no backend
 
@@ -117,9 +119,9 @@ References:
 
 ## Decision
 
-**Project Map will be GitHub-only.**
+**Project Map defaults to GitHub-only.**
 
-The supported production architecture is:
+The supported default production architecture is:
 
 ```text
 GitHub repository
@@ -129,7 +131,7 @@ GitHub repository
 
 The initial workflow commit is an intentional trust boundary, not a defect to hide behind another service. The user can inspect exactly what gains write permission before committing it. After that one-time commit, scheduled generation is automatic.
 
-The normal workflow continues to use the caller repository's `GITHUB_TOKEN`; Project Map does not require a user PAT, GitHub App, OAuth app, database, KV store, webhook, or external scheduler.
+The normal workflow continues to use the caller repository's `GITHUB_TOKEN`; Project Map does not require a user PAT, GitHub App, OAuth app, database, KV store, webhook, or external scheduler. The optional Cloudflare/GitHub App path may automate that initial step, but it is not required.
 
 ## Consequences
 
@@ -141,29 +143,20 @@ The normal workflow continues to use the caller repository's `GITHUB_TOKEN`; Pro
 - Advanced full-SHA pinning;
 - write-capable publish job only in the user's repository;
 - user-owned `galaxy.svg` and `graph.json`;
-- all 12 viewers and current view controls.
+- all 12 viewers and current view controls;
+- optional Cloudflare/GitHub App one-click implementation, isolated from the default path and governed by `optional-cloudflare-public-repo-security.md`.
 
-### Remove from the supported product
+### Historical removal plan — superseded
 
-- Cloudflare Worker deployment/configuration;
-- GitHub App installer and registration helper;
-- OAuth callback/state/nonce/token handling;
-- Worker rate-limit infrastructure;
-- hosted `/api/graph`, `/api/galaxy.svg`, and duplicate Worker viewer/home routes;
-- Worker-only TypeScript/Wrangler verification and dependencies once their remaining parity value is migrated or shown redundant.
-
-Git history is sufficient archival storage; do not keep a permanent legacy branch solely for the removed Worker.
+The earlier plan to remove the Worker, GitHub App installer, OAuth callback, rate-limit infrastructure, and Wrangler dependencies is **not active**. These components remain optional and must stay isolated so the GitHub-only path works when every Worker/App secret is absent.
 
 ## Implementation sequence
 
-1. Improve the Pages setup CTA so it opens the target GitHub new-workflow path and keeps the generated YAML one-click copyable. Do not depend on undocumented `value=` prefill.
-2. Remove GitHub App/one-click UI and installer-specific feedback/contracts.
-3. Remove Worker routes/config/secrets/docs and Worker-only tests.
-4. Remove `wrangler` and, if no remaining non-Worker TypeScript consumer exists, `typescript`/`tsconfig.json` too.
-5. Update README/security/architecture docs so GitHub-only is the only supported deployment path.
-6. Run affected static/unit gates during cleanup; run full Verify + Chromium + iPhone WebKit once on the final head.
-7. Move `v1` only after the final GitHub-only head is GREEN.
+1. Keep improving the GitHub-only onboarding independently of Cloudflare.
+2. Keep the optional one-click path stateless and secret-safe; never embed its credentials in the public repository or Pages JavaScript.
+3. Validate both paths only when changes affect them; do not make Worker CI failures block unrelated static viewer work unless the Worker surface changed.
+4. Move `v1` only after relevant generator/runtime changes are GREEN.
 
-## Rejected future regression
+## Regression guard
 
-Do not reintroduce a backend solely to make the first workflow commit automatic. A backend should return only if a future feature has demonstrated value that cannot be provided by GitHub repository + Actions + Pages and justifies its own security/operations budget.
+Do not make a backend mandatory solely to automate the first workflow commit. The optional Worker can remain available, but GitHub repository + Actions + Pages must always be sufficient to install, generate, update, and view Project Map.
