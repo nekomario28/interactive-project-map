@@ -21,6 +21,7 @@ function patchStatusProjection(source, name) {
   next = next.replaceAll('const statusLabels = { original: "Original", fork: "Fork", archived: "Archived" };', 'const statusLabels = { original: "Original", fork: "Fork", archived: "Archived", contributed: "Contributed" };');
   next = next.replaceAll('if (node.archived === true) return "archived";', 'if (node.relation === "contributed") return "contributed";\n      if (node.archived === true) return "archived";');
   next = next.replaceAll('const label = value === "original" ? "Original" : value === "fork" ? "Fork" : "Archived";', 'const label = value === "original" ? "Original" : value === "fork" ? "Fork" : value === "contributed" ? "Contributed" : "Archived";');
+  next = next.replaceAll('counts.archived = 0;', 'counts.archived = 0;\n    counts.contributed = 0;');
   if (!next.includes('"contributed"')) throw new Error(`${name} did not gain Contributed status support`);
   return next;
 }
