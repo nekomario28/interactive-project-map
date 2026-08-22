@@ -1,5 +1,5 @@
 "use strict";
-/* global state, searchInput, rebuildLayout, updateDetails, draw, drawEdges, drawNodesAndLabels, hitTest, worldToScreen, nodeRadius, nodeStatus, ctx */
+/* global state, searchInput, rebuildLayout, updateDetails, draw, nodeStatus */
 
 (() => {
   const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -275,67 +275,6 @@
       }
       updateControls();
     };
-
-    if (typeof drawEdges === "function") {
-      const baseDrawEdges = drawEdges;
-      drawEdges = function statusFilteredDrawEdges(colors) {
-        const allEdges = state.edges;
-        const visibleIds = new Set(state.nodes.filter(statusVisible).map((node) => node.id));
-        try {
-          state.edges = allEdges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
-          baseDrawEdges(colors);
-        } finally {
-          state.edges = allEdges;
-        }
-      };
-    }
-
-    if (typeof drawNodesAndLabels === "function") {
-      const baseDrawNodesAndLabels = drawNodesAndLabels;
-      drawNodesAndLabels = function viewStateDrawNodesAndLabels(colors) {
-        const allNodes = state.nodes;
-        const visibleNodes = allNodes.filter(statusVisible);
-        try {
-          state.nodes = visibleNodes;
-          if (activity) {
-            const reference = Number.isFinite(Date.parse(state.graph?.generatedAt)) ? Date.parse(state.graph.generatedAt) : Date.now();
-            for (const node of visibleNodes) {
-              if (node.type !== "repository") continue;
-              const updated = Date.parse(node.updatedAt);
-              if (!Number.isFinite(updated)) continue;
-              const ageDays = Math.max(0, (reference - updated) / 86_400_000);
-              const alpha = ageDays <= 30 ? 0.30 : ageDays <= 180 ? 0.14 : 0.055;
-              const point = worldToScreen(node.x, node.y);
-              const radius = Math.max(4, nodeRadius(node) * state.zoom) + 7;
-              ctx.save();
-              ctx.globalAlpha = alpha;
-              ctx.strokeStyle = colors.text;
-              ctx.lineWidth = ageDays <= 30 ? 2 : 1.2;
-              ctx.beginPath();
-              ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-              ctx.stroke();
-              ctx.restore();
-            }
-          }
-          baseDrawNodesAndLabels(colors);
-        } finally {
-          state.nodes = allNodes;
-        }
-      };
-    }
-
-    if (typeof hitTest === "function") {
-      const baseHitTest = hitTest;
-      hitTest = function statusFilteredHitTest(x, y) {
-        const allNodes = state.nodes;
-        try {
-          state.nodes = allNodes.filter(statusVisible);
-          return baseHitTest(x, y);
-        } finally {
-          state.nodes = allNodes;
-        }
-      };
-    }
 
     if (typeof updateDetails === "function") {
       const baseUpdateDetails = updateDetails;

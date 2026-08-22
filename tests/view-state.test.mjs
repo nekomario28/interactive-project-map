@@ -38,14 +38,17 @@ test("focus depth traverses repository relations only", async () => {
   assert.doesNotMatch(source, /adjacency[^\n]*membership/);
 });
 
-test("motion reuses the reduced-motion contract and activity uses existing timestamps", async () => {
-  const source = await readFile(new URL("../scripts/public-view-state.js", import.meta.url), "utf8");
+test("motion stays in view-state while Activity rendering stays in the canonical render adapter", async () => {
+  const viewState = await readFile(new URL("../scripts/public-view-state.js", import.meta.url), "utf8");
+  const renderAdapter = await readFile(new URL("../scripts/public-tree-router.js", import.meta.url), "utf8");
 
-  assert.match(source, /\(prefers-reduced-motion: reduce\)/);
-  assert.match(source, /target\.matches \|\| userMotionOff/);
-  assert.match(source, /node\.updatedAt/);
-  assert.match(source, /state\.graph\?\.generatedAt/);
-  assert.doesNotMatch(source, /fetch\(/);
+  assert.match(viewState, /\(prefers-reduced-motion: reduce\)/);
+  assert.match(viewState, /target\.matches \|\| userMotionOff/);
+  assert.match(renderAdapter, /node\.updatedAt/);
+  assert.match(renderAdapter, /state\.graph\?\.generatedAt/);
+  assert.doesNotMatch(viewState, /drawEdges|drawNodesAndLabels|hitTest|worldToScreen|nodeRadius/);
+  assert.doesNotMatch(viewState, /fetch\(/);
+  assert.doesNotMatch(renderAdapter, /fetch\(/);
 });
 
 test("style routing preserves semantic view parameters", async () => {
