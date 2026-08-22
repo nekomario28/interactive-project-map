@@ -1,0 +1,85 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPM anime-magic v3</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--bg:#05070c;--panel:#090e16;--line:#253147;--text:#f1f5fb;--muted:#7f8ba0;--ai:#c56eff;--robot:#65b8ff;--systems:#68d88a;--sim:#ffb64e;--crimson:#ff4d33;--gold:#ffc64e;--cyan:#50dcff}
+*{box-sizing:border-box}html,body{margin:0;width:740px;height:420px;overflow:hidden;background:var(--bg);color:var(--text)}
+.app{width:740px;height:420px;display:grid;grid-template-columns:574px 166px;grid-template-rows:32px 388px;background:radial-gradient(circle at 40% 50%,#0a111e 0,#05070c 58%,#030408 100%)}
+.top{grid-column:1/3;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 11px;border-bottom:1px solid #1c2534;background:#070b12;font-size:10px}.brand{font-weight:800}.brand span{font-weight:500;color:#7f91ab;margin-left:7px}.stylebar{display:flex;gap:3px}.stylebar button{height:22px;border:1px solid #253047;background:#0b1018;color:#8d9bb0;border-radius:5px;padding:0 6px;font-size:8px;cursor:pointer}.stylebar button.active{color:#fff;border-color:#5979a7;background:#121c2a}
+.stage{position:relative;overflow:hidden}.stage svg{display:block;width:574px;height:388px}.panel{border-left:1px solid #1c2635;background:linear-gradient(180deg,#0a1018,#070b11);padding:8px 7px}.panel h2{font-size:10px;margin:0 0 6px;color:#d9e3f2}.category{border:1px solid #202b3b;border-radius:6px;margin-bottom:5px;overflow:hidden;background:#0a1018}.cat-head{height:26px;display:grid;grid-template-columns:1fr 24px}.cat-focus,.cat-toggle{border:0;background:transparent;color:#dbe4f2;font-size:9px;cursor:pointer}.cat-focus{display:grid;grid-template-columns:10px 1fr;gap:4px;align-items:center;text-align:left;padding:0 6px}.cat-toggle{border-left:1px solid #202b3b;color:#74839a}.dot{width:6px;height:6px;border-radius:50%;box-shadow:0 0 7px currentColor}.repo-list{display:none;border-top:1px solid #1d2736;padding:2px}.category.open .repo-list{display:block}.repo-btn{display:block;width:100%;height:21px;border:0;background:transparent;color:#a7b4c7;text-align:left;border-radius:4px;padding:0 6px;font-size:8px;cursor:pointer}.repo-btn.active,.repo-btn:hover{background:#131d2b;color:#fff}.clear{width:100%;height:24px;margin-top:5px;border:1px solid #27354a;background:#101824;color:#c7d3e4;border-radius:5px;font-size:8px}.hint{font-size:7px;line-height:1.4;color:#687990;margin:7px 2px 0}.chip{position:absolute;left:8px;bottom:7px;background:#070c13d9;border:1px solid #253348;border-radius:12px;padding:4px 7px;color:#a9b7ca;font-size:7px;backdrop-filter:blur(4px)}
+svg text{font-family:inherit}.dim{opacity:.24}.faint{opacity:.22}.grid{stroke:#26364e;stroke-width:.55;opacity:.28}.owner{fill:#0a1019;stroke:#8ba2c4;stroke-width:1.2}.ownerText{fill:#f5f8fc;font-weight:850;font-size:18px;text-anchor:middle}.small{fill:#8090a7;font-size:5px;letter-spacing:1px;text-anchor:middle}.cat{font-size:10px;font-weight:800;text-anchor:middle}.repo{font-size:7.5px;font-weight:700;fill:#f2f5fa;text-anchor:middle}.tiny{font-size:5px;fill:#7d8ba0;text-anchor:middle}.glow{filter:url(#glow)}.edge{fill:none;stroke-width:1}.sigil{fill:none;stroke-width:.8}.seqLabel{font-size:5px;letter-spacing:.9px;fill:#86a8bd}.code{font-size:5px;fill:#77d7e9;letter-spacing:.5px}.status{font-size:5px;fill:#98a5b8}.burst{fill:none;stroke-width:1.1}.ray{stroke-width:.65}.pill{fill:#0b121d;stroke-width:1}.pulse{animation:pulse 1.8s ease-in-out infinite}@keyframes pulse{50%{opacity:.42}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+</style>
+<div class="app">
+<header class="top"><div class="brand">YUU / Project Map <span id="styleTitle">Crimson Cast</span></div><div class="stylebar" id="stylebar"></div></header>
+<main class="stage"><svg id="map" viewBox="0 0 574 388" aria-label="Project map"></svg><div class="chip" id="chip">No focus</div></main>
+<aside class="panel"><h2>Categories</h2><div id="categories"></div><button id="clear" class="clear">Clear focus</button><p class="hint">Category name → focus<br>+/− → expand only<br>Repository → focus</p></aside>
+</div>
+<script>
+const DATA=[
+{id:'ai',name:'AI / LLM',color:'#c56eff',repos:['DeciDelta','Civitas']},
+{id:'robot',name:'Robotics',color:'#65b8ff',repos:['Isaac Radeon','dual-scorpion']},
+{id:'systems',name:'Systems',color:'#68d88a',repos:['common-runner','microfactory-lab']},
+{id:'sim',name:'Simulation',color:'#ffb64e',repos:['Doctravia','lime_tidyup']}
+];
+const STYLES=[['crimson','Crimson Cast'],['cad','CAD Sequence'],['layers','Layered Formula'],['compiler','Arcane Compiler']];
+const P=new URLSearchParams(location.search);let style=P.get('style')||'crimson',focus=P.get('focus')||null;let openCats=new Set((P.get('open')||'ai').split(',').filter(Boolean));
+const svg=document.getElementById('map'),cats=document.getElementById('categories'),chip=document.getElementById('chip'),NS='http://www.w3.org/2000/svg';
+function S(t,a={},tx){const e=document.createElementNS(NS,t);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));if(tx!=null)e.textContent=tx;return e}
+function defs(){const d=S('defs');const f=S('filter',{id:'glow',x:'-100%',y:'-100%',width:'300%',height:'300%'});f.append(S('feGaussianBlur',{stdDeviation:'3.1',result:'b'}));const m=S('feMerge');m.append(S('feMergeNode',{in:'b'}),S('feMergeNode',{in:'SourceGraphic'}));f.append(m);d.append(f);svg.append(d)}
+function fcat(){return DATA.find(c=>c.id===focus)||DATA.find(c=>c.repos.includes(focus))}
+function isDim(c,r){if(!focus)return false;const fc=fcat();if(!fc)return false;if(r===focus||c===focus)return false;return c!==fc.id}
+function owner(x=287,y=195,r=31,label='YUU'){const g=S('g');g.append(S('circle',{cx:x,cy:y,r:r+7,fill:'none',stroke:'#36485f','stroke-width':.6,'stroke-dasharray':'2 3'}));g.append(S('circle',{cx:x,cy:y,r,class:'owner'}));g.append(S('text',{x,y:y+4,class:'ownerText'},label));g.append(S('text',{x,y:y+16,class:'small'},'SYSTEM CORE'));svg.append(g)}
+function clickGroup(g,val){g.style.cursor='pointer';g.addEventListener('click',()=>{focus=val;render()})}
+function repoPill(x,y,w,name,color,cat){const g=S('g',{class:isDim(cat,name)?'dim':''});g.append(S('rect',{x:x-w/2,y:y-10,width:w,height:20,rx:7,class:'pill',stroke:color}));g.append(S('text',{x,y:y+2.5,class:'repo'},name));clickGroup(g,name);svg.append(g);return g}
+function backgroundGrid(){for(let x=25;x<550;x+=35)svg.append(S('line',{x1:x,y1:18,x2:x,y2:370,class:'grid'}));for(let y=25;y<370;y+=35)svg.append(S('line',{x1:15,y1:y,x2:560,y2:y,class:'grid'}))}
+function renderCrimson(){
+ const cx=287,cy=198;for(let r of [58,89,126,160])svg.append(S('circle',{cx,cy,r,fill:'none',stroke:r===160?'#ff5b32':'#713228','stroke-width':r===160?1.15:.65,'stroke-dasharray':r===89?'3 4':'none',opacity:r===160?.75:.35,class:r===160?'glow':''}));
+ for(let a=0;a<360;a+=45){const q=a*Math.PI/180;svg.append(S('line',{x1:cx+Math.cos(q)*132,y1:cy+Math.sin(q)*132,x2:cx+Math.cos(q)*160,y2:cy+Math.sin(q)*160,stroke:'#ff7a45','stroke-width':.55,opacity:.45}))}
+ owner(cx,cy,29);
+ const cfg={ai:{a:225},robot:{a:315},systems:{a:135},sim:{a:45}};
+ DATA.forEach(c=>{const p=cfg[c.id],rad=p.a*Math.PI/180,x=cx+Math.cos(rad)*112,y=cy+Math.sin(rad)*112;const dim=focus&&fcat()?.id!==c.id;const g=S('g',{class:dim?'dim':''});g.append(S('circle',{cx:x,cy:y,r:23,fill:'#130b0a',stroke:c.color,'stroke-width':1.3,class:'glow'}));g.append(S('circle',{cx:x,cy:y,r:29,fill:'none',stroke:c.color,'stroke-width':.55,'stroke-dasharray':'2 3',opacity:.7}));g.append(S('text',{x,y:y+3,class:'cat',fill:c.color},c.name));clickGroup(g,c.id);svg.append(g);
+ const tangent=p.a===225||p.a===135?-1:1; const rx=x+tangent*77; const ys=[y-15,y+15];c.repos.forEach((r,i)=>{svg.append(S('path',{d:`M${x+tangent*24} ${y} Q${x+tangent*45} ${ys[i]} ${rx-tangent*42} ${ys[i]}`,stroke:c.color,'stroke-width':.85,fill:'none',opacity:isDim(c.id,r)?.12:.62}));repoPill(rx,ys[i],86,r,c.color,c.id)});
+ });
+ svg.append(S('path',{d:'M287 38 C266 74 305 95 287 124 C268 153 305 168 287 198',fill:'none',stroke:'#ffb34e','stroke-width':1.2,opacity:.55,class:'glow pulse'}));
+ ['CHARGE','FORM','LOCK','CAST'].forEach((t,i)=>svg.append(S('text',{x:287,y:51+i*35,class:'seqLabel','text-anchor':'middle',fill:i===3?'#ffc64e':'#b18d68'},t)));
+}
+function renderCAD(){
+ backgroundGrid();
+ owner(287,194,27);
+ svg.append(S('line',{x1:287,y1:37,x2:287,y2:350,stroke:'#53d9ff','stroke-width':1,opacity:.55}));
+ ['LOAD','DECODE','COMPILE','EXEC'].forEach((t,i)=>{const y=61+i*88;svg.append(S('rect',{x:267,y:y-9,width:40,height:18,rx:4,fill:'#081723',stroke:'#3bcff8','stroke-width':.7,opacity:.95}));svg.append(S('text',{x:287,y:y+2,class:'code','text-anchor':'middle'},t))});
+ const cfg={ai:{x:145,y:87},robot:{x:429,y:87},systems:{x:145,y:300},sim:{x:429,y:300}};
+ DATA.forEach(c=>{const p=cfg[c.id],dim=focus&&fcat()?.id!==c.id;svg.append(S('path',{d:`M287 194 L${p.x} ${p.y}`,stroke:c.color,'stroke-width':.9,fill:'none',opacity:dim?.1:.55,'stroke-dasharray':'4 3'}));const g=S('g',{class:dim?'dim':''});g.append(S('rect',{x:p.x-47,y:p.y-19,width:94,height:38,rx:5,fill:'#09131f',stroke:c.color,'stroke-width':1}));g.append(S('text',{x:p.x,y:p.y-2,class:'cat',fill:c.color},c.name));g.append(S('text',{x:p.x,y:p.y+10,class:'tiny'},'ACTIVATION BLOCK'));clickGroup(g,c.id);svg.append(g);
+ const side=p.x<287?-1:1,rx=p.x+side*82;[p.y-18,p.y+18].forEach((yy,i)=>{const r=c.repos[i];svg.append(S('path',{d:`M${p.x+side*47} ${p.y} L${rx-side*43} ${yy}`,stroke:c.color,'stroke-width':.75,opacity:isDim(c.id,r)?.1:.55}));repoPill(rx,yy,78,r,c.color,c.id)});
+ });
+ const fc=fcat();if(fc){const y=366;svg.append(S('rect',{x:120,y:y-10,width:334,height:18,rx:4,fill:'#07141d',stroke:'#38cfee','stroke-width':.7}));svg.append(S('text',{x:128,y:y+2,class:'code','text-anchor':'start'},`SEQ :: ${fc.name.toUpperCase()} :: ${focus} :: READY`))}
+}
+function renderLayers(){
+ owner(287,194,27);
+ const rings=[
+  {c:DATA[0],r:72,label:{x:224,y:132},ports:[{x:181,y:100,a:225},{x:168,y:139,a:190}]},
+  {c:DATA[1],r:104,label:{x:358,y:116},ports:[{x:405,y:88,a:315},{x:428,y:129,a:332}]},
+  {c:DATA[2],r:136,label:{x:191,y:292},ports:[{x:137,y:322,a:142},{x:184,y:349,a:123}]},
+  {c:DATA[3],r:165,label:{x:406,y:287},ports:[{x:457,y:314,a:42},{x:414,y:358,a:63}]}
+ ];
+ rings.forEach(({c,r,label,ports},idx)=>{const dim=focus&&fcat()?.id!==c.id;svg.append(S('circle',{cx:287,cy:194,r,fill:'none',stroke:c.color,'stroke-width':idx===0?1.1:.75,'stroke-dasharray':idx%2?'3 4':'none',opacity:dim?.08:.5,class:dim?'':'glow'}));const g=S('g',{class:dim?'dim':''});g.append(S('rect',{x:label.x-34,y:label.y-10,width:68,height:20,rx:7,fill:'#09111b',stroke:c.color,'stroke-width':1}));g.append(S('text',{x:label.x,y:label.y+3,class:'cat',fill:c.color},c.name));clickGroup(g,c.id);svg.append(g);
+  c.repos.forEach((name,i)=>{const p=ports[i],q=p.a*Math.PI/180,ax=287+Math.cos(q)*r,ay=194+Math.sin(q)*r;svg.append(S('line',{x1:ax,y1:ay,x2:p.x,y2:p.y,stroke:c.color,'stroke-width':.65,opacity:isDim(c.id,name)?.08:.55}));const gg=S('g',{class:isDim(c.id,name)?'dim':''});gg.append(S('circle',{cx:p.x,cy:p.y,r:7,fill:'#0d1520',stroke:c.color,'stroke-width':1}));gg.append(S('text',{x:p.x+(p.x<287?-11:11),y:p.y+2.5,fill:'#eef3fa','font-size':7,'font-weight':700,'text-anchor':p.x<287?'end':'start'},name));clickGroup(gg,name);svg.append(gg)});
+ });
+ const fc=fcat();if(fc){const rr=rings[DATA.indexOf(fc)].r;for(let a=0;a<360;a+=24){const q=a*Math.PI/180;svg.append(S('line',{x1:287+Math.cos(q)*(rr-5),y1:194+Math.sin(q)*(rr-5),x2:287+Math.cos(q)*(rr+5),y2:194+Math.sin(q)*(rr+5),stroke:fc.color,'stroke-width':.55,opacity:.6}))}}
+}
+function renderCompiler(){
+ backgroundGrid();owner(287,194,27);
+ const cfg=[{x:145,y:88},{x:429,y:88},{x:145,y:300},{x:429,y:300}];
+ DATA.forEach((c,i)=>{const p=cfg[i],dim=focus&&fcat()?.id!==c.id;const g=S('g',{class:dim?'dim':''});g.append(S('path',{d:`M287 194 Q${(287+p.x)/2} ${p.y} ${p.x} ${p.y}`,stroke:c.color,'stroke-width':1,fill:'none',opacity:.55}));g.append(S('rect',{x:p.x-47,y:p.y-20,width:94,height:40,rx:8,fill:'#0b111a',stroke:c.color,'stroke-width':1.1}));g.append(S('text',{x:p.x,y:p.y-4,class:'cat',fill:c.color},c.name));g.append(S('text',{x:p.x,y:p.y+10,class:'tiny'},`MODULE 0${i+1} · READY`));clickGroup(g,c.id);svg.append(g);
+ const side=p.x<287?-1:1,rx=p.x+side*82,ys=[p.y-18,p.y+18];c.repos.forEach((r,j)=>{repoPill(rx,ys[j],78,r,c.color,c.id)});
+ });
+ if(focus&&!DATA.some(c=>c.id===focus)){const fc=fcat(),p=cfg[DATA.indexOf(fc)],side=p.x<287?-1:1,rx=p.x+side*82,j=fc.repos.indexOf(focus),y=p.y+(j===0?-18:18);[15,22,30].forEach((r,k)=>svg.append(S('circle',{cx:rx,cy:y,r,fill:'none',stroke:k===2?'#ff5a3d':'#ffc15a','stroke-width':k===2?1:.7,opacity:.7-k*.12,class:'glow'})));for(let a=0;a<360;a+=45){const q=a*Math.PI/180;svg.append(S('line',{x1:rx+Math.cos(q)*18,y1:y+Math.sin(q)*18,x2:rx+Math.cos(q)*35,y2:y+Math.sin(q)*35,stroke:'#ff724b','stroke-width':.55,opacity:.65}))}
+ svg.append(S('rect',{x:178,y:348,width:220,height:20,rx:5,fill:'#06131c',stroke:'#45d7ff','stroke-width':.8}));svg.append(S('text',{x:188,y:361,class:'code','text-anchor':'start'},`COMPILE ${fc.name.toUpperCase()} → ${focus.toUpperCase()} → CAST`));}
+}
+function render(){svg.replaceChildren();defs();({crimson:renderCrimson,cad:renderCAD,layers:renderLayers,compiler:renderCompiler}[style]||renderCrimson)();document.getElementById('styleTitle').textContent=STYLES.find(s=>s[0]===style)?.[1]||style;chip.textContent=focus?`Focus: ${focus}`:'No focus';renderPanel();renderStylebar()}
+function renderPanel(){cats.innerHTML='';DATA.forEach(c=>{const box=document.createElement('div');box.className='category'+(openCats.has(c.id)?' open':'');const h=document.createElement('div');h.className='cat-head';const f=document.createElement('button');f.className='cat-focus';f.innerHTML=`<span class="dot" style="color:${c.color};background:${c.color}"></span><span>${c.name}</span>`;f.onclick=()=>{focus=c.id;render()};const t=document.createElement('button');t.className='cat-toggle';t.textContent=openCats.has(c.id)?'−':'+';t.onclick=()=>{openCats.has(c.id)?openCats.delete(c.id):openCats.add(c.id);render()};h.append(f,t);box.append(h);const list=document.createElement('div');list.className='repo-list';c.repos.forEach(r=>{const b=document.createElement('button');b.className='repo-btn'+(focus===r?' active':'');b.textContent=r;b.onclick=()=>{focus=r;render()};list.append(b)});box.append(list);cats.append(box)})}
+function renderStylebar(){const bar=document.getElementById('stylebar');bar.innerHTML='';STYLES.forEach(([id,name])=>{const b=document.createElement('button');b.className=id===style?'active':'';b.textContent=name;b.onclick=()=>{style=id;render()};bar.append(b)})}
+document.getElementById('clear').onclick=()=>{focus=null;render()};render();
+</script>
