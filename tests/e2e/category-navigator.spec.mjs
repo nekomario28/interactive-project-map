@@ -30,18 +30,26 @@ async function installFixture(page) {
   });
 }
 
+async function openNavigator(page) {
+  const toggle = page.getByRole("button", { name: "Categories" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  return page.getByRole("complementary", { name: "Category navigator" });
+}
+
 test("category disclosure is independent from category and repository focus", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 760 });
   await installFixture(page);
   await page.goto("/u/?username=example&style=galaxy-systems");
   await expect(page.locator("#status")).toBeHidden();
 
-  const navigator = page.getByRole("complementary", { name: "Category navigator" });
+  const navigator = await openNavigator(page);
   await expect(navigator).toBeVisible();
   await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · 4 repos");
 
   const roboticsFocus = navigator.locator('[data-category-id="group:robotics"]');
-  const roboticsSection = roboticsFocus.locator("xpath=ancestor::section");
+  const roboticsSection = roboticsFocus.locator("xpath=ancestor::section[1]");
   const disclosure = roboticsSection.locator(".category-nav-disclosure");
   const repositories = roboticsSection.locator(".category-nav-repositories");
 
@@ -72,9 +80,9 @@ test("search expands matching categories and status filters remove hidden reposi
   await page.goto("/u/?username=example&style=obsidian");
   await expect(page.locator("#status")).toBeHidden();
 
-  const navigator = page.getByRole("complementary", { name: "Category navigator" });
-  const robotics = navigator.locator('[data-category-id="group:robotics"]').locator("xpath=ancestor::section");
-  const web = navigator.locator('[data-category-id="group:web"]').locator("xpath=ancestor::section");
+  const navigator = await openNavigator(page);
+  const robotics = navigator.locator('[data-category-id="group:robotics"]').locator("xpath=ancestor::section[1]");
+  const web = navigator.locator('[data-category-id="group:web"]').locator("xpath=ancestor::section[1]");
   await expect(robotics.locator(".category-nav-repositories")).toBeHidden();
   await expect(web.locator(".category-nav-repositories")).toBeHidden();
 
@@ -103,7 +111,7 @@ test("aggregate viewers use search dimming as a safe category and repository foc
   await page.goto("/treemap/?username=example&style=treemap");
   await expect(page.locator("#status")).toBeHidden();
 
-  const navigator = page.getByRole("complementary", { name: "Category navigator" });
+  const navigator = await openNavigator(page);
   const robotics = navigator.locator('[data-category-id="group:robotics"]');
   await robotics.click();
 
