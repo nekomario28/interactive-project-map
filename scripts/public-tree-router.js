@@ -228,12 +228,23 @@
       queueMicrotask(refreshControlSummary);
     });
 
+    function renderProjectionReady() {
+      const canvas = ctx.canvas;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      return state.fitted === true
+        && canvas.width === Math.round(Math.max(1, rect.width) * dpr)
+        && canvas.height === Math.round(Math.max(1, rect.height) * dpr);
+    }
+
     lastStatusKey = statusKey();
     window.ProjectMapRenderProjection = Object.freeze({
       snapshot() {
         return {
           statuses: lastStatusKey ? lastStatusKey.split(",") : [],
-          repositories: state.nodes?.filter((node) => node?.type === "repository").map((node) => node.id) || [],
+          repositories: renderProjectionReady()
+            ? state.nodes?.filter((node) => node?.type === "repository").map((node) => node.id) || []
+            : [],
           activityOverlayCount: lastActivityOverlayCount,
           statusCounts: { ...knownStatusCounts },
         };
