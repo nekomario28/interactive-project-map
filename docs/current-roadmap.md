@@ -25,6 +25,7 @@ Detailed plan and evidence: `docs/external-contributions-research.md`.
 These are small but useful operational checks rather than new architecture.
 
 - Do one live GitHub Pages UX pass after the next production feature lands: beginner Step 0 profile-repo creation, Step 1 workflow handoff, Step 2 initial run, map load, mobile behavior and shareable state.
+- Keep the experimental **Profile Galaxy / Arcane UX** line evidence-driven. The real 740×420 v2 prototype validates an independently expandable Category navigator, Category focus, Repository focus, context-preserving dimming, and bounded Detonation as a focus-only effect. Do not add production preset IDs yet; the next gate is real `graph.json` input, representative small/medium profiles, 100/300-repository stress where applicable, keyboard/touch, and reduced-motion comparison against Galaxy Systems/Hybrid and Obsidian-like. Detailed evidence: `docs/arcane-profile-ux-evaluation-2026-08-22.md`.
 - Exercise the optional Cloudflare/GitHub App one-click path with real operator credentials if it is going to be advertised as a live convenience. This is **not** a dependency of the GitHub-only default path and is not a blocker for Project Map itself.
 - Keep real Cloudflare/GitHub credentials only in Cloudflare secret storage or ignored local files. Public tracked files may contain names, documentation and obvious placeholders only.
 
