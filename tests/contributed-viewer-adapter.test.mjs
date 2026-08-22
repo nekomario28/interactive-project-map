@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   patchSharedViewState,
@@ -60,6 +61,15 @@ if (username) { fetch("graph.json"); }
   assert.match(patched, /External owner/);
   assert.match(patched, /if \(!contributionEdges\.length\) return baseDrawEdges\(colors\)/);
   assert.equal(patchSharedViewerRuntime(patched), patched);
+});
+
+test("C4a shared render projection keeps Contributed above fork/archive source flags", async () => {
+  const source = await readFile(new URL("../scripts/public-tree-router.js", import.meta.url), "utf8");
+  assert.match(source, /const statusValues = \["original", "fork", "archived", "contributed"\]/);
+  assert.match(source, /contributed: "Contributed"/);
+  assert.match(source, /const knownStatusCounts = \{ original: 0, fork: 0, archived: 0, contributed: 0 \}/);
+  assert.match(source, /if \(node\.relation === "contributed"\) return "contributed";/);
+  assert.match(source, /const counts = \{ original: 0, fork: 0, archived: 0, contributed: 0 \}/);
 });
 
 test("C4a Contributed status CSS is idempotent", () => {
