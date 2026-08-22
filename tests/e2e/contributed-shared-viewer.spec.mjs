@@ -85,6 +85,13 @@ test("shared Galaxy keeps Contributed distinct from fork/archive through filter,
   await page.goto("/u/?username=example&style=galaxy-hybrid");
   await expect(page.locator("#status")).toBeHidden();
 
+  await expect.poll(async () => page.evaluate(() => window.ProjectMapContributedViewer.snapshot())).toEqual({
+    contributedRepositories: ["repository:outside/project"],
+    contributionEdges: [
+      { source: "user:example", target: "repository:outside/project", type: "contribution" },
+    ],
+  });
+
   const contributedButton = page.locator('[data-status-filter="contributed"]');
   await expect(contributedButton).toHaveText("Contributed 1");
   await expect(contributedButton).toHaveAttribute("aria-pressed", "true");
