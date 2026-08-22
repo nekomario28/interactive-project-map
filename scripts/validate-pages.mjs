@@ -36,6 +36,8 @@ async function validateDynamicMarkup() {
     requireStyles(html, name);
     for (const className of ["original", "fork", "archived"]) if (!new RegExp(`class="${className}"`).test(html)) throw new Error(`${name} legend is missing ${className}`);
     if (!/<link rel="stylesheet" href="\.\.\/viewer\.css">/.test(html)) throw new Error(`${name} must load validated stylesheet`);
+    if (!/<link rel="stylesheet" href="\.\.\/category-navigator\.css">/.test(html)) throw new Error(`${name} must load category navigator stylesheet`);
+    if (!/<script src="\.\.\/category-navigator\.js" defer><\/script>/.test(html)) throw new Error(`${name} must load category navigator runtime`);
     if (/script-src[^;]*'unsafe-inline'/.test(html)) throw new Error(`${name} CSP must not allow unsafe-inline scripts`);
     if (!/style-src[^;]*'self'[^;]*'unsafe-inline'/.test(html)) throw new Error(`${name} CSP must explicitly permit runtime inline positioning styles`);
   }
@@ -73,5 +75,6 @@ await validateDynamicMarkup();
 await validateEmbeddedCss(join(siteDir, "index.html"));
 await validateExternalCss(join(siteDir, "viewer.css"));
 await validateExternalCss(join(siteDir, "presets.css"));
+await validateExternalCss(join(siteDir, "category-navigator.css"));
 await generateWorkflowFixture();
-console.log("Generated Pages markup, CSS, twelve style presets and stable-v1 reusable browser installer runtime validated.");
+console.log("Generated Pages markup, CSS, category navigator, twelve style presets and stable-v1 reusable browser installer runtime validated.");

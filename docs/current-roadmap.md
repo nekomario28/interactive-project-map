@@ -24,12 +24,14 @@ Detailed plan and evidence: `docs/external-contributions-research.md`.
 
 These are small but useful operational checks rather than new architecture.
 
+- Finish and validate **#121 Category navigator / focus index**: Category label selects the Category, `+ / −` independently discloses repositories, repository rows select repositories, Search temporarily expands matching Categories, current status filters are respected, and existing context-preserving selection dimming is reused instead of creating another graph-filtering model. Keep repository Local Graph depth 1–3 independent.
 - Do one live GitHub Pages UX pass after the next production feature lands: beginner Step 0 profile-repo creation, Step 1 workflow handoff, Step 2 initial run, map load, mobile behavior and shareable state.
 - Exercise the optional Cloudflare/GitHub App one-click path with real operator credentials if it is going to be advertised as a live convenience. This is **not** a dependency of the GitHub-only default path and is not a blocker for Project Map itself.
 - Keep real Cloudflare/GitHub credentials only in Cloudflare secret storage or ignored local files. Public tracked files may contain names, documentation and obvious placeholders only.
 
-## P2 — maintenance only when evidence appears
+## P2 — maintenance / deferred ideas only when evidence appears
 
+- **Do not add new visual style presets now.** Magic-circle / spell-array, activation-sequence, selection-only cast/explosion, and SF × magic ideas are parked in `docs/future-visual-style-ideas.md`. Revisit only if a candidate materially improves readability, hierarchy, focus feedback, dense-profile behavior, or profile identity over current production layouts.
 - Dependabot/action pin maintenance: update in grouped, reviewed changes rather than churn.
 - Re-run large-portfolio stress only when graph/layout behavior changes materially.
 - Revisit additional clustering only if materially different evidence appears; do not restart the rejected experiment by default.
@@ -46,4 +48,4 @@ These are small but useful operational checks rather than new architecture.
 
 ## Current tracker state
 
-At this snapshot there are no open product issues or open PRs in this repository. New work should be opened from the P0/P1 items above rather than reviving completed historical phases.
+PR **#121** is the active product/UI change. Do not revive the rejected visual-style experiments while it is being validated. After #121, return to the P0 external-contribution line unless new evidence changes priority.
