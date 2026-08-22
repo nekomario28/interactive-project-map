@@ -13,10 +13,10 @@ permissions:
   contents: read
 
 jobs:
-  ai-director-split-pool:
+  ai-director-semantic-split:
     if: github.head_ref == 'exp/ai-director-spotlight-outcomes'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - name: Checkout exact experiment head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,22 +24,20 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - name: Install dataset client and ffmpeg
+      - name: Install generation client and ffmpeg
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check -q huggingface_hub
+          python -m pip install --disable-pip-version-check -q gradio_client
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-      - name: Execute real pool-aware split edits
-        run: python scripts/ai_director_split_pool_actual.py
-      - name: Remove source videos before upload
-        if: always()
-        run: rm -rf .tmp/ai-director-split-pool/raw
-      - name: Upload split outcomes
+      - name: Execute real 1s x 3 semantic split regeneration
+        continue-on-error: true
+        run: python scripts/ai_director_semantic_split_sid004.py
+      - name: Upload semantic split evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-split-pool
-          path: .tmp/ai-director-split-pool
+          name: ai-director-semantic-split-sid004
+          path: .tmp/ai-director-semantic-split-sid004
           if-no-files-found: error
           retention-days: 3
