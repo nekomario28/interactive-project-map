@@ -1,6 +1,6 @@
 # External contribution research
 
-Status: **Foundation accepted; rendering semantics intentionally deferred** (2026-08-22)
+Status: **Foundation accepted; promotion plan recorded, rendering not implemented yet** (2026-08-22)
 
 ## Goal
 
@@ -82,9 +82,10 @@ If promoted into the map, external repositories must be represented explicitly a
 2. The external owner remains visible in metadata.
 3. Contribution metadata records commits, PRs, merged PRs, window, and truncation state.
 4. Private repositories and restricted contributions are never serialized into the public profile graph.
-5. External repositories must not create an ownership edge from the Project Map user.
+5. External repositories must not create an ownership edge or ownership path from the Project Map user.
 6. Status/filter behavior must not silently treat Contributed as Original/Fork/Archived.
 7. A small cap/ranking policy is required so one-off external activity cannot swamp an owned portfolio.
+8. An external repository may itself be a fork or archived, but its Project Map relation remains **Contributed**; source-repository flags stay metadata rather than overriding the relation.
 
 ## Open ranking question
 
@@ -96,6 +97,56 @@ No arbitrary threshold is adopted yet. Candidate policies to evaluate against re
 
 The diagnostic user currently demonstrates why this needs deliberate evaluation: one external repository has a merged PR while several substantial but still-open upstream PRs exist. A merged-only rule would hide useful ongoing upstream work; an every-PR rule could overfill maps for highly active contributors.
 
+## Accepted promotion plan
+
+The implementation order is fixed so acquisition evidence, ownership semantics, rendering, and release promotion do not get mixed together.
+
+### Phase C1 — ranking/cap evaluation
+
+- Build deterministic fixtures for sparse, moderate, and very active external contributors, plus at least one real public portfolio.
+- Compare candidate meaningful-work gates and top-N caps using the already-bounded 365-day contribution records.
+- Measure how many one-off repositories are admitted, how many clearly meaningful upstream repositories are lost, and how large the external slice becomes relative to the owned portfolio.
+- Do not tune a threshold solely around one user. If no simple stable gate works, keep Contributed user-selectable rather than adding a complicated scoring model.
+
+### Phase C2 — explicit graph schema
+
+- Add one explicit **Contributed** repository relation; never reuse Original.
+- Use stable repository identity based on full `owner/repo` so same-name repositories from different owners cannot collide.
+- Serialize only the bounded public metadata required by the viewer: external owner, canonical URL, source fork/archive flags, contribution counts, window and truncation state, plus the same safe repository metadata needed for classification/search.
+- Introduce graph edge/path semantics that cannot be interpreted as user ownership. Existing `ownership` edges must never lead to an external repository.
+- Extend static-graph sanitization so external URLs are accepted only when the node is explicitly Contributed and all contribution metadata passes strict bounds.
+
+### Phase C3 — generation integration
+
+- Wire the accepted ranking policy into the reusable generator only after the schema/privacy tests are GREEN.
+- Keep one GraphQL contribution request; do not add PATs, browser API calls, a backend requirement, or a second contribution data source.
+- Add an explicit setup input for Contributed visibility/inclusion. Start conservatively; only make it a default-on collection feature if the ranking evaluation shows low noise across portfolios.
+- Keep graph generation authoritative. Viewer controls may hide Contributed nodes but must never fetch or resurrect excluded contribution data.
+
+### Phase C4 — all-12-preset viewer semantics
+
+- Add `Contributed` as a fourth repository control alongside Original / Fork / Archived.
+- Preserve the existing status-count, URL-share, Focus/Local Graph, search, empty-category pruning, hover/selection and stable-geometry contracts.
+- Shared Galaxy/Obsidian and all eight dedicated projection viewers must agree on Contributed counts and filtering before promotion.
+- Matrix/Sankey/Treemap/Timeline aggregation must remain semantically correct rather than treating external work as owned output.
+- Tooltips/details should show `owner/repo` and a compact contribution summary so the relationship is obvious.
+
+### Phase C5 — production proof and stable promotion
+
+- Generate a real profile graph containing both owned and Contributed repositories and verify that no private/restricted repository name or metadata is present.
+- Run affected tests during iteration, then one final full Verify + 12-preset comparison + Chromium + iPhone WebKit gate on the exact final head.
+- Perform one live GitHub Pages UX pass on the generated profile map.
+- Move the `v1` stable branch only after the final Contributed head is reviewed and GREEN. Advanced immutable pins remain available for users who do not want the stable channel to move.
+
+## Non-goals
+
+- Do not infer code ownership from authored PRs or commits.
+- Do not display private/internal contributions, even as redacted repository placeholders.
+- Do not scrape GitHub profile pages.
+- Do not add organization membership as a proxy for contribution.
+- Do not turn Contributed into another taxonomy hierarchy layer.
+- Do not reopen local-clustering work merely to place external repositories; issue #61 is a measured NO-GO unless materially new evidence appears.
+
 ## Implementation boundary
 
-`src/external-contributions.ts` and `scripts/external-contributions.mjs` are deliberately standalone. They are source/static parity implementations and are not called by generation yet. This makes the next decision reversible and independently testable.
+`src/external-contributions.ts` and `scripts/external-contributions.mjs` are deliberately standalone today. They are source/static parity implementations and are not called by generation yet. This keeps Phase C1/C2 reversible and independently testable before any public `graph.json` schema change.
