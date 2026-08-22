@@ -9,7 +9,8 @@
   if (!workspace || !controls || document.getElementById("categoryNavigator")) return;
 
   const manualExpanded = new Set();
-  let panelOpen = window.matchMedia?.("(min-width: 980px)")?.matches ?? true;
+  const baseUpdateDetails = updateDetails;
+  let panelOpen = false;
   let lastRenderKey = "";
   let rendering = false;
   let fallbackFocus = null;
@@ -145,15 +146,22 @@
     if (!node || (node.type === "repository" && !repositoryVisible(node))) return;
     fallbackFocus = null;
     restoreUserQuery();
-    updateDetails(node);
+    if (supportsDirectSelection(node)) {
+      baseUpdateDetails(node);
+    } else {
+      baseUpdateDetails(null);
+      applyFallbackFocus(node);
+    }
+    queueMicrotask(() => render({ force: true }));
     canvas.focus({ preventScroll: true });
   }
 
   function clearFocus() {
     fallbackFocus = null;
     restoreUserQuery();
-    updateDetails(null);
+    baseUpdateDetails(null);
     if (typeof draw === "function") draw();
+    queueMicrotask(() => render({ force: true }));
     canvas.focus({ preventScroll: true });
   }
 
@@ -268,18 +276,10 @@
     button.addEventListener("click", () => queueMicrotask(() => render({ force: true })));
   }
 
-  const baseUpdateDetails = updateDetails;
   updateDetails = function categoryNavigatorUpdateDetails(node) {
     fallbackFocus = null;
     restoreUserQuery();
-    const rendered = node?.id ? renderedNode(node.id) || node : node;
-    let result;
-    if (rendered && !supportsDirectSelection(rendered)) {
-      result = baseUpdateDetails(null);
-      applyFallbackFocus(rendered);
-    } else {
-      result = baseUpdateDetails(rendered);
-    }
+    const result = baseUpdateDetails(node);
     queueMicrotask(() => render({ force: true }));
     return result;
   };
@@ -297,7 +297,7 @@
     if (window.innerWidth < 700 && panelOpen) setPanelOpen(false);
   }, { passive: true });
 
-  setPanelOpen(panelOpen);
+  setPanelOpen(false);
   render({ force: true });
   window.ProjectMapCategoryNavigator = Object.freeze({
     render: () => render({ force: true }),
