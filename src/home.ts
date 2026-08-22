@@ -38,6 +38,7 @@ export function renderHome(origin: string, oneClickInstall = false): string {
 </form>
 <div class="options">
 <label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Style <select id="map-style"><option value="radial">Radial</option><option value="galaxy-classic">Galaxy Classic</option><option value="galaxy-systems">Galaxy Systems</option><option value="galaxy-hybrid">Galaxy Hybrid</option><option value="obsidian">Obsidian-like</option><option value="tree">Tree</option><option value="treemap">Treemap</option><option value="timeline">Timeline</option><option value="cluster">Cluster / Bubble</option><option value="sunburst">Sunburst</option><option value="matrix">Matrix / Heatmap</option><option value="sankey">Sankey</option></select></label>
 <label>Max repos <input id="max-repos" type="number" min="1" max="300" value="100" /></label>
 <label><input id="forks" type="checkbox" checked /> Include forks</label>
 <label><input id="archived" type="checkbox" /> Include archived</label>
@@ -45,10 +46,10 @@ export function renderHome(origin: string, oneClickInstall = false): string {
 <div id="status" class="status">Preview uses public repository data only. Permanent maps are generated in your own profile repository.</div>
 
 <div id="result" class="result">
-<div class="preview"><span class="badge">Hosted preview</span><img id="preview" alt="Generated GitHub project galaxy preview" /></div>
-<div class="actions"><a id="open-map" class="button" target="_blank" rel="noopener">Open your interactive map ↗</a>${oneClickAction}</div>
+<div class="preview"><span class="badge">Hosted Galaxy preview</span><img id="preview" alt="Generated GitHub project galaxy preview" /></div>
+<div class="actions"><a id="create-profile-repo" class="button" target="_blank" rel="noopener">0 · No profile repo? Create it ↗</a><a id="open-map" class="button" target="_blank" rel="noopener">Open your interactive map ↗</a>${oneClickAction}</div>
 <div class="steps">
-<section class="panel"><h2>1. Add this GitHub Actions workflow</h2><p>Create <code>.github/workflows/project-map.yml</code> in your public <code>USERNAME/USERNAME</code> profile repository. The generator job has read-only permissions; a separate publish job writes only the generated files. When the GitHub App button is available, it performs this step and starts the first run automatically; the workflow below remains the manual fallback.</p><textarea id="workflow" class="code workflow" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="workflow">Copy workflow</button></div></section>
+<section class="panel"><h2>1. Add this GitHub Actions workflow</h2><p>If <code>USERNAME/USERNAME</code> does not exist, use Step 0 and enable <strong>Add README</strong> on GitHub first. Then create <code>.github/workflows/project-map.yml</code> in that public profile repository. The selected style is preserved in both the manual workflow and GitHub App flow. The hosted image above remains a lightweight Galaxy preview; the installed static map uses the selected preset.</p><textarea id="workflow" class="code workflow" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="workflow">Copy workflow</button></div></section>
 <section class="panel"><h2>2. Add this to your profile README</h2><p>The image is served from your own repository. Clicking it opens the shared interactive viewer, which prefers your static graph and only falls back to the hosted GitHub API when no valid static graph exists.</p><textarea id="html-embed" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="html-embed">Copy HTML</button><button class="button" type="button" data-copy="markdown-embed">Copy Markdown</button></div><textarea id="markdown-embed" class="code" readonly hidden></textarea></section>
 <section class="panel"><h2>3. Static outputs</h2><p>These resolve through the profile repository's default branch.</p><textarea id="static-urls" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="static-urls">Copy URLs</button></div></section>
 </div>
@@ -64,9 +65,11 @@ export function renderHome(origin: string, oneClickInstall = false): string {
 </main>
 <script>
 const serviceOrigin=${JSON.stringify(origin)};
+const styles=new Set(['radial','galaxy-classic','galaxy-systems','galaxy-hybrid','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey']);
 const form=document.getElementById('generator-form');
 const usernameInput=document.getElementById('username');
 const themeInput=document.getElementById('theme');
+const styleInput=document.getElementById('map-style');
 const maxReposInput=document.getElementById('max-repos');
 const forksInput=document.getElementById('forks');
 const archivedInput=document.getElementById('archived');
@@ -74,20 +77,23 @@ const statusEl=document.getElementById('status');
 const resultEl=document.getElementById('result');
 const preview=document.getElementById('preview');
 const openMap=document.getElementById('open-map');
+const createProfileRepo=document.getElementById('create-profile-repo');
 const oneClickInstall=document.getElementById('one-click-install');
 const usernameRe=/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 
-function values(){const username=usernameInput.value.trim().toLowerCase();const theme=themeInput.value==='light'?'light':'dark';const maxRepos=Math.max(1,Math.min(300,Math.round(Number(maxReposInput.value)||100)));return{username,theme,maxRepos,forks:forksInput.checked,archived:archivedInput.checked}}
-function query(v){const p=new URLSearchParams();p.set('username',v.username);p.set('theme',v.theme);p.set('max_repos',String(v.maxRepos));p.set('forks',String(v.forks));p.set('archived',String(v.archived));return p}
-function urls(v){const p=query(v);const previewUrl=new URL('/api/galaxy.svg',serviceOrigin);previewUrl.search=p.toString();const installUrl=new URL('/api/install-workflow',serviceOrigin);installUrl.search=p.toString();const oneClickUrl=new URL('/api/install/start',serviceOrigin);oneClickUrl.search=p.toString();const raw='https://raw.githubusercontent.com/'+encodeURIComponent(v.username)+'/'+encodeURIComponent(v.username)+'/HEAD/project-map';const viewer=new URL('/u/'+encodeURIComponent(v.username),serviceOrigin);viewer.searchParams.set('max_repos',String(v.maxRepos));viewer.searchParams.set('forks',String(v.forks));viewer.searchParams.set('archived',String(v.archived));return{preview:previewUrl.toString(),install:installUrl.toString(),oneClick:oneClickUrl.toString(),svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()}}
+function styleValue(value){const normalized=String(value||'').trim().toLowerCase();return styles.has(normalized)?normalized:'radial'}
+function values(){const username=usernameInput.value.trim().toLowerCase();const theme=themeInput.value==='light'?'light':'dark';const style=styleValue(styleInput.value);const maxRepos=Math.max(1,Math.min(300,Math.round(Number(maxReposInput.value)||100)));return{username,theme,style,maxRepos,forks:forksInput.checked,archived:archivedInput.checked}}
+function query(v){const p=new URLSearchParams();p.set('username',v.username);p.set('theme',v.theme);p.set('style',v.style);p.set('max_repos',String(v.maxRepos));p.set('forks',String(v.forks));p.set('archived',String(v.archived));return p}
+function profileRepoUrl(username){const u=new URL('https://github.com/new');u.searchParams.set('name',username);u.searchParams.set('owner',username);u.searchParams.set('visibility','public');u.searchParams.set('description','GitHub profile for '+username);return u.toString()}
+function urls(v){const p=query(v);const previewUrl=new URL('/api/galaxy.svg',serviceOrigin);previewUrl.search=p.toString();const installUrl=new URL('/api/install-workflow',serviceOrigin);installUrl.search=p.toString();const oneClickUrl=new URL('/api/install/start',serviceOrigin);oneClickUrl.search=p.toString();const raw='https://raw.githubusercontent.com/'+encodeURIComponent(v.username)+'/'+encodeURIComponent(v.username)+'/HEAD/project-map';const viewer=new URL('/u/'+encodeURIComponent(v.username),serviceOrigin);viewer.searchParams.set('style',v.style);viewer.searchParams.set('max_repos',String(v.maxRepos));viewer.searchParams.set('forks',String(v.forks));viewer.searchParams.set('archived',String(v.archived));return{preview:previewUrl.toString(),install:installUrl.toString(),oneClick:oneClickUrl.toString(),profile:profileRepoUrl(v.username),svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()}}
 function htmlUrl(value){return value.replaceAll('&','&amp;')}
 function updateShare(v){const share=new URL(location.href);share.search=query(v).toString();history.replaceState(null,'',share)}
 
 async function generate(){
-  const v=values();maxReposInput.value=String(v.maxRepos);
+  const v=values();maxReposInput.value=String(v.maxRepos);styleInput.value=v.style;
   if(!usernameRe.test(v.username)){statusEl.textContent='Enter a valid GitHub username.';statusEl.classList.add('error');resultEl.classList.remove('visible');return}
-  statusEl.textContent='Loading hosted preview and install workflow…';statusEl.classList.remove('error');const u=urls(v);
-  preview.src=u.preview;openMap.href=u.viewer;if(oneClickInstall)oneClickInstall.href=u.oneClick;
+  statusEl.textContent='Loading hosted Galaxy preview and '+v.style+' install workflow…';statusEl.classList.remove('error');const u=urls(v);
+  preview.src=u.preview;openMap.href=u.viewer;createProfileRepo.href=u.profile;if(oneClickInstall)oneClickInstall.href=u.oneClick;
   document.getElementById('html-embed').value='<p align="center">\n  <a href="'+htmlUrl(u.viewer)+'">\n    <img width="740" src="'+u.svg+'" alt="'+v.username+' project galaxy" />\n  </a>\n</p>';
   document.getElementById('markdown-embed').value='[!['+v.username+' project galaxy]('+u.svg+')]('+u.viewer+')';
   document.getElementById('static-urls').value='SVG: '+u.svg+'\nGraph: '+u.graph+'\nInteractive: '+u.viewer;
@@ -96,10 +102,10 @@ async function generate(){
 }
 
 form.addEventListener('submit',event=>{event.preventDefault();generate()});
-preview.addEventListener('load',()=>{statusEl.textContent='Preview ready. Install the workflow once, then use the static README embed below.';statusEl.classList.remove('error')});
+preview.addEventListener('load',()=>{statusEl.textContent='Hosted Galaxy preview ready. The installed static map will use '+styleValue(styleInput.value)+'.';statusEl.classList.remove('error')});
 preview.addEventListener('error',()=>{statusEl.textContent='Could not generate the preview. Check the username or try again shortly.';statusEl.classList.add('error')});
 for(const button of document.querySelectorAll('[data-copy]'))button.addEventListener('click',async()=>{const target=document.getElementById(button.dataset.copy);if(!target)return;try{await navigator.clipboard.writeText(target.value);const old=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=old,1200)}catch{target.hidden=false;target.select();document.execCommand('copy')}});
-const initial=new URL(location.href).searchParams;if(initial.has('username')){usernameInput.value=initial.get('username')||'';themeInput.value=initial.get('theme')==='light'?'light':'dark';maxReposInput.value=initial.get('max_repos')||'100';forksInput.checked=initial.get('forks')!=='false';archivedInput.checked=initial.get('archived')==='true';generate()}
+const initial=new URL(location.href).searchParams;if(initial.has('username')){usernameInput.value=initial.get('username')||'';themeInput.value=initial.get('theme')==='light'?'light':'dark';styleInput.value=styleValue(initial.get('style'));maxReposInput.value=initial.get('max_repos')||'100';forksInput.checked=initial.get('forks')!=='false';archivedInput.checked=initial.get('archived')==='true';generate()}
 </script>
 </body>
 </html>`;
