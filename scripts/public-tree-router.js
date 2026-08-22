@@ -83,7 +83,10 @@
 
     function statusKey() {
       const statuses = Array.isArray(viewSnapshot().statuses) ? viewSnapshot().statuses : statusValues;
-      return statusValues.filter((value) => statuses.includes(value)).join(",");
+      const hasKnownCounts = statusValues.some((value) => knownStatusCounts[value] > 0);
+      return statusValues
+        .filter((value) => statuses.includes(value) && (!hasKnownCounts || knownStatusCounts[value] > 0))
+        .join(",");
     }
 
     function refreshControlSummary() {
