@@ -83,7 +83,10 @@
 
     function statusKey() {
       const statuses = Array.isArray(viewSnapshot().statuses) ? viewSnapshot().statuses : statusValues;
-      return statusValues.filter((value) => statuses.includes(value)).join(",");
+      const hasKnownCounts = statusValues.some((value) => knownStatusCounts[value] > 0);
+      return statusValues
+        .filter((value) => statuses.includes(value) && (!hasKnownCounts || knownStatusCounts[value] > 0))
+        .join(",");
     }
 
     function refreshControlSummary() {
@@ -236,5 +239,10 @@
         };
       },
     });
+
+    // View-state groups controls later in the same DOMContentLoaded dispatch.
+    // Re-sync the canvas once that toolbar layout has settled so the backing
+    // bitmap and CSS viewport use the same dimensions before the next draw.
+    window.requestAnimationFrame(() => window.dispatchEvent(new window.Event("resize")));
   }, { once: true });
 })();

@@ -139,7 +139,7 @@ test("a status with zero repositories is disabled instead of looking like a brok
   await expect(archivedButton).toHaveText("Archived 0");
   await expect(archivedButton).toHaveAttribute("title", /No archived repositories are available/);
   await expect(page.locator("#resultCount")).toHaveText("3 / 3 repos");
-  expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().statusCounts)).toEqual({ original: 2, fork: 1, archived: 0 });
+  expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().statusCounts)).toEqual({ original: 2, fork: 1, archived: 0, contributed: 0 });
   expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().statuses)).toEqual(["original", "fork"]);
   expect(new URL(page.url()).searchParams.has("status")).toBe(false);
 });
