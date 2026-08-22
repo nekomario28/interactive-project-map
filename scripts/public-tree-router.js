@@ -244,5 +244,22 @@
     // Re-sync the canvas once that toolbar layout has settled so the backing
     // bitmap and CSS viewport use the same dimensions before the next draw.
     window.requestAnimationFrame(() => window.dispatchEvent(new window.Event("resize")));
+
+    // Runtime-specific subtitle/control updates can change the canvas viewport
+    // after that first frame. Keep the backing bitmap in lockstep with the CSS
+    // box so the next interaction never redraws against a different center.
+    if (typeof window.ResizeObserver === "function") {
+      const canvas = ctx.canvas;
+      const canvasResizeObserver = new window.ResizeObserver(() => {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const width = Math.round(Math.max(1, rect.width) * dpr);
+        const height = Math.round(Math.max(1, rect.height) * dpr);
+        if (canvas.width !== width || canvas.height !== height) {
+          window.dispatchEvent(new window.Event("resize"));
+        }
+      });
+      canvasResizeObserver.observe(canvas);
+    }
   }, { once: true });
 })();
