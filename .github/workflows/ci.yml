@@ -13,10 +13,10 @@ permissions:
   contents: read
 
 jobs:
-  ai-director-spotlight-outcomes:
+  ai-director-duration-audit:
     if: github.head_ref == 'exp/ai-director-spotlight-outcomes'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout exact experiment head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,14 +24,22 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - name: Install dataset client
-        run: python -m pip install --disable-pip-version-check -q huggingface_hub
-      - name: Download paired alternate candidates
-        run: python scripts/ai_director_download_alternates.py
-      - name: Upload alternate candidate evidence
+      - name: Install dataset client and ffmpeg
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -q huggingface_hub
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Audit actual duration for 20 prompts x 3 generators
+        run: python scripts/ai_director_duration_audit.py
+      - name: Remove raw videos before artifact upload
+        if: always()
+        run: rm -rf .tmp/ai-director-duration-audit/raw
+      - name: Upload duration audit
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-spotlight-alternates
-          path: .tmp/ai-director-alternates
+          name: ai-director-duration-audit
+          path: .tmp/ai-director-duration-audit
           if-no-files-found: error
           retention-days: 3
