@@ -18,6 +18,7 @@ const env = {
 const options = {
   username: "octocat",
   theme: "dark",
+  style: "sankey",
   maxRepos: 100,
   includeForks: true,
   includeArchived: false,
@@ -38,6 +39,7 @@ test("signed installer state round-trips, expires, and is bound to the HttpOnly 
   const created = await createInstallState(options, secret, { nowMs, nonce: "browser-nonce" });
   const payload = await verifyInstallState(created.state, secret, created.nonce, { nowMs: nowMs + 30_000 });
   assert.equal(payload.username, "octocat");
+  assert.equal(payload.style, "sankey");
   assert.equal(payload.maxRepos, 100);
   assert.equal(payload.nonce, "browser-nonce");
 
@@ -84,6 +86,7 @@ test("callback verifies the user's installation, installs only the managed profi
       const workflow = Buffer.from(body.content, "base64").toString("utf8");
       assert.ok(workflow.startsWith(MANAGED_WORKFLOW_MARKER));
       assert.match(workflow, /generate-project-map\.yml@v1/);
+      assert.match(workflow, /style: sankey/);
       assert.match(workflow, /contents: write/);
       return json({ content: { path: ".github/workflows/project-map.yml" }, commit: { sha: "abc" } }, 201);
     }
@@ -106,6 +109,7 @@ test("callback verifies the user's installation, installs only the managed profi
     workflow: "created",
   });
   assert.match(result.viewerUrl, /^https:\/\/maps\.example\/u\/octocat\?/);
+  assert.match(result.viewerUrl, /style=sankey/);
   assert.match(result.viewerUrl, /install=created/);
   assert.equal(dispatchAttempts, 2);
   const authCalls = calls.filter((call) => call.url.startsWith("https://api.github.com/"));

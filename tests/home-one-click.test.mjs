@@ -9,6 +9,18 @@ test("one-click control is absent when GitHub App secrets are not configured", (
   assert.match(html, /Copy workflow/);
 });
 
+test("Cloudflare setup exposes the same twelve style choices and beginner Step 0", () => {
+  const html = renderHome("https://maps.example");
+  const styles = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+  assert.match(html, /id="map-style"/);
+  for (const style of styles) assert.match(html, new RegExp(`value="${style}"`));
+  assert.match(html, /id="create-profile-repo"/);
+  assert.match(html, /https:\/\/github\.com\/new/);
+  assert.match(html, /searchParams\.set\('visibility','public'\)/);
+  assert.match(html, /enable <strong>Add README<\/strong>/);
+  assert.match(html, /p\.set\('style',v\.style\)/);
+});
+
 test("configured home adds one-click start without removing the manual fallback", () => {
   const html = renderHome("https://maps.example", true);
   assert.match(html, /id="one-click-install"/);
