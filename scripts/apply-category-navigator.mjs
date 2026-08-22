@@ -1,6 +1,7 @@
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { applyContributedViewer } from "./apply-contributed-viewer.mjs";
 
 const VIEWER_DIRS = ["u", "radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const SCRIPT_TAG = '<script src="../category-navigator.js" defer></script>';
@@ -22,6 +23,7 @@ function attachNavigator(html, mode) {
 export async function applyCategoryNavigator(outputDir = resolve(process.cwd(), "site")) {
   const sourceDir = resolve(process.cwd(), "scripts");
   await mkdir(outputDir, { recursive: true });
+  await applyContributedViewer(outputDir);
   await copyFile(join(sourceDir, "public-category-navigator.js"), join(outputDir, "category-navigator.js"));
   await copyFile(join(sourceDir, "public-category-navigator.css"), join(outputDir, "category-navigator.css"));
 
