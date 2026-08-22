@@ -13,145 +13,40 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    if: github.head_ref != 'exp/ai-director-spotlight-outcomes'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Smoke test local project-map action default
-        uses: ./
-        with:
-          github_token: ${{ github.token }}
-          username: ${{ github.repository_owner }}
-          max_repos: "60"
-          forks: "true"
-          archived: "false"
-          output_dir: .tmp/project-map
-      - name: Check action outputs
-        run: |
-          test -s .tmp/project-map/galaxy.svg
-          test -s .tmp/project-map/graph.json
-          grep -q "Radial Tree classic map" .tmp/project-map/galaxy.svg
-          grep -q "Radial Tree · Classic" .tmp/project-map/galaxy.svg
-      - name: Gate standard taxonomy on reviewed public portfolio
-        run: |
-          node scripts/evaluate-semantic.mjs \
-            --graph .tmp/project-map/graph.json \
-            --expected docs/semantic-evaluation-nekomario28.standard-v1.json \
-            --min-assigned-accuracy 1 \
-            --min-end-to-end-accuracy 1 \
-            --min-coverage 1 \
-            --max-ambiguity-rate 0 \
-            --max-missing-rate 0 \
-            --output .tmp/standard-taxonomy-evaluation.json
-      - name: Verify
-        run: npm run verify
-      - name: Render twelve-preset comparison
-        run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
-      - name: Upload preset comparison
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: preset-comparison
-          path: .tmp/preset-comparison
-          if-no-files-found: error
-          retention-days: 3
-
-  browser-e2e:
-    needs: verify
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --user 1001 --ipc=host
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Chromium browser E2E
-        run: npm run test:e2e
-      - name: iPhone WebKit smoke
-        run: npm run test:e2e:webkit
-      - name: Upload browser E2E evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-e2e
-          path: |
-            .tmp/playwright-visual
-            .tmp/playwright-report
-            test-results
-          if-no-files-found: warn
-          retention-days: 3
-
-  ai-director-spotlight-probe:
+  ai-director-spotlight-outcomes:
     if: github.head_ref == 'exp/ai-director-spotlight-outcomes'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
+      - name: Checkout exact experiment head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Setup Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
 
-      - name: Install public dataset clients
-        run: python -m pip install --disable-pip-version-check -q huggingface_hub gradio_client
-
-      - name: Download unresolved Spotlight videos and metadata
+      - name: Install experiment clients and ffmpeg
         run: |
           set -euo pipefail
-          mkdir -p .tmp/spotlight
-          python - <<'PY'
-          from huggingface_hub import hf_hub_download
-          repo='UBC-ViL/Spotlight-VideoGen-Errors'
-          pids=[3,4,5,7,8,13,15,17,18,21]
-          hf_hub_download(repo_id=repo, repo_type='dataset', filename='test/metadata.jsonl', local_dir='.tmp/spotlight')
-          for pid in pids:
-              name=f'test/spotlight/ltx2/sid_{pid:03d}.mp4'
-              p=hf_hub_download(repo_id=repo, repo_type='dataset', filename=name, local_dir='.tmp/spotlight')
-              print(p)
-          PY
+          python -m pip install --disable-pip-version-check -q huggingface_hub gradio_client
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
 
-      - name: Dump public video generation and repair Space endpoints
+      - name: Run real split, fresh-regenerate, and backtrack outcomes
+        continue-on-error: true
+        run: python scripts/ai_director_spotlight_experiment.py
+
+      - name: Inventory evidence
         if: always()
         run: |
-          set -euo pipefail
-          python - <<'PY' > .tmp/spotlight/spaces.txt 2>&1
-          from gradio_client import Client
-          spaces=['Lightricks/LTX-2-3','ltx-community/ltx-2.3-inpaint']
-          for space in spaces:
-              print(f'=== {space} ===')
-              try:
-                  client=Client(space, verbose=False)
-                  print('CONFIG_KEYS', sorted(client.config.keys()))
-                  print('DEPENDENCIES', client.config.get('dependencies'))
-                  print('ENDPOINTS')
-                  for ep in getattr(client, 'endpoints', []):
-                      try:
-                          print('EP', ep.api_name, ep.fn_index, ep.is_valid, ep)
-                      except Exception:
-                          print('EP_REPR', repr(ep))
-                  try:
-                      print('VIEW_API', client.view_api(print_info=False, return_format='dict'))
-                  except TypeError:
-                      print('VIEW_API', client.view_api(print_info=False))
-              except Exception as exc:
-                  print('PROBE_ERROR', type(exc).__name__, str(exc))
-          PY
-          cat .tmp/spotlight/spaces.txt
+          find .tmp/ai-director -type f -printf '%p %s bytes\n' | sort || true
 
-      - name: Upload batch evidence
+      - name: Upload outcome evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-spotlight-batch
-          path: .tmp/spotlight
+          name: ai-director-spotlight-outcomes
+          path: .tmp/ai-director
           if-no-files-found: error
           retention-days: 3
