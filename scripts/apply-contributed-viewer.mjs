@@ -265,7 +265,8 @@ export function patchSharedViewerRuntime(source) {
   if (source.includes(RUNTIME_MARKER)) return source;
   const anchor = '\ntry {\n  username = normalizeUsername(query.get("username"));';
   if (!source.includes(anchor)) throw new Error("Could not locate shared viewer startup boundary");
-  return source.replace(anchor, `\n\n${contributedRuntime()}\n${anchor.slice(1)}`);
+  const runtime = `/* eslint-disable no-func-assign */\n${contributedRuntime()}\n/* eslint-enable no-func-assign */`;
+  return source.replace(anchor, `\n\n${runtime}\n${anchor.slice(1)}`);
 }
 
 export function patchViewerCss(source) {
