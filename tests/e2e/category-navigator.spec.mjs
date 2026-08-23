@@ -24,9 +24,50 @@ const graph = {
   ],
 };
 
+const externalGraph = {
+  ...graph,
+  contributedRepositoryCount: 1,
+  externalContributions: {
+    window: { from: "2025-08-22T00:00:00Z", to: "2026-08-22T00:00:00Z" },
+    cap: 4,
+    candidateRepositories: 1,
+    includedRepositories: 1,
+    omittedRepositories: 0,
+    truncatedRepositories: 0,
+  },
+  nodes: [
+    ...graph.nodes,
+    {
+      id: "repository:other/ext",
+      label: "other/ext",
+      type: "repository",
+      relation: "contributed",
+      repositoryOwner: "other",
+      repositoryName: "ext",
+      url: "https://github.com/other/ext",
+      description: "accepted external work",
+      language: "Python",
+      topics: ["robotics"],
+      stars: 2,
+      forks: 0,
+      fork: false,
+      archived: false,
+      createdAt: "2026-07-01T00:00:00Z",
+      updatedAt: "2026-08-01T00:00:00Z",
+      contribution: { commits: 0, pullRequests: 1, mergedPullRequests: 1, commitsTruncated: false, pullRequestsTruncated: false },
+    },
+  ],
+};
+
 async function installFixture(page) {
   await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
+  });
+}
+
+async function installExternalFixture(page) {
+  await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(externalGraph) });
   });
 }
 
@@ -160,4 +201,31 @@ test("aggregate viewers use search dimming as a safe category and repository foc
   await alpha.click();
   expect(await page.evaluate(() => state.query)).toBe("");
   expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus)).toBeNull();
+});
+
+test("Contributed appears in a separate non-owned navigator section", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 760 });
+  await installExternalFixture(page);
+  await page.goto("/u/?username=example&style=galaxy-systems");
+  await expect(page.locator("#status")).toBeHidden();
+
+  const navigator = await openNavigator(page);
+  await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · 4 owned · 1 external");
+  const external = navigator.locator('[data-external-contributions="true"]');
+  await expect(external).toHaveCount(1);
+  await expect(external).toContainText("External contributions");
+  await expect(external).toContainText("not owned");
+  await expect(external.locator(".category-nav-repositories")).toBeHidden();
+
+  await external.locator(".category-nav-disclosure").click();
+  const repo = external.locator('[data-repository-id="repository:other/ext"]');
+  await expect(repo).toBeVisible();
+  await repo.click();
+  await expect(repo).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#detailsTitle")).toHaveText("other/ext");
+  await expect(page.locator("#detailsMeta")).toContainText("Contributed");
+
+  await page.getByRole("button", { name: /^Contributed repositories: 1/ }).click();
+  await expect(navigator.locator('[data-external-contributions="true"]')).toHaveCount(0);
+  await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · 4 repos");
 });

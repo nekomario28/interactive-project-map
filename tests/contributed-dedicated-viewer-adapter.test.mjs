@@ -15,6 +15,7 @@ for (const mode of DEDICATED_CONTRIBUTED_MODES) {
 
     assert.ok(marker >= 0 && marker < startup);
     assert.match(patched, /raw\.relation !== "contributed"/);
+    assert.match(patched, /commits === 0 && mergedPullRequests === 0/);
     assert.match(patched, /repositoryOwner/);
     assert.match(patched, /repositoryName/);
     assert.match(patched, /owner\.toLowerCase\(\) === String\(projectOwner\)\.toLowerCase\(\)/);

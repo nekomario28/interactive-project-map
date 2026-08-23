@@ -95,6 +95,14 @@
       .sort((a, b) => (b.stars || 0) - (a.stars || 0) || String(a.label || "").localeCompare(String(b.label || "")));
   }
 
+  function externalRepositories() {
+    return graphNodes()
+      .filter((node) => node?.type === "repository"
+        && node?.relation === "contributed"
+        && repositoryVisible(node))
+      .sort((a, b) => String(a.label || "").localeCompare(String(b.label || "")));
+  }
+
   function nodeSearchText(node) {
     return normalizedText([
       node?.label,
@@ -246,6 +254,65 @@
     return section;
   }
 
+  function createExternalEntry(repositories, query) {
+    const sectionKey = "external:contributions";
+    const activeId = activeFocusId();
+    const searchOpen = Boolean(query) && repositories.some((repo) => nodeSearchText(repo).includes(query));
+    const expanded = manualExpanded.has(sectionKey)
+      || repositories.some((repo) => repo.id === activeId)
+      || searchOpen;
+
+    const section = document.createElement("section");
+    section.className = "category-nav-group category-nav-external";
+    section.dataset.externalContributions = "true";
+    section.setAttribute("aria-label", "External contributions, not an owned category");
+
+    const row = document.createElement("div");
+    row.className = "category-nav-row";
+
+    const heading = document.createElement("div");
+    heading.className = "category-nav-focus";
+    heading.setAttribute("role", "heading");
+    heading.setAttribute("aria-level", "3");
+    heading.title = "External contributions are shown separately and are not part of an owned category.";
+    heading.innerHTML = `<span>External contributions</span><small>${repositories.length} · not owned</small>`;
+
+    const disclosure = document.createElement("button");
+    disclosure.type = "button";
+    disclosure.className = "category-nav-disclosure";
+    disclosure.setAttribute("aria-expanded", String(expanded));
+    disclosure.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} external contribution repositories`);
+    disclosure.textContent = expanded ? "−" : "+";
+    disclosure.addEventListener("click", () => {
+      if (manualExpanded.has(sectionKey)) manualExpanded.delete(sectionKey);
+      else manualExpanded.add(sectionKey);
+      render({ force: true });
+    });
+
+    row.append(heading, disclosure);
+    section.append(row);
+
+    const repoList = document.createElement("div");
+    repoList.className = "category-nav-repositories";
+    repoList.hidden = !expanded;
+    for (const repo of repositories) {
+      const match = !query || nodeSearchText(repo).includes(query);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "category-nav-repository";
+      button.dataset.repositoryId = repo.id;
+      button.setAttribute("aria-label", `${repo.label}, external contribution`);
+      button.setAttribute("aria-pressed", String(activeId === repo.id));
+      if (query && match) button.classList.add("is-search-match");
+      if (query && !match) button.classList.add("is-search-muted");
+      button.innerHTML = `<span>${repo.label}</span><small>${repo.language || "External"}</small>`;
+      button.addEventListener("click", () => toggleFocusNode(repo.id));
+      repoList.append(button);
+    }
+    section.append(repoList);
+    return section;
+  }
+
   function render({ force = false } = {}) {
     if (rendering) return;
     rendering = true;
@@ -255,7 +322,8 @@
         .map((group) => ({ group, repositories: repositoriesFor(group) }))
         .filter(({ repositories }) => repositories.length > 0)
         .sort((a, b) => String(a.group.label || "").localeCompare(String(b.group.label || "")));
-      const signature = groupSignature(groups.map(({ group }) => group));
+      const external = externalRepositories();
+      const signature = `${groupSignature(groups.map(({ group }) => group))}::external:${external.map((repo) => repo.id).join(",")}`;
       const query = userQuery();
       const activeId = activeFocusId();
       const renderKey = `${signature}::${query}::${activeId}::${[...manualExpanded].sort().join(",")}::${panelOpen}`;
@@ -263,8 +331,8 @@
       lastRenderKey = renderKey;
 
       list.replaceChildren();
-      if (!groups.length) {
-        summary.textContent = state.graph ? "No visible categories" : "Loading…";
+      if (!groups.length && !external.length) {
+        summary.textContent = state.graph ? "No visible repositories" : "Loading…";
         clearButton.disabled = !activeId;
         return;
       }
@@ -274,9 +342,12 @@
         repositoryTotal += repositories.length;
         list.append(createGroupEntry(group, repositories, query));
       }
+      if (external.length) list.append(createExternalEntry(external, query));
       summary.textContent = fallbackFocus
         ? `${groups.length} categories · Focus: ${fallbackFocus.label}`
-        : `${groups.length} categories · ${repositoryTotal} repos`;
+        : external.length
+          ? `${groups.length} categories · ${repositoryTotal} owned · ${external.length} external`
+          : `${groups.length} categories · ${repositoryTotal} repos`;
       clearButton.disabled = !activeId;
     } finally {
       rendering = false;

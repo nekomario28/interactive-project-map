@@ -145,7 +145,7 @@ function contributedDedicatedRuntime(mode) {
     const pullRequests = boundedContributedInteger(contribution.pullRequests, MAX_CONTRIBUTION_COUNT);
     const mergedPullRequests = boundedContributedInteger(contribution.mergedPullRequests, MAX_CONTRIBUTION_COUNT);
     if (commits === null || pullRequests === null || mergedPullRequests === null || mergedPullRequests > pullRequests) return null;
-    if (commits === 0 && pullRequests === 0) return null;
+    if (commits === 0 && mergedPullRequests === 0) return null;
     if (typeof contribution.commitsTruncated !== "boolean" || typeof contribution.pullRequestsTruncated !== "boolean") return null;
     const node = {
       id,

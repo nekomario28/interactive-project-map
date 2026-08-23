@@ -70,6 +70,7 @@ if (username) { fetch("graph.json"); }
   assert.match(patched, /node\.relation === "contributed"/);
   assert.match(patched, /node\.label\.includes\("\/"\)/);
   assert.match(patched, /raw\.relation !== "contributed"/);
+  assert.match(patched, /commits === 0 && mergedPullRequests === 0/);
   assert.match(patched, /type: "contribution"/);
   assert.match(patched, /contributionTargets/);
   assert.match(patched, /contributed: "#62c8ba"/);
