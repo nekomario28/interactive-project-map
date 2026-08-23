@@ -1,24 +1,20 @@
 # Current roadmap
 
-Status snapshot: **2026-08-22**
+Status snapshot: **2026-08-23**
 
 This is the short canonical list of work that is still worth doing. Historical research and completed phase documents remain in `docs/`, but they should not be mistaken for active TODOs.
 
 ## P0 — finish explicit external contribution support
 
-The acquisition foundation is already merged in #117. The remaining product work is to promote public work in repositories owned by other people/organizations without implying ownership.
+The bounded acquisition foundation, explicit Contributed graph schema, conservative generator integration, and shared Galaxy/Obsidian viewer contract are now implemented. The remaining product work is to finish dedicated-preset semantics and production proof without implying ownership.
 
-1. Evaluate a deterministic meaningful-work ranking/cap for the bounded 365-day GraphQL contribution data.
-2. Add an explicit **Contributed** graph relation with full `owner/repo` identity and bounded contribution metadata.
-3. Guarantee that no `ownership` path from the Project Map user can reach an external repository.
-4. Extend strict static-graph sanitization for explicitly Contributed public repositories only.
-5. Connect the generator behind an explicit inclusion policy; do not add PATs, browser fetching, or another backend.
-6. Add `Contributed` beside Original / Fork / Archived and keep the behavior consistent across all 12 presets.
-7. Gate composition with Search, Focus/Local Graph, Activity, URL sharing, empty-category pruning, hover/selection and aggregate layouts.
-8. Run a real-profile privacy/UX proof, then one final full Verify + 12-preset + Chromium + iPhone WebKit gate.
-9. Move the stable `v1` branch only after the final Contributed head is reviewed and GREEN.
+1. Finish **C4b dedicated viewer semantics** across Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix and Sankey: external `owner/repo` identity must survive each viewer sanitizer, `relation: contributed` must win over source fork/archive flags, and aggregate layouts must count Contributed separately rather than as owned output.
+2. Keep the shared `Contributed` control/status-count/URL contract aligned across all 12 presets, including empty-category pruning and zero-count behavior.
+3. Gate composition with Search, Focus/Local Graph, Activity, URL sharing, hover/selection and aggregate layouts.
+4. Run a real-profile privacy/UX proof, then one final full Verify + 12-preset + Chromium + iPhone WebKit gate on the exact reviewed head.
+5. Move the stable `v1` branch only after the final Contributed head is reviewed and GREEN.
 
-Detailed plan and evidence: `docs/external-contributions-research.md`.
+Detailed plan and evidence: `docs/external-contributions-research.md`. C4b implementation boundary: `docs/contributed-dedicated-c4b.md`.
 
 ## P1 — production acceptance checks
 
@@ -45,7 +41,9 @@ These are small but useful operational checks rather than new architecture.
 - Stable reusable-generator setup, repair/update semantics and advanced immutable pinning are implemented (#98, #105, #107).
 - Beginner profile-repository onboarding plus public-repo Cloudflare secret hardening are implemented in #115.
 - External contribution API feasibility was proven in diagnostic #116 and the bounded source/static acquisition foundation merged in #117.
+- C1 ranking/cap, C2 graph schema/privacy boundary and C3 generator integration are implemented.
+- C4a shared Galaxy/Obsidian Contributed viewer contract merged in **#129** after exact-head Verify, Chromium and iPhone WebKit were GREEN.
 
 ## Current tracker state
 
-PR **#121** is the active product/UI change. Do not revive the rejected visual-style experiments while it is being validated. After #121, return to the P0 external-contribution line unless new evidence changes priority.
+C4b dedicated-preset semantics are the active P0 line on branch `feature/contributed-dedicated-presets`. Do not move `v1`, enable Contributed by default, or revive rejected visual-style experiments before dedicated semantics and the final privacy/UX proof are GREEN.
