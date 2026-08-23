@@ -4,34 +4,18 @@ import {
   clearInstallNonceCookie,
   completeGitHubAppInstall,
   installerErrorStatus,
-  isGitHubAppInstallerConfigured,
   type GitHubAppInstallerEnv,
 } from "./github-app-installer.ts";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
 import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
 import { enforceInstallerRateLimit } from "./installer-rate-limit.ts";
+import { dormantInstallerResponse, isOneClickInstallerExposed, type OneClickExposureEnv } from "./one-click-exposure.ts";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
 import { renderViewer } from "./viewer";
 
-type WorkerEnv = Env & GitHubAppInstallerEnv & {
-  ENABLE_ONE_CLICK_INSTALLER?: string;
-};
-
-function oneClickInstallerExposed(env: WorkerEnv): boolean {
-  return env.ENABLE_ONE_CLICK_INSTALLER === "true" && isGitHubAppInstallerConfigured(env);
-}
-
-function dormantInstallerResponse(): Response {
-  return new Response("Not Found", {
-    status: 404,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
-}
+type WorkerEnv = Env & GitHubAppInstallerEnv & OneClickExposureEnv;
 
 function corsHeaders(extra: Record<string, string> = {}): Headers {
   return new Headers({
@@ -62,7 +46,7 @@ export default {
 
     try {
       if (url.pathname === "/") {
-        return new Response(renderHome(url.origin, oneClickInstallerExposed(env)), {
+        return new Response(renderHome(url.origin, isOneClickInstallerExposed(env)), {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",
@@ -89,14 +73,14 @@ export default {
       }
 
       if (url.pathname === "/api/install/start") {
-        if (!oneClickInstallerExposed(env)) return dormantInstallerResponse();
+        if (!isOneClickInstallerExposed(env)) return dormantInstallerResponse();
         await enforceInstallerRateLimit(request, env, "start");
         const options = installOptionsFromUrl(url);
         return await beginGitHubAppInstall(request, env, options);
       }
 
       if (url.pathname === "/api/install/callback") {
-        if (!oneClickInstallerExposed(env)) {
+        if (!isOneClickInstallerExposed(env)) {
           const response = dormantInstallerResponse();
           response.headers.append("Set-Cookie", clearInstallNonceCookie());
           return response;
