@@ -30,9 +30,9 @@ jobs:
           python -m pip install --disable-pip-version-check -q gradio_client huggingface_hub
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-      - name: Backtrack from clean prefix sid003 with reduced CPU budget
+      - name: Backtrack from clean prefix sid003 with minimum supported CPU budget
         continue-on-error: true
-        run: python scripts/ai_director_cpu_regen_sid003.py --mode backtrack --duration 1.0 --steps 2
+        run: python scripts/ai_director_cpu_regen_sid003.py --mode backtrack --duration 1.0 --steps 4
       - name: Remove raw source
         if: always()
         run: rm -rf .tmp/ai-director-cpu-backtrack-sid003/raw
@@ -40,7 +40,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-cpu-backtrack-sid003-fast
+          name: ai-director-cpu-backtrack-sid003-min
           path: .tmp/ai-director-cpu-backtrack-sid003
           if-no-files-found: error
           retention-days: 3
