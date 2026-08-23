@@ -304,7 +304,7 @@ export function patchDedicatedViewerRuntime(source, mode) {
   let next = patchAggregateSource(source, mode);
   const anchor = "function showError";
   if (!next.includes(anchor)) throw new Error(`Could not locate ${mode} startup boundary`);
-  const runtime = `/* eslint-disable no-func-assign */\n${contributedDedicatedRuntime(mode)}\n/* eslint-enable no-func-assign */\n`;
+  const runtime = `/* eslint-disable no-func-assign, no-undef */\n${contributedDedicatedRuntime(mode)}\n/* eslint-enable no-func-assign, no-undef */\n`;
   next = next.replace(anchor, `${runtime}${anchor}`);
   if (!next.includes(RUNTIME_MARKER)) throw new Error(`Could not attach Contributed runtime to ${mode}`);
   return next;
