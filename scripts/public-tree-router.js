@@ -58,6 +58,7 @@
     let rebuilding = false;
     let lastStatusKey = "";
     let lastActivityOverlayCount = 0;
+    let canvasResizeFrame = 0;
 
     function viewSnapshot() {
       const value = window.ProjectMapViewState?.snapshot?.();
@@ -99,6 +100,14 @@
       resize();
     }
 
+    function scheduleCanvasLayoutSync() {
+      if (canvasResizeFrame) return;
+      canvasResizeFrame = window.requestAnimationFrame(() => {
+        canvasResizeFrame = 0;
+        syncCanvasLayout();
+      });
+    }
+
     function refreshControlSummary() {
       const snapshot = viewSnapshot();
       const active = new Set(Array.isArray(snapshot.statuses) ? snapshot.statuses : statusValues);
@@ -131,7 +140,7 @@
         }
         resultCount.title = `${visibleRepositories.length} visible of ${total} repositories in this map`;
       }
-      syncCanvasLayout();
+      scheduleCanvasLayoutSync();
     }
 
     function projectStatuses(graph) {
@@ -242,6 +251,13 @@
     document.getElementById("search")?.addEventListener("input", () => {
       queueMicrotask(refreshControlSummary);
     });
+
+    const canvas = ctx?.canvas;
+    if (canvas && typeof window.ResizeObserver === "function") {
+      const canvasResizeObserver = new window.ResizeObserver(scheduleCanvasLayoutSync);
+      canvasResizeObserver.observe(canvas);
+    }
+    scheduleCanvasLayoutSync();
 
     lastStatusKey = statusKey();
     window.ProjectMapRenderProjection = Object.freeze({
