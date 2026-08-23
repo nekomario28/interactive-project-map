@@ -8,7 +8,7 @@ import {
   type GitHubAppInstallerEnv,
 } from "./github-app-installer.ts";
 import { getGraph, normalizeUsername, type WorkerContext } from "./hosted";
-import { installOptionsFromUrl, renderInstallWorkflow, supportsOneClickInstall } from "./install";
+import { installOptionsFromUrl, renderInstallWorkflow } from "./install";
 import { enforceInstallerRateLimit } from "./installer-rate-limit.ts";
 import { intParam } from "./params";
 import { renderGalaxySvg } from "./svg";
@@ -75,12 +75,6 @@ export default {
       if (url.pathname === "/api/install/start") {
         await enforceInstallerRateLimit(request, env, "start");
         const options = installOptionsFromUrl(url);
-        if (!supportsOneClickInstall(options)) {
-          return Response.json(
-            { error: "Contributed opt-in currently requires the generated manual workflow." },
-            { status: 409, headers: corsHeaders({ "Cache-Control": "no-store" }) },
-          );
-        }
         return await beginGitHubAppInstall(request, env, options);
       }
 
