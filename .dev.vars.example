@@ -4,7 +4,11 @@
 # Optional. Strongly recommended for production to raise GitHub API rate limits.
 GITHUB_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxx
 
-# Optional one-click installer. Leave all four unset to keep the manual workflow-only UI.
+# Dormant one-click installer. Keep false for normal/public operation.
+# Reactivation requires an explicit reviewed decision plus real-credential acceptance.
+ENABLE_ONE_CLICK_INSTALLER=false
+
+# Retained one-click implementation secrets. Leave unset unless deliberately testing/reactivating it.
 # Register a public GitHub App that requests user authorization during installation.
 GITHUB_APP_SLUG=interactive-project-map
 GITHUB_APP_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx
