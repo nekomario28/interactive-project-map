@@ -15,7 +15,23 @@ import { renderGalaxySvg } from "./svg";
 import type { Env } from "./types";
 import { renderViewer } from "./viewer";
 
-type WorkerEnv = Env & GitHubAppInstallerEnv;
+type WorkerEnv = Env & GitHubAppInstallerEnv & {
+  ENABLE_ONE_CLICK_INSTALLER?: string;
+};
+
+function oneClickInstallerExposed(env: WorkerEnv): boolean {
+  return env.ENABLE_ONE_CLICK_INSTALLER === "true" && isGitHubAppInstallerConfigured(env);
+}
+
+function dormantInstallerResponse(): Response {
+  return new Response("Not Found", {
+    status: 404,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
 function corsHeaders(extra: Record<string, string> = {}): Headers {
   return new Headers({
@@ -46,7 +62,7 @@ export default {
 
     try {
       if (url.pathname === "/") {
-        return new Response(renderHome(url.origin, isGitHubAppInstallerConfigured(env)), {
+        return new Response(renderHome(url.origin, oneClickInstallerExposed(env)), {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",
@@ -73,12 +89,18 @@ export default {
       }
 
       if (url.pathname === "/api/install/start") {
+        if (!oneClickInstallerExposed(env)) return dormantInstallerResponse();
         await enforceInstallerRateLimit(request, env, "start");
         const options = installOptionsFromUrl(url);
         return await beginGitHubAppInstall(request, env, options);
       }
 
       if (url.pathname === "/api/install/callback") {
+        if (!oneClickInstallerExposed(env)) {
+          const response = dormantInstallerResponse();
+          response.headers.append("Set-Cookie", clearInstallNonceCookie());
+          return response;
+        }
         try {
           await enforceInstallerRateLimit(request, env, "callback");
           const result = await completeGitHubAppInstall(request, env);
