@@ -6,11 +6,9 @@ This is the short canonical list of work that is still worth doing. Historical r
 
 ## P1 — production acceptance checks
 
-The default GitHub-only setup path now exposes the stable Contributed input publicly. The remaining work is operational polish rather than another Contributed schema/viewer/release phase.
+The default GitHub-only setup path exposes the stable Contributed input publicly, and the optional GitHub App installer now preserves the same opt-in through its signed state and callback. The remaining work is operator acceptance rather than another Contributed schema/viewer/release phase.
 
-- Finish and validate **#121 Category navigator / focus index**: Category label selects the Category, `+ / −` independently discloses repositories, repository rows select repositories, Search temporarily expands matching Categories, current status filters are respected, and existing context-preserving selection dimming is reused instead of creating another graph-filtering model. Keep repository Local Graph depth 1–3 independent.
 - Exercise the optional Cloudflare/GitHub App one-click path with real operator credentials if it is going to be advertised as a live convenience. This is **not** a dependency of the GitHub-only default path and is not a blocker for Project Map itself.
-- If Contributed should also be supported by the optional one-click installer, extend its signed installer-state/callback contract explicitly. Until then `contributed=true` is fail-closed and the public UI uses the generated manual workflow rather than silently dropping the opt-in.
 - Keep real Cloudflare/GitHub credentials only in Cloudflare secret storage or ignored local files. Public tracked files may contain names, documentation and obvious placeholders only.
 
 ## P2 — maintenance / deferred ideas only when evidence appears
@@ -25,6 +23,7 @@ The default GitHub-only setup path now exposes the stable Contributed input publ
 - Search-aware repository/category context, facet reasons, keyboard navigation and dedicated-preset search emphasis are implemented (#62, #63, #64). `docs/future-ui-todos.md` is historical and should not be read as an active Search TODO.
 - Original / Fork / Archived projection consistency and empty-category pruning are implemented (#103, #104, #109, #110).
 - Redundant Status/Activity draw-time wrappers were removed in #111.
+- **#121 Category navigator / focus index** merged on 2026-08-22: Category labels focus Categories, `+ / −` disclosure is independent, repository rows select repositories, Search temporarily expands matches, status filters remain authoritative, the shared runtime covers all nine interactive viewer routes, and Local Graph depth 1–3 remains independent. Its exact-head Verify, twelve-preset comparison, Chromium and iPhone WebKit gates were GREEN.
 - Local clustering evaluation issue #61 is closed **NO-GO** after the 0.72–0.90 threshold sweep; the standard taxonomy + Local Graph remains the default.
 - Stable reusable-generator setup, repair/update semantics and advanced immutable pinning are implemented (#98, #105, #107).
 - Beginner profile-repository onboarding plus public-repo Cloudflare secret hardening are implemented in #115.
@@ -38,8 +37,9 @@ The default GitHub-only setup path now exposes the stable Contributed input publ
 - Stable **`v1`** was then fast-forwarded to R; Contributed remains default-off globally.
 - Canonical `nekomario28/nekomario28` generation through `@v1` published commit **`ad6930e4339dfe1a3ba74da946776e54701dc73f`** containing 6 Contributed nodes and 6 direct `contribution` edges.
 - Live GitHub Pages proof run **`32632402395`** passed desktop Chromium and mobile WebKit against the published canonical map: 6 Contributed repositories, details/status sharing working, `status=c` restored on mobile, no horizontal overflow, and 0 browser errors. Temporary proof workflows were removed after their receipts were recorded.
-- Public setup exposure is implemented: both public generator surfaces show an explicit unchecked **Include Contributed** control, generated stable-`@v1` workflows always emit `contributed: true|false`, share URLs restore the choice, README/setup copy defines Contributed as work in repositories owned by others rather than ownership, and focused install/Pages/hosted-UI validators freeze the default-off contract.
+- Public setup exposure merged in **#143**: both public generator surfaces show an explicit unchecked **Include Contributed** control, generated stable-`@v1` workflows always emit `contributed: true|false`, share URLs restore the choice, README/setup copy defines Contributed as work in repositories owned by others rather than ownership, and focused install/Pages/hosted-UI validators freeze the default-off contract.
+- Optional GitHub App state/callback now preserves `includeContributed` without a state-version break: old v1 payloads with no field normalize to false, explicit booleans are signed and restored, and the managed workflow receives the restored value.
 
 ## Current tracker state
 
-There is no remaining C5 or public-setup Contributed blocker. The stable Contributed implementation is production-proven, published, and exposed through the recommended GitHub-only setup while remaining default-off. Active work starts at **P1 production acceptance**, not another contribution release or data-source expansion.
+There is no remaining C5, public-setup, Category-navigator, or code-level one-click Contributed blocker. The stable Contributed implementation is production-proven, published and exposed while remaining default-off. Active P1 is limited to optional real-credential operator acceptance and secret hygiene; the GitHub-only default path is not blocked by it.
