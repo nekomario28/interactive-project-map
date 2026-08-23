@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       theme:
-        description: Viewer theme
+        description: Static profile SVG theme
         required: true
         type: string
       style:
