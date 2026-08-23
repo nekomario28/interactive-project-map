@@ -1,6 +1,6 @@
 # Current roadmap
 
-Status snapshot: **2026-08-23**
+Status snapshot: **2026-08-24**
 
 This is the short canonical list of work that is still worth doing. Historical research and completed phase documents remain in `docs/`, but they should not be mistaken for active TODOs.
 
@@ -19,6 +19,7 @@ Real Cloudflare/GitHub credentials must remain only in Cloudflare secret storage
 - Dependabot/action pin maintenance: update in grouped, reviewed changes rather than churn.
 - Re-run large-portfolio stress only when graph/layout behavior changes materially.
 - Revisit additional clustering only if materially different evidence appears; do not restart the rejected experiment by default.
+- The remaining post-audit setup/viewer ideas—exposing advanced SVG width/height in the beginner generator or further compacting mobile controls—are discretionary UX polish, not correctness blockers. Revisit only with concrete usability evidence rather than adding controls by default.
 
 ## Completed / no longer TODO
 
@@ -41,7 +42,9 @@ Real Cloudflare/GitHub credentials must remain only in Cloudflare secret storage
 - Live GitHub Pages proof run **`32632402395`** passed desktop Chromium and mobile WebKit against the published canonical map: 6 Contributed repositories, details/status sharing working, `status=c` restored on mobile, no horizontal overflow, and 0 browser errors. Temporary proof workflows were removed after their receipts were recorded.
 - Public setup exposure merged in **#143**: both public generator surfaces show an explicit unchecked **Include Contributed** control, generated stable-`@v1` workflows always emit `contributed: true|false`, share URLs restore the choice, README/setup copy defines Contributed as work in repositories owned by others rather than ownership, and focused install/Pages/hosted-UI validators freeze the default-off contract.
 - Optional GitHub App state/callback support merged in **#145**: old v1 payloads with no `includeContributed` normalize to false, explicit booleans are signed and restored, malformed non-booleans are rejected, and the managed workflow receives the restored value. This code is retained for future reuse but is not a public production surface while the installer is dormant.
+- **#148 UI contract audit fixes** merged on 2026-08-24: Sunburst restores dense-profile label LOD instead of drawing all 300 repository names over one another; direct search hits remain readable; every interactive route has explicit Contributed legend semantics; zero-count mobile status chips stop consuming narrow-screen space; and the Pages setup UI now uses one 0→3 onboarding sequence, labels theme as the profile SVG theme, collapses the duplicate style selector, explains the bounded Contributed window/cap, and warns when the currently published SVG can still reflect previous settings. Exact-head Verify, twelve-preset comparison, Chromium (including the new 300-repository canvas assertion) and iPhone WebKit were GREEN.
+- **#149 dormant Worker setup consolidation** merged on 2026-08-24: in the normal dormant state, Worker `/` redirects to the canonical GitHub Pages generator instead of exposing a second drifting registration UI. The retained legacy Worker home is available only if the existing explicit one-click exposure condition is deliberately satisfied; Worker APIs/viewer/fallback remain intact. The reusable workflow also now describes `theme` as the **Static profile SVG theme**. Exact-head Verify, Chromium and iPhone WebKit were GREEN.
 
 ## Current tracker state
 
-There is no remaining C5, public-setup, Category-navigator, or active one-click blocker. The stable Contributed implementation is production-proven, published and exposed through the GitHub-only path while remaining default-off. The optional one-click implementation is preserved and CI-covered but deliberately dormant; it should not consume active roadmap attention until its explicit reactivation condition is met.
+There is no remaining C5, public-setup, Category-navigator, audited UI-contract, or active one-click blocker. The stable Contributed implementation is production-proven, published and exposed through the GitHub-only path while remaining default-off. The optional one-click implementation is preserved and CI-covered but deliberately dormant; it should not consume active roadmap attention until its explicit reactivation condition is met. Further width/height controls or mobile compaction are evidence-gated polish rather than active product TODOs.
