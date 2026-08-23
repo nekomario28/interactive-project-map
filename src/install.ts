@@ -50,10 +50,6 @@ export function installOptionsFromUrl(url: URL): InstallOptions {
   };
 }
 
-export function supportsOneClickInstall(options: InstallOptions): boolean {
-  return options.includeContributed !== true;
-}
-
 export function staticAssetUrls(origin: string, options: InstallOptions) {
   const owner = encodeURIComponent(options.username);
   const rawBase = `https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map`;
