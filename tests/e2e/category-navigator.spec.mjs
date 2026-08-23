@@ -38,7 +38,7 @@ async function openNavigator(page) {
   return page.getByRole("complementary", { name: "Category navigator" });
 }
 
-test("category disclosure is independent from category and repository focus", async ({ page }) => {
+test("category launcher aligns left and selection toggles independently from disclosure", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 760 });
   await installFixture(page);
   await page.goto("/u/?username=example&style=galaxy-systems");
@@ -47,6 +47,16 @@ test("category disclosure is independent from category and repository focus", as
   const navigator = await openNavigator(page);
   await expect(navigator).toBeVisible();
   await expect(page.locator("#categoryNavigatorSummary")).toHaveText("2 categories · 4 repos");
+
+  const toggleBox = await page.getByRole("button", { name: "Categories" }).boundingBox();
+  const titleBox = await page.locator("#title").boundingBox();
+  const panelBox = await navigator.boundingBox();
+  expect(toggleBox).not.toBeNull();
+  expect(titleBox).not.toBeNull();
+  expect(panelBox).not.toBeNull();
+  expect(toggleBox.x).toBeLessThan(titleBox.x);
+  expect(toggleBox.x).toBeLessThan(80);
+  expect(panelBox.x).toBeLessThan(40);
 
   const roboticsFocus = navigator.locator('[data-category-id="group:robotics"]');
   const roboticsSection = roboticsFocus.locator("xpath=ancestor::section[1]");
@@ -63,12 +73,24 @@ test("category disclosure is independent from category and repository focus", as
   expect(await page.evaluate(() => state.selected?.id || null)).toBe("group:robotics");
   await expect(repositories).toBeVisible();
 
+  await roboticsFocus.click();
+  await expect(roboticsFocus).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => state.selected?.id || null)).toBeNull();
+  await expect(repositories).toBeVisible();
+
+  await roboticsFocus.click();
   const alpha = navigator.locator('[data-repository-id="repository:alpha"]');
   await alpha.click();
   await expect(alpha).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => state.selected?.id || null)).toBe("repository:alpha");
   await expect(page.locator("#detailsTitle")).toHaveText("alpha");
 
+  await alpha.click();
+  await expect(alpha).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => state.selected?.id || null)).toBeNull();
+  await expect(repositories).toBeVisible();
+
+  await alpha.click();
   await navigator.getByRole("button", { name: "Clear focus" }).click();
   expect(await page.evaluate(() => state.selected?.id || null)).toBeNull();
   await expect(repositories).toBeVisible();
@@ -121,6 +143,12 @@ test("aggregate viewers use search dimming as a safe category and repository foc
   expect(await page.evaluate(() => state.query)).toBe("robotics");
   await expect(page.locator("#detailsTitle")).toHaveText("Project treemap");
 
+  await robotics.click();
+  await expect(robotics).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus)).toBeNull();
+  expect(await page.evaluate(() => state.query)).toBe("");
+
+  await robotics.click();
   const alpha = navigator.locator('[data-repository-id="repository:alpha"]');
   await alpha.click();
   await expect(alpha).toHaveAttribute("aria-pressed", "true");
@@ -129,7 +157,7 @@ test("aggregate viewers use search dimming as a safe category and repository foc
   expect(await page.evaluate(() => state.query)).toBe("alpha");
   await expect(page.locator("#detailsTitle")).toHaveText("Project treemap");
 
-  await navigator.getByRole("button", { name: "Clear focus" }).click();
+  await alpha.click();
   expect(await page.evaluate(() => state.query)).toBe("");
   expect(await page.evaluate(() => window.ProjectMapCategoryNavigator.snapshot().focus)).toBeNull();
 });
