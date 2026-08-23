@@ -69,8 +69,9 @@ function styleOptions(active = "radial") {
 function addHomeStylePreset(html) {
   const marker = '<div class="options">';
   const control = `<label>Map style <select id="mapStyle">${styleOptions("radial")}</select></label>`;
+  const contributed = '<label title="Opt in to bounded public work in repositories owned by other people or organizations. Ownership is never inferred."><input id="contributed" type="checkbox" /> Include Contributed</label>';
   if (!html.includes(marker)) throw new Error("Could not find generator options container");
-  return html.replace("style-src 'unsafe-inline'", "style-src 'self' 'unsafe-inline'").replace("</head>", '<link rel="stylesheet" href="./presets.css">\n</head>').replace(marker, `${stylePresetGallery()}\n${marker}\n${control}`);
+  return html.replace("style-src 'unsafe-inline'", "style-src 'self' 'unsafe-inline'").replace("</head>", '<link rel="stylesheet" href="./presets.css">\n</head>').replace(marker, `${stylePresetGallery()}\n${marker}\n${control}\n${contributed}`);
 }
 
 function exploratoryControls() {
