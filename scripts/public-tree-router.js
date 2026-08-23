@@ -1,11 +1,11 @@
 "use strict";
-/* global state, rebuildLayout, draw, worldToScreen, nodeRadius, palette, ctx, queueMicrotask */
+/* global state, rebuildLayout, draw, resize, worldToScreen, nodeRadius, palette, ctx, queueMicrotask */
 
 (() => {
   const visibleStyles = new Set(["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
   const dedicatedStyles = new Set(["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]);
-  const statusValues = ["original", "fork", "archived"];
-  const statusLabels = { original: "Original", fork: "Fork", archived: "Archived" };
+  const statusValues = ["original", "fork", "archived", "contributed"];
+  const statusLabels = { original: "Original", fork: "Fork", archived: "Archived", contributed: "Contributed" };
   const styleSelect = document.getElementById("style");
   const currentUrl = new URL(location.href);
   const params = currentUrl.searchParams;
@@ -54,10 +54,11 @@
 
     const baseRebuildLayout = rebuildLayout;
     const baseDraw = draw;
-    const knownStatusCounts = { original: 0, fork: 0, archived: 0 };
+    const knownStatusCounts = { original: 0, fork: 0, archived: 0, contributed: 0 };
     let rebuilding = false;
     let lastStatusKey = "";
     let lastActivityOverlayCount = 0;
+    let canvasResizeFrame = 0;
 
     function viewSnapshot() {
       const value = window.ProjectMapViewState?.snapshot?.();
@@ -68,12 +69,13 @@
 
     function repositoryStatus(node) {
       if (!node || node.type !== "repository") return null;
+      if (node.relation === "contributed") return "contributed";
       if (node.archived === true) return "archived";
       return node.fork === true ? "fork" : "original";
     }
 
     function rememberStatusCounts(graph) {
-      const counts = { original: 0, fork: 0, archived: 0 };
+      const counts = { original: 0, fork: 0, archived: 0, contributed: 0 };
       for (const node of graph?.nodes || []) {
         const status = repositoryStatus(node);
         if (status) counts[status] += 1;
@@ -84,6 +86,29 @@
     function statusKey() {
       const statuses = Array.isArray(viewSnapshot().statuses) ? viewSnapshot().statuses : statusValues;
       return statusValues.filter((value) => statuses.includes(value)).join(",");
+    }
+
+    function syncCanvasLayout() {
+      if (typeof resize !== "function") return;
+      const canvas = ctx?.canvas;
+      const rect = canvas?.getBoundingClientRect?.();
+      if (!canvas || !rect) return;
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.round(Math.max(1, rect.width) * dpr);
+      const height = Math.round(Math.max(1, rect.height) * dpr);
+      if (canvas.width === width && canvas.height === height) {
+        draw();
+        return;
+      }
+      resize();
+    }
+
+    function scheduleCanvasLayoutSync() {
+      if (canvasResizeFrame) return;
+      canvasResizeFrame = window.requestAnimationFrame(() => {
+        canvasResizeFrame = 0;
+        syncCanvasLayout();
+      });
     }
 
     function refreshControlSummary() {
@@ -106,17 +131,19 @@
       }
 
       const resultCount = document.getElementById("resultCount");
-      if (!resultCount) return;
-      const visibleRepositories = (state.nodes || []).filter((node) => node?.type === "repository");
-      const total = statusValues.reduce((sum, value) => sum + knownStatusCounts[value], 0);
-      const query = String(snapshot.query || "");
-      if (query) {
-        const matches = visibleRepositories.filter((node) => window.ProjectMapSearchContext?.matches?.(node) ?? true).length;
-        resultCount.textContent = `${matches} matches · ${visibleRepositories.length}/${total} repos`;
-      } else {
-        resultCount.textContent = `${visibleRepositories.length} / ${total} repos`;
+      if (resultCount) {
+        const visibleRepositories = (state.nodes || []).filter((node) => node?.type === "repository");
+        const total = statusValues.reduce((sum, value) => sum + knownStatusCounts[value], 0);
+        const query = String(snapshot.query || "");
+        if (query) {
+          const matches = visibleRepositories.filter((node) => window.ProjectMapSearchContext?.matches?.(node) ?? true).length;
+          resultCount.textContent = `${matches} matches · ${visibleRepositories.length}/${total} repos`;
+        } else {
+          resultCount.textContent = `${visibleRepositories.length} / ${total} repos`;
+        }
+        resultCount.title = `${visibleRepositories.length} visible of ${total} repositories in this map`;
       }
-      resultCount.title = `${visibleRepositories.length} visible of ${total} repositories in this map`;
+      scheduleCanvasLayoutSync();
     }
 
     function projectStatuses(graph) {
@@ -178,7 +205,10 @@
       } finally {
         state.graph = sourceGraph;
         rebuilding = false;
-        queueMicrotask(refreshControlSummary);
+        queueMicrotask(() => {
+          lastStatusKey = statusKey();
+          refreshControlSummary();
+        });
       }
     };
 
@@ -224,6 +254,13 @@
     document.getElementById("search")?.addEventListener("input", () => {
       queueMicrotask(refreshControlSummary);
     });
+
+    const canvas = ctx?.canvas;
+    if (canvas && typeof window.ResizeObserver === "function") {
+      const canvasResizeObserver = new window.ResizeObserver(scheduleCanvasLayoutSync);
+      canvasResizeObserver.observe(canvas);
+    }
+    scheduleCanvasLayoutSync();
 
     lastStatusKey = statusKey();
     window.ProjectMapRenderProjection = Object.freeze({

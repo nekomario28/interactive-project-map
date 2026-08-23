@@ -41,6 +41,10 @@ async function renderSnapshot(page) {
   return page.evaluate(() => window.ProjectMapRenderProjection?.snapshot?.() || null);
 }
 
+async function obsidianSnapshot(page) {
+  return page.evaluate(() => window.ProjectMapObsidianRuntime?.snapshot?.() || null);
+}
+
 test("shared repository filters change the actual layout and canvas", async ({ page }) => {
   await installFixture(page);
   await page.goto("/u/?username=example&style=galaxy-systems&motion=off");
@@ -78,6 +82,7 @@ test("Activity changes final canvas output and OFF restores the base rendering",
   await page.goto("/u/?username=example&style=obsidian&motion=off");
   await expect(page.locator("#status")).toBeHidden();
   await expect.poll(async () => (await renderSnapshot(page))?.repositories?.length).toBe(4);
+  await expect.poll(async () => (await obsidianSnapshot(page))?.phase).toBe("settled");
   const baseCanvas = await canvasImage(page);
 
   const activity = page.locator("#activityToggle");
