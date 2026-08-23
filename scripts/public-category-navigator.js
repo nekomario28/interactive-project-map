@@ -20,7 +20,17 @@
   toggleButton.type = "button";
   toggleButton.textContent = "Categories";
   toggleButton.setAttribute("aria-controls", "categoryNavigator");
-  controls.append(toggleButton);
+
+  const toolbar = controls.closest(".toolbar");
+  const titleBlock = toolbar?.querySelector(".title-block");
+  if (toolbar && titleBlock && titleBlock.parentElement === toolbar) {
+    const primary = document.createElement("div");
+    primary.className = "category-navigator-primary";
+    toolbar.insertBefore(primary, titleBlock);
+    primary.append(toggleButton, titleBlock);
+  } else {
+    controls.prepend(toggleButton);
+  }
 
   const panel = document.createElement("aside");
   panel.id = "categoryNavigator";
@@ -165,6 +175,14 @@
     canvas.focus({ preventScroll: true });
   }
 
+  function toggleFocusNode(id) {
+    if (activeFocusId() === id) {
+      clearFocus();
+      return;
+    }
+    focusNode(id);
+  }
+
   function createGroupEntry(group, repositories, query) {
     const groupId = normalizedGroupId(group.id);
     const activeId = activeFocusId();
@@ -184,9 +202,10 @@
     focus.type = "button";
     focus.className = "category-nav-focus";
     focus.dataset.categoryId = group.id;
+    focus.setAttribute("aria-label", group.label);
     focus.setAttribute("aria-pressed", String(activeId === group.id));
     focus.innerHTML = `<span>${group.label}</span><small>${repositories.length}</small>`;
-    focus.addEventListener("click", () => focusNode(group.id));
+    focus.addEventListener("click", () => toggleFocusNode(group.id));
 
     const disclosure = document.createElement("button");
     disclosure.type = "button";
@@ -213,12 +232,13 @@
       button.type = "button";
       button.className = "category-nav-repository";
       button.dataset.repositoryId = repo.id;
+      button.setAttribute("aria-label", repo.label);
       button.setAttribute("aria-pressed", String(activeId === repo.id));
       if (query && match) button.classList.add("is-search-match");
       if (query && !match) button.classList.add("is-search-muted");
       const status = repo.archived ? "Archived" : repo.fork ? "Fork" : "Original";
       button.innerHTML = `<span>${repo.label}</span><small>${repo.language || status}</small>`;
-      button.addEventListener("click", () => focusNode(repo.id));
+      button.addEventListener("click", () => toggleFocusNode(repo.id));
       repoList.append(button);
     }
 

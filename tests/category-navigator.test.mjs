@@ -28,9 +28,14 @@ test("category navigator is attached once to every interactive viewer", async ()
     const runtime = await readFile(join(root, "category-navigator.js"), "utf8");
     const css = await readFile(join(root, "category-navigator.css"), "utf8");
     assert.match(runtime, /categoryNavigatorToggle/);
+    assert.match(runtime, /category-navigator-primary/);
     assert.match(runtime, /manualExpanded/);
+    assert.match(runtime, /toggleFocusNode/);
+    assert.match(runtime, /activeFocusId\(\) === id/);
     assert.match(runtime, /focusCategory/);
+    assert.match(css, /\.category-navigator-primary/);
     assert.match(css, /\.category-navigator/);
+    assert.match(css, /aria-pressed="true"\]\:\:after/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
