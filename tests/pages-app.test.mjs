@@ -20,13 +20,15 @@ test("legacy viewer render source remains static-only before public shell replac
   assert.match(html, /raw\.githubusercontent\.com/); assert.match(html, /HEAD\/project-map\/graph\.json/); assert.doesNotMatch(html, /\/api\/graph/); assert.doesNotMatch(html, /api\.github\.com/);
 });
 
-test("public Pages build emits twelve map presets with three distinct Galaxy examples", async () => {
+test("public Pages build emits twelve map presets and explicit default-off Contributed setup", async () => {
   const dir = await mkdtemp(join(tmpdir(), "project-map-pages-"));
   try {
     await buildPublicPages(dir);
     const read = (name) => readFile(join(dir, name), "utf8");
     const home = await read("index.html"); const shared = await read("u/index.html"); const appJs = await read("app.js"); const routerJs = await read("tree-router.js"); const navJs = await read("tree-nav.js"); const presetCss = await read("presets.css"); const noJekyll = await read(".nojekyll");
     assert.match(home, /Radial Tree \(Classic\)/); assert.match(home, />Galaxy Classic</); assert.match(home, />Galaxy Systems</); assert.match(home, />Galaxy Hybrid</); assert.match(home, />Matrix \/ Heatmap</); assert.match(home, />Sankey</);
+    assert.match(home, /<input id="contributed" type="checkbox" \/> Include Contributed/);
+    assert.doesNotMatch(home, /id="contributed"[^>]*checked/);
     for (const style of styles) assert.match(home, new RegExp(`data-style-preset="${style}"`));
     for (const style of styles) assert.match(shared, new RegExp(`value="${style}"`));
     assert.match(shared, /tree-router\.js/); assert.match(shared, /viewer\.js/); assert.match(shared, /data-map-style="galaxy-systems"/);
@@ -37,6 +39,10 @@ test("public Pages build emits twelve map presets with three distinct Galaxy exa
     assert.match(appJs, new RegExp(`PROJECT_MAP_ACTION_REF=['"]${PUBLIC_ACTION_REF}['"]`));
     assert.match(appJs, /STYLE_VALUES=new Set\(\['radial','galaxy-classic','galaxy-systems','galaxy-hybrid','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey'\]\)/);
     assert.match(appJs, /if\(value==='galaxy'\)return'galaxy-systems'/);
+    assert.match(appJs, /contributedInput=document\.getElementById\('contributed'\)/);
+    assert.match(appJs, /'      contributed: '\+v\.contributed/);
+    assert.match(appJs, /share\.searchParams\.set\('contributed',String\(v\.contributed\)\)/);
+    assert.match(appJs, /contributedInput\.checked=initial\.get\('contributed'\)==='true'/);
     assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/);
     for (const source of [routerJs, navJs]) { assert.match(source, /galaxy-classic/); assert.match(source, /galaxy-systems/); assert.match(source, /galaxy-hybrid/); assert.match(source, /matrix/); assert.match(source, /sankey/); }
     assert.match(presetCss, /\.preview-sun-group/); assert.match(presetCss, /\.preview-matrix-grid/); assert.match(presetCss, /\.preview-sankey-flow/); assert.equal(noJekyll, "\n");
