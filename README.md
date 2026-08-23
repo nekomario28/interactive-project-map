@@ -196,7 +196,7 @@ The recommended path is GitHub-owned:
 GitHub repository + GitHub Actions + GitHub Pages
 ```
 
-The Cloudflare Worker / GitHub App path remains available as an **optional** one-click/fallback surface; it is not required for generation or normal viewing. The Contributed opt-in currently uses the generated manual workflow path so the optional one-click installer cannot silently lose that choice. Runtime secrets stay outside the public repository. See [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
+The Cloudflare Worker / GitHub App path remains available as an **optional** one-click/fallback surface; it is not required for generation or normal viewing. Its signed installer state preserves the same default-off Contributed choice through the OAuth callback into the managed workflow, while old v1 installer states that predate the field remain compatible and normalize it to false. Runtime secrets stay outside the public repository. See [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
 
 ## Development
 
@@ -250,7 +250,7 @@ GitHub's automatic **Contributors** view remains commit-authorship-driven. Resea
 </tr>
 <tr>
 <td align="center" valign="top"><a href="https://github.com/Stellarium/stellarium"><img src="https://github.com/Stellarium.png?size=96" width="64" alt="Stellarium"/><br/><sub><b>Stellarium</b></sub></a><br/><sub>FOV label disclosure · GPL-2.0 concept only</sub></td>
-<td align="center" valign="top"><a href="https://github.com/kenforthewin/atomic"><img src="https://github.com/kenforthewin.png?size=96" width="64" alt="kenforthewin"/><br/><sub><b>Atomic</b></sub></a><br/><sub>semantic-unit model · MIT</sub></td>
+<td align="center" valign="top"><a href="https://github.com/kenforthewin/atomic"><img src="https://github.com/kenforthewin.png?size=96" width="64" alt="kenforthewin"/><br/><sub><b>Node Factor</b></sub></a><br/><sub>semantic-unit model · MIT</sub></td>
 <td align="center" valign="top"><a href="https://github.com/juanceresa/sift-kg"><img src="https://github.com/juanceresa.png?size=96" width="64" alt="juanceresa"/><br/><sub><b>sift-kg</b></sub></a><br/><sub>schema discovery · MIT</sub></td>
 <td align="center" valign="top"><a href="https://github.com/microsoft/graphrag"><img src="https://github.com/microsoft.png?size=96" width="64" alt="Microsoft"/><br/><sub><b>GraphRAG</b></sub></a><br/><sub>hierarchical community reference · MIT</sub></td>
 </tr>
