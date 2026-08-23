@@ -17,7 +17,7 @@ export interface InstallOptions {
   maxRepos: number;
   includeForks: boolean;
   includeArchived: boolean;
-  includeContributed: boolean;
+  includeContributed?: boolean;
   generatorRef?: string;
 }
 
@@ -68,6 +68,7 @@ export function staticAssetUrls(origin: string, options: InstallOptions) {
 export function renderInstallWorkflow(options: InstallOptions): string {
   const generatorRef = normalizeGeneratorRef(options.generatorRef);
   const style = normalizeStyle(options.style);
+  const includeContributed = options.includeContributed === true;
   const generatorPolicy = generatorRef === STABLE_REUSABLE_REF ? "stable-v1" : `pinned-${generatorRef}`;
   return `name: Update project map
 # Project Map generator policy: ${generatorPolicy}
@@ -92,7 +93,7 @@ jobs:
       max_repos: "${options.maxRepos}"
       forks: ${options.includeForks}
       archived: ${options.includeArchived}
-      contributed: ${options.includeContributed}
+      contributed: ${includeContributed}
 
   publish:
     needs: generate
