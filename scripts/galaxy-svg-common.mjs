@@ -2,6 +2,9 @@ import { TAU, clamp, hashText } from "../packages/spatial-core/src/index.js";
 
 export { TAU, clamp };
 
+export const CONTRIBUTED_DARK = "#E69F00";
+export const CONTRIBUTED_LIGHT = "#A85D00";
+
 export function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
@@ -18,8 +21,8 @@ export function displayLabel(node) {
 export function palette(theme) {
   const dark = theme === "dark";
   return dark
-    ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", contributed: "#55c7d7", relation: "#f4b65f" }
-    : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", contributed: "#238c98", relation: "#a46618" };
+    ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", contributed: CONTRIBUTED_DARK, relation: "#f4b65f" }
+    : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", contributed: CONTRIBUTED_LIGHT, relation: "#a46618" };
 }
 
 export function statusOf(node) {
@@ -64,12 +67,14 @@ export function legend(colors, width, height, label) {
 
 export function nodeMarkup(node, x, y, colors, options = {}) {
   const radius = options.radius ?? nodeRadius(node);
-  const fill = colors[statusOf(node)] || colors.original;
+  const status = statusOf(node);
+  const fill = colors[status] || colors.original;
   const opacity = node.archived ? 0.72 : 0.96;
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
-  const archived = node.type === "repository" && node.archived ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
-  return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${archived}${label}</g>`;
+  const contributed = node.type === "repository" && status === "contributed" ? `<circle cx="${x}" cy="${y}" r="${radius + 4.2}" fill="none" stroke="${colors.contributed}" stroke-width="1.45" stroke-dasharray="3 3"/>` : "";
+  const archived = node.type === "repository" && node.archived && status !== "contributed" ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
+  return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${contributed}${archived}${label}</g>`;
 }
 
 export function motionValuesCircle(radius, startAngle, samples = 12) {

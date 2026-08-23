@@ -1,0 +1,13 @@
+:root,
+body[data-map-style="obsidian"] {
+  --contributed: #E69F00;
+}
+
+.control-cluster .status-contributed {
+  --status-color: var(--contributed);
+}
+
+.repository-filters .status-contributed[aria-pressed="true"] {
+  border-style: dashed;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--contributed) 72%, transparent);
+}
