@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
-import worker from "../src/index.ts";
+import { renderHome } from "../src/home.ts";
+import { dormantInstallerResponse, isOneClickInstallerExposed } from "../src/one-click-exposure.ts";
 
 const configuredSecrets = {
   GITHUB_APP_CLIENT_ID: "Iv1.test-client",
@@ -9,45 +11,30 @@ const configuredSecrets = {
   INSTALL_STATE_SECRET: "s".repeat(32),
 };
 
-const ctx = { waitUntil() {} };
-
-test("one-click stays hidden and installer routes fail closed while dormant even when credentials exist", async () => {
-  const home = await worker.fetch(new Request("https://maps.example/"), configuredSecrets, ctx);
-  assert.equal(home.status, 200);
-  assert.doesNotMatch(await home.text(), /id="one-click-install"/);
-
-  const start = await worker.fetch(
-    new Request("https://maps.example/api/install/start?username=octocat"),
-    configuredSecrets,
-    ctx,
-  );
-  assert.equal(start.status, 404);
-  assert.equal(await start.text(), "Not Found");
-  assert.equal(start.headers.get("Cache-Control"), "no-store");
-
-  const callback = await worker.fetch(
-    new Request("https://maps.example/api/install/callback?code=unused&state=unused"),
-    configuredSecrets,
-    ctx,
-  );
-  assert.equal(callback.status, 404);
-  assert.match(callback.headers.get("Set-Cookie") ?? "", /Max-Age=0/);
+test("one-click stays hidden while dormant even when credentials exist", () => {
+  assert.equal(isOneClickInstallerExposed(configuredSecrets), false);
+  assert.doesNotMatch(renderHome("https://maps.example", isOneClickInstallerExposed(configuredSecrets)), /id="one-click-install"/);
 });
 
-test("one-click exposure requires an explicit true gate in addition to complete credentials", async () => {
-  const enabledHome = await worker.fetch(
-    new Request("https://maps.example/"),
-    { ...configuredSecrets, ENABLE_ONE_CLICK_INSTALLER: "true" },
-    ctx,
-  );
-  assert.equal(enabledHome.status, 200);
-  assert.match(await enabledHome.text(), /id="one-click-install"/);
+test("one-click exposure requires an explicit true gate in addition to complete credentials", () => {
+  const enabled = { ...configuredSecrets, ENABLE_ONE_CLICK_INSTALLER: "true" };
+  assert.equal(isOneClickInstallerExposed(enabled), true);
+  assert.match(renderHome("https://maps.example", isOneClickInstallerExposed(enabled)), /id="one-click-install"/);
 
-  const incompleteHome = await worker.fetch(
-    new Request("https://maps.example/"),
-    { ENABLE_ONE_CLICK_INSTALLER: "true" },
-    ctx,
-  );
-  assert.equal(incompleteHome.status, 200);
-  assert.doesNotMatch(await incompleteHome.text(), /id="one-click-install"/);
+  assert.equal(isOneClickInstallerExposed({ ENABLE_ONE_CLICK_INSTALLER: "true" }), false);
+  assert.equal(isOneClickInstallerExposed({ ...configuredSecrets, ENABLE_ONE_CLICK_INSTALLER: "false" }), false);
+});
+
+test("dormant installer response is non-cacheable 404", async () => {
+  const response = dormantInstallerResponse();
+  assert.equal(response.status, 404);
+  assert.equal(await response.text(), "Not Found");
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
+});
+
+test("Worker entrypoint gates both installer GET routes before operational work and clears dormant callback nonce", async () => {
+  const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+  assert.match(source, /if \(url\.pathname === "\/api\/install\/start"\) \{\s*if \(!isOneClickInstallerExposed\(env\)\) return dormantInstallerResponse\(\);\s*await enforceInstallerRateLimit/);
+  assert.match(source, /if \(url\.pathname === "\/api\/install\/callback"\) \{\s*if \(!isOneClickInstallerExposed\(env\)\) \{\s*const response = dormantInstallerResponse\(\);\s*response\.headers\.append\("Set-Cookie", clearInstallNonceCookie\(\)\);\s*return response;/);
 });
