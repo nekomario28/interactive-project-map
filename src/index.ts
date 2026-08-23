@@ -17,6 +17,8 @@ import { renderViewer } from "./viewer";
 
 type WorkerEnv = Env & GitHubAppInstallerEnv & OneClickExposureEnv;
 
+const CANONICAL_SETUP_URL = "https://nekomario28.github.io/interactive-project-map/";
+
 function corsHeaders(extra: Record<string, string> = {}): Headers {
   return new Headers({
     "Access-Control-Allow-Origin": "*",
@@ -46,7 +48,19 @@ export default {
 
     try {
       if (url.pathname === "/") {
-        return new Response(renderHome(url.origin, isOneClickInstallerExposed(env)), {
+        const oneClickExposed = isOneClickInstallerExposed(env);
+        if (!oneClickExposed) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: CANONICAL_SETUP_URL,
+              "Cache-Control": "public, max-age=300",
+              "Referrer-Policy": "no-referrer",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        }
+        return new Response(renderHome(url.origin, true), {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=300",

@@ -33,6 +33,12 @@ test("dormant installer response is non-cacheable 404", async () => {
   assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
 });
 
+test("Worker root redirects dormant setup traffic to canonical GitHub Pages and only restores legacy home after explicit exposure", async () => {
+  const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+  assert.match(source, /const CANONICAL_SETUP_URL = "https:\/\/nekomario28\.github\.io\/interactive-project-map\/";/);
+  assert.match(source, /if \(url\.pathname === "\/"\) \{\s*const oneClickExposed = isOneClickInstallerExposed\(env\);\s*if \(!oneClickExposed\) \{[\s\S]*?status: 302,[\s\S]*?Location: CANONICAL_SETUP_URL,[\s\S]*?return new Response\(renderHome\(url\.origin, true\)/);
+});
+
 test("Worker entrypoint gates both installer GET routes before operational work and clears dormant callback nonce", async () => {
   const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
   assert.match(source, /if \(url\.pathname === "\/api\/install\/start"\) \{\s*if \(!isOneClickInstallerExposed\(env\)\) return dormantInstallerResponse\(\);\s*await enforceInstallerRateLimit/);
