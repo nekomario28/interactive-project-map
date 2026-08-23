@@ -23,6 +23,7 @@ const options = {
   includeForks: true,
   includeArchived: false,
 };
+const contributedOptions = { ...options, includeContributed: true };
 const nowMs = Date.UTC(2026, 7, 22, 0, 0, 0);
 
 function json(value, status = 200, headers = {}) {
@@ -35,12 +36,13 @@ function callbackRequest(state, nonce) {
   });
 }
 
-test("signed installer state round-trips, expires, and is bound to the HttpOnly nonce cookie", async () => {
+test("signed installer state round-trips, defaults old v1 Contributed state off, expires, and is bound to the HttpOnly nonce cookie", async () => {
   const created = await createInstallState(options, secret, { nowMs, nonce: "browser-nonce" });
   const payload = await verifyInstallState(created.state, secret, created.nonce, { nowMs: nowMs + 30_000 });
   assert.equal(payload.username, "octocat");
   assert.equal(payload.style, "sankey");
   assert.equal(payload.maxRepos, 100);
+  assert.equal(payload.includeContributed, false);
   assert.equal(payload.nonce, "browser-nonce");
 
   await assert.rejects(() => verifyInstallState(created.state, secret, "wrong-browser", { nowMs }), /cookie mismatch/);
@@ -51,21 +53,30 @@ test("signed installer state round-trips, expires, and is bound to the HttpOnly 
   await assert.rejects(() => verifyInstallState(tampered, secret, created.nonce, { nowMs }), /state|signature/i);
 });
 
+test("signed installer state preserves explicit Contributed opt-in", async () => {
+  const created = await createInstallState(contributedOptions, secret, { nowMs, nonce: "contributed-nonce" });
+  const payload = await verifyInstallState(created.state, secret, created.nonce, { nowMs: nowMs + 30_000 });
+  assert.equal(payload.includeContributed, true);
+});
+
 test("install start redirects only to the configured GitHub App and sets a short-lived secure nonce cookie", async () => {
-  const response = await beginGitHubAppInstall(new Request("https://maps.example/api/install/start"), env, options, { nowMs, nonce: "browser-nonce" });
+  const response = await beginGitHubAppInstall(new Request("https://maps.example/api/install/start"), env, contributedOptions, { nowMs, nonce: "browser-nonce" });
   assert.equal(response.status, 302);
   const location = new URL(response.headers.get("Location"));
   assert.equal(location.origin, "https://github.com");
   assert.equal(location.pathname, "/apps/project-map-test/installations/new");
-  assert.ok(location.searchParams.get("state"));
+  const state = location.searchParams.get("state");
+  assert.ok(state);
+  const payload = await verifyInstallState(state, secret, "browser-nonce", { nowMs });
+  assert.equal(payload.includeContributed, true);
   assert.match(response.headers.get("Set-Cookie"), /project_map_install_nonce=browser-nonce/);
   assert.match(response.headers.get("Set-Cookie"), /HttpOnly/);
   assert.match(response.headers.get("Set-Cookie"), /Secure/);
   assert.match(response.headers.get("Set-Cookie"), /SameSite=Lax/);
 });
 
-test("callback verifies the user's installation, installs only the managed profile workflow, and dispatches it", async () => {
-  const created = await createInstallState(options, secret, { nowMs, nonce: "browser-nonce" });
+test("callback preserves Contributed, verifies the user's installation, installs only the managed profile workflow, and dispatches it", async () => {
+  const created = await createInstallState(contributedOptions, secret, { nowMs, nonce: "browser-nonce" });
   const calls = [];
   let dispatchAttempts = 0;
   const fetchImpl = async (input, init = {}) => {
@@ -87,6 +98,7 @@ test("callback verifies the user's installation, installs only the managed profi
       assert.ok(workflow.startsWith(MANAGED_WORKFLOW_MARKER));
       assert.match(workflow, /generate-project-map\.yml@v1/);
       assert.match(workflow, /style: sankey/);
+      assert.match(workflow, /contributed: true/);
       assert.match(workflow, /contents: write/);
       return json({ content: { path: ".github/workflows/project-map.yml" }, commit: { sha: "abc" } }, 201);
     }
