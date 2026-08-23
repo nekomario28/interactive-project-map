@@ -96,7 +96,10 @@
       const dpr = window.devicePixelRatio || 1;
       const width = Math.round(Math.max(1, rect.width) * dpr);
       const height = Math.round(Math.max(1, rect.height) * dpr);
-      if (canvas.width === width && canvas.height === height) return;
+      if (canvas.width === width && canvas.height === height) {
+        draw();
+        return;
+      }
       resize();
     }
 
