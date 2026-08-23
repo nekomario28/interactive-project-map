@@ -12,7 +12,8 @@ This is the provider-neutral entrypoint for Project Map work. `docs/current-road
 
 ## Product and release boundaries
 
-- The GitHub-only setup path is the default production architecture; optional Cloudflare/GitHub App convenience must not become a hidden dependency.
+- The GitHub-only setup path is the default production architecture.
+- The optional Cloudflare/GitHub App one-click installer is **DORMANT / NOT_PRODUCTION_EXPOSED**. Keep its small implementation and tests compatible with `main`, but do not advertise, credential-test, expand, or reactivate it without concrete onboarding evidence or an explicit reviewed product decision. Public exposure requires the separate `ENABLE_ONE_CLICK_INSTALLER=true` gate plus complete credentials and the documented real-credential acceptance.
 - Stable `v1`, the outer reusable workflow, and the immutable inner Action pin are distinct release/authority layers. Do not move or conflate them without the declared release-chain proof.
 - Contributed is an explicit non-ownership relation, default-off globally. External repositories must not be silently promoted into owned taxonomy/category membership.
 - Missing/unsupported optional installer semantics fail closed rather than silently dropping user opt-in.
@@ -31,12 +32,12 @@ Prefer one shared projection/adapter over copying behavior into multiple viewers
 - Preserve desktop Chromium and mobile WebKit coverage when the affected surface requires them.
 - Large-portfolio stress, new clustering, and new visual styles stay deferred unless new evidence triggers them; do not reopen NO-GO work by default.
 - Experimental AI Director or other `Do not merge` execution lanes are not Project Map product state.
-- `NOT_RUN`, optional-path-unverified, NO-GO, historical, and production-proven are distinct evidence states.
+- `NOT_RUN`, optional-path-unverified, NO-GO, historical, dormant, and production-proven are distinct evidence states.
 
 ## Secrets and permissions
 
 - Never commit real GitHub/Cloudflare credentials or tokens.
-- Public tracked files may contain documentation, names, and obvious placeholders only.
+- Public tracked files may contain documentation, names, feature-gate defaults, and obvious placeholders only.
 - Do not widen workflow/App permissions or introduce a backend merely to simplify one setup interaction without an explicit reviewed decision.
 
 ## Cross-project boundary

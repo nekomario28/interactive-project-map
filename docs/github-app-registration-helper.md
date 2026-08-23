@@ -1,6 +1,8 @@
 # GitHub App registration helper
 
-The production one-click installer still requires one GitHub App registration plus four Worker secrets. Do not use the GitHub App manifest flow for this project: that flow returns a private key and webhook secret that this architecture deliberately does not need.
+**Status: DORMANT / NOT_PRODUCTION_EXPOSED.** The one-click implementation is retained for possible future reuse, but normal users should use the GitHub-only generated-workflow path. Do not register or expose a production GitHub App merely because this helper exists.
+
+If one-click is deliberately reactivated after the roadmap condition is met, it requires one GitHub App registration plus four Worker secrets. Do not use the GitHub App manifest flow for this project: that flow returns a private key and webhook secret that this architecture deliberately does not need.
 
 GitHub supports pre-filling the normal registration form with URL parameters. Generate the exact Project Map registration URL with:
 
@@ -39,6 +41,8 @@ openssl rand -hex 32
 
 The App private key and webhook secret are not used. Do not add them to Worker configuration.
 
-This helper is an operator tool, not an end-user setup path. Normal users should install the single public Project Map GitHub App once production acceptance is complete.
+Credential presence does not expose the installer. The Worker additionally requires the explicit non-secret gate `ENABLE_ONE_CLICK_INSTALLER=true`; keep it false for normal/public operation. Use `true` only in a deliberate reactivation/acceptance environment after reviewing the current roadmap and one-click installer contract.
+
+This helper is an operator-only dormant recovery/reactivation tool, not an end-user setup path.
 
 Official GitHub reference: `Registering a GitHub App using URL parameters` in GitHub Docs.

@@ -188,15 +188,15 @@ If the graph is missing or invalid, the viewer shows setup/recovery guidance ins
 
 Stable installs use the reusable generator channel `@v1`. Advanced users may pin a full reviewed 40-character generator commit SHA.
 
-## GitHub Pages and optional Cloudflare
+## GitHub Pages and dormant one-click implementation
 
-The recommended path is GitHub-owned:
+The production setup path is GitHub-owned:
 
 ```text
 GitHub repository + GitHub Actions + GitHub Pages
 ```
 
-The Cloudflare Worker / GitHub App path remains available as an **optional** one-click/fallback surface; it is not required for generation or normal viewing. Its signed installer state preserves the same default-off Contributed choice through the OAuth callback into the managed workflow, while old v1 installer states that predate the field remain compatible and normalize it to false. Runtime secrets stay outside the public repository. See [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
+The Cloudflare Worker may still serve hosted previews/fallback, but GitHub App one-click onboarding is **DORMANT / NOT_PRODUCTION_EXPOSED**. Its small signed-state/callback implementation and security tests are retained in `main` for possible future reuse. Normal UI does not show the one-click control, and installer routes fail closed unless the separate explicit `ENABLE_ONE_CLICK_INSTALLER=true` gate and complete credentials are both present. The gate stays off unless concrete onboarding evidence or an explicit reviewed product decision justifies reactivation and the documented real-credential acceptance is then completed. Runtime secrets stay outside the public repository. See [`docs/current-roadmap.md`](docs/current-roadmap.md), [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
 
 ## Development
 

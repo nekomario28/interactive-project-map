@@ -1,10 +1,12 @@
 # GitHub App one-click installer
 
-This document fixes the production boundary for the optional one-click installer. The normal Project Map runtime remains distributed: after installation, each user's own GitHub Actions workflow fetches metadata, generates `project-map/galaxy.svg` and `project-map/graph.json`, and publishes those files. The GitHub App is not in the recurring generation path.
+**Status: DORMANT / NOT_PRODUCTION_EXPOSED.** The implementation and its security/regression tests are intentionally retained in `main`, but the public UI does not expose it during normal operation. Complete GitHub App credentials are insufficient by themselves: the Worker also requires the explicit non-secret `ENABLE_ONE_CLICK_INSTALLER=true` gate. Keep that gate false unless the roadmap reactivation condition is met and a deliberate acceptance environment is being used.
+
+This document preserves the reviewed boundary for the optional one-click installer. The normal Project Map runtime remains distributed: after installation, each user's own GitHub Actions workflow fetches metadata, generates `project-map/galaxy.svg` and `project-map/graph.json`, and publishes those files. The GitHub App is not in the recurring generation path.
 
 ## Why a GitHub App
 
-The existing manual installer is intentionally safe but still asks users to copy a workflow file. A GitHub App can reduce that to GitHub's own install/authorization confirmation, one workflow write, and one initial `workflow_dispatch`.
+The existing manual installer is intentionally safe but still asks users to copy a workflow file. A GitHub App can reduce that to GitHub's own install/authorization confirmation, one workflow write, and one initial `workflow_dispatch`. That convenience is currently not important enough to justify an active public App/Cloudflare operational surface, so the capability is preserved rather than exposed.
 
 The implementation deliberately does **not** add:
 
@@ -20,7 +22,7 @@ The OAuth user access token exists only for the callback request and is discarde
 
 ## GitHub App registration
 
-Register a public GitHub App with:
+Do not register a production App merely because this document exists. If one-click is deliberately reactivated, register a public GitHub App with:
 
 - **Homepage URL:** the deployed Worker root.
 - **Callback URL:** `https://<worker-origin>/api/install/callback`.
@@ -47,9 +49,15 @@ References:
 - https://docs.github.com/en/rest/repos/contents
 - https://docs.github.com/en/rest/actions/workflows
 
-## Worker secrets
+## Worker secrets and exposure gate
 
-Set all four values before exposing the one-click control:
+For normal/public operation, keep:
+
+```text
+ENABLE_ONE_CLICK_INSTALLER=false
+```
+
+Credential presence alone must not make the UI or routes live. In a deliberate reactivation/acceptance environment, set the four secret values with Wrangler:
 
 ```sh
 wrangler secret put GITHUB_APP_CLIENT_ID
@@ -57,6 +65,8 @@ wrangler secret put GITHUB_APP_CLIENT_SECRET
 wrangler secret put GITHUB_APP_SLUG
 wrangler secret put INSTALL_STATE_SECRET
 ```
+
+and only then set the separate non-secret gate to `ENABLE_ONE_CLICK_INSTALLER=true` for that environment.
 
 `INSTALL_STATE_SECRET` must contain at least 32 bytes of secret material. A suitable value can be generated with:
 
@@ -67,6 +77,8 @@ openssl rand -hex 32
 No private key is required by this architecture because the callback uses a GitHub App **user access token**, not an installation access token.
 
 ## Request flow
+
+While dormant, the hosted home omits the one-click control and `/api/install/start` plus `/api/install/callback` fail closed with 404 responses. The flow below applies only when the explicit exposure gate is true **and** all required credentials are configured.
 
 ```text
 browser
@@ -161,17 +173,22 @@ Code-only gates, which require no GitHub App credentials:
 15. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
 16. installer start/callback reuse the existing Worker API rate limiter.
 17. Worker typecheck/dry-run and the existing full project verification suite.
+18. dormant exposure contract: credentials without `ENABLE_ONE_CLICK_INSTALLER=true` do not render the public one-click control and both installer routes return 404; an explicit true gate still requires complete credentials.
 
-The final production gate requires a real GitHub App registration and Worker secrets:
+## Reactivation acceptance gate — not active work
 
-1. start from the hosted UI with Contributed left off and confirm the existing default path;
-2. install the App on a disposable/public profile repository, selecting only that repository;
-3. return through the OAuth callback;
-4. confirm exactly one managed workflow file is created;
-5. confirm its first workflow run starts;
-6. confirm only `project-map/galaxy.svg` and `project-map/graph.json` are published;
-7. repeat from the hosted UI with **Include Contributed** enabled and confirm the managed workflow contains `contributed: true` and the generated graph uses the opt-in;
-8. run the one-click path again and confirm the managed workflow is updated/no-op rather than duplicated;
-9. remove App access and confirm the already-installed scheduled workflow continues independently.
+Do not run this gate unless the roadmap reactivation condition has been met. Use an isolated/disposable acceptance deployment first; do not expose the public control merely to discover whether credentials are correct.
+
+1. set the four real secrets in the acceptance Worker and explicitly enable `ENABLE_ONE_CLICK_INSTALLER=true` there;
+2. start from the hosted UI with Contributed left off and confirm the existing default path;
+3. install the App on a disposable/public profile repository, selecting only that repository;
+4. return through the OAuth callback;
+5. confirm exactly one managed workflow file is created;
+6. confirm its first workflow run starts;
+7. confirm only `project-map/galaxy.svg` and `project-map/graph.json` are published;
+8. repeat from the hosted UI with **Include Contributed** enabled and confirm the managed workflow contains `contributed: true` and the generated graph uses the opt-in;
+9. run the one-click path again and confirm the managed workflow is updated/no-op rather than duplicated;
+10. remove App access and confirm the already-installed scheduled workflow continues independently;
+11. only after the acceptance evidence is recorded may a reviewed production deployment deliberately set the exposure gate true.
 
 Do not weaken the code-only gates to compensate for a registration or permission error. Use GitHub's `X-Accepted-GitHub-Permissions` response header to diagnose missing App permissions.

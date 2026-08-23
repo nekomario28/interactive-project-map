@@ -4,15 +4,17 @@ Status snapshot: **2026-08-23**
 
 This is the short canonical list of work that is still worth doing. Historical research and completed phase documents remain in `docs/`, but they should not be mistaken for active TODOs.
 
-## P1 — production acceptance checks
+## P1 — no active production acceptance blocker
 
-The default GitHub-only setup path exposes the stable Contributed input publicly, and the optional GitHub App installer now preserves the same opt-in through its signed state and callback. The remaining work is operator acceptance rather than another Contributed schema/viewer/release phase.
+The GitHub-only setup path is the production onboarding path. The optional Cloudflare/GitHub App one-click installer is deliberately **DORMANT / NOT_PRODUCTION_EXPOSED**: its implementation and security/regression tests remain in `main`, but credential presence alone must not expose it. Public UI and installer routes require the separate explicit `ENABLE_ONE_CLICK_INSTALLER=true` gate, which stays off by default.
 
-- Exercise the optional Cloudflare/GitHub App one-click path with real operator credentials if it is going to be advertised as a live convenience. This is **not** a dependency of the GitHub-only default path and is not a blocker for Project Map itself.
-- Keep real Cloudflare/GitHub credentials only in Cloudflare secret storage or ignored local files. Public tracked files may contain names, documentation and obvious placeholders only.
+One-click real-credential acceptance is therefore **not an active P1 task**. Reactivate it only when concrete evidence justifies the extra GitHub App/Cloudflare operational surface—for example, measured onboarding friction in the GitHub-only workflow or an explicit reviewed product decision. Reactivation must then include the documented real-credential acceptance before public exposure.
+
+Real Cloudflare/GitHub credentials must remain only in Cloudflare secret storage or ignored local files. Public tracked files may contain names, documentation and obvious placeholders only.
 
 ## P2 — maintenance / deferred ideas only when evidence appears
 
+- **ONE_CLICK_INSTALLER → DORMANT / NOT_PRODUCTION_EXPOSED.** Keep the small implementation, signed-state/callback compatibility, managed-workflow ownership rules and security tests maintained with `main`; do not advertise, credential-test, or expand it until the reactivation condition above is met.
 - **Do not add new visual style presets now.** Magic-circle / spell-array, activation-sequence, selection-only cast/explosion, and SF × magic ideas are parked in `docs/future-visual-style-ideas.md`. Revisit only if a candidate materially improves readability, hierarchy, focus feedback, dense-profile behavior, or profile identity over current production layouts.
 - Dependabot/action pin maintenance: update in grouped, reviewed changes rather than churn.
 - Re-run large-portfolio stress only when graph/layout behavior changes materially.
@@ -38,8 +40,8 @@ The default GitHub-only setup path exposes the stable Contributed input publicly
 - Canonical `nekomario28/nekomario28` generation through `@v1` published commit **`ad6930e4339dfe1a3ba74da946776e54701dc73f`** containing 6 Contributed nodes and 6 direct `contribution` edges.
 - Live GitHub Pages proof run **`32632402395`** passed desktop Chromium and mobile WebKit against the published canonical map: 6 Contributed repositories, details/status sharing working, `status=c` restored on mobile, no horizontal overflow, and 0 browser errors. Temporary proof workflows were removed after their receipts were recorded.
 - Public setup exposure merged in **#143**: both public generator surfaces show an explicit unchecked **Include Contributed** control, generated stable-`@v1` workflows always emit `contributed: true|false`, share URLs restore the choice, README/setup copy defines Contributed as work in repositories owned by others rather than ownership, and focused install/Pages/hosted-UI validators freeze the default-off contract.
-- Optional GitHub App state/callback now preserves `includeContributed` without a state-version break: old v1 payloads with no field normalize to false, explicit booleans are signed and restored, and the managed workflow receives the restored value.
+- Optional GitHub App state/callback support merged in **#145**: old v1 payloads with no `includeContributed` normalize to false, explicit booleans are signed and restored, malformed non-booleans are rejected, and the managed workflow receives the restored value. This code is retained for future reuse but is not a public production surface while the installer is dormant.
 
 ## Current tracker state
 
-There is no remaining C5, public-setup, Category-navigator, or code-level one-click Contributed blocker. The stable Contributed implementation is production-proven, published and exposed while remaining default-off. Active P1 is limited to optional real-credential operator acceptance and secret hygiene; the GitHub-only default path is not blocked by it.
+There is no remaining C5, public-setup, Category-navigator, or active one-click blocker. The stable Contributed implementation is production-proven, published and exposed through the GitHub-only path while remaining default-off. The optional one-click implementation is preserved and CI-covered but deliberately dormant; it should not consume active roadmap attention until its explicit reactivation condition is met.
