@@ -13,6 +13,8 @@ test("local Cloudflare secret file families stay ignored while public examples s
   assert.match(ignore, /^\.env\*$/m);
 
   assert.match(example, /PUBLIC PLACEHOLDER FILE ONLY/);
+  assert.match(example, /^ENABLE_ONE_CLICK_INSTALLER=false$/m);
+  assert.doesNotMatch(example, /^ENABLE_ONE_CLICK_INSTALLER=true$/m);
   assert.match(example, /GITHUB_TOKEN=github_pat_x{8,}/);
   assert.match(example, /GITHUB_APP_CLIENT_SECRET=x{16,}/);
   assert.match(example, /INSTALL_STATE_SECRET=x{32,}/);
