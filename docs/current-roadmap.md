@@ -4,23 +4,13 @@ Status snapshot: **2026-08-23**
 
 This is the short canonical list of work that is still worth doing. Historical research and completed phase documents remain in `docs/`, but they should not be mistaken for active TODOs.
 
-## P0 — expose the stable Contributed opt-in in public setup
-
-The Contributed data model, generator, all-12-preset semantics, real-profile privacy proof, release chain, stable `v1` promotion, canonical profile regeneration, and live GitHub Pages UX proof are complete. The remaining product gap is **public setup exposure**, not another schema/viewer/release phase.
-
-1. Add an explicit Contributed opt-in to the public install options / setup generator and emit `contributed: true|false` into the generated reusable-workflow call.
-2. Keep the default **false**. Do not silently change existing generated workflows or globally enable external contribution collection.
-3. Update public setup copy/README so users understand that Contributed means work in repositories owned by other people or organizations, never repository ownership.
-4. Add focused install/setup tests proving the stable `@v1` workflow receives the option without changing existing defaults.
-
-This work is now safe because stable `v1` already resolves release **R = `b0734590a7ea65fea68eee9fb4e9b5c5d40ee8a0`**, whose reusable workflow resolves inner Action **F = `e5dafc86bec1cee6d913deaf040a2631599afb53`**.
-
 ## P1 — production acceptance checks
 
-These are small but useful operational checks rather than new architecture.
+The default GitHub-only setup path now exposes the stable Contributed input publicly. The remaining work is operational polish rather than another Contributed schema/viewer/release phase.
 
 - Finish and validate **#121 Category navigator / focus index**: Category label selects the Category, `+ / −` independently discloses repositories, repository rows select repositories, Search temporarily expands matching Categories, current status filters are respected, and existing context-preserving selection dimming is reused instead of creating another graph-filtering model. Keep repository Local Graph depth 1–3 independent.
 - Exercise the optional Cloudflare/GitHub App one-click path with real operator credentials if it is going to be advertised as a live convenience. This is **not** a dependency of the GitHub-only default path and is not a blocker for Project Map itself.
+- If Contributed should also be supported by the optional one-click installer, extend its signed installer-state/callback contract explicitly. Until then `contributed=true` is fail-closed and the public UI uses the generated manual workflow rather than silently dropping the opt-in.
 - Keep real Cloudflare/GitHub credentials only in Cloudflare secret storage or ignored local files. Public tracked files may contain names, documentation and obvious placeholders only.
 
 ## P2 — maintenance / deferred ideas only when evidence appears
@@ -48,7 +38,8 @@ These are small but useful operational checks rather than new architecture.
 - Stable **`v1`** was then fast-forwarded to R; Contributed remains default-off globally.
 - Canonical `nekomario28/nekomario28` generation through `@v1` published commit **`ad6930e4339dfe1a3ba74da946776e54701dc73f`** containing 6 Contributed nodes and 6 direct `contribution` edges.
 - Live GitHub Pages proof run **`32632402395`** passed desktop Chromium and mobile WebKit against the published canonical map: 6 Contributed repositories, details/status sharing working, `status=c` restored on mobile, no horizontal overflow, and 0 browser errors. Temporary proof workflows were removed after their receipts were recorded.
+- Public setup exposure is implemented: both public generator surfaces show an explicit unchecked **Include Contributed** control, generated stable-`@v1` workflows always emit `contributed: true|false`, share URLs restore the choice, README/setup copy defines Contributed as work in repositories owned by others rather than ownership, and focused install/Pages/hosted-UI validators freeze the default-off contract.
 
 ## Current tracker state
 
-There is no remaining C5 release blocker. The stable Contributed implementation is production-proven and published. The next P0 is only the **default-off public setup opt-in**. Do not change the global default, revive rejected visual-style experiments, or add another contribution data source without new evidence.
+There is no remaining C5 or public-setup Contributed blocker. The stable Contributed implementation is production-proven, published, and exposed through the recommended GitHub-only setup while remaining default-off. Active work starts at **P1 production acceptance**, not another contribution release or data-source expansion.

@@ -46,12 +46,12 @@
 
 Project Galaxy turns public GitHub repositories into a reusable portfolio graph. The same generated `graph.json` drives both a compact SVG for a profile README and twelve browser visualizations.
 
-The generated data keeps repository status explicit: **Original**, **Fork**, and **Archived** are never silently merged into one ownership meaning. Work contributed to repositories owned by other people or organizations is being developed as an explicit **Contributed** relation rather than being misrepresented as owned work; see [`docs/current-roadmap.md`](docs/current-roadmap.md) and [`docs/external-contributions-research.md`](docs/external-contributions-research.md).
+The generated data keeps repository status explicit: **Original**, **Fork**, **Archived**, and opt-in **Contributed** are never silently merged into one ownership meaning. Contributed is **off by default** and represents bounded public work in repositories owned by other people or organizations; it never means that you own those repositories. See [`docs/current-roadmap.md`](docs/current-roadmap.md) and [`docs/external-contributions-research.md`](docs/external-contributions-research.md).
 
 ## Quick start
 
 1. Open the **[public generator](https://nekomario28.github.io/interactive-project-map/)**.
-2. Enter your GitHub username and choose a theme, preset and repository filters.
+2. Enter your GitHub username and choose a theme, preset and repository filters. Enable **Include Contributed** only if you want bounded public work in repositories owned by others included; the default is off.
 3. If you do not yet have the special `USERNAME/USERNAME` profile repository, use the guided **Step 0** link to create it as a public repository.
 4. Use **Step 1** to copy the generated workflow and open GitHub's new-file editor at `.github/workflows/project-map.yml`.
 5. Commit the workflow, then use **Step 2** to run **Update project map** once.
@@ -181,6 +181,7 @@ If the graph is missing or invalid, the viewer shows setup/recovery guidance ins
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
+| `contributed` | `false` | include bounded public contributions to repositories owned by others; never changes repository ownership |
 | `width` | `740` | SVG width, `420`–`1600` |
 | `height` | `420` | SVG height, `260`–`1000` |
 | `output_dir` | `project-map` | relative output directory |
@@ -195,7 +196,7 @@ The recommended path is GitHub-owned:
 GitHub repository + GitHub Actions + GitHub Pages
 ```
 
-The Cloudflare Worker / GitHub App path remains available as an **optional** one-click/fallback surface; it is not required for generation or normal viewing. Runtime secrets stay outside the public repository. See [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
+The Cloudflare Worker / GitHub App path remains available as an **optional** one-click/fallback surface; it is not required for generation or normal viewing. The Contributed opt-in currently uses the generated manual workflow path so the optional one-click installer cannot silently lose that choice. Runtime secrets stay outside the public repository. See [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
 
 ## Development
 
@@ -211,7 +212,7 @@ CI also renders all twelve presets from the same graph and uploads a visual comp
 
 ## Project status
 
-The current roadmap, completed foundation work, and remaining `Contributed` promotion work are tracked in [`docs/current-roadmap.md`](docs/current-roadmap.md).
+The current roadmap, completed Contributed production proof, and remaining product/operations work are tracked in [`docs/current-roadmap.md`](docs/current-roadmap.md).
 
 ## Contributors & credits
 

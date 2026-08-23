@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
-import { installOptionsFromUrl, normalizeGeneratorRef, normalizeStyle, renderInstallWorkflow, staticAssetUrls } from "../src/install.ts";
+import { installOptionsFromUrl, normalizeGeneratorRef, normalizeStyle, renderInstallWorkflow, staticAssetUrls, supportsOneClickInstall } from "../src/install.ts";
 
 const PINNED_REF = "151b9cabd5968cdfb602115fc440795c14f88745";
 
-test("install options preserve generator choices and default to stable v1", () => {
+test("install options preserve generator choices and default Contributed off on stable v1", () => {
   const url = new URL("https://maps.example/api/install-workflow?username=OctoCat&theme=light&style=sankey&max_repos=75&forks=false&archived=true");
   assert.deepEqual(installOptionsFromUrl(url), {
     username: "octocat",
@@ -14,8 +14,21 @@ test("install options preserve generator choices and default to stable v1", () =
     maxRepos: 75,
     includeForks: false,
     includeArchived: true,
+    includeContributed: false,
     generatorRef: "v1",
   });
+});
+
+test("install options accept an explicit Contributed opt-in", () => {
+  const url = new URL("https://maps.example/api/install-workflow?username=OctoCat&contributed=true");
+  assert.equal(installOptionsFromUrl(url).includeContributed, true);
+});
+
+test("one-click installer remains available by default but fails closed for Contributed opt-in", () => {
+  const defaults = installOptionsFromUrl(new URL("https://maps.example/api/install-workflow?username=octocat"));
+  const contributed = installOptionsFromUrl(new URL("https://maps.example/api/install-workflow?username=octocat&contributed=true"));
+  assert.equal(supportsOneClickInstall(defaults), true);
+  assert.equal(supportsOneClickInstall(contributed), false);
 });
 
 test("style accepts the twelve public presets and preserves legacy galaxy alias", () => {
@@ -49,7 +62,7 @@ test("static asset URLs use the profile repository default branch and preserve s
   assert.equal(urls.viewer, "https://maps.example/u/octocat?style=matrix&max_repos=80&forks=false&archived=true");
 });
 
-test("generated workflow follows stable v1 generation and keeps write publishing local", () => {
+test("generated workflow follows stable v1 generation, emits default-off Contributed, and keeps write publishing local", () => {
   const workflow = renderInstallWorkflow({
     username: "octocat",
     theme: "dark",
@@ -65,6 +78,7 @@ test("generated workflow follows stable v1 generation and keeps write publishing
   assert.match(workflow, new RegExp(`# Reviewed immutable inner Action baseline: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
   assert.match(workflow, /style: galaxy-hybrid/);
   assert.match(workflow, /max_repos: "100"/);
+  assert.match(workflow, /contributed: false/);
   assert.doesNotMatch(workflow, /actions\/upload-artifact@/);
 
   assert.match(workflow, /publish:\n[\s\S]*permissions:\n      actions: read\n      contents: write/);
@@ -74,6 +88,19 @@ test("generated workflow follows stable v1 generation and keeps write publishing
 
   const generateBlock = workflow.slice(workflow.indexOf("  generate:"), workflow.indexOf("  publish:"));
   assert.doesNotMatch(generateBlock, /contents: write/);
+});
+
+test("generated workflow forwards explicit Contributed opt-in", () => {
+  const workflow = renderInstallWorkflow({
+    username: "octocat",
+    theme: "dark",
+    style: "radial",
+    maxRepos: 100,
+    includeForks: true,
+    includeArchived: false,
+    includeContributed: true,
+  });
+  assert.match(workflow, /contributed: true/);
 });
 
 test("generated workflow can pin the reusable generator to an immutable SHA", () => {
@@ -88,5 +115,6 @@ test("generated workflow can pin the reusable generator to an immutable SHA", ()
   });
   assert.match(workflow, new RegExp(`generate-project-map\\.yml@${PINNED_REF}`));
   assert.match(workflow, new RegExp(`# Project Map generator policy: pinned-${PINNED_REF}`));
+  assert.match(workflow, /contributed: false/);
   assert.doesNotMatch(workflow, /generate-project-map\.yml@v1/);
 });
