@@ -6,7 +6,7 @@ import { installOptionsFromUrl, normalizeGeneratorRef, normalizeStyle, renderIns
 const PINNED_REF = "151b9cabd5968cdfb602115fc440795c14f88745";
 
 test("install options preserve generator choices and default to stable v1", () => {
-  const url = new URL("https://maps.example/api/install-workflow?username=OctoCat&theme=light&style=sankey&max_repos=75&forks=false&archived=true");
+  const url = new URL("https://maps.example/api/install-workflow?username=OctoCat&theme=light&style=sankey&max_repos=75&forks=false&archived=true&contributed=true");
   assert.deepEqual(installOptionsFromUrl(url), {
     username: "octocat",
     theme: "light",
@@ -14,8 +14,11 @@ test("install options preserve generator choices and default to stable v1", () =
     maxRepos: 75,
     includeForks: false,
     includeArchived: true,
+    includeContributed: true,
     generatorRef: "v1",
   });
+  const defaults = installOptionsFromUrl(new URL("https://maps.example/api/install-workflow?username=OctoCat"));
+  assert.equal(defaults.includeContributed, false);
 });
 
 test("style accepts the twelve public presets and preserves legacy galaxy alias", () => {
@@ -42,6 +45,7 @@ test("static asset URLs use the profile repository default branch and preserve s
     maxRepos: 80,
     includeForks: false,
     includeArchived: true,
+    includeContributed: false,
   };
   const urls = staticAssetUrls("https://maps.example", options);
   assert.equal(urls.svg, "https://raw.githubusercontent.com/octocat/octocat/HEAD/project-map/galaxy.svg");
@@ -57,6 +61,7 @@ test("generated workflow follows stable v1 generation and keeps write publishing
     maxRepos: 100,
     includeForks: true,
     includeArchived: false,
+    includeContributed: false,
   });
 
   assert.match(workflow, /generate:\n[\s\S]*permissions:\n      contents: read/);
@@ -65,6 +70,7 @@ test("generated workflow follows stable v1 generation and keeps write publishing
   assert.match(workflow, new RegExp(`# Reviewed immutable inner Action baseline: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
   assert.match(workflow, /style: galaxy-hybrid/);
   assert.match(workflow, /max_repos: "100"/);
+  assert.match(workflow, /contributed: false/);
   assert.doesNotMatch(workflow, /actions\/upload-artifact@/);
 
   assert.match(workflow, /publish:\n[\s\S]*permissions:\n      actions: read\n      contents: write/);
@@ -76,6 +82,19 @@ test("generated workflow follows stable v1 generation and keeps write publishing
   assert.doesNotMatch(generateBlock, /contents: write/);
 });
 
+test("generated workflow exposes Contributed only when explicitly opted in", () => {
+  const workflow = renderInstallWorkflow({
+    username: "octocat",
+    theme: "dark",
+    style: "radial",
+    maxRepos: 100,
+    includeForks: true,
+    includeArchived: false,
+    includeContributed: true,
+  });
+  assert.match(workflow, /contributed: true/);
+});
+
 test("generated workflow can pin the reusable generator to an immutable SHA", () => {
   const workflow = renderInstallWorkflow({
     username: "octocat",
@@ -84,6 +103,7 @@ test("generated workflow can pin the reusable generator to an immutable SHA", ()
     maxRepos: 100,
     includeForks: true,
     includeArchived: false,
+    includeContributed: false,
     generatorRef: PINNED_REF,
   });
   assert.match(workflow, new RegExp(`generate-project-map\\.yml@${PINNED_REF}`));
