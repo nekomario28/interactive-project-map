@@ -18,12 +18,13 @@ export function displayLabel(node) {
 export function palette(theme) {
   const dark = theme === "dark";
   return dark
-    ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", relation: "#f4b65f" }
-    : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", relation: "#a46618" };
+    ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", contributed: "#55c7d7", relation: "#f4b65f" }
+    : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", contributed: "#238c98", relation: "#a46618" };
 }
 
 export function statusOf(node) {
   if (node.type !== "repository") return node.type;
+  if (node.relation === "contributed") return "contributed";
   if (node.archived) return "archived";
   return node.fork ? "fork" : "original";
 }
@@ -51,7 +52,7 @@ export function background(owner, width, height, colors, particleCount = 90) {
 }
 
 export function legend(colors, width, height, label) {
-  const items = [[colors.original, "Original"], [colors.fork, "Fork"], [colors.archived, "Archived"]];
+  const items = [[colors.original, "Original"], [colors.fork, "Fork"], [colors.archived, "Archived"], [colors.contributed, "Contributed"]];
   let x = 18;
   const status = items.map(([color, text]) => {
     const chunk = `<circle cx="${x + 4}" cy="${height - 16}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 12.5}" fill="${colors.muted}" font-size="9.5">${text}</text>`;
