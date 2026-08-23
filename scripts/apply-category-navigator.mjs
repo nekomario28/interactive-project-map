@@ -34,7 +34,8 @@ async function hasCompletePagesBuild(outputDir) {
 export async function applyCategoryNavigator(outputDir = resolve(process.cwd(), "site")) {
   const sourceDir = resolve(process.cwd(), "scripts");
   await mkdir(outputDir, { recursive: true });
-  if (await hasCompletePagesBuild(outputDir)) await applyContributedViewer(outputDir);
+  const completePagesBuild = await hasCompletePagesBuild(outputDir);
+  if (completePagesBuild) await applyContributedViewer(outputDir);
   await copyFile(join(sourceDir, "public-category-navigator.js"), join(outputDir, "category-navigator.js"));
   await copyFile(join(sourceDir, "public-category-navigator.css"), join(outputDir, "category-navigator.css"));
 
@@ -48,7 +49,7 @@ export async function applyCategoryNavigator(outputDir = resolve(process.cwd(), 
     if (next !== html) await writeFile(htmlPath, next);
   }
 
-  await applyUiContractFixes(outputDir);
+  if (completePagesBuild) await applyUiContractFixes(outputDir);
 }
 
 async function main() {
