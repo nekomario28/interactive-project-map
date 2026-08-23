@@ -6,15 +6,14 @@ This is the short canonical list of work that is still worth doing. Historical r
 
 ## P0 — finish explicit external contribution support
 
-The bounded acquisition foundation, explicit Contributed graph schema, conservative generator integration, and shared Galaxy/Obsidian viewer contract are now implemented. The remaining product work is to finish dedicated-preset semantics and production proof without implying ownership.
+The bounded acquisition foundation, explicit Contributed graph schema, conservative generator integration, shared Galaxy/Obsidian viewer contract, and dedicated-preset C4 semantics are implemented. The remaining product work is the C5 real-profile production proof and stable-channel promotion without implying ownership.
 
-1. Finish **C4b dedicated viewer semantics** across Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix and Sankey: external `owner/repo` identity must survive each viewer sanitizer, `relation: contributed` must win over source fork/archive flags, and aggregate layouts must count Contributed separately rather than as owned output.
-2. Keep the shared `Contributed` control/status-count/URL contract aligned across all 12 presets, including empty-category pruning and zero-count behavior.
-3. Gate composition with Search, Focus/Local Graph, Activity, URL sharing, hover/selection and aggregate layouts.
-4. Run a real-profile privacy/UX proof, then one final full Verify + 12-preset + Chromium + iPhone WebKit gate on the exact reviewed head.
-5. Move the stable `v1` branch only after the final Contributed head is reviewed and GREEN.
+1. Generate a real profile graph containing both owned and Contributed repositories and verify that no private/restricted repository name or metadata is serialized.
+2. Perform one live GitHub Pages UX pass on the generated profile map, including Contributed identity/details, filters, shareable state and mobile behavior.
+3. Run one final full Verify + 12-preset comparison + Chromium + iPhone WebKit gate on the exact reviewed production-proof head.
+4. Move the stable `v1` branch only after that final Contributed head is reviewed and GREEN.
 
-Detailed plan and evidence: `docs/external-contributions-research.md`. C4b implementation boundary: `docs/contributed-dedicated-c4b.md`.
+Detailed plan and evidence: `docs/external-contributions-research.md`. Dedicated C4b implementation boundary: `docs/contributed-dedicated-c4b.md`.
 
 ## P1 — production acceptance checks
 
@@ -43,7 +42,8 @@ These are small but useful operational checks rather than new architecture.
 - External contribution API feasibility was proven in diagnostic #116 and the bounded source/static acquisition foundation merged in #117.
 - C1 ranking/cap, C2 graph schema/privacy boundary and C3 generator integration are implemented.
 - C4a shared Galaxy/Obsidian Contributed viewer contract merged in **#129** after exact-head Verify, Chromium and iPhone WebKit were GREEN.
+- C4b dedicated-viewer semantics are implemented in **#140**: strict external `owner/repo` reconstruction, Contributed-over-fork/archive precedence, fourth status/filter/URL alias, presentation-only external layout context where required, aggregate fourth buckets, and C2-shaped eight-route browser gates. The implementation head was GREEN on Verify, 12-preset comparison, Chromium and iPhone WebKit before the final roadmap-only update.
 
 ## Current tracker state
 
-C4b dedicated-preset semantics are the active P0 line on branch `feature/contributed-dedicated-presets`. Do not move `v1`, enable Contributed by default, or revive rejected visual-style experiments before dedicated semantics and the final privacy/UX proof are GREEN.
+C5 production proof is the active P0 line. Do not move `v1`, enable Contributed by default, or revive rejected visual-style experiments before the real-profile privacy/UX proof and final exact-head gates are GREEN.
