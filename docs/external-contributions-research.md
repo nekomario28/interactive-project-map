@@ -1,6 +1,6 @@
 # External contribution research
 
-Status: **Foundation accepted; promotion plan recorded, rendering not implemented yet** (2026-08-22)
+Status: **C4 all-12-preset semantics implemented; C5 production proof pending** (2026-08-23)
 
 ## Goal
 
@@ -125,13 +125,19 @@ The implementation order is fixed so acquisition evidence, ownership semantics, 
 
 ### Phase C4 — all-12-preset viewer semantics
 
+Status: **implemented in #129 (shared Galaxy/Obsidian) and #140 (eight dedicated viewers); fixture-level exact-head gates GREEN.**
+
 - Add `Contributed` as a fourth repository control alongside Original / Fork / Archived.
 - Preserve the existing status-count, URL-share, Focus/Local Graph, search, empty-category pruning, hover/selection and stable-geometry contracts.
 - Shared Galaxy/Obsidian and all eight dedicated projection viewers must agree on Contributed counts and filtering before promotion.
 - Matrix/Sankey/Treemap/Timeline aggregation must remain semantically correct rather than treating external work as owned output.
 - Tooltips/details should show `owner/repo` and a compact contribution summary so the relationship is obvious.
 
+C4b uses strict reconstruction of C2-valid external nodes after the legacy owned-only dedicated sanitizers. `relation: contributed` takes precedence over source fork/archive flags. Category-dependent dedicated layouts use a presentation-only `External contributions` context rather than serializing an ownership/category membership edge. Matrix and Sankey expose a fourth Contributed aggregate bucket. The C2-shaped browser fixture intentionally marks the external repository as both forked and archived to prove relation precedence across the dedicated projection contract.
+
 ### Phase C5 — production proof and stable promotion
+
+Status: **active next phase.**
 
 - Generate a real profile graph containing both owned and Contributed repositories and verify that no private/restricted repository name or metadata is present.
 - Run affected tests during iteration, then one final full Verify + 12-preset comparison + Chromium + iPhone WebKit gate on the exact final head.
@@ -149,4 +155,4 @@ The implementation order is fixed so acquisition evidence, ownership semantics, 
 
 ## Implementation boundary
 
-`src/external-contributions.ts` and `scripts/external-contributions.mjs` are deliberately standalone today. They are source/static parity implementations and are not called by generation yet. This keeps Phase C1/C2 reversible and independently testable before any public `graph.json` schema change.
+The C1/C2 acquisition and schema boundary remains source/static parity code. C3 connects the accepted bounded ranking policy to generation only when Contributed is explicitly enabled. C4 consumes only the generated graph contract; viewers never fetch GitHub contribution data themselves. C5 is the remaining production-proof and stable-promotion boundary.

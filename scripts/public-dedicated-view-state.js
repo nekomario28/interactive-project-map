@@ -1,9 +1,9 @@
 "use strict";
 
 (() => {
-  const STATUS_VALUES = ["original", "fork", "archived"];
+  const STATUS_VALUES = ["original", "fork", "archived", "contributed"];
   const params = new URL(location.href).searchParams;
-  const aliases = { o: "original", f: "fork", a: "archived" };
+  const aliases = { o: "original", f: "fork", a: "archived", c: "contributed" };
   const parsed = String(params.get("status") || "")
     .split(",")
     .map((value) => aliases[value] || value)
@@ -11,13 +11,21 @@
   const statuses = new Set(parsed.length ? parsed : STATUS_VALUES);
   const buttons = [...document.querySelectorAll("[data-status-filter]")];
   const resultCount = document.getElementById("resultCount");
-  const counts = { original: 0, fork: 0, archived: 0 };
+  const counts = { original: 0, fork: 0, archived: 0, contributed: 0 };
   let graphLoaded = false;
 
   function repositoryStatus(node) {
     if (!node || node.type !== "repository") return null;
+    if (node.relation === "contributed") return "contributed";
     if (node.archived === true) return "archived";
     return node.fork === true ? "fork" : "original";
+  }
+
+  function statusLabel(value) {
+    if (value === "original") return "Original";
+    if (value === "fork") return "Fork";
+    if (value === "archived") return "Archived";
+    return "Contributed";
   }
 
   function normalizeStatuses() {
@@ -38,7 +46,7 @@
     for (const button of buttons) {
       const value = button.dataset.statusFilter;
       const count = counts[value] || 0;
-      const label = value === "original" ? "Original" : value === "fork" ? "Fork" : "Archived";
+      const label = statusLabel(value);
       button.classList.add("status-chip", `status-${value}`);
       button.dataset.statusCount = String(count);
       button.disabled = !graphLoaded || count === 0;
@@ -73,6 +81,7 @@
     counts.original = 0;
     counts.fork = 0;
     counts.archived = 0;
+    counts.contributed = 0;
     for (const node of value.nodes) {
       const status = repositoryStatus(node);
       if (status) counts[status] += 1;
@@ -96,6 +105,7 @@
     // A category is contextual structure, not an independently visible item.
     // Once status filtering removes its last repository, remove the category and
     // its ownership edge as well so every dedicated layout sees the same graph.
+    // Contributed repositories intentionally have no owned category membership.
     const normalizedNodes = statusNodes
       .filter((node) => node?.type !== "group" || (groupCounts.get(node.id) || 0) > 0)
       .map((node) => node?.type === "group"
@@ -105,7 +115,8 @@
     const filtered = {
       ...value,
       nodes: normalizedNodes,
-      repositoryCount: normalizedNodes.filter((node) => node?.type === "repository").length,
+      repositoryCount: normalizedNodes.filter((node) => node?.type === "repository" && node?.relation !== "contributed").length,
+      contributedRepositoryCount: normalizedNodes.filter((node) => node?.type === "repository" && node?.relation === "contributed").length,
       groupCount: normalizedNodes.filter((node) => node?.type === "group").length,
     };
     if (Array.isArray(value.edges)) filtered.edges = value.edges.filter((edge) => ids.has(edge?.source) && ids.has(edge?.target));
