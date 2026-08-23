@@ -4,7 +4,11 @@ from pathlib import Path
 from gradio_client import Client, handle_file
 from huggingface_hub import hf_hub_download
 
-ap=argparse.ArgumentParser(); ap.add_argument('--mode',choices=['fresh','backtrack'],required=True); args=ap.parse_args()
+ap=argparse.ArgumentParser()
+ap.add_argument('--mode',choices=['fresh','backtrack'],required=True)
+ap.add_argument('--duration',type=float,default=2.0)
+ap.add_argument('--steps',type=int,default=4)
+args=ap.parse_args()
 ROOT=Path(f'.tmp/ai-director-cpu-{args.mode}-sid003'); ROOT.mkdir(parents=True,exist_ok=True)
 prompt='A bicycle pedals itself down the street, stops at a red light, and then continues when it turns green.'
 image=None
@@ -14,11 +18,11 @@ if args.mode=='backtrack':
  subprocess.run(['ffmpeg','-y','-v','error','-ss','1.12','-i',str(raw),'-frames:v','1','-q:v','2',str(anchor)],check=True)
  image=handle_file(str(anchor))
 
-out={'mode':args.mode,'space':'WeReCooking/ltx-2.3-cpu','endpoint':'/generate','prompt':prompt,'duration_sec':2.0,'steps':4,'seed':33003,'anchor_sec':1.12 if args.mode=='backtrack' else None}
+out={'mode':args.mode,'space':'WeReCooking/ltx-2.3-cpu','endpoint':'/generate','prompt':prompt,'duration_sec':args.duration,'steps':args.steps,'seed':33003,'anchor_sec':1.12 if args.mode=='backtrack' else None}
 t0=time.time()
 try:
  c=Client('WeReCooking/ltx-2.3-cpu',verbose=False)
- result=c.predict(prompt,image,[],0.6,False,2.0,4,33003,api_name='/generate')
+ result=c.predict(prompt,image,[],0.6,False,args.duration,args.steps,33003,api_name='/generate')
  out['raw_result']=repr(result)
  candidates=[]
  def walk(x):
