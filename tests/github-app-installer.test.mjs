@@ -22,6 +22,7 @@ const options = {
   maxRepos: 100,
   includeForks: true,
   includeArchived: false,
+  includeContributed: true,
 };
 const nowMs = Date.UTC(2026, 7, 22, 0, 0, 0);
 
@@ -41,6 +42,7 @@ test("signed installer state round-trips, expires, and is bound to the HttpOnly 
   assert.equal(payload.username, "octocat");
   assert.equal(payload.style, "sankey");
   assert.equal(payload.maxRepos, 100);
+  assert.equal(payload.includeContributed, true);
   assert.equal(payload.nonce, "browser-nonce");
 
   await assert.rejects(() => verifyInstallState(created.state, secret, "wrong-browser", { nowMs }), /cookie mismatch/);
@@ -87,6 +89,7 @@ test("callback verifies the user's installation, installs only the managed profi
       assert.ok(workflow.startsWith(MANAGED_WORKFLOW_MARKER));
       assert.match(workflow, /generate-project-map\.yml@v1/);
       assert.match(workflow, /style: sankey/);
+      assert.match(workflow, /contributed: true/);
       assert.match(workflow, /contents: write/);
       return json({ content: { path: ".github/workflows/project-map.yml" }, commit: { sha: "abc" } }, 201);
     }
