@@ -4,18 +4,16 @@ Status snapshot: **2026-08-23**
 
 This is the short canonical list of work that is still worth doing. Historical research and completed phase documents remain in `docs/`, but they should not be mistaken for active TODOs.
 
-## P0 — finish explicit external contribution support
+## P0 — expose the stable Contributed opt-in in public setup
 
-The bounded acquisition foundation, explicit Contributed graph schema, conservative generator integration, all-12-preset C4 semantics, and direct real-profile Action-F privacy proof are GREEN. The remaining work is the release-chain proof and stable production acceptance without implying ownership.
+The Contributed data model, generator, all-12-preset semantics, real-profile privacy proof, release chain, stable `v1` promotion, canonical profile regeneration, and live GitHub Pages UX proof are complete. The remaining product gap is **public setup exposure**, not another schema/viewer/release phase.
 
-1. Promote the reusable workflow's immutable inner Action pin and both public metadata mirrors to **F = `e5dafc86bec1cee6d913deaf040a2631599afb53`**, while forwarding the existing opt-in `contributed` input in the same reviewed release change.
-2. Run the full exact-head Verify + 12-preset comparison + Chromium + iPhone WebKit gates for that release change.
-3. After merge, call the reusable workflow at exact release commit **R** with `contributed: true` and prove that it resolves inner Action F and reproduces the real-profile privacy/ownership invariants.
-4. Only after that proof, move stable `v1` to R. Do not make Contributed globally default-on.
-5. Opt the canonical `nekomario28/nekomario28` profile workflow into `contributed: true` through `@v1`, regenerate the published graph/SVG, and verify that at least one eligible Contributed repository is present with no private/restricted leakage or ownership path.
-6. Perform the live GitHub Pages UX pass on that canonical map: Contributed identity/details, filters, shareable state and mobile behavior.
+1. Add an explicit Contributed opt-in to the public install options / setup generator and emit `contributed: true|false` into the generated reusable-workflow call.
+2. Keep the default **false**. Do not silently change existing generated workflows or globally enable external contribution collection.
+3. Update public setup copy/README so users understand that Contributed means work in repositories owned by other people or organizations, never repository ownership.
+4. Add focused install/setup tests proving the stable `@v1` workflow receives the option without changing existing defaults.
 
-Direct production proof already completed: run `32631530792` against Action F produced 13 owned + 6 Contributed repositories, 6 direct contribution edges, 0 privacy-marker keys and 0 ownership violations. Detailed evidence: `docs/contributed-generator-c3.md` and `docs/external-contributions-research.md`.
+This work is now safe because stable `v1` already resolves release **R = `b0734590a7ea65fea68eee9fb4e9b5c5d40ee8a0`**, whose reusable workflow resolves inner Action **F = `e5dafc86bec1cee6d913deaf040a2631599afb53`**.
 
 ## P1 — production acceptance checks
 
@@ -44,8 +42,13 @@ These are small but useful operational checks rather than new architecture.
 - C1 ranking/cap, C2 graph schema/privacy boundary and C3 generator integration are implemented.
 - C4a shared Galaxy/Obsidian Contributed viewer contract merged in **#129** after exact-head Verify, Chromium and iPhone WebKit were GREEN.
 - C4b dedicated-viewer semantics merged in **#140**: strict external `owner/repo` reconstruction, Contributed-over-fork/archive precedence, fourth status/filter/URL alias, presentation-only external layout context where required, aggregate fourth buckets, and C2-shaped eight-route browser gates.
-- C5 direct Action-F real-profile/privacy proof is GREEN on run `32631530792`; its experimental output was artifact-only and did not replace the canonical profile map.
+- C5 direct Action-F real-profile/privacy proof is GREEN on run `32631530792`: 13 owned + 6 Contributed repositories, 6 direct contribution edges, 0 privacy-marker keys and 0 ownership violations.
+- Release-chain PR **#141** advanced the reusable inner Action and public metadata mirrors to F. Exact-head run **#694 / `32631951199`** passed Verify, taxonomy, 12-preset comparison, Chromium, iPhone WebKit and evidence upload before merge.
+- Exact reusable-workflow proof run **`32632124217`** proved R → F resolution and reproduced 13 owned + 6 Contributed, privacy 0 and ownership 0.
+- Stable **`v1`** was then fast-forwarded to R; Contributed remains default-off globally.
+- Canonical `nekomario28/nekomario28` generation through `@v1` published commit **`ad6930e4339dfe1a3ba74da946776e54701dc73f`** containing 6 Contributed nodes and 6 direct `contribution` edges.
+- Live GitHub Pages proof run **`32632402395`** passed desktop Chromium and mobile WebKit against the published canonical map: 6 Contributed repositories, details/status sharing working, `status=c` restored on mobile, no horizontal overflow, and 0 browser errors. Temporary proof workflows were removed after their receipts were recorded.
 
 ## Current tracker state
 
-The active P0 line is the inner-pin/reusable-workflow release proof on `release/contributed-inner-pin`. Do not move `v1`, enable Contributed globally by default, or revive rejected visual-style experiments before exact release proof is GREEN.
+There is no remaining C5 release blocker. The stable Contributed implementation is production-proven and published. The next P0 is only the **default-off public setup opt-in**. Do not change the global default, revive rejected visual-style experiments, or add another contribution data source without new evidence.
