@@ -24,7 +24,7 @@ on:
         required: true
         type: boolean
       contributed:
-        description: Include bounded public contributions to repositories owned by others
+        description: Include bounded accepted public contributions to repositories owned by others
         required: false
         default: false
         type: boolean
@@ -38,9 +38,10 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Contributed release: Action F was proven directly against the real public profile before this
-# inner-pin promotion. Keep the inner pin and contributed forwarding in the same reviewed commit,
-# then prove this exact reusable workflow before moving v1.
+# Accepted-Contributed release: Action 1557cfae847c96bf8810fe74bcfef7cb22aec7b3 was proven
+# directly against the real public profile in nekomario28/nekomario28 run 32654967209 / job
+# 97232165228: 13 owned + 1 accepted Contributed, no owned-category leakage, and the Galaxy
+# Systems SVG contained the presentation-only External contributions system and Contributed legend.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -51,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@e5dafc86bec1cee6d913deaf040a2631599afb53
+        uses: nekomario28/interactive-project-map@1557cfae847c96bf8810fe74bcfef7cb22aec7b3
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}

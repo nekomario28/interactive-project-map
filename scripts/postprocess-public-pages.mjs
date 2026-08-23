@@ -9,9 +9,9 @@ import {
   stepForceLayout,
 } from "../packages/spatial-core/src/index.js";
 
-// Keep generated consumer workflows on a reviewed, immutable main implementation commit.
-// This commit includes standard-v1 generalization gates and visible-hierarchy promotion.
-export const PUBLIC_ACTION_REF = "e5dafc86bec1cee6d913deaf040a2631599afb53";
+// Keep generated consumer workflows on the reviewed immutable Action release.
+// Accepted-Contributed behavior was proven against the real public profile before this promotion.
+export const PUBLIC_ACTION_REF = "1557cfae847c96bf8810fe74bcfef7cb22aec7b3";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
