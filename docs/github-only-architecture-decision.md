@@ -1,8 +1,8 @@
 # Architecture decision: GitHub-only distribution
 
-Status: **Accepted as the default path** (2026-08-22)
+Status: **Accepted as the production default** (2026-08-22); one-click installer **DORMANT / NOT_PRODUCTION_EXPOSED** since 2026-08-23.
 
-> **Update:** GitHub repository + GitHub Actions + GitHub Pages remains the default and fully supported architecture, but the existing Cloudflare Worker + GitHub App one-click path is now intentionally retained as an **optional** convenience. The Worker-removal sections below are historical research and are superseded by [`optional-cloudflare-public-repo-security.md`](./optional-cloudflare-public-repo-security.md). Cloudflare must never become a dependency of normal Project Map generation or viewing.
+> **Update:** GitHub repository + GitHub Actions + GitHub Pages is the production onboarding architecture. The existing Cloudflare Worker + GitHub App one-click implementation is retained only as dormant, tested code in `main`; it is not an available/public convenience. Credential presence alone must not expose it. Public UI and installer routes require the separate explicit `ENABLE_ONE_CLICK_INSTALLER=true` gate, which remains off by default. The earlier Worker-removal sections below are historical research and are superseded by [`optional-cloudflare-public-repo-security.md`](./optional-cloudflare-public-repo-security.md) and [`current-roadmap.md`](./current-roadmap.md).
 
 ## Goal
 
@@ -23,7 +23,7 @@ GitHub Pages setup generator
 
 The Pages deployment itself is also GitHub Actions -> GitHub Pages. Normal viewer traffic does not require the hosted Worker.
 
-The Cloudflare Worker is therefore an optional second implementation of home/viewer/graph/SVG generation plus the GitHub App installer, not a dependency of the main path.
+The Cloudflare Worker remains a second implementation of home/viewer/graph/SVG generation plus the GitHub App installer, but its one-click surface is deliberately dormant and not production-exposed. It is not a dependency of the main path.
 
 ## Options investigated
 
@@ -33,7 +33,7 @@ The Cloudflare Worker is therefore an optional second implementation of home/vie
 
 **Cost:** separate deployment, four secrets, OAuth callback state/nonce handling, rate limiters, a second TypeScript runtime, Worker-specific tests, App registration/permissions, and an additional production acceptance surface. This infrastructure exists almost entirely to remove a few setup clicks.
 
-**Decision:** reject as the default/product path. The value is too small relative to the permanent operational and security surface. It is nevertheless retained as an optional convenience under the separate public-repository security boundary linked above.
+**Decision:** reject as the default/product path. The value is too small relative to the permanent operational and security surface. The reviewed implementation is preserved behind a default-off exposure gate for possible future reuse, but it is **DORMANT / NOT_PRODUCTION_EXPOSED** and is not an active production acceptance task.
 
 ### B. GitHub Pages + OAuth/PKCE with no backend
 
@@ -121,7 +121,7 @@ References:
 
 **Project Map defaults to GitHub-only.**
 
-The supported default production architecture is:
+The supported production architecture is:
 
 ```text
 GitHub repository
@@ -131,7 +131,7 @@ GitHub repository
 
 The initial workflow commit is an intentional trust boundary, not a defect to hide behind another service. The user can inspect exactly what gains write permission before committing it. After that one-time commit, scheduled generation is automatic.
 
-The normal workflow continues to use the caller repository's `GITHUB_TOKEN`; Project Map does not require a user PAT, GitHub App, OAuth app, database, KV store, webhook, or external scheduler. The optional Cloudflare/GitHub App path may automate that initial step, but it is not required.
+The normal workflow continues to use the caller repository's `GITHUB_TOKEN`; Project Map does not require a user PAT, GitHub App, OAuth app, database, KV store, webhook, or external scheduler. The retained Cloudflare/GitHub App code may automate that initial step only after an explicit reviewed reactivation and real-credential acceptance; it is not currently exposed.
 
 ## Consequences
 
@@ -144,19 +144,20 @@ The normal workflow continues to use the caller repository's `GITHUB_TOKEN`; Pro
 - write-capable publish job only in the user's repository;
 - user-owned `galaxy.svg` and `graph.json`;
 - all 12 viewers and current view controls;
-- optional Cloudflare/GitHub App one-click implementation, isolated from the default path and governed by `optional-cloudflare-public-repo-security.md`.
+- dormant Cloudflare/GitHub App one-click implementation and its security/regression tests, isolated behind the explicit default-off exposure gate and governed by `optional-cloudflare-public-repo-security.md`.
 
 ### Historical removal plan — superseded
 
-The earlier plan to remove the Worker, GitHub App installer, OAuth callback, rate-limit infrastructure, and Wrangler dependencies is **not active**. These components remain optional and must stay isolated so the GitHub-only path works when every Worker/App secret is absent.
+The earlier plan to remove the Worker, GitHub App installer, OAuth callback, rate-limit infrastructure, and Wrangler dependencies is **not active**. These components remain retained but dormant. They must stay isolated so the GitHub-only path works when every Worker/App secret is absent, and secret presence must not expose the installer.
 
 ## Implementation sequence
 
-1. Keep improving the GitHub-only onboarding independently of Cloudflare.
-2. Keep the optional one-click path stateless and secret-safe; never embed its credentials in the public repository or Pages JavaScript.
-3. Validate both paths only when changes affect them; do not make Worker CI failures block unrelated static viewer work unless the Worker surface changed.
-4. Move `v1` only after relevant generator/runtime changes are GREEN.
+1. Keep the GitHub-only onboarding authoritative and independent of Cloudflare.
+2. Keep the dormant one-click implementation small, stateless, secret-safe, and regression-tested; do not advertise, credential-test, or expand it while dormant.
+3. Reactivate one-click only when concrete onboarding evidence or an explicit reviewed product decision justifies the extra operational surface; perform documented real-credential acceptance before public exposure.
+4. Validate Worker/installer behavior when its retained code or security boundary changes; unrelated static viewer work must not make one-click active again.
+5. Move `v1` only after relevant generator/runtime changes are GREEN.
 
 ## Regression guard
 
-Do not make a backend mandatory solely to automate the first workflow commit. The optional Worker can remain available, but GitHub repository + Actions + Pages must always be sufficient to install, generate, update, and view Project Map.
+Do not make a backend mandatory solely to automate the first workflow commit. Do not describe the dormant Worker/App installer as an available public path while `ENABLE_ONE_CLICK_INSTALLER` is off. GitHub repository + Actions + Pages must always be sufficient to install, generate, update, and view Project Map.
