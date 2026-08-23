@@ -13,35 +13,34 @@ permissions:
   contents: read
 
 jobs:
-  ai-director-i2v-provider-probe:
+  ai-director-fast-i2v-sid003:
     if: github.head_ref == 'exp/ai-director-i2v-provider-probe'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
+      - name: Checkout exact experiment head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - name: Probe fast I2V provider API
+      - name: Install clients and ffmpeg
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check -q gradio_client
-          mkdir -p .tmp/ai-director-i2v-provider-probe
-          python - <<'PY' | tee .tmp/ai-director-i2v-provider-probe/api.txt
-          from gradio_client import Client
-          for space in ['Upsampler/ltx-video','Lightricks/ltx-2-distilled']:
-              print('===', space, '===')
-              try:
-                  c=Client(space, verbose=False)
-                  print(c.view_api(all_endpoints=True, print_info=False, return_format='dict'))
-              except Exception as e:
-                  print('ERROR', type(e).__name__, str(e))
-          PY
-      - name: Upload provider API evidence
+          python -m pip install --disable-pip-version-check -q gradio_client huggingface_hub
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Execute fast anchor-conditioned sid003 I2V
+        continue-on-error: true
+        run: python scripts/ai_director_fast_i2v_sid003.py
+      - name: Remove raw source
+        if: always()
+        run: rm -rf .tmp/ai-director-fast-i2v-sid003/raw
+      - name: Upload fast I2V outcome
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-i2v-provider-probe
-          path: .tmp/ai-director-i2v-provider-probe
+          name: ai-director-fast-i2v-sid003
+          path: .tmp/ai-director-fast-i2v-sid003
           if-no-files-found: error
           retention-days: 3
