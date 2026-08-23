@@ -22,6 +22,40 @@ function repo(index) {
   };
 }
 
+function contributedNode() {
+  return {
+    id: "repository:external/accepted-work",
+    label: "external/accepted-work",
+    type: "repository",
+    relation: "contributed",
+    repositoryOwner: "external",
+    repositoryName: "accepted-work",
+    url: "https://github.com/external/accepted-work",
+    description: "Accepted upstream work",
+    language: "TypeScript",
+    topics: ["visualization"],
+    stars: 2,
+    forks: 0,
+    fork: false,
+    archived: false,
+    contribution: {
+      commits: 0,
+      pullRequests: 1,
+      mergedPullRequests: 1,
+      commitsTruncated: false,
+      pullRequestsTruncated: false,
+    },
+    classification: {
+      categoryId: "web-apps",
+      categoryLabel: "Web / Apps",
+      secondaryTags: [],
+      confidence: 0.9,
+      method: "deterministic",
+      evidence: [],
+    },
+  };
+}
+
 test("Galaxy Classic preserves the static single-galaxy renderer", () => {
   const graph = buildGraph("example", Array.from({ length: 18 }, (_, index) => repo(index)), true, true);
   const svg = renderGalaxyClassicSvg(graph, "dark", 740, 420);
@@ -60,6 +94,25 @@ test("Galaxy Systems static frame is category-first and labels at most two repre
   assert.match(svg, /font-size="10\.5" font-weight="650"/, "category headings should retain the original Galaxy Systems node-label styling");
   assert.doesNotMatch(svg, /data-static-category="[^"]+">[^]*?<rect[^>]+rx="10\.5"/, "category headings must not use the pill treatment");
   assert.match(svg, /text-anchor="(?:start|end|middle)" fill="#[0-9a-f]{6}" font-size="9\.2"/, "representative labels should use outward radial anchors");
+});
+
+test("Galaxy Systems projects Contributed repositories into a presentation-only external system", () => {
+  const graph = buildGraph("example", Array.from({ length: 6 }, (_, index) => repo(index)), true, true);
+  const contributed = contributedNode();
+  graph.nodes.push(contributed);
+  graph.edges.push({ source: "user:example", target: contributed.id, type: "contribution" });
+  graph.contributedRepositoryCount = 1;
+
+  assert.equal("groupId" in contributed, false, "canonical Contributed node must start without owned category membership");
+  const svg = renderGalaxySystemsSvg(graph, "dark", 740, 420);
+
+  assert.match(svg, /External contributions/);
+  assert.match(svg, /external\/accepted-work/);
+  assert.match(svg, /Contributed/);
+  assert.match(svg, /fill="#55c7d7"/);
+  assert.equal("groupId" in contributed, false, "SVG projection must not mutate canonical graph membership");
+  const repositoryMarkers = svg.match(/data-galaxy-orbit="repository"/g) ?? [];
+  assert.equal(repositoryMarkers.length, graph.nodes.filter((node) => node.type === "repository").length, "every owned and Contributed repository should remain in Systems SVG");
 });
 
 test("Galaxy Hybrid emits a rotating spiral with local elliptical repository systems", () => {

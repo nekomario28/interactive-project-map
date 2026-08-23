@@ -20,6 +20,10 @@ export function compareContributedRepositories(left, right) {
   return String(left?.nameWithOwner || "").localeCompare(String(right?.nameWithOwner || ""));
 }
 
+export function isAcceptedContributedRepository(repository) {
+  return nonNegativeInteger(repository?.mergedPullRequests) > 0 || nonNegativeInteger(repository?.commits) > 0;
+}
+
 export function selectContributedRepositories(repositories, ownedRepositoryCount, options = {}) {
   const byRepository = new Map();
   for (const repository of Array.isArray(repositories) ? repositories : []) {
@@ -34,20 +38,24 @@ export function selectContributedRepositories(repositories, ownedRepositoryCount
     if (!existing || compareContributedRepositories(normalized, existing) < 0) byRepository.set(key, normalized);
   }
 
+  const discovered = [...byRepository.values()];
+  const eligible = discovered.filter(isAcceptedContributedRepository).sort(compareContributedRepositories);
+  const pendingOnly = discovered.filter((repository) => !isAcceptedContributedRepository(repository));
   const defaultCap = contributedRepositoryCap(ownedRepositoryCount);
   const requestedCap = options.cap == null ? defaultCap : nonNegativeInteger(options.cap);
   const cap = Math.min(CONTRIBUTED_MAX_REPOSITORIES, requestedCap);
-  const ranked = [...byRepository.values()].sort(compareContributedRepositories);
-  const selected = ranked.slice(0, cap);
+  const selected = eligible.slice(0, cap);
   return {
     repositories: selected,
     diagnostics: {
       ownedRepositoryCount: nonNegativeInteger(ownedRepositoryCount),
-      candidateRepositories: ranked.length,
+      candidateRepositories: discovered.length,
+      eligibleRepositories: eligible.length,
+      pendingOnlyRepositories: pendingOnly.length,
       selectedRepositories: selected.length,
-      omittedRepositories: Math.max(0, ranked.length - selected.length),
+      omittedRepositories: Math.max(0, discovered.length - selected.length),
       cap,
-      policy: "merged-prs>commits>prs>name; no activity threshold",
+      policy: "accepted: merged-prs|commits; rank merged-prs>commits>prs>name",
     },
   };
 }
