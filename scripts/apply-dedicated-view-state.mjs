@@ -1,6 +1,7 @@
 import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { applyContributedDedicatedViewers } from "./apply-contributed-dedicated-viewers.mjs";
 
 const DEDICATED_STYLES = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const STATUS_CONTROLS = '<button type="button" data-status-filter="original" aria-pressed="true">Original</button><button type="button" data-status-filter="fork" aria-pressed="true">Fork</button><button type="button" data-status-filter="archived" aria-pressed="true">Archived</button><button type="button" data-status-filter="contributed" aria-pressed="true">Contributed</button><span id="resultCount" aria-live="polite"></span>';
@@ -25,12 +26,14 @@ export async function applyDedicatedViewState(outputDir = resolve(process.cwd(),
     }
     if (next !== html) await writeFile(htmlPath, next);
   }
+
+  await applyContributedDedicatedViewers(outputDir);
 }
 
 async function main() {
   const outputDir = resolve(process.argv[2] || join(process.cwd(), "site"));
   await applyDedicatedViewState(outputDir);
-  console.log(`Attached shared repository status projection to ${DEDICATED_STYLES.length} dedicated viewers`);
+  console.log(`Attached shared repository status projection and Contributed contract to ${DEDICATED_STYLES.length} dedicated viewers`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
