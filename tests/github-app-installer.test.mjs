@@ -59,6 +59,14 @@ test("signed installer state preserves explicit Contributed opt-in", async () =>
   assert.equal(payload.includeContributed, true);
 });
 
+test("signed installer state rejects non-boolean Contributed values", async () => {
+  const created = await createInstallState({ ...options, includeContributed: "true" }, secret, { nowMs, nonce: "invalid-contributed-nonce" });
+  await assert.rejects(
+    () => verifyInstallState(created.state, secret, created.nonce, { nowMs: nowMs + 30_000 }),
+    (error) => error?.code === "invalid_state" && error?.status === 400,
+  );
+});
+
 test("install start redirects only to the configured GitHub App and sets a short-lived secure nonce cookie", async () => {
   const response = await beginGitHubAppInstall(new Request("https://maps.example/api/install/start"), env, contributedOptions, { nowMs, nonce: "browser-nonce" });
   assert.equal(response.status, 302);
