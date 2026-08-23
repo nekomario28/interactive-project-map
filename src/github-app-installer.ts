@@ -152,11 +152,13 @@ function validInstallOptions(payload: Record<string, unknown>): InstallOptions {
   const maxRepos = payload.maxRepos;
   const includeForks = payload.includeForks;
   const includeArchived = payload.includeArchived;
+  // Missing means false so a state minted just before this rollout remains valid.
+  const includeContributed = payload.includeContributed === true;
   const generatorRef = normalizedGeneratorRef(payload.generatorRef);
   if (!theme || !Number.isInteger(maxRepos) || Number(maxRepos) < 1 || Number(maxRepos) > 300 || typeof includeForks !== "boolean" || typeof includeArchived !== "boolean") {
     throw new InstallerError("Invalid installer state options", 400, "invalid_state");
   }
-  return { username, theme, style, maxRepos: Number(maxRepos), includeForks, includeArchived, generatorRef };
+  return { username, theme, style, maxRepos: Number(maxRepos), includeForks, includeArchived, includeContributed, generatorRef };
 }
 
 export async function createInstallState(options: InstallOptions, secret: string, runtime: InstallerRuntime = {}): Promise<{ state: string; nonce: string }> {
