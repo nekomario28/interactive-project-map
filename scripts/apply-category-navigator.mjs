@@ -2,6 +2,7 @@ import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { applyContributedViewer } from "./apply-contributed-viewer.mjs";
+import { applyUiContractFixes } from "./apply-ui-contract-fixes.mjs";
 
 const VIEWER_DIRS = ["u", "radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const SCRIPT_TAG = '<script src="../category-navigator.js" defer></script>';
@@ -46,12 +47,14 @@ export async function applyCategoryNavigator(outputDir = resolve(process.cwd(), 
     }
     if (next !== html) await writeFile(htmlPath, next);
   }
+
+  await applyUiContractFixes(outputDir);
 }
 
 async function main() {
   const outputDir = resolve(process.argv[2] || join(process.cwd(), "site"));
   await applyCategoryNavigator(outputDir);
-  console.log(`Attached category navigator to ${VIEWER_DIRS.length} interactive viewers`);
+  console.log(`Attached category navigator and final UI contracts to ${VIEWER_DIRS.length} interactive viewers`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
