@@ -36,6 +36,7 @@ test("release chain treats outer reusable ref and inner Action SHA as separate r
   assert.equal(pagesInnerRef, reusableInnerRef, "Pages-generated workflows must advertise the same inner Action release");
   assert.match(reusable, /OUTER release target:/);
   assert.match(reusable, /INNER release target:/);
+  assert.match(reusable, /contributed:\s*\$\{\{\s*inputs\.contributed\s*\}\}/, "reusable workflow must forward the Contributed opt-in to the immutable inner Action");
 
   const generated = renderInstallWorkflow({
     username: "octocat",

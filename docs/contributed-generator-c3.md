@@ -1,10 +1,10 @@
 # Contributed generator C3
 
-Status: **Staged implementation** (2026-08-22)
+Status: **Direct production proof GREEN; release-chain promotion in progress** (2026-08-23)
 
 ## Action contract
 
-The Project Map Action now accepts an opt-in `contributed` boolean, default **false**. When disabled, generation is byte-for-byte on the existing owned-repository path apart from ordinary timestamps.
+The Project Map Action accepts an opt-in `contributed` boolean, default **false**. When disabled, generation stays on the existing owned-repository path apart from ordinary timestamps.
 
 When enabled, generation keeps owned taxonomy/semantic processing authoritative, then performs exactly one bounded public external-contribution query, applies C1 ranking/cap, classifies the selected external repositories for metadata/search, and attaches them using the C2 `contribution` relation.
 
@@ -28,19 +28,34 @@ External repositories therefore do not participate in taxonomy discovery or owne
 
 No PAT, GitHub App credential, Cloudflare dependency, browser fetch, or additional contribution source is introduced.
 
-## Release-chain staging
+## Direct Action F production proof
 
-The reusable workflow source defines a `contributed` input now, but deliberately does **not** pass it to the current immutable inner Action `caeca4b7…`, which predates C3.
+The final C4 implementation commit is **F = `e5dafc86bec1cee6d913deaf040a2631599afb53`**. Before advancing any reusable-workflow pin or `v1`, the public `nekomario28/nekomario28` profile ran Action F directly with `contributed: true` under a `contents: read` generation job.
 
-This is not dead wiring. It enforces the release protocol from `docs/release-chain.md`:
+Proof run `32631530792` completed GREEN. Its safe receipt records:
 
-1. C3/C4 produce final implementation commit **F** containing Action support.
-2. Real-profile/privacy proof calls Action **F directly** with `contributed: true`.
-3. The later inner-pin release commit changes the reusable workflow to Action **F** and adds `contributed: ${{ inputs.contributed }}` in the same commit.
-4. Exact reusable-workflow proof runs before `v1` moves.
+- 13 owned repositories;
+- 6 Contributed repositories;
+- 6 direct `contribution` edges;
+- 0 serialized privacy-marker keys;
+- 0 ownership/membership violations;
+- a bounded 365-day public contribution window.
 
-Pages and Cloudflare stable setup generators do not emit the new input yet. Doing so before `v1` is promoted would create workflows that call an older stable reusable workflow which does not know the input. User-facing setup exposure follows the stable release boundary rather than preceding it.
+The full proof artifact was independently inspected as well: Contributed nodes retained full external `owner/repo` identity, had no `groupId` / `groupLabel`, did not enter owned semantic edges, and were reachable only through direct `contribution` edges from the profile owner. The proof workflow did not publish this experimental graph into the canonical `project-map/` output.
+
+## Release-chain promotion
+
+The direct-F proof satisfies step 2 of `docs/release-chain.md`. The current release step is now:
+
+1. keep **F** fixed at `e5dafc86bec1cee6d913deaf040a2631599afb53`;
+2. update the reusable workflow inner Action pin and both public metadata mirrors to F;
+3. forward `contributed: ${{ inputs.contributed }}` in that same reviewed release change;
+4. run the exact release-head verification gates;
+5. after merge, call the reusable workflow at exact release commit **R** and prove that it executes F and emits the same safe Contributed contract;
+6. only then move `v1` to R and regenerate the canonical profile through `@v1`.
+
+Pages and Cloudflare stable setup generators still do not expose Contributed as a default-on user choice. Stable-channel exposure follows the release boundary rather than preceding it.
 
 ## C4 boundary
 
-C3 guarantees correct data collection and serialization, not complete visual semantics. C4 is responsible for making all 12 presets, fourth-status filtering, tooltips/search, Focus and aggregations understand Contributed consistently before F is accepted.
+C4 is complete. Shared Galaxy/Obsidian plus all eight dedicated viewers agree on the fourth Contributed status, strict external identity, filtering and aggregate semantics. C5 now owns release-chain proof, stable promotion and the final live profile UX/privacy acceptance.

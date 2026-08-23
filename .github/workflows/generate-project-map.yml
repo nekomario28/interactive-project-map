@@ -38,10 +38,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Contributed staging: the outer input exists before release, but it is intentionally NOT passed
-# to the current inner Action because that immutable release predates the input. The inner-pin
-# promotion commit must update the Action SHA and add `contributed: ${{ inputs.contributed }}`
-# together, then prove the exact reusable-workflow chain before v1 moves.
+# Contributed release: Action F was proven directly against the real public profile before this
+# inner-pin promotion. Keep the inner pin and contributed forwarding in the same reviewed commit,
+# then prove this exact reusable workflow before moving v1.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -52,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@caeca4b7b33603109bbadd860a68fdae476c7482
+        uses: nekomario28/interactive-project-map@e5dafc86bec1cee6d913deaf040a2631599afb53
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
@@ -61,6 +60,7 @@ jobs:
           max_repos: ${{ inputs.max_repos }}
           forks: ${{ inputs.forks }}
           archived: ${{ inputs.archived }}
+          contributed: ${{ inputs.contributed }}
           output_dir: project-map
 
       - name: Transfer generated files to publish job
