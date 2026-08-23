@@ -17,6 +17,7 @@ export interface InstallOptions {
   maxRepos: number;
   includeForks: boolean;
   includeArchived: boolean;
+  includeContributed: boolean;
   generatorRef?: string;
 }
 
@@ -44,6 +45,7 @@ export function installOptionsFromUrl(url: URL): InstallOptions {
     maxRepos: intParam(url, "max_repos", 100, 1, 300),
     includeForks: boolParam(url, "forks", true),
     includeArchived: boolParam(url, "archived", false),
+    includeContributed: boolParam(url, "contributed", false),
     generatorRef: normalizeGeneratorRef(url.searchParams.get("generator_ref")),
   };
 }
@@ -90,6 +92,7 @@ jobs:
       max_repos: "${options.maxRepos}"
       forks: ${options.includeForks}
       archived: ${options.includeArchived}
+      contributed: ${options.includeContributed}
 
   publish:
     needs: generate
