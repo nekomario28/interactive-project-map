@@ -179,7 +179,10 @@
       } finally {
         state.graph = sourceGraph;
         rebuilding = false;
-        queueMicrotask(refreshControlSummary);
+        queueMicrotask(() => {
+          lastStatusKey = statusKey();
+          refreshControlSummary();
+        });
       }
     };
 
