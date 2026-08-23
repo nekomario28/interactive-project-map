@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  ai-director-fast-i2v-sid003:
+  ai-director-chained-i2v-sid003:
     if: github.head_ref == 'exp/ai-director-i2v-provider-probe'
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -30,17 +30,17 @@ jobs:
           python -m pip install --disable-pip-version-check -q gradio_client huggingface_hub
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-      - name: Execute fast anchor-conditioned sid003 I2V
+      - name: Execute chained sid003 I2V events
         continue-on-error: true
-        run: python scripts/ai_director_fast_i2v_sid003.py
+        run: python scripts/ai_director_chained_i2v_sid003.py
       - name: Remove raw source
         if: always()
-        run: rm -rf .tmp/ai-director-fast-i2v-sid003/raw
-      - name: Upload fast I2V outcome
+        run: rm -rf .tmp/ai-director-chained-i2v-sid003/raw
+      - name: Upload chained I2V outcome
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ai-director-fast-i2v-sid003
-          path: .tmp/ai-director-fast-i2v-sid003
+          name: ai-director-chained-i2v-sid003
+          path: .tmp/ai-director-chained-i2v-sid003
           if-no-files-found: error
           retention-days: 3
