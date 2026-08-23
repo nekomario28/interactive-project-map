@@ -71,11 +71,11 @@ No private key is required by this architecture because the callback uses a GitH
 ```text
 browser
   |
-  | GET /api/install/start?username=...&theme=...
+  | GET /api/install/start?username=...&theme=...&contributed=true|false
   v
 Worker
   |-- validate options
-  |-- create 15-minute HMAC-signed state
+  |-- create 15-minute HMAC-signed state, including the default-off Contributed choice
   |-- create random browser nonce
   |-- Set-Cookie: HttpOnly; Secure; SameSite=Lax
   v
@@ -86,6 +86,7 @@ https://github.com/apps/<slug>/installations/new?state=...
 GET /api/install/callback?code=...&state=...
   |
   |-- verify HMAC, expiry and nonce cookie
+  |-- restore install options; legacy v1 state with no Contributed field normalizes it to false
   |-- exchange code with the exact registered callback redirect_uri
   |-- require a GitHub App user token (`ghu_...`)
   |-- GET /user/installations
@@ -94,6 +95,7 @@ GET /api/install/callback?code=...&state=...
   |-- require explicit USERNAME/USERNAME access + push/admin capability
   |-- GET .github/workflows/project-map.yml
   |-- create it, or update it only when it begins with our managed marker
+  |-- preserve `contributed: true|false` in the managed workflow
   |-- POST workflow_dispatch (short retry only for just-created 404 race)
   |-- discard user token
   v
@@ -109,6 +111,8 @@ GitHub explicitly warns that an `installation_id` query parameter can be spoofed
 ### State is browser-bound, not merely signed
 
 The install state is HMAC-signed and expires after 15 minutes. In addition, a random nonce inside the signed state must equal an HttpOnly `SameSite=Lax` cookie set when installation begins. A copied callback URL is therefore insufficient on its own.
+
+Install options are part of that signed state. `includeContributed` is boolean and remains default-off. Existing v1 state created before that field existed remains valid and is interpreted as `false`; an explicit boolean is preserved through verification and written to the managed workflow. Non-boolean values are rejected rather than coerced.
 
 ### OAuth code exchange is callback-bound
 
@@ -144,27 +148,30 @@ Code-only gates, which require no GitHub App credentials:
 2. tamper rejection.
 3. expiry rejection.
 4. nonce-cookie mismatch rejection.
-5. exact OAuth callback `redirect_uri` binding.
-6. reject non-`ghu_` token types.
-7. installation account verification.
-8. explicit `USERNAME/USERNAME` repository verification.
-9. strict first-line managed-workflow ownership and unrelated-workflow overwrite refusal.
-10. default generated workflow uses stable `v1`; Advanced mode accepts only `v1` or a full commit SHA.
-11. signed Advanced SHA survives start → callback → managed workflow update unchanged.
-12. managed workflow create/update/no-op behavior.
-13. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
-14. installer start/callback reuse the existing Worker API rate limiter.
-15. Worker typecheck/dry-run and the existing full project verification suite.
+5. legacy v1 state with no Contributed field restores `includeContributed=false`; explicit boolean opt-in survives signed state verification and non-boolean state is rejected.
+6. exact OAuth callback `redirect_uri` binding.
+7. reject non-`ghu_` token types.
+8. installation account verification.
+9. explicit `USERNAME/USERNAME` repository verification.
+10. strict first-line managed-workflow ownership and unrelated-workflow overwrite refusal.
+11. default generated workflow uses stable `v1`; Advanced mode accepts only `v1` or a full commit SHA.
+12. signed Advanced SHA survives start → callback → managed workflow update unchanged.
+13. signed Contributed opt-in survives start → callback → managed workflow as `contributed: true` while the omitted/default path remains false.
+14. managed workflow create/update/no-op behavior.
+15. first-run dispatch with a bounded retry for GitHub's just-created workflow visibility race.
+16. installer start/callback reuse the existing Worker API rate limiter.
+17. Worker typecheck/dry-run and the existing full project verification suite.
 
 The final production gate requires a real GitHub App registration and Worker secrets:
 
-1. start from the hosted UI;
+1. start from the hosted UI with Contributed left off and confirm the existing default path;
 2. install the App on a disposable/public profile repository, selecting only that repository;
 3. return through the OAuth callback;
 4. confirm exactly one managed workflow file is created;
 5. confirm its first workflow run starts;
 6. confirm only `project-map/galaxy.svg` and `project-map/graph.json` are published;
-7. run the one-click path again and confirm the managed workflow is updated/no-op rather than duplicated;
-8. remove App access and confirm the already-installed scheduled workflow continues independently.
+7. repeat from the hosted UI with **Include Contributed** enabled and confirm the managed workflow contains `contributed: true` and the generated graph uses the opt-in;
+8. run the one-click path again and confirm the managed workflow is updated/no-op rather than duplicated;
+9. remove App access and confirm the already-installed scheduled workflow continues independently.
 
 Do not weaken the code-only gates to compensate for a registration or permission error. Use GitHub's `X-Accepted-GitHub-Permissions` response header to diagnose missing App permissions.

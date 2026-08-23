@@ -25,14 +25,15 @@ test("Cloudflare setup exposes the same twelve style choices, default-off Contri
   assert.match(html, /p\.set\('style',v\.style\)/);
 });
 
-test("configured home keeps one-click for defaults and hides it when Contributed is selected", () => {
+test("configured home preserves the same Contributed choice through one-click and manual install paths", () => {
   const html = renderHome("https://maps.example", true);
   assert.match(html, /id="one-click-install"/);
   assert.match(html, /Install with GitHub App/);
   assert.match(html, /\/api\/install\/start/);
   assert.match(html, /oneClickInstall\.href=u\.oneClick/);
-  assert.match(html, /oneClickInstall\.hidden=v\.contributed/);
-  assert.match(html, /Contributed opt-in currently uses the manual workflow path/);
+  assert.doesNotMatch(html, /oneClickInstall\.hidden=v\.contributed/);
+  assert.match(html, /preserved in both the manual workflow and GitHub App flow/);
+  assert.match(html, /The same choice is preserved by both install paths/);
   assert.match(html, /id="workflow"/);
   assert.match(html, /Copy workflow/);
 });
