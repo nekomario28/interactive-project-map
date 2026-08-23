@@ -6,6 +6,7 @@ import vm from "node:vm";
 const PINNED_REF = "151b9cabd5968cdfb602115fc440795c14f88745";
 
 function element(id) {
+  const parentLabel = { after() {} };
   return {
     id,
     value: id === "maxRepos" ? "100" : id === "theme" ? "dark" : id === "mapStyle" ? "radial" : "",
@@ -17,6 +18,8 @@ function element(id) {
     classList: { add() {}, remove() {}, toggle() {} },
     addEventListener() {},
     setAttribute() {},
+    append() {},
+    closest(selector) { return selector === "label" ? parentLabel : null; },
     select() {},
   };
 }
@@ -38,6 +41,7 @@ test("Pages setup keeps stable v1 hidden by default and accepts only immutable S
       querySelector(selector) { return selector === ".actions" ? actions : null; },
       querySelectorAll() { return []; },
       createElement(tag) { return element(tag); },
+      createTextNode(text) { return { textContent: text }; },
       execCommand() { return true; },
     },
   };
@@ -48,11 +52,13 @@ test("Pages setup keeps stable v1 hidden by default and accepts only immutable S
   assert.equal(vm.runInContext(`normalizeGeneratorRef('${PINNED_REF.toUpperCase()}')`, context), PINNED_REF);
   assert.equal(vm.runInContext("normalizeGeneratorRef('main')", context), null);
 
-  const pinned = vm.runInContext(`workflowFor({theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,generatorRef:'${PINNED_REF}'})`, context);
+  const pinned = vm.runInContext(`workflowFor({theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,contributed:false,generatorRef:'${PINNED_REF}'})`, context);
   assert.match(pinned, new RegExp(`generate-project-map\\.yml@${PINNED_REF}`));
   assert.match(pinned, new RegExp(`Project Map generator policy: pinned-${PINNED_REF}`));
+  assert.match(pinned, /contributed: false/);
 
-  const stable = vm.runInContext("workflowFor({theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,generatorRef:'v1'})", context);
+  const stable = vm.runInContext("workflowFor({theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,contributed:true,generatorRef:'v1'})", context);
   assert.match(stable, /generate-project-map\.yml@v1/);
   assert.match(stable, /Project Map generator policy: stable-v1/);
+  assert.match(stable, /contributed: true/);
 });
