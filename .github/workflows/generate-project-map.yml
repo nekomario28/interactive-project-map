@@ -38,9 +38,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Profile-local Galaxy world release: Action 4e5bbf4c4a4858770b4393ced718722fba724530 passed
-# Verify #801, including donor-background structure, twelve-preset comparison,
-# Contributed external-halo regressions, Chromium and iPhone WebKit.
+# Arm-free profile-local Galaxy release: Action 041717e17cea8a28343a3b607ef4faf008813fd0 passed
+# Verify #822, including donor rings/associations/nucleus without central arm paths,
+# twelve-preset comparison, Contributed external-halo regressions, Chromium and iPhone WebKit.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@4e5bbf4c4a4858770b4393ced718722fba724530
+        uses: nekomario28/interactive-project-map@041717e17cea8a28343a3b607ef4faf008813fd0
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
