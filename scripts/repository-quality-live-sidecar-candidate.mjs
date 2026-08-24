@@ -35,6 +35,14 @@ function normalizedRepositoryKey(value) {
   return key;
 }
 
+function frozenSnapshotDate(value, label) {
+  const date = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) {
+    throw new Error(`${label}.snapshotDate must be an explicit YYYY-MM-DD frozen evidence date`);
+  }
+  return date;
+}
+
 function resolveManifestFixture(manifestPath, fixturePath) {
   if (typeof fixturePath !== "string" || !fixturePath) throw new Error("enrichment source fixture is required");
   if (path.isAbsolute(fixturePath)) return fixturePath;
@@ -68,7 +76,11 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
       if (fixture.policyId !== policy.policyId) throw new Error(`${source.fixture} policy mismatch`);
       if (typeof fixture.status !== "string" || !fixture.status.startsWith("frozen-")) throw new Error(`${source.fixture} must remain a frozen evidence source`);
       if (!Array.isArray(fixture.cases)) throw new Error(`${source.fixture} cases must be an array`);
-      fixtureCache.set(fixturePath, fixture);
+      fixtureCache.set(fixturePath, {
+        ...fixture,
+        snapshotDate: frozenSnapshotDate(fixture.snapshotDate, source.fixture),
+      });
+      fixture = fixtureCache.get(fixturePath);
     }
 
     const selected = fixture.cases.find((entry) => entry?.id === source.caseId);
@@ -88,7 +100,7 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
       repositoryKey,
       fixture: source.fixture,
       fixtureStatus: fixture.status,
-      fixtureSnapshotDate: fixture.snapshotDate ?? null,
+      fixtureSnapshotDate: fixture.snapshotDate,
       caseId: source.caseId,
       evidenceField,
       artifacts: [...context.artifacts],
@@ -97,6 +109,31 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
   });
 
   return { enrichments, sourceDiagnostics };
+}
+
+function attachFrozenEvidenceFreshness(presentation, sourceDiagnostics) {
+  const byRepository = new Map(sourceDiagnostics.map((source) => [source.repositoryKey, source]));
+  const dates = [...new Set(sourceDiagnostics.map((source) => source.fixtureSnapshotDate))].sort();
+  if (!dates.length) throw new Error("bounded Quality evidence freshness dates are unavailable");
+
+  presentation.evidenceFreshness = {
+    mode: "bounded-frozen-snapshots",
+    automaticRefresh: false,
+    snapshotDates: dates,
+    oldestSnapshotDate: dates[0],
+    newestSnapshotDate: dates.at(-1),
+  };
+
+  for (const entry of presentation.repositories) {
+    if (entry.overlayState !== "available") continue;
+    const source = byRepository.get(entry.repositoryKey);
+    if (!source) throw new Error(`Quality-available repository has no frozen freshness source: ${entry.repositoryKey}`);
+    entry.evidenceFreshness = {
+      state: "frozen-snapshot",
+      snapshotDate: source.fixtureSnapshotDate,
+      automaticRefresh: false,
+    };
+  }
 }
 
 export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
@@ -116,6 +153,7 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
   });
   const assessment = assessmentResult.artifact;
   const presentation = buildRepositoryQualityPresentationCandidate(graph, assessment);
+  attachFrozenEvidenceFreshness(presentation, sourceDiagnostics);
 
   if (presentation.source.graphGeneratedAt !== graph.generatedAt) {
     throw new Error("generated Quality presentation is not bound to the source graph.generatedAt");
@@ -148,11 +186,14 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
         quality: assessmentResult.diagnostics.quality,
       },
       presentation: presentation.diagnostics,
+      evidenceFreshness: presentation.evidenceFreshness,
       enrichmentSources: sourceDiagnostics,
       invariants: {
         sourceGraphGeneratedAtCopiedExactly: true,
         repositoryMembershipComesOnlyFromGraph: true,
         frozenEvidenceSourcesAreExplicit: true,
+        frozenEvidenceFreshnessIsPublished: true,
+        automaticEvidenceRefreshPerformed: false,
         publicationPerformed: false,
         defaultActionChanged: false,
       },
