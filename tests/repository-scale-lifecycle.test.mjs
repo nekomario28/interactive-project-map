@@ -4,9 +4,14 @@ import assert from "node:assert/strict";
 import { buildRepositoryScaleEvidence } from "../scripts/repository-scale-features.mjs";
 import { buildRepositoryLifecycleContext } from "../scripts/repository-lifecycle-context.mjs";
 
+const TEAM_ORIGINAL = { ownership: "owned", collaboration: "team", lineage: "original" };
+const CONTRIBUTED = { ownership: "contributed", collaboration: "unknown", lineage: "original" };
+const OWNED_FORK = { ownership: "owned", collaboration: "unknown", lineage: "fork" };
+const OWNED_UNKNOWN = { ownership: "owned", collaboration: "unknown", lineage: "original" };
+
 test("Scale uses breadth and coordination evidence without LOC/commit/workflow shortcuts", () => {
   const result = buildRepositoryScaleEvidence({
-    relation: "owned-team",
+    relation: TEAM_ORIGINAL,
     subsystems: 5,
     supportedPlatforms: 3,
     integrations: 4,
@@ -22,19 +27,20 @@ test("Scale uses breadth and coordination evidence without LOC/commit/workflow s
   assert.equal(result.projectSide.locUsedAsScale, false);
   assert.equal(result.projectSide.commitCountUsedAsScale, false);
   assert.equal(result.projectSide.workflowCountUsedAsScale, false);
+  assert.equal(result.attribution.profile, "team");
   assert.equal(result.compositeScale, null);
 });
 
 test("person-side contribution fields are rejected from project Scale extraction", () => {
   assert.throws(
-    () => buildRepositoryScaleEvidence({ relation: "contributed", mergedPullRequests: 40 }),
+    () => buildRepositoryScaleEvidence({ relation: CONTRIBUTED, mergedPullRequests: 40 }),
     /person-side evidence/,
   );
 });
 
 test("fork upstream Scale remains context-only", () => {
   const result = buildRepositoryScaleEvidence({
-    relation: "owned-fork",
+    relation: OWNED_FORK,
     subsystems: 1,
     contributors: 1,
     parent: {
@@ -49,14 +55,24 @@ test("fork upstream Scale remains context-only", () => {
 
   assert.equal(result.upstreamContext.contextOnly, true);
   assert.equal(result.upstreamContext.eligibleForLocalScale, false);
+  assert.equal(result.attribution.profile, "fork");
   assert.equal(result.attribution.upstreamScaleIsContextOnly, true);
   assert.equal(result.compositeScale, null);
 });
 
-test("unknown Scale evidence stays unknown rather than zero", () => {
-  const result = buildRepositoryScaleEvidence({ relation: "owned-solo" });
+test("unknown Scale evidence and collaboration stay unknown rather than zero or solo", () => {
+  const result = buildRepositoryScaleEvidence({ relation: OWNED_UNKNOWN });
   assert.equal(result.projectSide.technicalBreadth.subsystems.state, "unknown");
   assert.equal(result.projectSide.organizationalBreadth.contributors.raw, null);
+  assert.equal(result.attribution.profile, "unresolved");
+  assert.equal(result.attribution.collaborationState, "unknown");
+});
+
+test("parent Scale context is rejected for original lineage", () => {
+  assert.throws(
+    () => buildRepositoryScaleEvidence({ relation: TEAM_ORIGINAL, parent: { subsystems: 4 } }),
+    /only valid when relation.lineage is fork/,
+  );
 });
 
 test("frozen dataset lifecycle does not treat inactivity as poor health or Quality", () => {
