@@ -6,6 +6,7 @@
   "personInput": "personalContribution",
   "confidencePolicy": "preserve-separately-do-not-weight-merit-yet",
   "activityPolicy": "not-a-prominence-input",
+  "relationPolicy": "orthogonal ownership/collaboration/lineage are reduced to an attribution profile only after validation",
   "candidates": {
     "balanced-v1": {
       "projectWeights": {
@@ -14,11 +15,11 @@
         "scale": 0.15,
         "maturity": 0.15
       },
-      "relationAttribution": {
-        "owned-solo": { "mode": "direct", "base": 1.0, "personalContributionSlope": 0.0 },
-        "owned-team": { "mode": "contribution-gated", "base": 0.40, "personalContributionSlope": 0.60 },
+      "attributionProfiles": {
+        "direct": { "mode": "direct", "base": 1.0, "personalContributionSlope": 0.0 },
+        "team": { "mode": "contribution-gated", "base": 0.40, "personalContributionSlope": 0.60 },
         "contributed": { "mode": "contribution-gated", "base": 0.08, "personalContributionSlope": 0.92 },
-        "owned-fork": { "mode": "contribution-gated", "base": 0.15, "personalContributionSlope": 0.85 }
+        "fork": { "mode": "contribution-gated", "base": 0.15, "personalContributionSlope": 0.85 }
       }
     },
     "quality-led-v1": {
@@ -28,11 +29,11 @@
         "scale": 0.15,
         "maturity": 0.15
       },
-      "relationAttribution": {
-        "owned-solo": { "mode": "direct", "base": 1.0, "personalContributionSlope": 0.0 },
-        "owned-team": { "mode": "contribution-gated", "base": 0.40, "personalContributionSlope": 0.60 },
+      "attributionProfiles": {
+        "direct": { "mode": "direct", "base": 1.0, "personalContributionSlope": 0.0 },
+        "team": { "mode": "contribution-gated", "base": 0.40, "personalContributionSlope": 0.60 },
         "contributed": { "mode": "contribution-gated", "base": 0.08, "personalContributionSlope": 0.92 },
-        "owned-fork": { "mode": "contribution-gated", "base": 0.15, "personalContributionSlope": 0.85 }
+        "fork": { "mode": "contribution-gated", "base": 0.15, "personalContributionSlope": 0.85 }
       }
     },
     "impact-led-v1": {
@@ -42,11 +43,11 @@
         "scale": 0.10,
         "maturity": 0.15
       },
-      "relationAttribution": {
-        "owned-solo": { "mode": "direct", "base": 1.0, "personalContributionSlope": 0.0 },
-        "owned-team": { "mode": "contribution-gated", "base": 0.40, "personalContributionSlope": 0.60 },
+      "attributionProfiles": {
+        "direct": { "mode": "direct", "base": 1.0, "personalContributionSlope": 0.0 },
+        "team": { "mode": "contribution-gated", "base": 0.40, "personalContributionSlope": 0.60 },
         "contributed": { "mode": "contribution-gated", "base": 0.08, "personalContributionSlope": 0.92 },
-        "owned-fork": { "mode": "contribution-gated", "base": 0.15, "personalContributionSlope": 0.85 }
+        "fork": { "mode": "contribution-gated", "base": 0.15, "personalContributionSlope": 0.85 }
       }
     }
   },
