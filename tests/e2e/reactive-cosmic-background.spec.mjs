@@ -117,9 +117,13 @@ test("meteor is a real background canvas event and remains behind graph content"
   await expect.poll(() => page.evaluate(() => Boolean(window.ProjectMapCosmicBackground))).toBe(true);
   expect(await page.evaluate(() => window.ProjectMapCosmicBackground.spawnMeteor())).toBe(true);
 
+  // Sample the meteor after its fade-in, not on the first frame where the head
+  // has technically entered the viewport but is intentionally still faint.
   await expect.poll(async () => page.evaluate(() => {
     const snap = window.ProjectMapCosmicBackground.snapshot();
     return snap.meteor.active
+      && snap.meteor.progress > 0.28
+      && snap.meteor.progress < 0.72
       && snap.meteor.headX > 8
       && snap.meteor.headX < snap.viewport.width - 8
       && snap.meteor.headY > 8
