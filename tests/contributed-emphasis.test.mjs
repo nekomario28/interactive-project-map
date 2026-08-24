@@ -28,12 +28,18 @@ test("static Galaxy Contributed nodes rely on the distinct status color without 
   assert.doesNotMatch(markup, /stroke="#d9847b"/);
 });
 
-test("browser emphasis keeps the orange identity and hides direct contribution connection lines", async () => {
+test("browser emphasis keeps Contributed out of owned swept space without fake membership", async () => {
   const source = await readFile(new URL("../scripts/public-contributed-emphasis.js", import.meta.url), "utf8");
   assert.match(source, /const CONTRIBUTED = "#E69F00"/);
   assert.match(source, /\["galaxy-classic", "galaxy-systems", "galaxy-hybrid"\]/);
   assert.match(source, /node\?\.type === "repository" && node\?\.relation === "contributed"/);
   assert.match(source, /edge\?\.type !== "contribution"/);
+  assert.match(source, /function ownedSweepEnvelope\(owner\)/);
+  assert.match(source, /groupRadius \+ localRadius/);
+  assert.match(source, /state\.style === "galaxy-systems" \? "external-rail" : "external-orbit"/);
+  assert.match(source, /railStartX = owner\.x \+ sweepRadius \+ 150/);
+  assert.match(source, /baseRadius = Math\.max\(345, sweepRadius \+ 125\)/);
+  assert.match(source, /target\.placement !== "external-orbit"/);
   assert.match(source, /ProjectMapContributedEmphasis/);
   assert.doesNotMatch(source, /ctx\./);
   assert.doesNotMatch(source, /drawNodesAndLabels/);
