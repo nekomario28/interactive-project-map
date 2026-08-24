@@ -50,31 +50,34 @@ function crowdedSystemsGraph() {
   };
 }
 
-test("Galaxy Systems keeps crowded Contributed repositories in a dedicated external rail", () => {
-  const width = 740;
-  const height = 420;
-  const svg = renderGalaxySystemsSvg(crowdedSystemsGraph(), "dark", width, height);
+test("Galaxy Systems restores Contributed as a natural outer halo with outward-only lanes", () => {
+  const svg = renderGalaxySystemsSvg(crowdedSystemsGraph(), "dark", 740, 420);
 
-  assert.match(svg, /data-galaxy-external-layout="rail"/);
-  assert.match(svg, /data-galaxy-external-backdrop="true"/);
-  assert.match(svg, />Contributed<\/text>/);
+  assert.match(svg, /data-galaxy-external-layout="halo"/);
+  assert.match(svg, /data-galaxy-placement="external-halo-orbit"/);
+  assert.doesNotMatch(svg, /data-galaxy-external-layout="rail"/);
+  assert.doesNotMatch(svg, /data-galaxy-external-backdrop/);
+  assert.doesNotMatch(svg, />external repositories<\/text>/);
 
   const placements = [...svg.matchAll(
-    /data-galaxy-orbit="contributed" data-galaxy-placement="external-rail" transform="translate\(([0-9.]+) ([0-9.]+)\)"/gu,
+    /data-galaxy-orbit="contributed" data-galaxy-placement="external-halo-orbit" data-galaxy-lane="([0-9]+)" data-galaxy-radius="([0-9.]+)"/gu,
   )];
   assert.equal(placements.length, 12);
+  const lane0 = placements.filter((match) => Number(match[1]) === 0).map((match) => Number(match[2]));
+  const lane1 = placements.filter((match) => Number(match[1]) === 1).map((match) => Number(match[2]));
+  assert.equal(lane0.length, 6);
+  assert.equal(lane1.length, 6);
+  assert.ok(Math.min(...lane1) > Math.max(...lane0), "later Contributed lanes must expand outward, never back through owned systems");
 
-  const xs = placements.map((match) => Number(match[1]));
-  const ys = placements.map((match) => Number(match[2]));
-  assert.ok(Math.min(...xs) > width * 0.75, `expected external rail to stay at the right edge, got x=${Math.min(...xs)}`);
-  assert.ok(Math.min(...ys) >= 54, `expected top clearance, got y=${Math.min(...ys)}`);
-  assert.ok(Math.max(...ys) <= height - 44, `expected legend clearance, got y=${Math.max(...ys)}`);
+  const externalStart = svg.indexOf('data-galaxy-external-layout="halo"');
+  assert.match(svg.slice(externalStart), /<animateTransform/u, "Contributed should remain part of the living galaxy instead of becoming a stationary UI shelf");
+});
 
-  const sortedY = [...ys].sort((a, b) => a - b);
-  const gaps = sortedY.slice(1).map((value, index) => value - sortedY[index]);
-  assert.ok(Math.min(...gaps) >= 24, `expected readable external-node spacing, got ${Math.min(...gaps)}`);
-
-  const externalStart = svg.indexOf('data-galaxy-external-layout="rail"');
-  const externalSlice = svg.slice(externalStart);
-  assert.doesNotMatch(externalSlice, /<animateTransform/u, "Contributed must not re-enter owned category motion through a global orbit");
+test("Galaxy Systems static background carries the historical profile-local world structure", () => {
+  const svg = renderGalaxySystemsSvg(crowdedSystemsGraph(), "dark", 740, 420);
+  assert.match(svg, /data-profile-galaxy-background="ead72debca2a16608ebc5b799993c0234ea10cab"/);
+  assert.equal((svg.match(/data-profile-galaxy-ring=/g) || []).length, 3);
+  assert.equal((svg.match(/data-profile-galaxy-arm=/g) || []).length, 6);
+  assert.equal((svg.match(/data-profile-stellar-association=/g) || []).length, 6);
+  assert.match(svg, /profile-galaxy-nucleus/);
 });

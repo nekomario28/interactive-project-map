@@ -76,7 +76,7 @@ function watchBrowserErrors(page) {
 }
 
 for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
-  test(`${style} keeps external Contributed repositories outside owned swept space without fake membership`, async ({ page }) => {
+  test(`${style} keeps Contributed in the same galaxy as a safe external halo orbit`, async ({ page }) => {
     await installGraph(page);
     const browserErrors = watchBrowserErrors(page);
     await page.goto(`/u/?username=example&style=${style}`);
@@ -105,6 +105,7 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
     expect(initial.emphasis.color).toBe("#E69F00");
     expect(initial.emphasis.style).toBe(style);
     expect(initial.emphasis.sweepRadius).toBeGreaterThanOrEqual(220);
+    expect(initial.emphasis.placement).toBe("external-halo-orbit");
     expect(initial.paletteColor).toBe("#E69F00");
     expect(initial.renderedPixel[0]).toBeGreaterThan(190);
     expect(initial.renderedPixel[1]).toBeGreaterThan(110);
@@ -114,20 +115,14 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
     expect(initial.fakeMembership).toBe(false);
 
     const first = initial.emphasis.repositories[0];
+    expect(first.placement).toBe("external-halo-orbit");
     expect(first.clearance).toBeGreaterThan(100);
-    if (style === "galaxy-systems") {
-      expect(initial.emphasis.placement).toBe("external-rail");
-      expect(first.placement).toBe("external-rail");
-    } else {
-      expect(initial.emphasis.placement).toBe("external-orbit");
-      expect(first.placement).toBe("external-orbit");
-    }
 
     await page.waitForTimeout(650);
     const second = await page.evaluate(() => window.ProjectMapContributedEmphasis.snapshot().repositories[0]);
     const displacement = Math.hypot(second.x - first.x, second.y - first.y);
-    if (style === "galaxy-systems") expect(displacement).toBeLessThan(0.01);
-    else expect(displacement).toBeGreaterThan(0.35);
+    expect(displacement).toBeGreaterThan(0.20);
+    expect(second.clearance).toBeGreaterThan(100);
 
     await expect(page.locator('[data-status-filter="contributed"]')).toContainText("Contributed");
     expect(browserErrors).toEqual([]);
