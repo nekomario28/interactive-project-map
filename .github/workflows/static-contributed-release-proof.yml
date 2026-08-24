@@ -1,0 +1,92 @@
+name: Static Contributed release proof
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/static-contributed-release-proof.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  generate:
+    permissions:
+      contents: read
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@2a172c3c62e8be8138e38822f05dd48671072209
+    with:
+      theme: dark
+      style: galaxy-systems
+      max_repos: "100"
+      forks: true
+      archived: true
+      contributed: true
+
+  verify:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout exact reusable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 2a172c3c62e8be8138e38822f05dd48671072209
+
+      - name: Assert R resolves inner F
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'uses: nekomario28/interactive-project-map@a5519222947325ff71a20309c483feba1085c718' .github/workflows/generate-project-map.yml
+          grep -q 'a5519222947325ff71a20309c483feba1085c718' src/action-ref.ts
+          grep -q 'PUBLIC_ACTION_REF = "a5519222947325ff71a20309c483feba1085c718"' scripts/postprocess-public-pages.mjs
+
+      - name: Download exact-R generated artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: project-map-generated
+          path: project-map
+
+      - name: Validate real-profile simplified Contributed artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s project-map/galaxy.svg
+          test -s project-map/graph.json
+          grep -q 'data-galaxy-preset="systems"' project-map/galaxy.svg
+          grep -q '#E69F00' project-map/galaxy.svg
+          grep -q 'data-galaxy-external="true"' project-map/galaxy.svg
+          grep -q 'data-galaxy-orbit="contributed"' project-map/galaxy.svg
+          grep -q '>Contributed</text>' project-map/galaxy.svg
+          if grep -q 'External contributions' project-map/galaxy.svg; then
+            echo 'Legacy synthetic External contributions hub is still present.' >&2
+            exit 1
+          fi
+          if grep -Eq 'stroke="#E69F00"[^>]+stroke-dasharray="3 3"' project-map/galaxy.svg; then
+            echo 'Legacy Contributed halo is still present.' >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('node:fs');
+          const graph = JSON.parse(fs.readFileSync('project-map/graph.json', 'utf8'));
+          const owner = 'nekomario28';
+          const contributed = graph.nodes.filter((node) => node?.type === 'repository' && node?.relation === 'contributed');
+          const contributedIds = new Set(contributed.map((node) => node.id));
+          if (contributed.length < 1) throw new Error('real profile has no accepted Contributed repositories');
+          if (graph.contributedRepositoryCount !== contributed.length) throw new Error('Contributed count mismatch');
+          if (graph.externalContributions?.includedRepositories !== contributed.length) throw new Error('Contributed diagnostics mismatch');
+          for (const node of contributed) {
+            if (!node.repositoryOwner || !node.repositoryName || String(node.repositoryOwner).toLowerCase() === owner) throw new Error('invalid external repository identity');
+            if ('groupId' in node || 'groupLabel' in node) throw new Error('Contributed repository gained owned category membership');
+            const commits = Number(node.contribution?.commits || 0);
+            const merged = Number(node.contribution?.mergedPullRequests || 0);
+            if (commits < 1 && merged < 1) throw new Error(`pending-only repository admitted: ${node.label}`);
+          }
+          const ownershipLeak = graph.edges.some((edge) => ['ownership', 'membership'].includes(edge?.type) && contributedIds.has(edge?.target));
+          if (ownershipLeak) throw new Error('ownership path reaches Contributed repository');
+          const contributionTargets = new Set(graph.edges.filter((edge) => edge?.type === 'contribution').map((edge) => edge.target));
+          for (const id of contributedIds) if (!contributionTargets.has(id)) throw new Error(`missing canonical contribution edge for ${id}`);
+          if ((graph.semanticEdges || []).some((edge) => contributedIds.has(edge?.source) || contributedIds.has(edge?.target))) throw new Error('Contributed repository entered owned semantic graph');
+          console.log(`Exact R proof: ${graph.repositoryCount} owned + ${contributed.length} accepted Contributed`);
+          NODE
