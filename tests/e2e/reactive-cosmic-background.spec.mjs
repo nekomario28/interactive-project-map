@@ -51,7 +51,7 @@ async function sampleFirstDonorStar(page) {
   });
 }
 
-test("Galaxy restores the profile-local background as one world-space system", async ({ browser }) => {
+test("Galaxy keeps the historical donor scoped to one world-space background", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
   const page = await context.newPage();
   await installFixture(page);
@@ -61,14 +61,15 @@ test("Galaxy restores the profile-local background as one world-space system", a
 
   const before = await sampleFirstDonorStar(page);
   expect(before).not.toBeNull();
-  expect(before.snap.donor).toBe("nekomario28/profile-local-common-center-galaxy");
+  expect(before.snap.donor).toBe("nekomario28/profile-local-background");
   expect(before.snap.donorCommit).toBe("ead72debca2a16608ebc5b799993c0234ea10cab");
-  expect(before.snap.geometry).toBe("world-space-spiral-sectors");
+  expect(before.snap.geometry).toBe("world-space-category-background");
   expect(before.snap.starCount).toBe(92);
   expect(before.snap.rings).toEqual([132, 194, 256]);
   expect(before.snap.yFlatten).toBe(0.63);
   expect(before.snap.associationLobes).toBe(4);
   expect(before.snap.associationStars).toBe(7);
+  expect(before.snap.twinklePeriodMs).toBe(14000);
   expect(before.snap.groupCount).toBe(2);
   expect(before.brightest).toBeGreaterThan(45);
   expect(await page.evaluate(() => typeof window.ProjectMapCosmicBackground.spawnMeteor)).toBe("undefined");

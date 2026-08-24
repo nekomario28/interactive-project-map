@@ -5,6 +5,7 @@ const ANIMATED_LIMIT = 80;
 const REPRESENTATIVE_LIMIT = 2;
 const STATIC_LABEL_STROKE_WIDTH = 1.4;
 const CONTRIBUTED_PER_LANE = 6;
+const AMBIENT_TWINKLE_SECONDS = 14;
 
 function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -13,6 +14,14 @@ function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 
     values.push(`${(centerX + Math.cos(angle) * radius).toFixed(2)} ${(centerY + Math.sin(angle) * radius).toFixed(2)}`);
   }
   return values.join(";");
+}
+
+function animatedBackground(markup) {
+  const marker = '<g data-profile-galaxy-background="ead72debca2a16608ebc5b799993c0234ea10cab">';
+  return markup.replace(
+    marker,
+    `${marker}<animate data-profile-galaxy-ambient-motion="twinkle" attributeName="opacity" values="0.92;1;0.92" dur="${AMBIENT_TWINKLE_SECONDS}s" repeatCount="indefinite"/>`,
+  );
 }
 
 function assignments(group, members) {
@@ -157,7 +166,7 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
     height,
     preset: "systems",
     ariaLabel: "Galaxy Systems",
-    backgroundMarkup: background(graph.owner, width, height, colors, 92, { cx, cy, groupCount: count, categoryRadius }),
+    backgroundMarkup: animatedBackground(background(graph.owner, width, height, colors, 92, { cx, cy, groupCount: count, categoryRadius })),
     graphMarkup,
     legendMarkup: legend(colors, width, height, "Galaxy Systems"),
   });

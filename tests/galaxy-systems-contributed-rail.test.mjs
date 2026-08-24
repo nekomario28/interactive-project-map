@@ -73,11 +73,13 @@ test("Galaxy Systems restores Contributed as a natural outer halo with outward-o
   assert.match(svg.slice(externalStart), /<animateTransform/u, "Contributed should remain part of the living galaxy instead of becoming a stationary UI shelf");
 });
 
-test("Galaxy Systems static background carries the historical profile-local world structure without central arms", () => {
+test("Galaxy Systems static background is background-only, arm-free and visibly alive", () => {
   const svg = renderGalaxySystemsSvg(crowdedSystemsGraph(), "dark", 740, 420);
   assert.match(svg, /data-profile-galaxy-background="ead72debca2a16608ebc5b799993c0234ea10cab"/);
   assert.equal((svg.match(/data-profile-galaxy-ring=/g) || []).length, 3);
   assert.doesNotMatch(svg, /data-profile-galaxy-arm=/, "central curved Galaxy arms must stay absent");
   assert.equal((svg.match(/data-profile-stellar-association=/g) || []).length, 6);
   assert.match(svg, /profile-galaxy-nucleus/);
+  assert.match(svg, /data-profile-galaxy-ambient-motion="twinkle"/);
+  assert.match(svg, /attributeName="opacity" values="0\.92;1;0\.92" dur="14s"/);
 });
