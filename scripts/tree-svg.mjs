@@ -1,3 +1,13 @@
+import {
+  addExternalBundle,
+  isContributedRepository,
+  repositoryOpacity,
+  repositoryStatus,
+  shouldDecorateArchived,
+  statusLegendItems,
+  withContributedColor,
+} from "./static-contributed.mjs";
+
 function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
@@ -15,16 +25,11 @@ function labelWidth(node, fontSize = 9.5) {
   return clamp(12 + displayLabel(node).length * fontSize * 0.58, 42, 175);
 }
 
-function statusOf(node) {
-  if (node.type !== "repository") return node.type;
-  if (node.archived) return "archived";
-  return node.fork ? "fork" : "original";
-}
-
 function palette(theme) {
-  return theme === "light"
+  const base = theme === "light"
     ? { bg: "#fbfcff", panel: "#f4f7fb", fg: "#172033", muted: "#667085", edge: "#b9c3d1", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", relation: "#a46618" }
     : { bg: "#080b12", panel: "#0e1420", fg: "#e8edf7", muted: "#98a5b9", edge: "#425069", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", relation: "#f4b65f" };
+  return withContributedColor(base, theme);
 }
 
 function groupMembers(group, repos) {
@@ -35,6 +40,7 @@ function groupMembers(group, repos) {
 function buildTreeLayout(graph, width, height) {
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository");
+  const ownedRepos = repos.filter((repo) => !isContributedRepository(repo));
   const owner = graph.nodes.find((node) => node.type === "owner");
   const marginX = 26;
   const usableWidth = Math.max(120, width - marginX * 2);
@@ -44,18 +50,19 @@ function buildTreeLayout(graph, width, height) {
   const points = [];
   if (owner) points.push({ x: width / 2, y: ownerY, node: owner, depth: 0 });
 
-  const bundles = groups.map((group) => ({
+  let bundles = groups.map((group) => ({
     group,
-    members: groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label)),
+    members: groupMembers(group, ownedRepos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label)),
   }));
   const assigned = new Set(bundles.flatMap((bundle) => bundle.members.map((repo) => repo.id)));
-  const unassigned = repos.filter((repo) => !assigned.has(repo.id));
+  const unassigned = ownedRepos.filter((repo) => !assigned.has(repo.id));
   if (unassigned.length) {
     bundles.push({
       group: { id: "group:other", label: "Other", type: "group", repositoryCount: unassigned.length },
       members: unassigned,
     });
   }
+  bundles = addExternalBundle(bundles, repos);
 
   const totalWeight = Math.max(1, bundles.reduce((sum, bundle) => sum + Math.max(1, bundle.members.length), 0));
   const gutter = bundles.length > 1 ? Math.min(18, usableWidth * 0.018) : 0;
@@ -121,9 +128,8 @@ function placeLabels(points, width, height) {
 }
 
 function legend(colors, width, height) {
-  const items = [[colors.original, "Original"], [colors.fork, "Fork"], [colors.archived, "Archived"]];
   let x = 18;
-  return items.map(([color, label]) => {
+  return statusLegendItems(colors).map(([color, label]) => {
     const chunk = `<circle cx="${x + 4}" cy="${height - 16}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 12.5}" fill="${colors.muted}" font-size="9.5">${label}</text>`;
     x += 32 + label.length * 5.8;
     return chunk;
@@ -146,7 +152,7 @@ export function renderTreeSvg(graph, theme, width, height) {
     const maxGroupX = Math.max(...groups.map((point) => point.x));
     structural.push(`<line x1="${minGroupX.toFixed(1)}" y1="${branchY.toFixed(1)}" x2="${maxGroupX.toFixed(1)}" y2="${branchY.toFixed(1)}" stroke="${colors.edge}" opacity="0.72"/>`);
     for (const group of groups) {
-      structural.push(`<line x1="${group.x.toFixed(1)}" y1="${branchY.toFixed(1)}" x2="${group.x.toFixed(1)}" y2="${group.y.toFixed(1)}" stroke="${colors.edge}" opacity="0.72"/>`);
+      structural.push(`<line x1="${group.x.toFixed(1)}" y1="${branchY.toFixed(1)}" x2="${group.x.toFixed(1)}" y2="${group.y.toFixed(1)}" stroke="${group.node.external ? colors.contributed : colors.edge}" opacity="${group.node.external ? 0.48 : 0.72}"${group.node.external ? ' stroke-dasharray="4 3"' : ""}/>`);
     }
   }
 
@@ -154,12 +160,14 @@ export function renderTreeSvg(graph, theme, width, height) {
     const members = points.filter((point) => point.node.type === "repository" && point.parentId === group.node.id);
     if (!members.length) continue;
     const junctionY = group.y + Math.max(36, (members[0].y - group.y) * 0.50);
-    structural.push(`<line x1="${group.x.toFixed(1)}" y1="${group.y.toFixed(1)}" x2="${group.x.toFixed(1)}" y2="${junctionY.toFixed(1)}" stroke="${colors.edge}" opacity="0.58"/>`);
+    const branchColor = group.node.external ? colors.contributed : colors.edge;
+    const branchDash = group.node.external ? ' stroke-dasharray="4 3"' : "";
+    structural.push(`<line x1="${group.x.toFixed(1)}" y1="${group.y.toFixed(1)}" x2="${group.x.toFixed(1)}" y2="${junctionY.toFixed(1)}" stroke="${branchColor}" opacity="0.58"${branchDash}/>`);
     const minX = Math.min(...members.map((point) => point.x));
     const maxX = Math.max(...members.map((point) => point.x));
-    structural.push(`<line x1="${minX.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${maxX.toFixed(1)}" y2="${junctionY.toFixed(1)}" stroke="${colors.edge}" opacity="0.50"/>`);
+    structural.push(`<line x1="${minX.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${maxX.toFixed(1)}" y2="${junctionY.toFixed(1)}" stroke="${branchColor}" opacity="0.50"${branchDash}/>`);
     for (const member of members) {
-      structural.push(`<line x1="${member.x.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${member.x.toFixed(1)}" y2="${member.y.toFixed(1)}" stroke="${colors.edge}" opacity="0.50"/>`);
+      structural.push(`<line x1="${member.x.toFixed(1)}" y1="${junctionY.toFixed(1)}" x2="${member.x.toFixed(1)}" y2="${member.y.toFixed(1)}" stroke="${branchColor}" opacity="0.50"${branchDash}/>`);
     }
   }
 
@@ -171,18 +179,19 @@ export function renderTreeSvg(graph, theme, width, height) {
   }).join("");
 
   const nodes = points.map(({ x, y, node }) => {
-    const status = statusOf(node);
-    const fill = colors[status] || colors.original;
+    const status = repositoryStatus(node);
+    const fill = node.type === "group" && node.external ? colors.contributed : (colors[status] || colors.original);
     const radius = node.type === "owner" ? 18 : node.type === "group" ? 7 : clamp(4.8 + Math.log2((node.stars ?? 0) + 1) * 1.15, 4.8, 9.5);
     const placement = labels.get(node.id);
     const label = placement
-      ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="2" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
+      ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="middle" fill="${node.type === "group" ? (node.external ? colors.contributed : colors.muted) : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="2" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
       : "";
     const title = node.type === "repository" ? `<title>${esc(`${node.label} · ${status}`)}</title>` : "";
-    const archivedRing = node.type === "repository" && node.archived
+    const archivedRing = shouldDecorateArchived(node)
       ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.2).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>`
       : "";
-    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.archived ? 0.74 : 0.97}"/>${archivedRing}${label}</g>`;
+    const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.74, contributed: 0.97 }) : 0.97;
+    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${archivedRing}${label}</g>`;
   }).join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Tree-style map of ${esc(graph.owner)} public GitHub repositories">\n  <rect width="100%" height="100%" rx="14" fill="${colors.bg}"/>\n  <rect x="10" y="10" width="${width - 20}" height="${height - 42}" rx="10" fill="${colors.panel}" opacity="0.3"/>\n  <g>${structural.join("")}</g>\n  <g>${relationLines}</g>\n  <g>${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
