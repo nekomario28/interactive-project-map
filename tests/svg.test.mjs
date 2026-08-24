@@ -110,7 +110,7 @@ test("Galaxy Systems projects Contributed repositories into a presentation-only 
   assert.match(svg, /external\/accepted-work/);
   assert.match(svg, /Contributed/);
   assert.match(svg, /fill="#E69F00"/);
-  assert.match(svg, /stroke="#E69F00"[^>]+stroke-dasharray="3 3"/);
+  assert.doesNotMatch(svg, /stroke="#E69F00"[^>]+stroke-dasharray="3 3"/);
   assert.equal("groupId" in contributed, false, "SVG projection must not mutate canonical graph membership");
   const repositoryMarkers = svg.match(/data-galaxy-orbit="repository"/g) ?? [];
   assert.equal(repositoryMarkers.length, graph.nodes.filter((node) => node.type === "repository").length, "every owned and Contributed repository should remain in Systems SVG");
