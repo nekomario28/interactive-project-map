@@ -29,13 +29,15 @@ All interactive presets must:
 
 ## Galaxy presentation contract
 
-Galaxy Classic / Systems / Hybrid may use presentation-only external placement because the normal Galaxy motion model is category-membership based and contributed repositories intentionally have no owned category membership.
+Galaxy Classic / Systems / Hybrid use presentation-only external placement because the normal Galaxy motion model is category-membership based and contributed repositories intentionally have no owned category membership.
 
-External placement must remain visually disjoint from the swept region of owned category systems. In particular, a second or later Contributed lane must never be moved inward through owned category orbits merely to fit more external repositories.
+External placement must remain visually disjoint from the **swept region** of owned category systems, not merely from the owned nodes' coordinates at one instant. For an owned repository that moves around a category hub, the safe envelope therefore includes `owner -> category radius + category -> repository local radius`. A Contributed lane must never be moved inward through that envelope merely to fit more external repositories.
 
-For the static `Galaxy Systems` SVG, Contributed repositories use a dedicated edge rail rather than the owner-centered category motion field. The rail is presentation-only: it may use a background fade and subtle divider to preserve separation, but it must not introduce a synthetic category hub, `groupId`, ownership edge, or membership edge. Contributed nodes on the rail do not participate in the global category animation.
+`Galaxy Systems` uses a dedicated external rail in both the interactive viewer and static SVG. Interactive rail columns are stationary in world space and additional columns expand outward only; they do not participate in category animation. The static SVG may use a background fade and subtle divider for the same external-zone reading.
 
-Other Galaxy presentations may still use owner-centered external orbits when their geometry guarantees a disjoint external region. Reduced-motion preferences must continue to pause any extra motion that remains.
+`Galaxy Classic` and `Galaxy Hybrid` may retain slow owner-centered external orbits, but the innermost external orbit must be outside the owned swept envelope with an explicit clearance margin. Additional lanes expand outward only. Reduced-motion preferences pause this extra motion.
+
+The rail/orbit geometry is presentation-only. It must not introduce a synthetic category hub, `groupId`, ownership edge, or membership edge, and it must never be serialized back into the canonical graph.
 
 ## Dedicated preset contract
 
