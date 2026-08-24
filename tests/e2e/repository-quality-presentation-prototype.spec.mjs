@@ -7,7 +7,10 @@ import { expect, test } from "@playwright/test";
 import { buildRepositoryAssessmentCandidate } from "../../scripts/repository-assessment-candidate.mjs";
 import { buildQualityEvidenceVector } from "../../scripts/repository-quality-evidence.mjs";
 import { buildRepositoryQualityPresentationModel } from "../../scripts/repository-quality-presentation.mjs";
-import { renderRepositoryQualityPresentationPrototypeSvg } from "../../scripts/repository-quality-presentation-prototype-svg.mjs";
+import {
+  REPOSITORY_QUALITY_PRESENTATION_THEMES,
+  renderRepositoryQualityPresentationPrototypeSvg,
+} from "../../scripts/repository-quality-presentation-prototype-svg.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../..");
@@ -47,9 +50,9 @@ function currentModel() {
   return buildRepositoryQualityPresentationModel(policy, live.graph, assessment);
 }
 
-async function mountSvg(page, svg, frameWidth) {
+async function mountSvg(page, svg, frameWidth, pageBackground) {
   await page.setViewportSize({ width: Math.max(720, frameWidth + 40), height: 1100 });
-  await page.setContent(`<body style="margin:0;background:#070a12;padding:20px"><div id="frame" style="width:${frameWidth}px">${svg}</div></body>`);
+  await page.setContent(`<body style="margin:0;background:${pageBackground};padding:20px"><div id="frame" style="width:${frameWidth}px">${svg}</div></body>`);
   await page.locator("svg").evaluate((element) => {
     element.style.width = "100%";
     element.style.height = "auto";
@@ -75,20 +78,12 @@ async function cardLayoutMetrics(page) {
   }));
 }
 
-test.beforeAll(async () => {
-  await mkdir(".tmp/playwright-visual/dark", { recursive: true });
-});
-
-test("compact Quality presentation remains complete and non-overlapping at profile scale", async ({ page }) => {
-  const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "compact", columns: 3 });
-  fs.writeFileSync(".tmp/playwright-visual/dark/repository-quality-compact.svg", svg, "utf8");
-  await mountSvg(page, svg, 720);
-
+async function expectCompleteLayout(page, expectedDimensions) {
   await expect(page.locator(".quality-card")).toHaveCount(15);
   await expect(page.locator('[data-quality-state="available"]')).toHaveCount(4);
   await expect(page.locator('[data-quality-state="unavailable"]')).toHaveCount(11);
   await expect(page.locator(".quality-unavailable-ring")).toHaveCount(11);
-  await expect(page.locator("[data-dimension]")).toHaveCount(0);
+  await expect(page.locator("[data-dimension]")).toHaveCount(expectedDimensions);
 
   const metrics = await cardLayoutMetrics(page);
   for (const metric of metrics) {
@@ -98,30 +93,65 @@ test("compact Quality presentation remains complete and non-overlapping at profi
     expect(metric.coverageInside).toBe(true);
     expect(metric.verticalOrder).toBe(true);
   }
+}
+
+test.beforeAll(async () => {
+  await Promise.all([
+    mkdir(".tmp/playwright-visual/dark", { recursive: true }),
+    mkdir(".tmp/playwright-visual/light", { recursive: true }),
+  ]);
+});
+
+test("compact Quality presentation remains complete and non-overlapping at profile scale", async ({ page }) => {
+  const theme = REPOSITORY_QUALITY_PRESENTATION_THEMES.dark;
+  const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "compact", columns: 3, theme: "dark" });
+  fs.writeFileSync(".tmp/playwright-visual/dark/repository-quality-compact.svg", svg, "utf8");
+  await mountSvg(page, svg, 720, theme.page);
+
+  await expect(page.locator('svg[data-theme="dark"]')).toBeVisible();
+  await expectCompleteLayout(page, 0);
+  await expect(page.locator('[data-pattern="supports-solid"]')).toHaveCount(4);
+  await expect(page.locator('[data-pattern="unavailable-sparse-dash"]')).toHaveCount(11);
 
   await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/dark/repository-quality-compact.png" });
 });
 
 test("detail Quality presentation keeps dimension identity on assessed repositories without hiding unavailable ones", async ({ page }) => {
-  const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "detail", columns: 3 });
+  const theme = REPOSITORY_QUALITY_PRESENTATION_THEMES.dark;
+  const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "detail", columns: 3, theme: "dark" });
   fs.writeFileSync(".tmp/playwright-visual/dark/repository-quality-detail.svg", svg, "utf8");
-  await mountSvg(page, svg, 900);
+  await mountSvg(page, svg, 900, theme.page);
 
-  await expect(page.locator(".quality-card")).toHaveCount(15);
-  await expect(page.locator('[data-quality-state="available"]')).toHaveCount(4);
-  await expect(page.locator('[data-quality-state="unavailable"]')).toHaveCount(11);
-  await expect(page.locator("[data-dimension]")).toHaveCount(32);
-  await expect(page.locator(".quality-unavailable-ring")).toHaveCount(11);
+  await expect(page.locator('svg[data-theme="dark"]')).toBeVisible();
+  await expectCompleteLayout(page, 32);
   await expect(page.getByText("4 available · 11 unavailable · Structure remains default")).toBeVisible();
 
-  const metrics = await cardLayoutMetrics(page);
-  for (const metric of metrics) {
-    expect(metric.labelInside).toBe(true);
-    expect(metric.labelClearsCore).toBe(true);
-    expect(metric.artifactInside).toBe(true);
-    expect(metric.coverageInside).toBe(true);
-    expect(metric.verticalOrder).toBe(true);
-  }
-
   await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/dark/repository-quality-detail.png" });
+});
+
+test("light compact Quality presentation preserves semantics, pattern identity, and layout", async ({ page }) => {
+  const theme = REPOSITORY_QUALITY_PRESENTATION_THEMES.light;
+  const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "compact", columns: 3, theme: "light" });
+  fs.writeFileSync(".tmp/playwright-visual/light/repository-quality-compact.svg", svg, "utf8");
+  await mountSvg(page, svg, 720, theme.page);
+
+  await expect(page.locator('svg[data-theme="light"]')).toBeVisible();
+  await expectCompleteLayout(page, 0);
+  await expect(page.locator('[data-pattern="supports-solid"]')).toHaveCount(4);
+  await expect(page.locator('[data-pattern="unavailable-sparse-dash"]')).toHaveCount(11);
+
+  await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/light/repository-quality-compact.png" });
+});
+
+test("light detail Quality presentation preserves fixed dimensions and unavailable rings", async ({ page }) => {
+  const theme = REPOSITORY_QUALITY_PRESENTATION_THEMES.light;
+  const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "detail", columns: 3, theme: "light" });
+  fs.writeFileSync(".tmp/playwright-visual/light/repository-quality-detail.svg", svg, "utf8");
+  await mountSvg(page, svg, 900, theme.page);
+
+  await expect(page.locator('svg[data-theme="light"]')).toBeVisible();
+  await expectCompleteLayout(page, 32);
+  await expect(page.getByText("4 available · 11 unavailable · Structure remains default")).toBeVisible();
+
+  await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/light/repository-quality-detail.png" });
 });
