@@ -8,7 +8,21 @@
     "recommended",
     "optional",
     "not-applicable",
+    "unknown"
+  ],
+  "assessmentAuthorities": [
+    "repository-native",
+    "project-owned",
     "external",
+    "mixed",
+    "unknown"
+  ],
+  "evidenceStates": [
+    "observed",
+    "absent",
+    "not-collected",
+    "stale",
+    "conflicting",
     "unknown"
   ],
   "evidenceClasses": {
@@ -78,6 +92,15 @@
     "security-safety",
     "stewardship"
   ],
+  "qualityEvidenceContract": {
+    "mechanismPresenceIsNotOutcome": true,
+    "forbidImpactSignalsAsQualityEvidence": true,
+    "defaultEmphasizedApplicability": "recommended",
+    "defaultOtherApplicability": "optional",
+    "unknownIsNotFailure": true,
+    "notApplicableExcludedFromQuality": true,
+    "externalAuthorityDoesNotChangeApplicability": true
+  },
   "artifactModules": {
     "dataset": {
       "emphasize": [
