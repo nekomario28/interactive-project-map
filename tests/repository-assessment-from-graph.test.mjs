@@ -17,6 +17,8 @@ function graphFixture() {
         id: "repository:Toolkit",
         type: "repository",
         label: "Toolkit",
+        stars: 10,
+        forks: 2,
         fork: false,
         archived: false,
         taxonomyAssignment: {
@@ -28,6 +30,8 @@ function graphFixture() {
         id: "repository:ForkedLib",
         type: "repository",
         label: "ForkedLib",
+        stars: 0,
+        forks: 0,
         fork: true,
         archived: false,
         classification: {
@@ -42,8 +46,14 @@ function graphFixture() {
         relation: "contributed",
         repositoryOwner: "UpstreamOrg",
         repositoryName: "ProjectX",
+        stars: 1000,
+        forks: 200,
         fork: false,
         archived: false,
+        contribution: {
+          commits: 3,
+          mergedPullRequests: 2,
+        },
         classification: {
           categoryId: "uncategorized",
           secondaryTags: [],
@@ -115,6 +125,42 @@ test("legacy or uncategorized classifier ids do not become Standard Taxonomy ass
   assert.deepEqual(legacy.context.category, { state: "unknown", id: null });
 });
 
+test("existing stars and forks become partial Impact evidence without becoming Quality", () => {
+  const { artifact } = buildL0RepositoryAssessmentFromGraph(graphFixture(), { generatorRevision: revision });
+
+  const toolkit = artifact.repositories.find((repo) => repo.identity.name === "Toolkit");
+  assert.equal(toolkit.impact.state, "partial");
+  assert.equal(toolkit.impact.value.projectSide.recognition.raw, 10);
+  assert.equal(toolkit.impact.value.projectSide.reuseDerivativeInterest.raw, 2);
+  assert.equal(toolkit.impact.value.projectSide.recognition.directQualityEffect, false);
+  assert.equal(toolkit.impact.value.compositeImpact, null);
+  assert.equal(toolkit.quality.state, "not-collected");
+
+  const forked = artifact.repositories.find((repo) => repo.identity.name === "ForkedLib");
+  assert.equal(forked.impact.state, "partial");
+  assert.equal(forked.impact.value.projectSide.recognition.raw, 0);
+  assert.equal(forked.impact.value.upstreamContext.state, "unknown");
+  assert.equal(forked.impact.value.upstreamContext.contextOnly, true);
+
+  const missing = artifact.repositories.find((repo) => repo.identity.name === "Archive");
+  assert.deepEqual(missing.impact, { state: "not-collected", value: null });
+});
+
+test("existing Contributed activity becomes partial person-side evidence without a contribution score", () => {
+  const { artifact } = buildL0RepositoryAssessmentFromGraph(graphFixture(), { generatorRevision: revision });
+  const contributed = artifact.repositories.find((repo) => repo.identity.name === "ProjectX");
+
+  assert.equal(contributed.personalContribution.state, "partial");
+  assert.equal(contributed.personalContribution.value.activity.commits.raw, 3);
+  assert.equal(contributed.personalContribution.value.activity.mergedPullRequests.raw, 2);
+  assert.equal(contributed.personalContribution.value.responsibility.maintainerRole.state, "unknown");
+  assert.equal(contributed.personalContribution.value.compositePersonalContribution, null);
+  assert.equal(contributed.prominence.state, "not-collected");
+
+  const noContributionRecord = artifact.repositories.find((repo) => repo.identity.name === "Archive");
+  assert.deepEqual(noContributionRecord.personalContribution, { state: "not-collected", value: null });
+});
+
 test("missing contributed facets and lifecycle evidence remain explicitly unknown", () => {
   const { artifact, diagnostics } = buildL0RepositoryAssessmentFromGraph(graphFixture(), { generatorRevision: revision });
   const contributed = artifact.repositories.find((repo) => repo.identity.name === "ProjectX");
@@ -133,7 +179,7 @@ test("missing contributed facets and lifecycle evidence remain explicitly unknow
   assert.equal(diagnostics.archived, 1);
 });
 
-test("L0 adapter keeps all assessment scores uncollected and production scoring disabled", () => {
+test("L0 evidence vectors remain non-scoring and production scoring stays disabled", () => {
   const { artifact } = buildL0RepositoryAssessmentFromGraph(graphFixture(), {
     generatorRevision: revision,
     prominenceCandidateId: "balanced-v1",
@@ -141,10 +187,11 @@ test("L0 adapter keeps all assessment scores uncollected and production scoring 
   assert.equal(artifact.productionScoring, false);
   for (const repo of artifact.repositories) {
     assert.equal(repo.quality.state, "not-collected");
-    assert.equal(repo.impact.state, "not-collected");
     assert.equal(repo.scale.state, "not-collected");
     assert.equal(repo.prominence.state, "not-collected");
     assert.equal(repo.productionScore, null);
+    if (repo.impact.value) assert.equal(repo.impact.value.compositeImpact, null);
+    if (repo.personalContribution.value) assert.equal(repo.personalContribution.value.compositePersonalContribution, null);
   }
 });
 
@@ -162,5 +209,9 @@ test("diagnostics make L0 evidence coverage visible", () => {
     artifactsUnknown: 2,
     archived: 1,
     lifecycleUnknown: 3,
+    impactPartial: 3,
+    impactNotCollected: 1,
+    personalContributionPartial: 1,
+    personalContributionNotCollected: 3,
   });
 });
