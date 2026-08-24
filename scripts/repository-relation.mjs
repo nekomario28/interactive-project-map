@@ -39,13 +39,17 @@ export function relationRequiresLocalDelta(value) {
 
 export function relationAttributionProfile(value) {
   const relation = normalizeRepositoryRelation(value);
-  if (relation.collaboration === "unknown" || relation.lineage === "unknown") return "unresolved";
   if (relation.ownership === "contributed") return "contributed";
   if (relation.lineage === "fork") return "fork";
+  if (relation.lineage === "unknown" || relation.collaboration === "unknown") return "unresolved";
   if (relation.collaboration === "team") return "team";
   return "direct";
 }
 
 export function relationRequiresPersonalContribution(value) {
   return relationAttributionProfile(value) !== "direct";
+}
+
+export function relationIsDirectOwnedSoloOriginal(value) {
+  return relationAttributionProfile(value) === "direct";
 }
