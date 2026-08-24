@@ -1,5 +1,7 @@
 const RELATIONS = new Set(["owned-solo", "owned-team", "owned-fork", "contributed"]);
 const COMPONENTS = ["quality", "impact", "scale", "maturity"];
+const ALLOWED_INPUT_KEYS = new Set(["id", "relation", "components"]);
+const ALLOWED_COMPONENT_KEYS = new Set([...COMPONENTS, "personalContribution", "confidence"]);
 
 function object(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
@@ -12,6 +14,12 @@ function unit(value, label, nullable = false) {
     throw new Error(`${label} must be in [0, 1]${nullable ? " or null" : ""}`);
   }
   return value;
+}
+
+function rejectUnknownKeys(value, allowed, label) {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) throw new Error(`${label}.${key} is not a calibrated prominence input`);
+  }
 }
 
 export function validateProminenceCandidate(candidate) {
@@ -30,6 +38,12 @@ export function validateProminenceCandidate(candidate) {
     const base = unit(rule.base, `${relation}.base`);
     const slope = unit(rule.personalContributionSlope, `${relation}.personalContributionSlope`);
     if (base + slope > 1 + 1e-9) throw new Error(`${relation} attribution can exceed 1`);
+    if (relation === "owned-solo" && (rule.mode !== "direct" || base !== 1 || slope !== 0)) {
+      throw new Error("owned-solo attribution must stay direct");
+    }
+    if (relation !== "owned-solo" && rule.mode !== "contribution-gated") {
+      throw new Error(`${relation} must stay contribution-gated`);
+    }
   }
   return true;
 }
@@ -37,8 +51,10 @@ export function validateProminenceCandidate(candidate) {
 export function scoreProminenceCandidate(candidate, input) {
   validateProminenceCandidate(candidate);
   object(input, "input");
+  rejectUnknownKeys(input, ALLOWED_INPUT_KEYS, "input");
   if (!RELATIONS.has(input.relation)) throw new Error(`unsupported relation: ${String(input.relation)}`);
   const components = object(input.components, "components");
+  rejectUnknownKeys(components, ALLOWED_COMPONENT_KEYS, "components");
   const values = Object.fromEntries(COMPONENTS.map((key) => [key, unit(components[key], key)]));
   const personalContribution = unit(components.personalContribution, "personalContribution", true);
   const confidence = unit(components.confidence, "confidence", true);
