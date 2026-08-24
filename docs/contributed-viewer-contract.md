@@ -1,6 +1,6 @@
 # Contributed viewer contract
 
-Status: **production-proven; visual contract updated 2026-08-25 JST**
+Status: **production semantics proven; Galaxy presentation revised toward one-world coherence on 2026-08-25 JST**
 
 ## Purpose
 
@@ -24,20 +24,34 @@ All interactive presets must:
 3. expose `Contributed` as the repository's primary display status before fork/archive source flags;
 4. compose with status filtering and URL state (`c` alias), Search, selection, Local Graph focus, Activity, reduced motion, and Category Navigator;
 5. keep the full external `owner/repo` identity and show external owner / contribution evidence in details;
-6. use the distinct Contributed palette plus explicit `Contributed` text/legend/filter semantics; do not rely on a permanently drawn direct contribution line or decorative halo to communicate the relation;
+6. use the distinct Contributed palette plus explicit `Contributed` text/legend/filter semantics; do not rely on a permanently drawn direct contribution line or a synthetic owned category to communicate the relation;
 7. keep contributed repositories outside owned taxonomy membership. Layout-only placement is allowed but must not mutate `state.graph`.
 
 ## Galaxy presentation contract
 
-Galaxy Classic / Systems / Hybrid use presentation-only external placement because the normal Galaxy motion model is category-membership based and contributed repositories intentionally have no owned category membership.
+Galaxy Classic / Systems / Hybrid use presentation-only external placement because the normal category-system motion model requires owned membership and Contributed intentionally has none.
 
-External placement must remain visually disjoint from the **swept region** of owned category systems, not merely from the owned nodes' coordinates at one instant. For an owned repository that moves around a category hub, the safe envelope therefore includes `owner -> category radius + category -> repository local radius`. A Contributed lane must never be moved inward through that envelope merely to fit more external repositories.
+The visual metaphor is **one galaxy with an external halo**, not a graph plus a detached external-repository panel. Contributed is semantically external but visually inhabits the same world-space scene, background, center, and motion language as the owned project galaxy.
 
-`Galaxy Systems` uses a dedicated external rail in both the interactive viewer and static SVG. Interactive rail columns are stationary in world space and additional columns expand outward only; they do not participate in category animation. The static SVG may use a background fade and subtle divider for the same external-zone reading.
+The innermost Contributed halo must remain visually disjoint from the **swept region** of owned category systems, not merely from owned nodes at one instant. For an owned repository orbiting a category hub, the safe envelope includes:
 
-`Galaxy Classic` and `Galaxy Hybrid` may retain slow owner-centered external orbits, but the innermost external orbit must be outside the owned swept envelope with an explicit clearance margin. Additional lanes expand outward only. Reduced-motion preferences pause this extra motion.
+```text
+owner -> category radius + category -> repository local radius
+```
 
-The rail/orbit geometry is presentation-only. It must not introduce a synthetic category hub, `groupId`, ownership edge, or membership edge, and it must never be serialized back into the canonical graph.
+All three Galaxy variants therefore use owner-centered `external-halo-orbit` placement. The first halo begins beyond the owned swept envelope with an explicit clearance margin. The hard maximum of twelve Contributed repositories is partitioned into bounded lanes when needed, and every later lane expands **outward**. A later lane must never be moved inward merely to fit the viewport.
+
+Galaxy Systems uses a deliberately slower halo period than its local repository motion, so Contributed reads as distant orbital context rather than as another owned subsystem. Classic and Hybrid keep the same semantic geometry with style-appropriate periods. Reduced-motion preferences pause the extra halo motion.
+
+A detached right-edge rail, fade panel, divider, or `external repositories` shelf is not part of the active Galaxy presentation contract. Such UI separation can be semantically clear but breaks the common-world metaphor and should not be used as the default Galaxy solution.
+
+The halo geometry is presentation-only. It must not introduce a synthetic category hub, `groupId`, ownership edge, or membership edge, and it must never be serialized back into the canonical graph.
+
+## World-coherence rule
+
+When the surrounding visualization has a strong spatial metaphor, semantic distinction should first be expressed **inside that metaphor**. External entities can occupy outer halo space, different motion periods, and a distinct status color without being moved into a separate UI coordinate system.
+
+Correctness constraints such as collision clearance belong in the geometry solver; they should not automatically dictate a detached visual container.
 
 ## Dedicated preset contract
 
@@ -52,8 +66,9 @@ Static SVG renderers consume the same canonical graph and should preserve the sa
 - Contributed must not disappear merely because it has no owned `groupId`.
 - Contributed must not be recolored as Original/Fork/Archived because of source flags.
 - The Contributed palette and explicit legend text should match the interactive presentation family.
-- A static renderer may use presentation-only layout context where necessary, but it must keep Contributed spatially separate from owned taxonomy systems instead of making it look like another owned category.
-- Direct contribution edges should remain data-model evidence, not always-on visual spokes.
+- Galaxy Systems uses the same owner-centered external-halo concept rather than a detached rail; subsequent halo lanes expand outward only.
+- A static renderer may use presentation-only layout context where necessary, but it must keep Contributed spatially separate from owned taxonomy systems without making it look like another owned category.
+- Direct contribution edges remain data-model evidence, not always-on visual spokes.
 
 The detailed static-renderer gap audit is recorded in `docs/static-svg-parity-audit-2026-08-24.md`.
 

@@ -7,23 +7,26 @@ import { applyReactiveCosmicBackground } from "../scripts/apply-reactive-cosmic-
 
 const sourceUrl = new URL("../scripts/public-cosmic-background.js", import.meta.url);
 
-test("reactive cosmic background keeps pan-linked wrapped layers and sparse meteors", async () => {
+test("Galaxy background restores the profile-local world-space donor instead of screen-space decoration", async () => {
   const source = await readFile(sourceUrl, "utf8");
-  assert.match(source, /parallax: 0\.08/);
-  assert.match(source, /parallax: 0\.18/);
-  assert.match(source, /parallax: 0\.32/);
-  assert.match(source, /state\.pan\.x \* parallax/);
-  assert.match(source, /state\.pan\.y \* parallax/);
-  assert.match(source, /function wrap\(value, size\)/);
-  assert.match(source, /METEOR_MIN_DELAY = 22_000/);
-  assert.match(source, /METEOR_DELAY_SPAN = 34_000/);
-  assert.match(source, /runtime\.meteor\) return false/);
-  assert.match(source, /prefers-reduced-motion: reduce/);
-  assert.match(source, /width < 720/);
-  assert.match(source, /ProjectMapCosmicBackground/);
+  assert.match(source, /ead72debca2a16608ebc5b799993c0234ea10cab/);
+  assert.match(source, /Y_FLATTEN = 0\.63/);
+  assert.match(source, /STAR_COUNT = 92/);
+  assert.match(source, /RINGS = Object\.freeze\(\[132, 194, 256\]\)/);
+  assert.match(source, /ARM_START = 92/);
+  assert.match(source, /ARM_END = 294/);
+  assert.match(source, /\(\(radius - 128\) \/ 148\) \* 0\.38/);
+  assert.match(source, /associationLobes: 4/);
+  assert.match(source, /associationStars: 7/);
+  assert.match(source, /worldToScreen\(star\.x, star\.y\)/);
+  assert.match(source, /profileLocalGalaxyBackground/);
+  assert.doesNotMatch(source, /parallax:/);
+  assert.doesNotMatch(source, /METEOR_MIN_DELAY/);
+  assert.doesNotMatch(source, /spawnMeteor/);
+  assert.doesNotMatch(source, /HAZE_TILE/);
 });
 
-test("Pages build adapter installs cosmic before style runtimes only on the shared viewer", async () => {
+test("Pages build adapter installs the restored galaxy world before style runtimes only on the shared viewer", async () => {
   const outputDir = await mkdtemp(join(tmpdir(), "ipm-cosmic-"));
   try {
     await mkdir(join(outputDir, "u"), { recursive: true });
@@ -45,7 +48,8 @@ test("Pages build adapter installs cosmic before style runtimes only on the shar
     assert.ok(shared.indexOf("cosmic-background.js") < shared.indexOf("galaxy-systems-runtime.js"));
     assert.ok(shared.indexOf("galaxy-systems-runtime.js") < shared.indexOf("view-state.js"));
     assert.doesNotMatch(dedicated, /cosmic-background\.js/);
-    assert.match(runtime, /reactiveCosmicBackground/);
+    assert.match(runtime, /profileLocalGalaxyBackground/);
+    assert.match(runtime, /profile-local-common-center-galaxy/);
   } finally {
     await rm(outputDir, { recursive: true, force: true });
   }
