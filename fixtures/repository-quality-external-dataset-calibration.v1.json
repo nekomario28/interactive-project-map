@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "status": "frozen-external-dataset-donor-calibration",
+  "subject": {
+    "repository": "fivethirtyeight/data",
+    "revision": "4c1ff5e3aef1816ae04af63218015066e186c147",
+    "samplePath": "state-of-the-polls-2024",
+    "category": "data-analytics",
+    "artifacts": ["dataset"],
+    "lifecycle": "snapshot"
+  },
+  "qualityEvidence": {
+    "understandability": [
+      {
+        "authority": "repository-native",
+        "state": "observed",
+        "finding": "supports",
+        "evidenceClass": "C",
+        "sourceId": "state-of-the-polls-2024/README.md@4fb2a21fa282fde2287cfe46ed3314f9ce94678b",
+        "claim": "Dataset slice documents story context, included files, poll inclusion criteria, snapshot time, column definitions, race definitions and sources."
+      }
+    ],
+    "reproducibility": [
+      {
+        "authority": "repository-native",
+        "state": "observed",
+        "finding": "supports",
+        "evidenceClass": "C",
+        "sourceId": "state-of-the-polls-2024/README.md@4fb2a21fa282fde2287cfe46ed3314f9ce94678b",
+        "claim": "Selection window, qualifying question types, 2024 as-of timestamp and source identities are documented; this supports provenance/reconstruction but does not claim a deterministic generation pipeline."
+      }
+    ],
+    "interoperability": [
+      {
+        "authority": "repository-native",
+        "state": "observed",
+        "finding": "supports",
+        "evidenceClass": "C",
+        "sourceId": "state-of-the-polls-2024@4c1ff5e3aef1816ae04af63218015066e186c147:8-csv+README",
+        "claim": "The slice publishes eight CSV files and documents field names/definitions for poll and race tables."
+      }
+    ],
+    "stewardship": [
+      {
+        "authority": "repository-native",
+        "state": "observed",
+        "finding": "supports",
+        "evidenceClass": "C",
+        "sourceId": "README.md@4374bdf0108c9d564ceb79c4f4aebf6e7ceb8e2f+github-repository-metadata:license@4c1ff5e3aef1816ae04af63218015066e186c147",
+        "claim": "Repository states datasets are CC-BY-4.0 unless otherwise noted, and repository metadata declares CC-BY-4.0."
+      }
+    ]
+  },
+  "expected": {
+    "findings": {
+      "understandability": "supports",
+      "reproducibility": "supports",
+      "integrity": "unknown",
+      "interoperability": "supports",
+      "stewardship": "supports"
+    },
+    "confidence": {
+      "targetDimensions": 5,
+      "inspectedDimensions": 4,
+      "directionalDimensions": 4
+    },
+    "intrinsicDataValidity": "not-verified",
+    "compositeQualityScore": null,
+    "compositeConfidenceScore": null
+  },
+  "excludedSignals": {
+    "stars": "Impact only",
+    "forks": "Impact only",
+    "recentCommitActivity": "Activity/lifecycle context only"
+  }
+}
