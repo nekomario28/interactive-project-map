@@ -1,5 +1,5 @@
 "use strict";
-/* global state, palette, drawEdges, drawNodesAndLabels, nodeRadius, worldToScreen, ctx, draw, fitView, matchesQuery */
+/* global state, palette, drawEdges, draw, fitView */
 
 window.addEventListener("DOMContentLoaded", () => {
   const CONTRIBUTED = "#E69F00";
@@ -39,63 +39,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (typeof drawEdges === "function") {
     const baseDrawEdges = drawEdges;
-    drawEdges = function contributedEmphasisEdges(colors) {
-      if (!isGalaxyStyle() || !Array.isArray(state.edges)) return baseDrawEdges(colors);
+    drawEdges = function contributedVisualEdgePolicy(colors) {
+      if (!Array.isArray(state?.edges)) return baseDrawEdges(colors);
       const originalEdges = state.edges;
-      const contributionEdges = originalEdges.filter((edge) => edge?.type === "contribution");
-      if (!contributionEdges.length) return baseDrawEdges(colors);
-      state.edges = originalEdges.filter((edge) => edge?.type !== "contribution");
+      const visibleEdges = originalEdges.filter((edge) => edge?.type !== "contribution");
+      if (visibleEdges.length === originalEdges.length) return baseDrawEdges(colors);
+      state.edges = visibleEdges;
       try {
-        baseDrawEdges(colors);
+        return baseDrawEdges(colors);
       } finally {
         state.edges = originalEdges;
       }
-      ctx.save();
-      ctx.strokeStyle = colors.contributed || CONTRIBUTED;
-      ctx.setLineDash([3, 4]);
-      for (const edge of contributionEdges) {
-        const sourceNode = state.byId?.get?.(edge.source);
-        const targetNode = state.byId?.get?.(edge.target);
-        if (!sourceNode || !targetNode) continue;
-        let opacity = 0.78;
-        if (state.query && typeof matchesQuery === "function" && !(matchesQuery(sourceNode) || matchesQuery(targetNode))) opacity *= 0.18;
-        if (state.selected && sourceNode !== state.selected && targetNode !== state.selected) opacity *= 0.18;
-        const source = worldToScreen(sourceNode.x, sourceNode.y);
-        const target = worldToScreen(targetNode.x, targetNode.y);
-        ctx.globalAlpha = opacity;
-        ctx.lineWidth = 1.65;
-        ctx.beginPath();
-        ctx.moveTo(source.x, source.y);
-        ctx.lineTo(target.x, target.y);
-        ctx.stroke();
-      }
-      ctx.restore();
-    };
-  }
-
-  if (typeof drawNodesAndLabels === "function") {
-    const baseDrawNodesAndLabels = drawNodesAndLabels;
-    drawNodesAndLabels = function contributedEmphasisNodes(colors) {
-      const result = baseDrawNodesAndLabels(colors);
-      if (!isGalaxyStyle()) return result;
-      ctx.save();
-      ctx.strokeStyle = colors.contributed || CONTRIBUTED;
-      ctx.setLineDash([3, 3]);
-      for (const node of state.nodes) {
-        if (!isContributed(node)) continue;
-        let opacity = 0.94;
-        if (state.query && typeof matchesQuery === "function" && !matchesQuery(node)) opacity *= 0.18;
-        if (state.selected && state.selected !== node) opacity *= 0.24;
-        const point = worldToScreen(node.x, node.y);
-        const radius = Math.max(4, nodeRadius(node) * state.zoom) + 9;
-        ctx.globalAlpha = opacity;
-        ctx.lineWidth = node === state.selected ? 2.1 : 1.45;
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, radius, 0, TAU);
-        ctx.stroke();
-      }
-      ctx.restore();
-      return result;
     };
   }
 

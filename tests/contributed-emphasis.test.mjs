@@ -12,7 +12,7 @@ test("Contributed uses a warm, distinct Galaxy palette in both themes", () => {
   assert.notEqual(palette("dark").contributed, palette("dark").group);
 });
 
-test("static Galaxy Contributed nodes have a non-color dashed halo and keep status precedence", () => {
+test("static Galaxy Contributed nodes rely on the distinct status color without an extra halo", () => {
   const colors = palette("dark");
   const markup = nodeMarkup({
     id: "repository:outside/project",
@@ -24,21 +24,30 @@ test("static Galaxy Contributed nodes have a non-color dashed halo and keep stat
     stars: 20,
   }, 100, 100, colors);
   assert.match(markup, /fill="#E69F00"/);
-  assert.match(markup, /stroke="#E69F00"/);
-  assert.match(markup, /stroke-dasharray="3 3"/);
+  assert.doesNotMatch(markup, /stroke="#E69F00"/);
   assert.doesNotMatch(markup, /stroke="#d9847b"/);
 });
 
-test("browser emphasis runtime is presentation-only and exposes one shared Galaxy orbit contract", async () => {
+test("browser emphasis keeps the orange identity and hides direct contribution connection lines", async () => {
   const source = await readFile(new URL("../scripts/public-contributed-emphasis.js", import.meta.url), "utf8");
   assert.match(source, /const CONTRIBUTED = "#E69F00"/);
   assert.match(source, /\["galaxy-classic", "galaxy-systems", "galaxy-hybrid"\]/);
   assert.match(source, /node\?\.type === "repository" && node\?\.relation === "contributed"/);
-  assert.match(source, /ctx\.setLineDash\(\[3, 3\]\)/);
-  assert.match(source, /ctx\.setLineDash\(\[3, 4\]\)/);
+  assert.match(source, /edge\?\.type !== "contribution"/);
   assert.match(source, /ProjectMapContributedEmphasis/);
+  assert.doesNotMatch(source, /ctx\./);
+  assert.doesNotMatch(source, /drawNodesAndLabels/);
+  assert.doesNotMatch(source, /setLineDash/);
   assert.doesNotMatch(source, /type:\s*["']membership["']/);
   assert.doesNotMatch(source, /groupId\s*=/);
+});
+
+test("Contributed filter styling uses the same identity color without a dashed selected-state decoration", async () => {
+  const source = await readFile(new URL("../scripts/public-contributed-emphasis.css", import.meta.url), "utf8");
+  assert.match(source, /--contributed: #E69F00/);
+  assert.match(source, /--status-color: var\(--contributed\)/);
+  assert.doesNotMatch(source, /border-style:\s*dashed/);
+  assert.doesNotMatch(source, /box-shadow:/);
 });
 
 test("viewer build attaches Contributed emphasis after generated viewer contracts", async () => {

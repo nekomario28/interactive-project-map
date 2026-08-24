@@ -72,9 +72,8 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const opacity = node.archived ? 0.72 : 0.96;
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
-  const contributed = node.type === "repository" && status === "contributed" ? `<circle cx="${x}" cy="${y}" r="${radius + 4.2}" fill="none" stroke="${colors.contributed}" stroke-width="1.45" stroke-dasharray="3 3"/>` : "";
   const archived = node.type === "repository" && node.archived && status !== "contributed" ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
-  return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${contributed}${archived}${label}</g>`;
+  return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${archived}${label}</g>`;
 }
 
 export function motionValuesCircle(radius, startAngle, samples = 12) {
