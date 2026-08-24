@@ -85,15 +85,95 @@ test("owned team and contributed ownership require person-side attribution gates
   assert.equal(contributed.attribution.requiresPersonalContributionGate, true);
 });
 
-test("fork lineage requires local-delta evidence but absence remains unknown", () => {
+test("fork lineage requires local-delta evidence but uninspected absence remains unknown", () => {
   const unknown = buildPersonalContributionEvidence({ relation: OWNED_FORK });
   assert.equal(unknown.attribution.mode, "fork-local-delta");
   assert.equal(unknown.attribution.requiresLocalDeltaEvidence, true);
   assert.equal(unknown.attribution.localDeltaState, "unknown");
+  assert.equal(unknown.attribution.localDeltaPresence, "unknown");
+  assert.deepEqual(unknown.localDelta, { state: "unknown", presence: "unknown", scope: null, evidence: null });
 
-  const observed = buildPersonalContributionEvidence({ relation: OWNED_FORK, localDeltaEvidence: "adds a local device integration patch" });
-  assert.equal(observed.localDelta.state, "observed");
-  assert.equal(observed.attribution.localDeltaState, "observed");
+  const legacyObserved = buildPersonalContributionEvidence({ relation: OWNED_FORK, localDeltaEvidence: "adds a local device integration patch" });
+  assert.equal(legacyObserved.localDelta.state, "observed");
+  assert.equal(legacyObserved.localDelta.presence, "present");
+  assert.equal(legacyObserved.attribution.localDeltaState, "observed");
+  assert.equal(legacyObserved.attribution.localDeltaPresence, "present");
+  assert.deepEqual(legacyObserved.signals.localDelta, ["local-delta-present"]);
+});
+
+test("fork compare can record observed absence without claiming universal non-contribution", () => {
+  const evidence = buildPersonalContributionEvidence({
+    relation: OWNED_FORK,
+    localDeltaObservation: {
+      state: "observed",
+      presence: "absent",
+      scope: "parent/main...local/main",
+      evidence: "0 commits ahead; 2 behind; no local-ahead changed files",
+    },
+  });
+
+  assert.deepEqual(evidence.localDelta, {
+    state: "observed",
+    presence: "absent",
+    scope: "parent/main...local/main",
+    evidence: "0 commits ahead; 2 behind; no local-ahead changed files",
+  });
+  assert.equal(evidence.attribution.localDeltaState, "observed");
+  assert.equal(evidence.attribution.localDeltaPresence, "absent");
+  assert.deepEqual(evidence.signals.localDelta, []);
+  assert.equal(evidence.compositePersonalContribution, null);
+});
+
+test("fork compare can record a bounded observed local delta", () => {
+  const evidence = buildPersonalContributionEvidence({
+    relation: OWNED_FORK,
+    localDeltaObservation: {
+      state: "observed",
+      presence: "present",
+      scope: "parent/main...local/main",
+      evidence: "2 commits ahead with scheduler/server/test changes",
+    },
+  });
+
+  assert.equal(evidence.localDelta.state, "observed");
+  assert.equal(evidence.localDelta.presence, "present");
+  assert.equal(evidence.localDelta.scope, "parent/main...local/main");
+  assert.deepEqual(evidence.signals.localDelta, ["local-delta-present"]);
+});
+
+test("local delta observation state and presence cannot contradict", () => {
+  assert.throws(
+    () => buildPersonalContributionEvidence({
+      relation: OWNED_FORK,
+      localDeltaObservation: { state: "unknown", presence: "absent", scope: "parent/main...local/main" },
+    }),
+    /unknown local delta observation cannot claim present or absent delta/,
+  );
+  assert.throws(
+    () => buildPersonalContributionEvidence({
+      relation: OWNED_FORK,
+      localDeltaObservation: { state: "observed", presence: "unknown", scope: "parent/main...local/main" },
+    }),
+    /observed local delta observation must resolve presence/,
+  );
+  assert.throws(
+    () => buildPersonalContributionEvidence({
+      relation: OWNED_FORK,
+      localDeltaObservation: { state: "observed", presence: "present" },
+    }),
+    /requires comparison scope/,
+  );
+});
+
+test("legacy localDeltaEvidence and structured observation cannot be supplied together", () => {
+  assert.throws(
+    () => buildPersonalContributionEvidence({
+      relation: OWNED_FORK,
+      localDeltaEvidence: "legacy",
+      localDeltaObservation: { state: "observed", presence: "present", scope: "parent/main...local/main" },
+    }),
+    /not both/,
+  );
 });
 
 test("owned solo original allows direct attribution only after all relation axes are resolved", () => {
@@ -101,6 +181,8 @@ test("owned solo original allows direct attribution only after all relation axes
   assert.equal(evidence.attribution.mode, "direct-solo-original-context");
   assert.equal(evidence.attribution.profile, "direct");
   assert.equal(evidence.attribution.requiresPersonalContributionGate, false);
+  assert.equal(evidence.attribution.localDeltaState, "not-applicable");
+  assert.equal(evidence.attribution.localDeltaPresence, "not-applicable");
   assert.equal(evidence.compositePersonalContribution, null);
 });
 

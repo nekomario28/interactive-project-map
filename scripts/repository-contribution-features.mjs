@@ -14,6 +14,9 @@ const FORBIDDEN_PROJECT_SIDE_KEYS = [
   "projectScale",
 ];
 
+const LOCAL_DELTA_STATES = new Set(["observed", "unknown"]);
+const LOCAL_DELTA_PRESENCE = new Set(["present", "absent", "unknown"]);
+
 function optionalCount(value, label) {
   if (value == null) return { state: "unknown", raw: null };
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
@@ -32,6 +35,48 @@ function optionalText(value, label) {
   if (value == null || value === "") return { state: "unknown", value: null };
   if (typeof value !== "string") throw new Error(`${label} must be string when observed`);
   return { state: "observed", value: value.slice(0, 240) };
+}
+
+function boundedText(value, label) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") throw new Error(`${label} must be string when supplied`);
+  return value.slice(0, 240);
+}
+
+function normalizeLocalDelta(input) {
+  if (input.localDeltaObservation != null && input.localDeltaEvidence != null) {
+    throw new Error("use localDeltaObservation or legacy localDeltaEvidence, not both");
+  }
+
+  if (input.localDeltaObservation == null) {
+    const legacy = boundedText(input.localDeltaEvidence, "localDeltaEvidence");
+    if (legacy == null) {
+      return { state: "unknown", presence: "unknown", scope: null, evidence: null };
+    }
+    return { state: "observed", presence: "present", scope: "unspecified", evidence: legacy };
+  }
+
+  const observation = input.localDeltaObservation;
+  if (!observation || typeof observation !== "object" || Array.isArray(observation)) {
+    throw new Error("localDeltaObservation must be an object when supplied");
+  }
+  const state = observation.state ?? "unknown";
+  const presence = observation.presence ?? "unknown";
+  if (!LOCAL_DELTA_STATES.has(state)) throw new Error("localDeltaObservation.state is unsupported");
+  if (!LOCAL_DELTA_PRESENCE.has(presence)) throw new Error("localDeltaObservation.presence is unsupported");
+
+  const scope = boundedText(observation.scope, "localDeltaObservation.scope");
+  const evidence = boundedText(observation.evidence, "localDeltaObservation.evidence");
+
+  if (state === "unknown") {
+    if (presence !== "unknown") throw new Error("unknown local delta observation cannot claim present or absent delta");
+    if (evidence != null) throw new Error("unknown local delta observation cannot carry result evidence");
+    return { state, presence, scope, evidence: null };
+  }
+
+  if (presence === "unknown") throw new Error("observed local delta observation must resolve presence");
+  if (scope == null) throw new Error("observed local delta observation requires comparison scope");
+  return { state, presence, scope, evidence };
 }
 
 function attributionForRelation(relation) {
@@ -98,7 +143,7 @@ export function buildPersonalContributionEvidence(input) {
     maintainedCoreComponent: optionalBoolean(input.maintainedCoreComponent, "maintainedCoreComponent"),
   };
 
-  const localDelta = optionalText(input.localDeltaEvidence, "localDeltaEvidence");
+  const localDelta = normalizeLocalDelta(input);
   const scopeEvidence = optionalText(input.scopeEvidence, "scopeEvidence");
 
   const activitySignals = [];
@@ -125,10 +170,12 @@ export function buildPersonalContributionEvidence(input) {
     signals: {
       activity: activitySignals,
       responsibility: responsibilitySignals,
+      localDelta: localDelta.state === "observed" && localDelta.presence === "present" ? ["local-delta-present"] : [],
     },
     attribution: {
       ...attribution,
       localDeltaState: relationRequiresLocalDelta(relation) ? localDelta.state : "not-applicable",
+      localDeltaPresence: relationRequiresLocalDelta(relation) ? localDelta.presence : "not-applicable",
       directPersonalMeritPermitted: !relationRequiresPersonalContribution(relation),
     },
     compositePersonalContribution: null,
