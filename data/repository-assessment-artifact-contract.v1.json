@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "contractId": "ipm-repository-assessment-artifact-v1",
+  "status": "experimental-static-artifact-contract",
+  "defaultPath": "project-map/assessment.json",
+  "join": {
+    "canonicalRepositoryKey": "lowercase-owner/repository",
+    "graphNodeId": "current graph projection id",
+    "githubRepositoryId": "optional stable provider identity when acquisition exposes it",
+    "graphSchemaMutationRequired": false
+  },
+  "artifactRootFields": [
+    "schemaVersion",
+    "contractId",
+    "owner",
+    "generatedAt",
+    "sourceRevision",
+    "taxonomyId",
+    "assessmentPolicyId",
+    "productionScoring",
+    "prominenceCandidateId",
+    "repositories"
+  ],
+  "repositoryFields": [
+    "repositoryKey",
+    "graphNodeId",
+    "githubRepositoryId",
+    "context",
+    "acquisition",
+    "quality",
+    "impact",
+    "scale",
+    "lifecycle",
+    "personalContribution",
+    "prominence",
+    "productionScore"
+  ],
+  "acquisitionLevels": ["L0", "L1", "L2"],
+  "sectionStates": ["observed", "partial", "not-collected", "not-applicable", "unknown"],
+  "invariants": [
+    "assessment.json is a generated projection and not the authority for taxonomy or evidence sources",
+    "repositoryKey is unique within an artifact",
+    "owned repositories join graph nodes through repository:<name>",
+    "contributed repositories join graph nodes through repository:<owner/name>",
+    "productionScoring is false while production weights and tiers are unfrozen",
+    "productionScore remains null in v1 experimental artifacts",
+    "missing sections remain explicit rather than being converted to numeric zero",
+    "personal prominence remains null when gated Personal Contribution is unknown",
+    "raw activity does not become a prominence input",
+    "stable reusable v1 release does not move merely because this contract changes"
+  ]
+}
