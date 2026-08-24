@@ -5,6 +5,7 @@ import {
 } from "./repository-assessment-artifact.mjs";
 import { inferL0RepositoryRelation } from "./repository-relation.mjs";
 
+const CATEGORY_VALUES = new Set(standardTaxonomy.categories.map((category) => category.id));
 const ARTIFACT_VALUES = new Set(standardTaxonomy.facets.artifact.values);
 
 function object(value, label) {
@@ -12,14 +13,20 @@ function object(value, label) {
   return value;
 }
 
+function standardCategoryId(value) {
+  return typeof value === "string" && CATEGORY_VALUES.has(value) ? value : null;
+}
+
 function observedCategory(node) {
   const assignment = node.taxonomyAssignment;
-  if (assignment && typeof assignment === "object" && typeof assignment.categoryId === "string" && assignment.categoryId) {
-    return assignment.categoryId;
+  if (assignment && typeof assignment === "object") {
+    const categoryId = standardCategoryId(assignment.categoryId);
+    if (categoryId) return categoryId;
   }
   const classification = node.classification;
-  if (classification && typeof classification === "object" && typeof classification.categoryId === "string" && classification.categoryId) {
-    return classification.categoryId;
+  if (classification && typeof classification === "object") {
+    const categoryId = standardCategoryId(classification.categoryId);
+    if (categoryId) return categoryId;
   }
   return null;
 }

@@ -45,7 +45,7 @@ function graphFixture() {
         fork: false,
         archived: false,
         classification: {
-          categoryId: "systems-infrastructure",
+          categoryId: "uncategorized",
           secondaryTags: [],
         },
       },
@@ -82,19 +82,43 @@ test("L0 adapter derives only graph-observed relation axes and never assumes sol
   assert.equal(contributed.identity.graphNodeId, "repository:upstreamorg/projectx");
 });
 
-test("taxonomy assignment wins category routing and artifact facets are bounded to Standard Taxonomy values", () => {
+test("taxonomy assignment wins category routing and fallback accepts only Standard Taxonomy ids", () => {
   const { artifact } = buildL0RepositoryAssessmentFromGraph(graphFixture(), { generatorRevision: revision });
   const toolkit = artifact.repositories.find((repo) => repo.identity.name === "Toolkit");
   assert.deepEqual(toolkit.context.category, { state: "observed", id: "developer-tools" });
   assert.deepEqual(toolkit.context.artifacts, { state: "observed", values: ["tool"] });
 
   const forked = artifact.repositories.find((repo) => repo.identity.name === "ForkedLib");
+  assert.deepEqual(forked.context.category, { state: "observed", id: "developer-tools" });
   assert.deepEqual(forked.context.artifacts, { state: "observed", values: ["library"] });
+
+  const contributed = artifact.repositories.find((repo) => repo.identity.name === "ProjectX");
+  assert.deepEqual(contributed.context.category, { state: "unknown", id: null });
+  assert.deepEqual(contributed.context.artifacts, { state: "unknown", values: [] });
+});
+
+test("legacy or uncategorized classifier ids do not become Standard Taxonomy assessment categories", () => {
+  const fixture = graphFixture();
+  fixture.nodes.push({
+    id: "repository:LegacyRobotics",
+    type: "repository",
+    label: "LegacyRobotics",
+    fork: false,
+    archived: false,
+    classification: {
+      categoryId: "robotics",
+      secondaryTags: [],
+    },
+  });
+  const { artifact } = buildL0RepositoryAssessmentFromGraph(fixture, { generatorRevision: revision });
+  const legacy = artifact.repositories.find((repo) => repo.identity.name === "LegacyRobotics");
+  assert.deepEqual(legacy.context.category, { state: "unknown", id: null });
 });
 
 test("missing contributed facets and lifecycle evidence remain explicitly unknown", () => {
   const { artifact, diagnostics } = buildL0RepositoryAssessmentFromGraph(graphFixture(), { generatorRevision: revision });
   const contributed = artifact.repositories.find((repo) => repo.identity.name === "ProjectX");
+  assert.deepEqual(contributed.context.category, { state: "unknown", id: null });
   assert.deepEqual(contributed.context.artifacts, { state: "unknown", values: [] });
   assert.equal(contributed.context.lifecycle, "unknown");
 
@@ -104,7 +128,7 @@ test("missing contributed facets and lifecycle evidence remain explicitly unknow
   assert.equal(archived.context.lifecycle, "archived");
   assert.equal(archived.context.relation.lineage, "fork");
 
-  assert.equal(diagnostics.categoryUnknown, 1);
+  assert.equal(diagnostics.categoryUnknown, 2);
   assert.equal(diagnostics.artifactsUnknown, 2);
   assert.equal(diagnostics.archived, 1);
 });
@@ -132,8 +156,8 @@ test("diagnostics make L0 evidence coverage visible", () => {
     contributed: 2,
     forks: 2,
     collaborationUnknown: 4,
-    categoryObserved: 3,
-    categoryUnknown: 1,
+    categoryObserved: 2,
+    categoryUnknown: 2,
     artifactsObserved: 2,
     artifactsUnknown: 2,
     archived: 1,
