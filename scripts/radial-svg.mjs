@@ -1,3 +1,12 @@
+import {
+  repositoryOpacity,
+  repositoryStatus,
+  shouldDecorateArchived,
+  statusLegendItems,
+  visibleStructuralEdges,
+  withContributedColor,
+} from "./static-contributed.mjs";
+
 function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
@@ -30,16 +39,11 @@ function nodeRadius(node) {
   return clamp(5 + Math.log2((node.stars ?? 0) + 1) * 1.35, 5, 11.5);
 }
 
-function statusOf(node) {
-  if (node.type !== "repository") return node.type;
-  if (node.archived) return "archived";
-  return node.fork ? "fork" : "original";
-}
-
 function palette(theme) {
-  return theme === "dark"
+  const base = theme === "dark"
     ? { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", relation: "#f4b65f" }
     : { bg: "#fbfcff", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", relation: "#a46618" };
+  return withContributedColor(base, theme);
 }
 
 function groupMembers(group, repos) {
@@ -134,9 +138,8 @@ function placeLabels(points, width, height) {
 }
 
 function legend(colors, width, height) {
-  const items = [[colors.original, "Original"], [colors.fork, "Fork"], [colors.archived, "Archived"]];
   let x = 18;
-  return items.map(([color, label]) => {
+  return statusLegendItems(colors).map(([color, label]) => {
     const chunk = `<circle cx="${x + 4}" cy="${height - 16}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 12.5}" fill="${colors.muted}" font-size="9.5">${label}</text>`;
     x += 17 + label.length * 5.8 + 15;
     return chunk;
@@ -149,7 +152,7 @@ export function renderRadialTreeSvg(graph, theme, width, height) {
   const byId = new Map(points.map((point) => [point.node.id, point]));
   const labels = placeLabels(points, width, height);
 
-  const lines = graph.edges.map((edge) => {
+  const lines = visibleStructuralEdges(graph.edges).map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
     if (!source || !target) return "";
@@ -158,7 +161,7 @@ export function renderRadialTreeSvg(graph, theme, width, height) {
   }).join("");
 
   const nodes = points.map(({ x, y, node }) => {
-    const status = statusOf(node);
+    const status = repositoryStatus(node);
     const fill = colors[status] || colors.original;
     const radius = nodeRadius(node);
     const placement = labels.get(node.id);
@@ -166,13 +169,14 @@ export function renderRadialTreeSvg(graph, theme, width, height) {
     const label = placement
       ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="2.4" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
       : "";
-    const archivedRing = node.type === "repository" && node.archived
+    const archivedRing = shouldDecorateArchived(node)
       ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
       : "";
     const ownerRing = node.type === "owner"
       ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
       : "";
-    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.archived ? 0.72 : 0.96}"/>${ownerRing}${archivedRing}${label}</g>`;
+    const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
+    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${ownerRing}${archivedRing}${label}</g>`;
   }).join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Radial Tree classic map of ${esc(graph.owner)} public GitHub repositories">\n  <rect width="100%" height="100%" rx="16" fill="${colors.bg}"/>\n  <g>${lines}</g>\n  <g>${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
