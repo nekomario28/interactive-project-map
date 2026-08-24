@@ -3,7 +3,23 @@ const REQUIRED_APPLICABILITY = new Set([
   "recommended",
   "optional",
   "not-applicable",
+  "unknown",
+]);
+
+const REQUIRED_AUTHORITIES = new Set([
+  "repository-native",
+  "project-owned",
   "external",
+  "mixed",
+  "unknown",
+]);
+
+const REQUIRED_EVIDENCE_STATES = new Set([
+  "observed",
+  "absent",
+  "not-collected",
+  "stale",
+  "conflicting",
   "unknown",
 ]);
 
@@ -98,6 +114,19 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
   for (const state of REQUIRED_APPLICABILITY) {
     if (!applicability.has(state)) throw new Error(`missing applicability state: ${state}`);
   }
+  if (applicability.has("external")) {
+    throw new Error("external is an assessment authority, not an applicability state");
+  }
+
+  const authorities = new Set(assertUniqueStrings(policy.assessmentAuthorities, "assessmentAuthorities"));
+  for (const authority of REQUIRED_AUTHORITIES) {
+    if (!authorities.has(authority)) throw new Error(`missing assessment authority: ${authority}`);
+  }
+
+  const evidenceStates = new Set(assertUniqueStrings(policy.evidenceStates, "evidenceStates"));
+  for (const state of REQUIRED_EVIDENCE_STATES) {
+    if (!evidenceStates.has(state)) throw new Error(`missing evidence state: ${state}`);
+  }
 
   const lifecycle = new Set(assertUniqueStrings(policy.lifecycleStates, "lifecycleStates"));
   if (!lifecycle.has("frozen") || !lifecycle.has("active") || !lifecycle.has("unknown")) {
@@ -117,6 +146,22 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
   const qualityDimensions = new Set(assertUniqueStrings(policy.qualityDimensions, "qualityDimensions"));
   for (const required of ["verification", "reproducibility", "integrity", "stewardship"]) {
     if (!qualityDimensions.has(required)) throw new Error(`missing quality dimension: ${required}`);
+  }
+
+  const qualityEvidenceContract = assertObject(policy.qualityEvidenceContract, "qualityEvidenceContract");
+  if (qualityEvidenceContract.mechanismPresenceIsNotOutcome !== true) {
+    throw new Error("quality evidence must assess outcomes rather than mechanism presence");
+  }
+  if (qualityEvidenceContract.forbidImpactSignalsAsQualityEvidence !== true) {
+    throw new Error("impact signals must remain outside Quality evidence");
+  }
+  if (qualityEvidenceContract.externalAuthorityDoesNotChangeApplicability !== true) {
+    throw new Error("external authority must remain orthogonal to applicability");
+  }
+  for (const key of ["defaultEmphasizedApplicability", "defaultOtherApplicability"]) {
+    if (!applicability.has(qualityEvidenceContract[key])) {
+      throw new Error(`${key} must name a valid applicability state`);
+    }
   }
 
   const artifactValues = standardTaxonomy?.facets?.artifact?.values;
