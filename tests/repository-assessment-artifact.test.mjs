@@ -90,6 +90,19 @@ test("L0 skeleton preserves uncollected evidence instead of zero scores", () => 
   assert.deepEqual(contributed.personalContribution, { state: "not-collected", value: null });
 });
 
+test("L0 context preserves unknown category, artifact, and lifecycle rather than inventing defaults", () => {
+  const unresolved = makeAssessmentRepositorySkeleton("Alice", {
+    owner: "Alice",
+    name: "SparseMetadata",
+    relation: OWNED_UNKNOWN,
+    observedAt: generatedAt,
+  });
+  assert.deepEqual(unresolved.context.category, { state: "unknown", id: null });
+  assert.deepEqual(unresolved.context.artifacts, { state: "unknown", values: [] });
+  assert.equal(unresolved.context.lifecycle, "unknown");
+  assert.equal(validateRepositoryAssessmentArtifact(artifact([unresolved])), true);
+});
+
 test("assessment artifact validates without changing graph schema", () => {
   const value = artifact();
   assert.equal(validateRepositoryAssessmentArtifact(value), true);
