@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Radial Contributed overlap passed the full renderer, comparison and browser gates before this promotion.
-export const PUBLIC_ACTION_REF = "74e579b5cf2968d91a98edbc60dc290bdf6c6c5e";
+// Galaxy Systems Contributed external rail passed the full renderer, comparison and browser gates before this promotion.
+export const PUBLIC_ACTION_REF = "94abe621aae576d6a49e38fe7e146e0790387fc2";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
