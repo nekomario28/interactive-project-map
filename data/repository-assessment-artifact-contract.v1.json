@@ -40,6 +40,11 @@
     "name",
     "githubRepositoryId"
   ],
+  "repositoryRelationAxes": {
+    "ownership": ["owned", "contributed"],
+    "collaboration": ["solo", "team", "unknown"],
+    "lineage": ["original", "fork", "unknown"]
+  },
   "acquisitionLevels": ["L0", "L1", "L2"],
   "sectionStates": ["observed", "partial", "not-collected", "not-applicable", "unknown"],
   "invariants": [
@@ -48,10 +53,14 @@
     "repositoryKey is unique within an artifact",
     "owned repositories join graph nodes through repository:<name>",
     "contributed repositories join graph nodes through repository:<owner/name>",
+    "ownership collaboration and lineage are orthogonal relation axes",
+    "fork is lineage and never substitutes for ownership or collaboration",
+    "L0 owned non-fork repositories default collaboration to unknown rather than solo",
     "productionScoring is false while production weights and tiers are unfrozen",
     "productionScore remains null in v1 experimental artifacts",
     "missing sections remain explicit rather than being converted to numeric zero",
     "personal prominence remains null when gated Personal Contribution is unknown",
+    "personal prominence remains null while owned collaboration attribution is unresolved",
     "raw activity does not become a prominence input",
     "stable reusable v1 release does not move merely because this contract changes"
   ]
