@@ -34,7 +34,7 @@ test("C4a shared HTML adds one Contributed control idempotently", () => {
   assert.equal(patchSharedViewerHtml(patched), patched);
 });
 
-test("C4a runtime is installed in shared viewer before username startup and graph fetch", () => {
+test("C4a runtime is installed before startup and keeps contribution edges data-only", () => {
   const source = `"use strict";
 function sanitizeGraph(value) { return value; }
 function nodeStatus(node) {
@@ -73,10 +73,13 @@ if (username) { fetch("graph.json"); }
   assert.match(patched, /commits === 0 && mergedPullRequests === 0/);
   assert.match(patched, /type: "contribution"/);
   assert.match(patched, /contributionTargets/);
-  assert.match(patched, /contributed: "#62c8ba"/);
-  assert.match(patched, /contributed: "#55c7d7"/);
+  assert.match(patched, /contributed: "#E69F00"/);
   assert.match(patched, /External owner/);
-  assert.match(patched, /if \(!contributionEdges\.length\) return baseDrawEdges\(colors\)/);
+  assert.match(patched, /const visibleEdges = originalEdges\.filter\(\(edge\) => edge\?\.type !== "contribution"\)/);
+  assert.match(patched, /state\.edges = visibleEdges/);
+  assert.doesNotMatch(patched, /ctx\./);
+  assert.doesNotMatch(patched, /setLineDash/);
+  assert.doesNotMatch(patched, /worldToScreen/);
   assert.equal(patchSharedViewerRuntime(patched), patched);
 });
 
@@ -89,8 +92,9 @@ test("C4a shared render projection keeps Contributed above fork/archive source f
   assert.match(source, /const counts = \{ original: 0, fork: 0, archived: 0, contributed: 0 \}/);
 });
 
-test("C4a Contributed status CSS is idempotent", () => {
+test("C4a Contributed status CSS is warm-orange and idempotent", () => {
   const patched = patchViewerCss("body { margin: 0; }");
   assert.match(patched, /status-contributed/);
+  assert.match(patched, /#E69F00/);
   assert.equal(patchViewerCss(patched), patched);
 });
