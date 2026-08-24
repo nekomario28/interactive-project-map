@@ -2,11 +2,11 @@
 
 Status: **experimental evidence/context contract / no Scale, Maturity, or Activity composite scores yet**
 
-This layer fills the remaining project-side context needed before Portfolio Prominence calibration.
+This layer provides project-side scope and lifecycle context for later Portfolio Prominence calibration. Repository relation follows [`repository-relation-axes-v1.md`](repository-relation-axes-v1.md).
 
 ## Scale is breadth and coordination, not repository mass
 
-Candidate Scale evidence is grouped into:
+Candidate Scale evidence:
 
 ```text
 technical breadth
@@ -20,12 +20,12 @@ organizational breadth
   maintainers
 
 scope evidence
-  bounded textual/direct evidence of meaningful scope
+  bounded direct evidence of meaningful project scope
 ```
 
-The extractor may log-transform observed counts for later calibration, but it does not currently produce a composite Scale score.
+Observed count-like features may be log-transformed for later calibration, but there is no composite Scale score yet.
 
-The following shortcuts are explicitly rejected:
+Rejected shortcuts:
 
 ```text
 LOC => Scale
@@ -35,35 +35,52 @@ one large generated/data file => Scale
 project popularity => personal contribution
 ```
 
-A 200-line multi-system integration can have more meaningful scope than a large vendored or generated repository. Raw repository size is therefore not a primary Scale primitive.
+A small multi-system integration can carry more meaningful scope than a large generated repository.
 
 ## Project-side only
 
-Scale is project-side evidence. Person-side contribution fields must not be used to manufacture project Scale.
+Scale is project-side evidence. Person-side contribution fields are rejected by the extractor.
 
-For shared work, later portfolio prominence must consume both:
+For shared work, later portfolio presentation combines rather than conflates:
 
 ```text
 project Scale
 personal Contribution
 ```
 
-without substituting one for the other.
+Unknown collaboration does not prevent project-side Scale evidence from being collected; it only prevents unsafe personal attribution.
 
-## Forks
+## Fork lineage
 
-For `owned-fork`, upstream Scale is retained as `upstreamContext` and marked:
+Fork semantics use:
 
 ```text
-contextOnly = true
-eligibleForLocalScale = false
+relation.lineage = fork
 ```
 
-This mirrors the Impact and Personal Contribution attribution boundaries. A large upstream project does not make a tiny local fork delta into a large authored project.
+When upstream Scale is available it is retained as:
+
+```text
+upstreamContext
+  contextOnly = true
+  eligibleForLocalScale = false
+```
+
+The extractor rejects upstream `parent` Scale context for `lineage = original`, preventing two competing lineage authorities.
+
+A large upstream project therefore cannot inflate the local fork's authored Scale.
+
+## Ownership and collaboration do not define Scale automatically
+
+```text
+ownership = contributed
+```
+
+may describe a huge external project or a small one. Likewise `collaboration = team` does not itself imply a high Scale score. These axes control attribution/context; actual project Scale still depends on direct breadth/coordination evidence.
 
 ## Maturity and Activity remain distinct
 
-Lifecycle context uses the existing states:
+Lifecycle states:
 
 ```text
 active
@@ -76,7 +93,7 @@ experimental
 unknown
 ```
 
-Activity observations can include:
+Activity observations may include:
 
 ```text
 days since push
@@ -85,7 +102,7 @@ releases in a bounded recent window
 issue responses in a bounded recent window
 ```
 
-These observations do not directly produce Quality, Maturity, or health verdicts.
+These do not directly produce Quality, Maturity, or health verdicts.
 
 Maturity evidence can include:
 
@@ -98,17 +115,19 @@ versioned artifact
 experimental declaration
 ```
 
-Again, these are evidence features rather than direct points. One hundred releases do not automatically mean greater Maturity than one deliberately frozen, well-versioned reference artifact.
+One hundred releases do not automatically mean greater Maturity than a deliberately frozen, well-versioned reference artifact.
 
 ## Lifecycle interpretation
 
-For `frozen`, `snapshot`, and `archived` repositories, recent activity is not required by lifecycle. Low Activity must not become an automatic Quality or health penalty.
+For `frozen`, `snapshot`, and `archived`, recent activity is not required by lifecycle. Low Activity is not an automatic Quality or health penalty.
 
 For `stable` and `maintenance`, Activity is context-dependent.
 
-For `active` and `experimental`, Activity may be informative, but lack of recent commits still does not automatically prove poor Quality or project failure.
+For `active` and `experimental`, Activity may be informative, but inactivity alone still does not prove poor Quality.
 
-Current output therefore keeps:
+At L0, a non-archived repository remains `lifecycle = unknown`; the graph adapter does not infer `active` merely from repository presence or timestamps.
+
+Current outputs therefore retain:
 
 ```text
 compositeScale = null
@@ -117,4 +136,4 @@ compositeActivity = null
 healthInference = null
 ```
 
-The next layer may calibrate presentation prominence using synthetic/normalized components, but production scoring must continue to preserve these evidence boundaries.
+Production scoring must preserve these evidence boundaries even after calibration introduces presentation values.
