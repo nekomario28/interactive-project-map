@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Static Contributed parity passed the full exact-head renderer and browser gates before this promotion.
-export const PUBLIC_ACTION_REF = "a5519222947325ff71a20309c483feba1085c718";
+// Radial Contributed overlap passed the full renderer, comparison and browser gates before this promotion.
+export const PUBLIC_ACTION_REF = "74e579b5cf2968d91a98edbc60dc290bdf6c6c5e";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
