@@ -1,3 +1,13 @@
+import {
+  isContributedRepository,
+  repositoryOpacity,
+  repositoryStatus,
+  shouldDecorateArchived,
+  statusLegendItems,
+  visibleStructuralEdges,
+  withContributedColor,
+} from "./static-contributed.mjs";
+
 function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
@@ -31,30 +41,64 @@ function nodeRadius(node) {
 }
 
 function statusOf(node) {
-  if (node.type !== "repository") return node.type;
-  if (node.archived) return "archived";
-  return node.fork ? "fork" : "original";
+  return repositoryStatus(node);
 }
 
 function palette(theme, style) {
   const dark = theme === "dark";
+  let base;
   if (style === "obsidian") {
-    return dark
+    base = dark
       ? { bg: "#1e1e1e", bg2: "#181818", fg: "#dcddde", muted: "#9a9a9f", edge: "#57575d", owner: "#c4b5fd", group: "#8b7cf6", original: "#a89df7", fork: "#67b7a7", archived: "#b97a7a", relation: "#d7a75b" }
       : { bg: "#f7f7f8", bg2: "#eeeeef", fg: "#242427", muted: "#67676d", edge: "#b9b9c0", owner: "#7868db", group: "#6555c7", original: "#7667d8", fork: "#348e80", archived: "#a75f5f", relation: "#9c6b23" };
+  } else {
+    base = dark
+      ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", relation: "#f4b65f" }
+      : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", relation: "#a46618" };
   }
-  return dark
-    ? { bg: "#070a12", bg2: "#0b1120", fg: "#e8edf7", muted: "#9aa7bd", edge: "#344054", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", relation: "#f4b65f" }
-    : { bg: "#fbfcff", bg2: "#f2f6fc", fg: "#172033", muted: "#667085", edge: "#cfd6e3", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45", relation: "#a46618" };
+  return withContributedColor(base, theme);
 }
 
 function groupMembers(group, repos) {
   const key = String(group.id).replace(/^group:/, "");
-  return repos.filter((repo) => repo.groupId === key || group.id === `group:${repo.groupId}`);
+  return repos.filter((repo) => !isContributedRepository(repo) && (repo.groupId === key || group.id === `group:${repo.groupId}`));
 }
 
 const TAU = Math.PI * 2;
 const GALAXY_SYSTEM_LIMIT = 80;
+const CONTRIBUTED_PER_LANE = 8;
+
+function addContributedGalaxyPoints(points, repos, cx, cy, minSize, galaxyMode, animated = false) {
+  const contributed = repos
+    .filter(isContributedRepository)
+    .sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || String(a.id).localeCompare(String(b.id)));
+  if (!contributed.length) return;
+  const outerRadius = minSize * 0.455;
+  const laneGap = Math.max(30, minSize * 0.072);
+  contributed.forEach((repo, index) => {
+    const lane = Math.floor(index / CONTRIBUTED_PER_LANE);
+    const inLane = index % CONTRIBUTED_PER_LANE;
+    const laneCount = Math.min(CONTRIBUTED_PER_LANE, contributed.length - lane * CONTRIBUTED_PER_LANE);
+    const seed = (hash(`${repo.id}:${galaxyMode}:contributed-phase`) % 10000) / 10000;
+    const angle = -Math.PI / 2 + TAU * (inLane + seed * 0.25) / Math.max(1, laneCount);
+    const radius = Math.max(minSize * 0.30, outerRadius - lane * laneGap);
+    points.push({
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius,
+      node: repo,
+      galaxyMode,
+      external: true,
+      ...(animated ? {
+        orbitCenterX: cx,
+        orbitCenterY: cy,
+        orbitRadius: radius,
+        orbitLane: lane,
+        orbitDirection: (hash(`${repo.id}:${galaxyMode}:contributed-direction`) & 1) === 0 ? 1 : -1,
+        orbitDuration: 760 + lane * 160,
+      } : {}),
+    });
+  });
+}
 
 function denseGalaxyLayout(graph, width, height) {
   const cx = width / 2;
@@ -96,6 +140,7 @@ function denseGalaxyLayout(graph, width, height) {
       lane += 1;
     }
   });
+  addContributedGalaxyPoints(points, repos, cx, cy, minSize, "dense", false);
   return points;
 }
 
@@ -111,14 +156,7 @@ function systemOrbitAssignments(group, members) {
     for (let index = 0; index < take; index += 1) {
       const repo = members[cursor + index];
       const angle = seedPhase + TAU * index / Math.max(1, take) + lane * 0.31;
-      assignments.push({
-        repo,
-        lane,
-        radius,
-        angle,
-        direction: lane % 2 === 0 ? 1 : -1,
-        duration: 92 + lane * 38,
-      });
+      assignments.push({ repo, lane, radius, angle, direction: lane % 2 === 0 ? 1 : -1, duration: 92 + lane * 38 });
     }
     cursor += take;
     lane += 1;
@@ -167,11 +205,12 @@ function galaxySystemLayout(graph, width, height) {
       });
     }
   });
+  addContributedGalaxyPoints(points, repos, cx, cy, minSize, "systems", true);
   return points;
 }
 
 function galaxyLayout(graph, width, height) {
-  const repositoryCount = graph.repositoryCount ?? graph.nodes.filter((node) => node.type === "repository").length;
+  const repositoryCount = graph.nodes.filter((node) => node.type === "repository").length;
   return repositoryCount <= GALAXY_SYSTEM_LIMIT
     ? galaxySystemLayout(graph, width, height)
     : denseGalaxyLayout(graph, width, height);
@@ -187,7 +226,9 @@ function obsidianLayout(graph, width, height) {
     return { ...raw, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, vx: 0, vy: 0 };
   });
   const byId = new Map(nodes.map((node) => [node.id, node]));
-  const links = graph.edges.map((edge) => ({ ...edge, sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) })).filter((edge) => edge.sourceNode && edge.targetNode);
+  const links = visibleStructuralEdges(graph.edges)
+    .map((edge) => ({ ...edge, sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) }))
+    .filter((edge) => edge.sourceNode && edge.targetNode);
 
   for (let step = 0; step < 90; step += 1) {
     const alpha = 1 - step / 90;
@@ -268,8 +309,8 @@ function boxesOverlap(a, b, padding = 3) {
 
 function placeLabels(points, width, height) {
   const priorities = [...points].sort((a, b) => {
-    const pa = a.node.type === "owner" ? 10000 : a.node.type === "group" ? 9000 : (a.node.stars ?? 0) * 10 + (a.node.fork ? 0 : 5) - (a.node.archived ? 4 : 0);
-    const pb = b.node.type === "owner" ? 10000 : b.node.type === "group" ? 9000 : (b.node.stars ?? 0) * 10 + (b.node.fork ? 0 : 5) - (b.node.archived ? 4 : 0);
+    const pa = a.node.type === "owner" ? 10000 : a.node.type === "group" ? 9000 : (isContributedRepository(a.node) ? 8000 : (a.node.stars ?? 0) * 10 + (a.node.fork ? 0 : 5) - (a.node.archived ? 4 : 0));
+    const pb = b.node.type === "owner" ? 10000 : b.node.type === "group" ? 9000 : (isContributedRepository(b.node) ? 8000 : (b.node.stars ?? 0) * 10 + (b.node.fork ? 0 : 5) - (b.node.archived ? 4 : 0));
     return pb - pa || a.node.label.localeCompare(b.node.label);
   });
   const occupied = [];
@@ -294,7 +335,7 @@ function placeLabels(points, width, height) {
       chosen = { ...candidate, fontSize, box };
       break;
     }
-    if (chosen || node.type === "owner") {
+    if (chosen || node.type === "owner" || isContributedRepository(node)) {
       const fallback = chosen || { x: point.x, y: clamp(point.y + radius + 8, 8, height - 34), anchor: "middle", fontSize, box: { left: point.x - widthPx / 2, right: point.x + widthPx / 2, top: point.y + radius + 8, bottom: point.y + radius + 8 + heightPx } };
       placements.set(node.id, fallback);
       occupied.push(fallback.box);
@@ -315,13 +356,8 @@ function stars(owner, width, height, fg) {
 }
 
 function legend(colors, width, height) {
-  const items = [
-    [colors.original, "Original"],
-    [colors.fork, "Fork"],
-    [colors.archived, "Archived"],
-  ];
   let x = 18;
-  return items.map(([color, label]) => {
+  return statusLegendItems(colors).map(([color, label]) => {
     const chunk = `<circle cx="${x + 4}" cy="${height - 16}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 12.5}" fill="${colors.muted}" font-size="9.5">${label}</text>`;
     x += 17 + label.length * 5.8 + 15;
     return chunk;
@@ -330,7 +366,7 @@ function legend(colors, width, height) {
 
 function galaxySystemGuides(points, colors) {
   const groups = points.filter((point) => point.node.type === "group" && point.galaxyMode === "systems");
-  const repos = points.filter((point) => point.node.type === "repository" && point.galaxyMode === "systems");
+  const repos = points.filter((point) => point.node.type === "repository" && point.galaxyMode === "systems" && !isContributedRepository(point.node));
   return groups.map((groupPoint) => {
     const members = repos.filter((point) => point.groupId === groupPoint.node.id);
     const radii = [...new Set(members.map((point) => point.orbitRadius).filter(Number.isFinite))].sort((a, b) => a - b);
@@ -364,15 +400,16 @@ function categoryRelationLines(graph, points, colors) {
     const midY = (source.y + target.y) / 2;
     const controlX = owner ? midX * 0.62 + owner.x * 0.38 : midX;
     const controlY = owner ? midY * 0.62 + owner.y * 0.38 : midY;
-    const width = clamp(0.8 + Math.log2(count + 1) * 0.45, 0.8, 2.2);
-    return `<path data-category-relation="true" d="M${source.x.toFixed(1)},${source.y.toFixed(1)} Q${controlX.toFixed(1)},${controlY.toFixed(1)} ${target.x.toFixed(1)},${target.y.toFixed(1)}" fill="none" stroke="${colors.relation}" stroke-width="${width.toFixed(2)}" stroke-dasharray="4 5" opacity="0.34"><title>${esc(`${source.node.label} ↔ ${target.node.label}: ${count} relation${count === 1 ? "" : "s"}`)}</title></path>`;
+    const lineWidth = clamp(0.8 + Math.log2(count + 1) * 0.45, 0.8, 2.2);
+    return `<path data-category-relation="true" d="M${source.x.toFixed(1)},${source.y.toFixed(1)} Q${controlX.toFixed(1)},${controlY.toFixed(1)} ${target.x.toFixed(1)},${target.y.toFixed(1)}" fill="none" stroke="${colors.relation}" stroke-width="${lineWidth.toFixed(2)}" stroke-dasharray="4 5" opacity="0.34"><title>${esc(`${source.node.label} ↔ ${target.node.label}: ${count} relation${count === 1 ? "" : "s"}`)}</title></path>`;
   }).join("");
 }
 
 function staticEdgeLines(graph, points, colors, mapStyle, systemsMode) {
   const byId = new Map(points.map((point) => [point.node.id, point]));
+  const edges = visibleStructuralEdges(graph.edges);
   if (systemsMode) {
-    const ownership = graph.edges.filter((edge) => edge.type === "ownership").map((edge) => {
+    const ownership = edges.filter((edge) => edge.type === "ownership").map((edge) => {
       const source = byId.get(edge.source);
       const target = byId.get(edge.target);
       if (!source || !target) return "";
@@ -380,7 +417,7 @@ function staticEdgeLines(graph, points, colors, mapStyle, systemsMode) {
     }).join("");
     return ownership + categoryRelationLines(graph, points, colors);
   }
-  return graph.edges.map((edge) => {
+  return edges.map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
     if (!source || !target) return "";
@@ -398,16 +435,17 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
   const baseLabel = placement
     ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="${placement.anchor}" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${mapStyle === "galaxy" ? 2.5 : 1.8}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
     : "";
-  const archivedRing = node.type === "repository" && node.archived
+  const archivedRing = shouldDecorateArchived(node)
     ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
     : "";
   const ownerRing = node.type === "owner"
     ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
     : "";
-  const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${node.archived ? 0.72 : 0.96}"/>${ownerRing}${archivedRing}`;
+  const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
+  const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${ownerRing}${archivedRing}`;
 
   if (!systemsMode || node.type !== "repository" || !Number.isFinite(point.orbitCenterX) || !Number.isFinite(point.orbitCenterY)) {
-    return `<g>${core}${baseLabel}</g>`;
+    return `<g${isContributedRepository(node) ? ' data-galaxy-orbit="contributed"' : ""}>${core}${baseLabel}</g>`;
   }
 
   const direction = point.orbitDirection < 0 ? -1 : 1;
@@ -416,8 +454,10 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
   const label = placement
     ? `<g>${baseLabel}<animateTransform attributeName="transform" type="rotate" from="0 ${placement.x.toFixed(1)} ${placement.y.toFixed(1)}" to="${-direction * 360} ${placement.x.toFixed(1)} ${placement.y.toFixed(1)}" dur="${duration.toFixed(0)}s" repeatCount="indefinite"/></g>`
     : "";
-  const membership = `<line x1="${point.orbitCenterX.toFixed(1)}" y1="${point.orbitCenterY.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${colors.edge}" stroke-width="0.75" opacity="0.18"/>`;
-  return `<g data-galaxy-orbit="true" transform="rotate(0 ${point.orbitCenterX.toFixed(1)} ${point.orbitCenterY.toFixed(1)})">${membership}${core}${label}${orbitAnimation}</g>`;
+  const membership = isContributedRepository(node)
+    ? ""
+    : `<line x1="${point.orbitCenterX.toFixed(1)}" y1="${point.orbitCenterY.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${colors.edge}" stroke-width="0.75" opacity="0.18"/>`;
+  return `<g data-galaxy-orbit="${isContributedRepository(node) ? "contributed" : "true"}" transform="rotate(0 ${point.orbitCenterX.toFixed(1)} ${point.orbitCenterY.toFixed(1)})">${membership}${core}${label}${orbitAnimation}</g>`;
 }
 
 export function renderGalaxySvg(graph, theme, width, height, style = "galaxy") {
