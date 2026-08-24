@@ -1,9 +1,14 @@
 import { TAU, clamp, hashText } from "../packages/spatial-core/src/index.js";
+import {
+  CONTRIBUTED_DARK,
+  CONTRIBUTED_LIGHT,
+  repositoryOpacity,
+  repositoryStatus,
+  shouldDecorateArchived,
+  statusLegendItems,
+} from "./static-contributed.mjs";
 
-export { TAU, clamp };
-
-export const CONTRIBUTED_DARK = "#E69F00";
-export const CONTRIBUTED_LIGHT = "#A85D00";
+export { TAU, clamp, CONTRIBUTED_DARK, CONTRIBUTED_LIGHT };
 
 export function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
@@ -26,10 +31,7 @@ export function palette(theme) {
 }
 
 export function statusOf(node) {
-  if (node.type !== "repository") return node.type;
-  if (node.relation === "contributed") return "contributed";
-  if (node.archived) return "archived";
-  return node.fork ? "fork" : "original";
+  return repositoryStatus(node);
 }
 
 export function nodeRadius(node) {
@@ -55,9 +57,8 @@ export function background(owner, width, height, colors, particleCount = 90) {
 }
 
 export function legend(colors, width, height, label) {
-  const items = [[colors.original, "Original"], [colors.fork, "Fork"], [colors.archived, "Archived"], [colors.contributed, "Contributed"]];
   let x = 18;
-  const status = items.map(([color, text]) => {
+  const status = statusLegendItems(colors).map(([color, text]) => {
     const chunk = `<circle cx="${x + 4}" cy="${height - 16}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 12.5}" fill="${colors.muted}" font-size="9.5">${text}</text>`;
     x += 17 + text.length * 5.8 + 15;
     return chunk;
@@ -69,10 +70,10 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const radius = options.radius ?? nodeRadius(node);
   const status = statusOf(node);
   const fill = colors[status] || colors.original;
-  const opacity = node.archived ? 0.72 : 0.96;
+  const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
-  const archived = node.type === "repository" && node.archived && status !== "contributed" ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
+  const archived = shouldDecorateArchived(node) ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
   return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${archived}${label}</g>`;
 }
 
