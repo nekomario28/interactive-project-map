@@ -38,10 +38,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Accepted-Contributed release: Action 1557cfae847c96bf8810fe74bcfef7cb22aec7b3 was proven
-# directly against the real public profile in nekomario28/nekomario28 run 32654967209 / job
-# 97232165228: 13 owned + 1 accepted Contributed, no owned-category leakage, and the Galaxy
-# Systems SVG contained the presentation-only External contributions system and Contributed legend.
+# Static Contributed parity release: Action a5519222947325ff71a20309c483feba1085c718 passed
+# exact-head Verify #741, including all-12-preset Contributed parity, 300-repository stress,
+# Chromium and iPhone WebKit. The canonical contribution edge remains data-only in static SVG.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -52,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@1557cfae847c96bf8810fe74bcfef7cb22aec7b3
+        uses: nekomario28/interactive-project-map@a5519222947325ff71a20309c483feba1085c718
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
