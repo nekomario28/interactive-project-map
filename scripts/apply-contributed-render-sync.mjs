@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const SHARED_VIEWER = "viewer.js";
+const OBSIDIAN_RUNTIME = "obsidian-runtime.js";
 const GALAXY_RENDERERS = Object.freeze([
   ["galaxy-classic-runtime.js", "classic"],
   ["galaxy-systems-runtime.js", "systems"],
@@ -29,6 +30,15 @@ export function patchSharedContributedRendering(source) {
     "shared Contributed archive-ring precedence",
   );
   return next;
+}
+
+export function patchObsidianContributedRendering(source) {
+  return replaceRequired(
+    source,
+    '      if (node.type === "repository" && node.archived) {',
+    '      if (node.type === "repository" && node.archived && node.relation !== "contributed") {',
+    "Obsidian Contributed archive-ring precedence",
+  );
 }
 
 export function patchGalaxyContributedRendering(source, mode) {
@@ -72,6 +82,11 @@ export async function applyContributedRenderSync(outputDir = resolve(process.cwd
   const nextShared = patchSharedContributedRendering(shared);
   if (nextShared !== shared) await writeFile(sharedPath, nextShared);
 
+  const obsidianPath = join(outputDir, OBSIDIAN_RUNTIME);
+  const obsidian = await readFile(obsidianPath, "utf8");
+  const nextObsidian = patchObsidianContributedRendering(obsidian);
+  if (nextObsidian !== obsidian) await writeFile(obsidianPath, nextObsidian);
+
   for (const [filename, mode] of GALAXY_RENDERERS) {
     const path = join(outputDir, filename);
     const source = await readFile(path, "utf8");
@@ -83,7 +98,7 @@ export async function applyContributedRenderSync(outputDir = resolve(process.cwd
 async function main() {
   const outputDir = resolve(process.argv[2] || join(process.cwd(), "site"));
   await applyContributedRenderSync(outputDir);
-  console.log("Aligned shared, Galaxy Classic, and Galaxy Systems Contributed rendering with static SVG semantics");
+  console.log("Aligned shared, Obsidian, Galaxy Classic, and Galaxy Systems Contributed rendering with static SVG semantics");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
