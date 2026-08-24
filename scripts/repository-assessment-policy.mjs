@@ -25,6 +25,13 @@ const REQUIRED_EVIDENCE_STATES = new Set([
   "unknown",
 ]);
 
+const REQUIRED_FINDING_DIRECTIONS = new Set([
+  "supports",
+  "weakens",
+  "neutral",
+  "unknown",
+]);
+
 const REQUIRED_RELATION_AXES = {
   ownership: new Set(["owned", "contributed"]),
   collaboration: new Set(["solo", "team", "unknown"]),
@@ -134,6 +141,11 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
     if (!evidenceStates.has(state)) throw new Error(`missing evidence state: ${state}`);
   }
 
+  const findingDirections = new Set(assertUniqueStrings(policy.qualityFindingDirections, "qualityFindingDirections"));
+  for (const direction of REQUIRED_FINDING_DIRECTIONS) {
+    if (!findingDirections.has(direction)) throw new Error(`missing Quality finding direction: ${direction}`);
+  }
+
   const lifecycle = new Set(assertUniqueStrings(policy.lifecycleStates, "lifecycleStates"));
   if (!lifecycle.has("frozen") || !lifecycle.has("active") || !lifecycle.has("unknown")) {
     throw new Error("lifecycle states must preserve active/frozen/unknown distinctions");
@@ -166,6 +178,8 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
   if (qualityEvidenceContract.mechanismPresenceIsNotOutcome !== true) throw new Error("quality evidence must assess outcomes rather than mechanism presence");
   if (qualityEvidenceContract.forbidImpactSignalsAsQualityEvidence !== true) throw new Error("impact signals must remain outside Quality evidence");
   if (qualityEvidenceContract.externalAuthorityDoesNotChangeApplicability !== true) throw new Error("external authority must remain orthogonal to applicability");
+  if (qualityEvidenceContract.findingDirectionOrthogonalToEvidenceState !== true) throw new Error("Quality finding direction must remain orthogonal to evidence state");
+  if (qualityEvidenceContract.observedEvidenceDoesNotImplySupport !== true) throw new Error("observed evidence must not imply a supporting Quality finding");
   for (const key of ["defaultEmphasizedApplicability", "defaultOtherApplicability"]) {
     if (!applicability.has(qualityEvidenceContract[key])) throw new Error(`${key} must name a valid applicability state`);
   }

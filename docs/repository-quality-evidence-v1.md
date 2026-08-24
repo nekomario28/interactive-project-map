@@ -4,9 +4,9 @@ Status: **experimental evidence-vector contract / no composite Quality score yet
 
 This layer converts repository assessment context into an explainable Quality evidence vector. It does not select final Quality weights or tiers.
 
-## Three orthogonal state axes
+## Four orthogonal state axes
 
-A requirement or quality dimension must not overload one enum with several meanings.
+A requirement, observation, or quality dimension must not overload one enum with several meanings.
 
 ### Applicability
 
@@ -39,9 +39,10 @@ security-safety
   applicability = required
   authority     = external
   evidence      = observed
+  finding       = supports
 ```
 
-is valid when an external conformance or security evaluator is authoritative for that claim.
+is valid when an external conformance or security evaluator is authoritative for that claim and its result actually supports the outcome.
 
 ### Evidence state
 
@@ -56,7 +57,40 @@ unknown
 
 This answers: **what is currently known about the evidence itself?**
 
-These axes are deliberately orthogonal. `not-applicable`, `unknown`, and `external` must never collapse into the same numeric zero.
+### Finding direction
+
+```text
+supports
+weakens
+neutral
+unknown
+```
+
+This answers: **what does the evidence say about the applicable Quality outcome?**
+
+Evidence state and finding direction are deliberately separate. In particular:
+
+```text
+exact-head tests passed
+  evidence = observed
+  finding  = supports
+
+required compatibility check failed
+  evidence = observed
+  finding  = weakens
+
+CI config absent but irrelevant to the claim
+  evidence = absent
+  finding  = neutral
+
+run not fetched
+  evidence = not-collected
+  finding  = unknown
+```
+
+`observed` never implies `supports`. Likewise, `not-collected` and `unknown` evidence cannot carry a directional finding because there is no inspected result to interpret.
+
+These axes are deliberately orthogonal. `not-applicable`, `unknown`, `external`, and `weakens` must never collapse into the same numeric zero.
 
 ## Outcome before mechanism
 
@@ -82,6 +116,7 @@ verification
   applicability = recommended
   authority     = external
   evidence      = observed
+  finding       = supports
 ```
 
 without having CI or unit tests at all.
@@ -107,6 +142,7 @@ Each evidence record preserves:
 ```text
 authority
 evidence state
+finding direction
 evidence class
 source identity
 claim text when useful
@@ -114,7 +150,21 @@ claim text when useful
 
 Evidence classes continue to use the repository assessment policy's A/B/C/D/U trust classes. The evidence class is a Confidence input, not a direct Quality score.
 
-Multiple evidence sources can yield `authority = mixed`. Conflicting evidence remains `conflicting` rather than being silently averaged away.
+Finding direction is also not a score. It says whether that specific inspected evidence supports, weakens, or is neutral toward the relevant outcome. Multiple sources can therefore disagree without being silently averaged away.
+
+Multiple evidence sources can yield `authority = mixed`. A dimension summarizes finding directions as:
+
+```text
+supports
+weakens
+neutral
+mixed
+unknown
+```
+
+while retaining exact per-direction counts and all source records. `mixed` is a dimension summary state, not an allowed per-evidence finding value.
+
+Conflicting evidence remains `conflicting` in evidence state rather than being silently converted to a net positive or negative.
 
 ## Impact isolation
 
@@ -140,12 +190,23 @@ Stars remain important and materially influence Impact and later portfolio promi
 applicability
 authority
 evidenceState
+findingState
+findingCounts
 disposition
 evidenceCount
 evidence[]
 ```
 
-Dispositions are explanatory routing states such as:
+`findingCounts` preserves:
+
+```text
+supports
+weakens
+neutral
+unknown
+```
+
+Dispositions remain evidence-routing states such as:
 
 ```text
 evidenced
@@ -156,13 +217,15 @@ stale
 conflicting
 ```
 
+`disposition = evidenced` means usable evidence was observed. It does **not** mean the observed result was favorable; `findingState` carries that interpretation separately.
+
 The result also carries artifact claim boundaries and currently sets:
 
 ```text
 compositeQualityScore = null
 ```
 
-No downstream renderer should infer a numeric Quality value from evidence count, CI presence, or process-file count.
+No downstream renderer should infer a numeric Quality value from evidence count, `observed` state, CI presence, process-file count, or finding counts before an explicitly calibrated scoring contract exists.
 
 ## Current acceptance boundaries
 
@@ -172,9 +235,13 @@ The v1 Quality evidence layer must preserve all of the following:
 2. `not-applicable` dimensions are excluded rather than failed.
 3. unknown evidence remains unknown.
 4. repository-native and external evidence can coexist as `mixed` authority.
-5. Impact counters are rejected from Quality evidence input.
-6. artifact modules compose without creating a second archetype taxonomy.
-7. absence of CI is not itself a Quality defect.
-8. no composite Quality formula is frozen yet.
+5. evidence state is independent from finding direction.
+6. `observed` does not imply `supports`.
+7. `not-collected` or `unknown` evidence cannot fabricate a directional finding.
+8. supporting and weakening evidence can coexist and remain inspectably `mixed`.
+9. Impact counters are rejected from Quality evidence input.
+10. artifact modules compose without creating a second archetype taxonomy.
+11. absence of CI is not itself a Quality defect.
+12. no composite Quality formula is frozen yet.
 
 The next scoring phase must consume this vector rather than bypassing it.

@@ -25,6 +25,12 @@
     "conflicting",
     "unknown"
   ],
+  "qualityFindingDirections": [
+    "supports",
+    "weakens",
+    "neutral",
+    "unknown"
+  ],
   "evidenceClasses": {
     "A": "independently reproducible or machine-verified external evidence",
     "B": "canonical project-owned benchmark, acceptance, release, or validation evidence",
@@ -105,7 +111,9 @@
     "defaultOtherApplicability": "optional",
     "unknownIsNotFailure": true,
     "notApplicableExcludedFromQuality": true,
-    "externalAuthorityDoesNotChangeApplicability": true
+    "externalAuthorityDoesNotChangeApplicability": true,
+    "findingDirectionOrthogonalToEvidenceState": true,
+    "observedEvidenceDoesNotImplySupport": true
   },
   "artifactModules": {
     "dataset": {

@@ -29,17 +29,39 @@ function summarizeEvidenceState(entries) {
   return "unknown";
 }
 
+function summarizeFinding(entries) {
+  const findingCounts = {
+    supports: 0,
+    weakens: 0,
+    neutral: 0,
+    unknown: 0,
+  };
+  for (const entry of entries) findingCounts[entry.finding] += 1;
+
+  const directional = ["supports", "weakens", "neutral"].filter((direction) => findingCounts[direction] > 0);
+  let findingState = "unknown";
+  if (directional.length === 1) findingState = directional[0];
+  else if (directional.length > 1) findingState = "mixed";
+
+  return { findingState, findingCounts };
+}
+
 function normalizeEvidenceEntry(entry, policy, label) {
   assertObject(entry, label);
   const authorities = new Set(policy.assessmentAuthorities);
   const states = new Set(policy.evidenceStates);
+  const directions = new Set(policy.qualityFindingDirections);
   const classes = new Set(Object.keys(policy.evidenceClasses));
   const authority = assertAllowed(entry.authority ?? "unknown", authorities, `${label}.authority`);
   const state = assertAllowed(entry.state ?? "unknown", states, `${label}.state`);
+  const finding = assertAllowed(entry.finding ?? "unknown", directions, `${label}.finding`);
   const evidenceClass = assertAllowed(entry.evidenceClass ?? "U", classes, `${label}.evidenceClass`);
+  if ((state === "not-collected" || state === "unknown") && finding !== "unknown") {
+    throw new Error(`${label}.finding must remain unknown when evidence state is ${state}`);
+  }
   const sourceId = entry.sourceId == null ? null : String(entry.sourceId);
   const claim = entry.claim == null ? null : String(entry.claim);
-  return { authority, state, evidenceClass, sourceId, claim };
+  return { authority, state, finding, evidenceClass, sourceId, claim };
 }
 
 export function buildQualityEvidenceVector(policy, input) {
@@ -72,6 +94,7 @@ export function buildQualityEvidenceVector(policy, input) {
     const entries = rawEntries.map((entry, index) => normalizeEvidenceEntry(entry, policy, `${dimension}.evidence[${index}]`));
     const authority = summarizeAuthority(entries);
     const evidenceState = summarizeEvidenceState(entries);
+    const { findingState, findingCounts } = summarizeFinding(entries);
     const observed = entries.some((entry) => entry.state === "observed");
 
     let disposition = "unevidenced";
@@ -85,6 +108,8 @@ export function buildQualityEvidenceVector(policy, input) {
       applicability,
       authority,
       evidenceState,
+      findingState,
+      findingCounts,
       disposition,
       evidenceCount: entries.length,
       evidence: entries,
