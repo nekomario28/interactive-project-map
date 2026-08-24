@@ -81,6 +81,7 @@ test.beforeAll(async () => {
 
 test("compact Quality presentation remains complete and non-overlapping at profile scale", async ({ page }) => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "compact", columns: 3 });
+  fs.writeFileSync(".tmp/playwright-visual/dark/repository-quality-compact.svg", svg, "utf8");
   await mountSvg(page, svg, 720);
 
   await expect(page.locator(".quality-card")).toHaveCount(15);
@@ -103,6 +104,7 @@ test("compact Quality presentation remains complete and non-overlapping at profi
 
 test("detail Quality presentation keeps dimension identity on assessed repositories without hiding unavailable ones", async ({ page }) => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(currentModel(), { view: "detail", columns: 3 });
+  fs.writeFileSync(".tmp/playwright-visual/dark/repository-quality-detail.svg", svg, "utf8");
   await mountSvg(page, svg, 900);
 
   await expect(page.locator(".quality-card")).toHaveCount(15);
