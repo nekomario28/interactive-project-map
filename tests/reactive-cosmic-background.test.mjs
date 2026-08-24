@@ -23,14 +23,14 @@ test("reactive cosmic background keeps pan-linked wrapped layers and sparse mete
   assert.match(source, /ProjectMapCosmicBackground/);
 });
 
-test("Pages build adapter installs the cosmic runtime only on the shared viewer", async () => {
+test("Pages build adapter installs cosmic before style runtimes only on the shared viewer", async () => {
   const outputDir = await mkdtemp(join(tmpdir(), "ipm-cosmic-"));
   try {
     await mkdir(join(outputDir, "u"), { recursive: true });
     await mkdir(join(outputDir, "radial"), { recursive: true });
     await writeFile(
       join(outputDir, "u", "index.html"),
-      '<body><script src="../viewer.js" defer></script>\n<script src="../view-state.js" defer></script></body>',
+      '<body><script src="../viewer.js" defer></script>\n<script src="../galaxy-systems-runtime.js" defer></script>\n<script src="../view-state.js" defer></script></body>',
     );
     await writeFile(join(outputDir, "radial", "index.html"), '<body><script src="../radial-viewer.js" defer></script></body>');
 
@@ -41,7 +41,9 @@ test("Pages build adapter installs the cosmic runtime only on the shared viewer"
     const dedicated = await readFile(join(outputDir, "radial", "index.html"), "utf8");
     const runtime = await readFile(join(outputDir, "cosmic-background.js"), "utf8");
     assert.equal((shared.match(/cosmic-background\.js/g) || []).length, 1);
-    assert.ok(shared.indexOf("view-state.js") < shared.indexOf("cosmic-background.js"));
+    assert.ok(shared.indexOf("viewer.js") < shared.indexOf("cosmic-background.js"));
+    assert.ok(shared.indexOf("cosmic-background.js") < shared.indexOf("galaxy-systems-runtime.js"));
+    assert.ok(shared.indexOf("galaxy-systems-runtime.js") < shared.indexOf("view-state.js"));
     assert.doesNotMatch(dedicated, /cosmic-background\.js/);
     assert.match(runtime, /reactiveCosmicBackground/);
   } finally {
