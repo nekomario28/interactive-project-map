@@ -2,7 +2,7 @@
 
 Status: **experimental static artifact contract / not consumed by production renderers yet**
 
-The assessment system now has separate evidence vectors for Quality, Impact, Scale, lifecycle/Maturity/Activity context, and Personal Contribution, plus calibration-only Portfolio Prominence candidates. This document defines how those outputs can be packaged without mutating `graph.json` or making a renderer the authority.
+The assessment system has separate evidence vectors for Quality, Impact, Scale, lifecycle/Maturity/Activity context, and Personal Contribution, plus calibration-only Portfolio Prominence candidates. This document defines how those outputs are packaged without mutating `graph.json` or making a renderer the authority.
 
 Default future generated path:
 
@@ -12,20 +12,22 @@ project-map/assessment.json
 
 Machine-readable contract: [`../data/repository-assessment-artifact-contract.v1.json`](../data/repository-assessment-artifact-contract.v1.json).
 
-Validator/builder: [`../scripts/repository-assessment-artifact.mjs`](../scripts/repository-assessment-artifact.mjs).
+Builder/validator: [`../scripts/repository-assessment-artifact.mjs`](../scripts/repository-assessment-artifact.mjs).
+
+L0 graph adapter: [`../scripts/repository-assessment-from-graph.mjs`](../scripts/repository-assessment-from-graph.mjs).
+
+Relation contract: [`repository-relation-axes-v1.md`](repository-relation-axes-v1.md).
 
 ## Why a separate artifact first
 
-Assessment changes at a different rate and has different acquisition costs from semantic graph generation. Keeping it separate initially provides several advantages:
+Assessment changes at a different rate and has different acquisition costs from semantic graph generation. Keeping it separate initially means:
 
-- current graph/taxonomy semantics remain frozen;
-- current static and interactive renderers do not need schema changes just to experiment with assessment;
+- current graph/taxonomy semantics remain unchanged;
+- current static and interactive renderers need no schema change;
 - L0/L1/L2 acquisition can be incomplete without corrupting graph data;
-- evidence provenance and `UNKNOWN` / `not-collected` states remain available even when no score exists;
-- scoring/calibration policy can evolve without making old `graph.json` data ambiguous;
-- the stable reusable `v1` release need not move for assessment-only research/contract changes.
-
-Production integration can later choose whether to keep the sidecar artifact or project a stable subset into `graph.json` after evidence justifies that coupling.
+- `unknown`, `not-collected`, and provenance remain visible even when no score exists;
+- calibration policy can evolve independently;
+- stable reusable `v1` need not move for assessment-only experiments.
 
 ## Root identity
 
@@ -44,9 +46,9 @@ prominenceCandidateId
 repositories[]
 ```
 
-`generatorRevision` is the exact generator-code revision. It is not used as a substitute for repository evidence revision. Repository observations retain their own `observedAt`, and deeper evidence records retain their own source/provenance identities.
+`generatorRevision` identifies the generator code. Repository observations have their own `observedAt`; deeper evidence keeps its own source/revision/time identity.
 
-While weights/tiers remain experimental:
+While the scoring policy remains experimental:
 
 ```text
 productionScoring = false
@@ -57,51 +59,78 @@ for every repository.
 
 ## Repository identity and graph join
 
-The canonical assessment key is:
+Canonical assessment identity is:
 
 ```text
 lowercase(owner/repository)
 ```
 
-Example:
+The current graph projection is joined without changing the graph schema:
 
 ```text
-Alice/ToolKit -> alice/toolkit
+owned repository
+  repository:<name>
+
+contributed repository
+  repository:<lowercase owner/name>
 ```
 
-The current graph projection uses different repository node IDs for owned and Contributed work:
+Each assessment entry therefore stores both `repositoryKey` and the current `graphNodeId`. `githubRepositoryId` is optional until acquisition exposes it consistently.
+
+## Context is evidence-bearing too
+
+Repository context is:
 
 ```text
-owned
-  repository:ToolKit
-
-contributed
-  repository:upstreamorg/projectx
-```
-
-Therefore each assessment entry records both:
-
-```text
-repositoryKey   canonical cross-artifact identity
-graphNodeId     current graph projection join id
-```
-
-`githubRepositoryId` is optional. It can become the stronger provider-stable identity when acquisition exposes it consistently, but v1 does not change `graph.json` merely to add that field.
-
-Repository renames can therefore be handled by regenerating the sidecar from current provider evidence; a future provider-ID migration can be versioned independently.
-
-## Context
-
-Each repository retains the context needed to interpret evidence:
-
-```text
-categoryId
-artifacts[]
+category
+artifacts
 lifecycle
 relation
 ```
 
-Category/artifact semantics remain owned by Standard Taxonomy v1. The assessment artifact references them; it does not become a second taxonomy authority.
+Category is represented as:
+
+```json
+{ "state": "observed", "id": "developer-tools" }
+```
+
+or, when the current graph does not establish it:
+
+```json
+{ "state": "unknown", "id": null }
+```
+
+Artifact facets are represented as:
+
+```json
+{ "state": "observed", "values": ["tool"] }
+```
+
+or:
+
+```json
+{ "state": "unknown", "values": [] }
+```
+
+`partial` is allowed for artifact facets when a bounded acquisition step proves some artifact forms but not completeness.
+
+Do not invent `application`, dataset/model status, or another fallback solely to make an assessment route available. Quality routing waits until artifact evidence exists.
+
+## Orthogonal repository relation
+
+Assessment relation uses three axes:
+
+```text
+ownership:     owned | contributed
+collaboration: solo | team | unknown
+lineage:       original | fork | unknown
+```
+
+The production graph's `relation: contributed` remains unchanged and is merely one source for `ownership = contributed` in the sidecar.
+
+At L0 the graph can establish owned/contributed and the fork flag, but normally cannot prove solo/team. Therefore L0 defaults collaboration to `unknown` rather than `solo`.
+
+This prevents an owned repository from receiving direct personal credit merely because it is owned by the profile account.
 
 ## Acquisition state
 
@@ -112,24 +141,58 @@ level = L0 | L1 | L2
 observedAt
 ```
 
-The intended budget remains:
+Budget:
 
 ```text
 L0
-  bounded metadata for all eligible repositories
+  bounded existing graph/provider metadata
 
 L1
-  repository structure / basic validation evidence for selected needs
+  repository structure and fit-for-purpose validation evidence
 
 L2
-  deep evidence only for bounded repositories/dimensions where it changes a decision
+  deep evidence only where it changes an assessment decision
 ```
 
-This makes the sidecar compatible with large portfolios without deep-scanning every repository.
+The sidecar remains viable for large portfolios because deep scanning is not the default.
+
+## L0 graph adapter
+
+`buildL0RepositoryAssessmentFromGraph()` consumes the existing generated graph and copies only facts already represented there.
+
+For each repository it derives:
+
+```text
+ownership
+  node.relation === contributed ? contributed : owned
+
+lineage
+  node.fork === true ? fork : original
+
+collaboration
+  unknown
+
+category
+  taxonomyAssignment.categoryId
+  else classification.categoryId
+  else unknown
+
+artifacts
+  validated artifact:* secondary tags
+  else unknown
+
+lifecycle
+  archived only when node.archived === true
+  otherwise unknown
+```
+
+It deliberately does **not** infer active lifecycle from recent timestamps, solo authorship from ownership, or application artifact type from missing facet evidence.
+
+The adapter also returns diagnostics for observed/unknown category and artifact coverage, owned/contributed/fork counts, archived state, and unresolved collaboration.
 
 ## Section wrappers
 
-Each assessment section is wrapped as:
+Assessment sections use:
 
 ```json
 {
@@ -138,7 +201,7 @@ Each assessment section is wrapped as:
 }
 ```
 
-Allowed states are:
+Allowed states:
 
 ```text
 observed
@@ -147,8 +210,6 @@ not-collected
 not-applicable
 unknown
 ```
-
-`observed` and `partial` require a value object. The other states require `value = null`.
 
 Sections are:
 
@@ -161,74 +222,50 @@ personalContribution
 prominence
 ```
 
-This is intentionally redundant with the deeper evidence vector states: the wrapper describes **artifact acquisition/section availability**, while the nested vector preserves its dimension-level evidence semantics.
+The wrapper describes section availability; nested evidence vectors retain their more detailed evidence state, authority, provenance, and applicability semantics.
 
-## L0 skeletons
+## Personal attribution boundary
 
-`makeAssessmentRepositorySkeleton()` can create an L0 entry before any deep assessment has run.
-
-For a solo-owned repository it emits:
+Only a fully resolved:
 
 ```text
-quality               not-collected
-impact                not-collected
-scale                 not-collected
-lifecycle             not-collected
-personalContribution  not-applicable
-prominence            not-collected
-productionScore       null
+owned × solo × original
 ```
 
-For team/fork/contributed work, Personal Contribution is `not-collected` rather than `not-applicable`.
+relation makes Personal Contribution `not-applicable`, because project merit can be treated as direct personal project merit for this calibration layer.
 
-This is a key static-first property: **absence of acquisition is represented as absence of acquisition, not as low merit.**
+For team, fork, contributed, or unresolved owned work, Personal Contribution remains `not-collected` until evidence is acquired.
 
-## Prominence boundary
+Project prominence may eventually be available independently. Personal portfolio prominence must remain null when:
 
-When a calibration candidate has been evaluated, a prominence section may contain:
-
-```text
-candidateId
-projectProminence
-personalPortfolioProminence
-```
-
-For shared/fork/contributed work, the validator rejects a non-null personal prominence unless Personal Contribution is itself represented as observed in the artifact.
-
-If contribution evidence is unknown/not-collected:
-
-```text
-projectProminence           may be available
-personalPortfolioProminence must remain null
-```
+- Personal Contribution is required but not observed; or
+- owned collaboration/lineage is still unresolved.
 
 This preserves the distinction between a strong project and demonstrated personal credit.
 
-## What the artifact does not prove
+## What structural validity proves
 
-A structurally valid `assessment.json` proves only that the generated projection obeys the assessment packaging contract.
+A valid `assessment.json` proves that the projection follows the packaging contract. It does not prove:
 
-It does **not** by itself prove:
+- intrinsic repository Quality;
+- benchmark correctness;
+- model capability or dataset validity;
+- a production prominence formula;
+- final tiers;
+- renderer correctness;
+- complete deep assessment coverage.
 
-- that Quality evidence is correct;
-- that a benchmark or external evaluator is valid;
-- that the selected prominence candidate is a production policy;
-- that a project deserves a particular tier;
-- that renderers display the artifact correctly;
-- that all repositories were deeply assessed.
+## Next gate
 
-Those claims require their owning evidence and later rendered validation.
+Before production SVG/viewers consume assessment data:
 
-## Next integration gate
+1. validate the L0 graph adapter against current graph semantics;
+2. fill Quality/Impact/Scale/lifecycle/Contribution only through their owning extractors;
+3. resolve collaboration only from direct evidence rather than ownership assumptions;
+4. calibrate a bounded real-repository sample;
+5. measure coverage/confidence and attribution failures;
+6. decide whether `balanced-v1` remains the leading prominence candidate;
+7. only then choose tiers and rendered visual channels;
+8. require exact-head tests and rendered browser evidence before production integration.
 
-Before any production SVG/viewer consumes assessment data:
-
-1. generate L0 sidecar entries from the current graph/provider inventory;
-2. fill evidence vectors only through their owning extractors;
-3. evaluate a bounded real-repository sample through the candidate prominence formulas;
-4. inspect confidence/coverage and attribution failures;
-5. decide whether `balanced-v1` still survives real evidence;
-6. only then design tier thresholds and visual channels;
-7. run rendered multi-preset/browser evidence before claiming visual completion.
-
-Until then, `assessment.json` remains a sidecar experiment and stable reusable `v1` stays unchanged.
+Until those gates pass, `assessment.json` remains a sidecar experiment and stable reusable `v1` stays unchanged.
