@@ -117,7 +117,9 @@ async function sampleContributed(page, style) {
       repo = state.segments.find((item) => item.id === id);
       if (!repo) return null;
       const origin = center();
-      const angle = (repo.start + repo.end) / 2;
+      // Repository labels are centered on the segment midpoint. Sample well inside the
+      // same wedge but off that text axis so glyph antialiasing cannot mask the fill.
+      const angle = repo.start + (repo.end - repo.start) * 0.72;
       const radius = 118 * state.zoom;
       point = { x: origin.x + Math.cos(angle) * radius, y: origin.y + Math.sin(angle) * radius };
     } else {
@@ -134,7 +136,7 @@ async function sampleContributed(page, style) {
   }, { id: contributedId, styleName: style });
 }
 
-test("node-based dedicated viewers render archived/fork Contributed repositories as primary orange", async ({ browser }) => {
+test("dedicated viewers render archived/fork Contributed repositories as primary orange", async ({ browser }) => {
   for (const style of styles) {
     await test.step(style, async () => {
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
