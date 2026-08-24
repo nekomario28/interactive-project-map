@@ -1,9 +1,9 @@
 # Static SVG Contributed parity — stage 2
 
-Status: IMPLEMENTED / CI PENDING
+Status: COMPLETE / RELEASED
 Date: 2026-08-24
 
-This stage closes the renderer-wide semantic drift identified after the Galaxy Systems repair.
+This stage closed the renderer-wide semantic drift identified after the Galaxy Systems repair and was promoted through the stable reusable release chain.
 
 ## Shared contract
 
@@ -15,7 +15,7 @@ This stage closes the renderer-wide semantic drift identified after the Galaxy S
 
 ## Renderer coverage
 
-The shared static semantics now cover all twelve generated presets:
+The shared static semantics cover all twelve generated presets:
 
 - Radial
 - Galaxy Classic
@@ -43,6 +43,17 @@ Matrix and Sankey expose Contributed as a fourth status bucket. Tree/Treemap/Tim
 - Matrix/Sankey expose the fourth bucket;
 - Galaxy-family static presets keep Contributed outside owned category membership.
 
-## Release boundary
+## Acceptance and release receipt
 
-Do not move stable `v1` from its currently proven release until this branch has exact-head Verify, browser gates, and a real contributed reusable-workflow/profile proof. After that proof, advance `v1` and regenerate the canonical profile SVG so the public artifact no longer reflects the stale cyan release.
+- Renderer-wide implementation merged in **#158** as **F `a5519222947325ff71a20309c483feba1085c718`**.
+- Exact-head **Verify #741** passed 265 tests, the all-twelve-preset Contributed gate, 300-repository stress, twelve-preset comparison, Chromium and iPhone WebKit.
+- Release-chain pin promotion merged in **#159** as **R `2a172c3c62e8be8138e38822f05dd48671072209`**.
+- Exact-head **Verify #744** passed the full release-chain suite, twelve-preset comparison, Chromium and iPhone WebKit.
+- Evidence-only **#160** remained unmerged; dedicated run **`32695676884`** proved exact reusable R resolves inner F and generated a real-profile simplified Contributed artifact with ownership/privacy invariants intact.
+- Stable **`v1`** was fast-forwarded without history rewrite to R.
+- `nekomario28/nekomario28` production validator was aligned to the simplified contract in **`b1e0c5fc29cc99f551caf079691e39949a6d3ae0`**.
+- Production regeneration through `@v1` published **`2e9972832674cef02e30d8999e4159157edf4830`**. The graph contains 14 owned + 1 accepted Contributed repository and one canonical `contribution` evidence edge; the SVG renders that external repository with the warm orange identity and external orbit while omitting the obsolete synthetic `External contributions` hub and decorative Contributed halo.
+
+## Closed boundary
+
+Static Contributed parity and stable release drift are no longer active blockers. Future changes to lower-layer adapters or the dedicated Contributed animation scheduler are architecture maintenance only and must preserve this released contract plus the existing all-preset, dense-profile and browser gates.
