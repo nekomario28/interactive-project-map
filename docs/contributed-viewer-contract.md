@@ -1,6 +1,6 @@
 # Contributed viewer contract
 
-Status: C4 rollout in progress (2026-08-23 JST).
+Status: **production-proven; visual contract updated 2026-08-24 JST**
 
 ## Purpose
 
@@ -8,35 +8,51 @@ Status: C4 rollout in progress (2026-08-23 JST).
 
 The canonical identity is full `owner/repo`. A contributed repository may itself be a fork or archived; those remain source flags and never replace the top-level `Contributed` relation.
 
-## Completed foundation
+## Canonical graph contract
 
-- C1 ranking/cap: deterministic `merged PRs > commits > PRs > owner/repo`, no invented weighted score, hard maximum 12.
-- C2 graph/schema: explicit `relation: contributed`, full external identity, direct `contribution` edge, no ownership/membership path, strict static sanitizer.
-- C3 generation: opt-in Action input `contributed`, public-only 365-day evidence path, existing classification reuse, default remains `false`.
+- Deterministic ranking/cap: `merged PRs > commits > PRs > owner/repo`, hard maximum 12.
+- Explicit `relation: contributed`, full external identity, direct data-model `contribution` edge, and no ownership/membership path.
+- The direct `contribution` edge is evidence in the graph model. It is **not** a requirement to draw an owner-to-repository line in the UI or SVG.
+- Generation is opt-in and public-only over the bounded contribution window; the global default remains `false`.
 
-## C4a — shared Galaxy / Obsidian
+## Interactive viewer contract
 
-The shared exploratory viewer must:
+All interactive presets must:
 
 1. fail closed on malformed external identity, URL, contribution counts, truncation flags, or graph diagnostics;
-2. reconstruct only an explicit direct `user -> repository` `contribution` edge;
-3. expose `Contributed` as a fourth repository status before fork/archive source flags;
-4. compose with status filtering and URL state (`c` alias), Search, selection, Local Graph focus, Activity, reduced motion, and Category Navigator without placing external repositories into a taxonomy category;
-5. show external owner and contribution evidence in details;
-6. use a visually distinct node/edge treatment so the direct edge is not mistaken for ordinary ownership;
-7. preserve the existing static-first/no-browser-GitHub-API architecture.
+2. reconstruct only the explicit data-model `user -> repository` `contribution` relation and never fabricate ownership/membership;
+3. expose `Contributed` as the repository's primary display status before fork/archive source flags;
+4. compose with status filtering and URL state (`c` alias), Search, selection, Local Graph focus, Activity, reduced motion, and Category Navigator;
+5. keep the full external `owner/repo` identity and show external owner / contribution evidence in details;
+6. use the distinct Contributed palette plus explicit `Contributed` text/legend/filter semantics; do not rely on a permanently drawn direct contribution line or decorative halo to communicate the relation;
+7. keep contributed repositories outside owned taxonomy membership. Layout-only placement is allowed but must not mutate `state.graph`.
 
-## C4b — dedicated presets
+## Galaxy presentation contract
 
-Still required before public promotion:
+Galaxy Classic / Systems / Hybrid may place contributed repositories on presentation-only owner-centered outer orbits because the normal Galaxy motion model is category-membership based and contributed repositories intentionally have no owned category membership.
 
-- Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix, and Sankey need explicit external-contribution layout semantics.
-- Do not synthesize a fake `Other` category or category membership for contributed repositories.
-- Aggregate views must keep owned repository totals semantically separate from contributed totals.
-- All eight routes must share the same Contributed filter/search/detail contract.
+The presentation must not add a synthetic category hub, `groupId`, ownership edge, or membership edge. The canonical `contribution` edge remains data-only and is not rendered as an ownership-like spoke.
 
-## Promotion boundary
+Reduced-motion preferences must continue to pause the extra motion.
 
-Do **not** expose Contributed in the public setup generator or promote it into stable v1 until C4b is complete and the real-profile privacy/UX proof passes Chromium and iPhone WebKit on the exact final head.
+## Dedicated preset contract
 
-New visual styles remain deferred and are unrelated to this work.
+Radial, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix and Sankey use the same Contributed-first status semantics. Category-dependent layouts may use an explicit presentation-only external/unassigned context when required, but that context must never be serialized back into the canonical graph or counted as an owned category.
+
+Aggregate views must keep owned repository totals semantically separate from contributed totals and must not fold Contributed into Original/Fork/Archived composition.
+
+## Static SVG parity boundary
+
+Static SVG renderers consume the same canonical graph and should preserve the same user-visible relation semantics:
+
+- Contributed must not disappear merely because it has no owned `groupId`.
+- Contributed must not be recolored as Original/Fork/Archived because of source flags.
+- The Contributed palette and explicit legend text should match the interactive presentation family.
+- A static renderer may use presentation-only layout context where necessary, but Galaxy-family SVGs should use owner-centered external placement rather than a fake owned-category-looking hub.
+- Direct contribution edges should remain data-model evidence, not always-on visual spokes.
+
+The detailed static-renderer gap audit is recorded in `docs/static-svg-parity-audit-2026-08-24.md`.
+
+## Release boundary
+
+Stable `v1` is an immutable/reviewed release boundary, not an alias for current `main`. Visual or static-renderer fixes reach existing profile SVGs only after the reviewed release chain advances `v1` and the profile regenerates through that exact release.
