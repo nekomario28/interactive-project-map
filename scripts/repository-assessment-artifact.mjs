@@ -11,6 +11,7 @@ const REVISION_RE = /^[0-9a-f]{40}$/i;
 const LIFECYCLES = new Set(["active", "maintenance", "stable", "frozen", "snapshot", "archived", "experimental", "unknown"]);
 const ACQUISITION_LEVELS = new Set(["L0", "L1", "L2"]);
 const SECTION_STATES = new Set(["observed", "partial", "not-collected", "not-applicable", "unknown"]);
+const CONTEXT_STATES = new Set(["observed", "partial", "unknown"]);
 const SECTION_NAMES = ["quality", "impact", "scale", "lifecycle", "personalContribution", "prominence"];
 const MAX_REPOSITORIES = 400;
 
@@ -40,14 +41,44 @@ function section(value, label) {
   const candidate = object(value, label);
   if (!SECTION_STATES.has(candidate.state)) throw new Error(`${label}.state is unsupported`);
   const hasValue = candidate.value != null;
-  if ((candidate.state === "observed" || candidate.state === "partial") && !hasValue) {
-    throw new Error(`${label}.value is required for ${candidate.state}`);
-  }
-  if (candidate.state !== "observed" && candidate.state !== "partial" && hasValue) {
-    throw new Error(`${label}.value must be null for ${candidate.state}`);
-  }
+  if ((candidate.state === "observed" || candidate.state === "partial") && !hasValue) throw new Error(`${label}.value is required for ${candidate.state}`);
+  if (candidate.state !== "observed" && candidate.state !== "partial" && hasValue) throw new Error(`${label}.value must be null for ${candidate.state}`);
   if (hasValue) object(candidate.value, `${label}.value`);
   return candidate;
+}
+
+function categoryContext(categoryId) {
+  if (categoryId == null || categoryId === "") return { state: "unknown", id: null };
+  if (typeof categoryId !== "string") throw new Error("categoryId must be string when observed");
+  return { state: "observed", id: categoryId };
+}
+
+function artifactContext(artifacts) {
+  if (artifacts == null) return { state: "unknown", values: [] };
+  if (!Array.isArray(artifacts) || artifacts.some((item) => typeof item !== "string" || !item)) throw new Error("artifacts must be a string array when supplied");
+  const values = [...new Set(artifacts)];
+  return values.length ? { state: "observed", values } : { state: "unknown", values: [] };
+}
+
+function validateCategoryContext(value, label) {
+  const category = object(value, label);
+  if (!CONTEXT_STATES.has(category.state) || category.state === "partial") throw new Error(`${label}.state is unsupported`);
+  if (category.state === "observed") {
+    if (typeof category.id !== "string" || !category.id) throw new Error(`${label}.id is required when observed`);
+  } else if (category.id !== null) {
+    throw new Error(`${label}.id must be null when unknown`);
+  }
+  return category;
+}
+
+function validateArtifactContext(value, label) {
+  const artifacts = object(value, label);
+  if (!CONTEXT_STATES.has(artifacts.state)) throw new Error(`${label}.state is unsupported`);
+  if (!Array.isArray(artifacts.values) || artifacts.values.some((item) => typeof item !== "string" || !item)) throw new Error(`${label}.values must be a string array`);
+  if ((artifacts.state === "observed" || artifacts.state === "partial") && artifacts.values.length === 0) throw new Error(`${label}.values must be non-empty when ${artifacts.state}`);
+  if (artifacts.state === "unknown" && artifacts.values.length !== 0) throw new Error(`${label}.values must be empty when unknown`);
+  if (new Set(artifacts.values).size !== artifacts.values.length) throw new Error(`${label}.values must not contain duplicates`);
+  return artifacts;
 }
 
 export function canonicalRepositoryKey(owner, name) {
@@ -71,11 +102,8 @@ export function expectedGraphNodeId(rootOwner, repositoryOwner, repositoryName, 
 export function makeAssessmentRepositorySkeleton(rootOwner, input) {
   object(input, "repository input");
   const relation = normalizeRepositoryRelation(input.relation, "repository input.relation");
-  if (!LIFECYCLES.has(input.lifecycle)) throw new Error(`unsupported lifecycle: ${String(input.lifecycle)}`);
-  if (!Array.isArray(input.artifacts) || input.artifacts.length === 0 || input.artifacts.some((item) => typeof item !== "string" || !item)) {
-    throw new Error("artifacts must be a non-empty string array");
-  }
-  if (typeof input.categoryId !== "string" || !input.categoryId) throw new Error("categoryId is required");
+  const lifecycle = input.lifecycle ?? "unknown";
+  if (!LIFECYCLES.has(lifecycle)) throw new Error(`unsupported lifecycle: ${String(lifecycle)}`);
   const repositoryKey = canonicalRepositoryKey(input.owner, input.name);
   const graphNodeId = expectedGraphNodeId(rootOwner, input.owner, input.name, relation);
   const observedAt = iso(input.observedAt, "observedAt");
@@ -89,9 +117,9 @@ export function makeAssessmentRepositorySkeleton(rootOwner, input) {
       githubRepositoryId: nullableProviderId(input.githubRepositoryId, "githubRepositoryId"),
     },
     context: {
-      categoryId: input.categoryId,
-      artifacts: [...new Set(input.artifacts)],
-      lifecycle: input.lifecycle,
+      category: categoryContext(input.categoryId),
+      artifacts: artifactContext(input.artifacts),
+      lifecycle,
       relation,
     },
     acquisition: {
@@ -102,9 +130,7 @@ export function makeAssessmentRepositorySkeleton(rootOwner, input) {
     impact: { state: "not-collected", value: null },
     scale: { state: "not-collected", value: null },
     lifecycle: { state: "not-collected", value: null },
-    personalContribution: direct
-      ? { state: "not-applicable", value: null }
-      : { state: "not-collected", value: null },
+    personalContribution: direct ? { state: "not-applicable", value: null } : { state: "not-collected", value: null },
     prominence: { state: "not-collected", value: null },
     productionScore: null,
   };
@@ -117,11 +143,9 @@ export function validateAssessmentRepository(rootOwner, value, label = "reposito
   const acquisition = object(repository.acquisition, `${label}.acquisition`);
   const relation = normalizeRepositoryRelation(context.relation, `${label}.context.relation`);
 
+  validateCategoryContext(context.category, `${label}.context.category`);
+  validateArtifactContext(context.artifacts, `${label}.context.artifacts`);
   if (!LIFECYCLES.has(context.lifecycle)) throw new Error(`${label}.context.lifecycle is unsupported`);
-  if (typeof context.categoryId !== "string" || !context.categoryId) throw new Error(`${label}.context.categoryId is required`);
-  if (!Array.isArray(context.artifacts) || context.artifacts.length === 0 || context.artifacts.some((item) => typeof item !== "string" || !item)) {
-    throw new Error(`${label}.context.artifacts must be non-empty`);
-  }
 
   const key = canonicalRepositoryKey(identity.owner, identity.name);
   if (identity.repositoryKey !== key) throw new Error(`${label}.identity.repositoryKey must be canonical`);
@@ -136,24 +160,16 @@ export function validateAssessmentRepository(rootOwner, value, label = "reposito
   if (repository.productionScore !== null) throw new Error(`${label}.productionScore must remain null in experimental v1`);
 
   const profile = relationAttributionProfile(relation);
-  if (profile === "direct" && sections.personalContribution.state !== "not-applicable") {
-    throw new Error(`${label}.personalContribution must be not-applicable for direct owned-solo-original work`);
-  }
-  if (profile !== "direct" && sections.personalContribution.state === "not-applicable") {
-    throw new Error(`${label}.personalContribution cannot be not-applicable while attribution is gated or unresolved`);
-  }
+  if (profile === "direct" && sections.personalContribution.state !== "not-applicable") throw new Error(`${label}.personalContribution must be not-applicable for direct owned-solo-original work`);
+  if (profile !== "direct" && sections.personalContribution.state === "not-applicable") throw new Error(`${label}.personalContribution cannot be not-applicable while attribution is gated or unresolved`);
 
   if (sections.prominence.value != null) {
     const prominence = sections.prominence.value;
     if (typeof prominence.candidateId !== "string" || !prominence.candidateId) throw new Error(`${label}.prominence.value.candidateId is required`);
     unitOrNull(prominence.projectProminence, `${label}.prominence.value.projectProminence`);
     const personal = unitOrNull(prominence.personalPortfolioProminence, `${label}.prominence.value.personalPortfolioProminence`);
-    if (profile === "unresolved" && personal !== null) {
-      throw new Error(`${label} cannot fabricate personal prominence while repository relation attribution is unresolved`);
-    }
-    if (relationRequiresPersonalContribution(relation) && sections.personalContribution.state !== "observed" && personal !== null) {
-      throw new Error(`${label} cannot fabricate personal prominence without observed Personal Contribution`);
-    }
+    if (profile === "unresolved" && personal !== null) throw new Error(`${label} cannot fabricate personal prominence while repository relation attribution is unresolved`);
+    if (relationRequiresPersonalContribution(relation) && sections.personalContribution.state !== "observed" && personal !== null) throw new Error(`${label} cannot fabricate personal prominence without observed Personal Contribution`);
   }
 
   return true;
@@ -169,9 +185,7 @@ export function validateRepositoryAssessmentArtifact(value) {
   if (artifact.taxonomyId !== "ipm-standard-v1") throw new Error("artifact.taxonomyId is unsupported");
   if (artifact.assessmentPolicyId !== "ipm-repository-assessment-v1") throw new Error("artifact.assessmentPolicyId is unsupported");
   if (artifact.productionScoring !== false) throw new Error("productionScoring must remain false in v1 experimental artifact");
-  if (artifact.prominenceCandidateId != null && (typeof artifact.prominenceCandidateId !== "string" || !artifact.prominenceCandidateId)) {
-    throw new Error("prominenceCandidateId must be string or null");
-  }
+  if (artifact.prominenceCandidateId != null && (typeof artifact.prominenceCandidateId !== "string" || !artifact.prominenceCandidateId)) throw new Error("prominenceCandidateId must be string or null");
   if (!Array.isArray(artifact.repositories) || artifact.repositories.length > MAX_REPOSITORIES) throw new Error("artifact.repositories is invalid or too large");
 
   const keys = new Set();
