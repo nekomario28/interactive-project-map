@@ -1,7 +1,9 @@
+import { renderGalaxySvg } from "./svg.mjs";
 import { TAU, background, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
 import { isContributedRepository, visibleStructuralEdges } from "./static-contributed.mjs";
 
 const CONTRIBUTED_PER_LANE = 8;
+const DENSE_LIMIT = 80;
 
 function ownedRepositoryPoints(groups, repositories, cx, cy, minSize) {
   const points = [];
@@ -67,12 +69,18 @@ function structuralLines(graph, points, colors) {
 }
 
 export function renderGalaxyClassicSvg(graph, theme, width, height) {
+  const repositories = graph.nodes.filter((node) => node.type === "repository");
+  if (repositories.length > DENSE_LIMIT) {
+    return renderGalaxySvg(graph, theme, width, height, "galaxy")
+      .replace('role="img" aria-label="Galaxy-style map', 'role="img" data-galaxy-preset="classic" aria-label="Galaxy-style map')
+      .replace('>project map</text>', '>Galaxy Classic</text>');
+  }
+
   const colors = palette(theme);
   const cx = width / 2;
   const cy = height / 2 - 8;
   const minSize = Math.min(width, height);
   const groups = graph.nodes.filter((node) => node.type === "group").sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  const repositories = graph.nodes.filter((node) => node.type === "repository");
   const owner = graph.nodes.find((node) => node.type === "owner");
   const owned = ownedRepositoryPoints(groups, repositories, cx, cy, minSize);
   const external = contributedPoints(repositories, cx, cy, minSize);
