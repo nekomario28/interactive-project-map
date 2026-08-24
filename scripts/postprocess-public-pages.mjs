@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Arm-free profile-local Galaxy passed the full renderer, comparison and browser gates before this promotion.
-export const PUBLIC_ACTION_REF = "041717e17cea8a28343a3b607ef4faf008813fd0";
+// Background-only Galaxy F passed the full renderer, comparison and browser gates before this promotion.
+export const PUBLIC_ACTION_REF = "20958a9f57f9c995ace23b9561ea5c9080c15bd5";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
