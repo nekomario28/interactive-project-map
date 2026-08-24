@@ -1,3 +1,5 @@
+import { normalizeRepositoryRelation } from "./repository-relation.mjs";
+
 const REQUIRED_APPLICABILITY = new Set([
   "required",
   "recommended",
@@ -22,6 +24,12 @@ const REQUIRED_EVIDENCE_STATES = new Set([
   "conflicting",
   "unknown",
 ]);
+
+const REQUIRED_RELATION_AXES = {
+  ownership: new Set(["owned", "contributed"]),
+  collaboration: new Set(["solo", "team", "unknown"]),
+  lineage: new Set(["original", "fork", "unknown"]),
+};
 
 const REQUIRED_AXES = new Set([
   "quality",
@@ -114,9 +122,7 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
   for (const state of REQUIRED_APPLICABILITY) {
     if (!applicability.has(state)) throw new Error(`missing applicability state: ${state}`);
   }
-  if (applicability.has("external")) {
-    throw new Error("external is an assessment authority, not an applicability state");
-  }
+  if (applicability.has("external")) throw new Error("external is an assessment authority, not an applicability state");
 
   const authorities = new Set(assertUniqueStrings(policy.assessmentAuthorities, "assessmentAuthorities"));
   for (const authority of REQUIRED_AUTHORITIES) {
@@ -133,10 +139,18 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
     throw new Error("lifecycle states must preserve active/frozen/unknown distinctions");
   }
 
-  const relations = new Set(assertUniqueStrings(policy.relationStates, "relationStates"));
-  for (const relation of ["owned-solo", "owned-team", "owned-fork", "contributed"]) {
-    if (!relations.has(relation)) throw new Error(`missing relation state: ${relation}`);
+  const relationAxes = assertObject(policy.repositoryRelationAxes, "repositoryRelationAxes");
+  for (const [axis, requiredValues] of Object.entries(REQUIRED_RELATION_AXES)) {
+    const values = new Set(assertUniqueStrings(relationAxes[axis], `repositoryRelationAxes.${axis}`));
+    for (const value of requiredValues) {
+      if (!values.has(value)) throw new Error(`missing repository relation ${axis}: ${value}`);
+    }
   }
+  if (policy.relationStates != null) throw new Error("compound relationStates are deprecated; use repositoryRelationAxes");
+  const relationContract = assertObject(policy.repositoryRelationContract, "repositoryRelationContract");
+  if (relationContract.axesAreOrthogonal !== true) throw new Error("repository relation axes must remain orthogonal");
+  if (relationContract.l0OwnedCollaborationDefault !== "unknown") throw new Error("L0 must not assume owned repositories are solo");
+  if (relationContract.forkIsLineageNotOwnership !== true) throw new Error("fork must remain a lineage axis");
 
   const axes = assertObject(policy.axes, "axes");
   for (const axis of REQUIRED_AXES) {
@@ -149,19 +163,11 @@ export function validateRepositoryAssessmentPolicy(policy, standardTaxonomy) {
   }
 
   const qualityEvidenceContract = assertObject(policy.qualityEvidenceContract, "qualityEvidenceContract");
-  if (qualityEvidenceContract.mechanismPresenceIsNotOutcome !== true) {
-    throw new Error("quality evidence must assess outcomes rather than mechanism presence");
-  }
-  if (qualityEvidenceContract.forbidImpactSignalsAsQualityEvidence !== true) {
-    throw new Error("impact signals must remain outside Quality evidence");
-  }
-  if (qualityEvidenceContract.externalAuthorityDoesNotChangeApplicability !== true) {
-    throw new Error("external authority must remain orthogonal to applicability");
-  }
+  if (qualityEvidenceContract.mechanismPresenceIsNotOutcome !== true) throw new Error("quality evidence must assess outcomes rather than mechanism presence");
+  if (qualityEvidenceContract.forbidImpactSignalsAsQualityEvidence !== true) throw new Error("impact signals must remain outside Quality evidence");
+  if (qualityEvidenceContract.externalAuthorityDoesNotChangeApplicability !== true) throw new Error("external authority must remain orthogonal to applicability");
   for (const key of ["defaultEmphasizedApplicability", "defaultOtherApplicability"]) {
-    if (!applicability.has(qualityEvidenceContract[key])) {
-      throw new Error(`${key} must name a valid applicability state`);
-    }
+    if (!applicability.has(qualityEvidenceContract[key])) throw new Error(`${key} must name a valid applicability state`);
   }
 
   const artifactValues = standardTaxonomy?.facets?.artifact?.values;
@@ -196,7 +202,6 @@ export function validateRepositoryAssessmentFixtures(fixtures, policy, standardT
 
   const categories = new Set((standardTaxonomy.categories ?? []).map((category) => category.id));
   const lifecycles = new Set(policy.lifecycleStates);
-  const relations = new Set(policy.relationStates);
   const ids = new Set();
 
   for (const testCase of cases) {
@@ -208,7 +213,7 @@ export function validateRepositoryAssessmentFixtures(fixtures, policy, standardT
     const context = assertObject(testCase.context, `${testCase.id}.context`);
     if (!categories.has(context.category)) throw new Error(`${testCase.id} uses unknown category: ${context.category}`);
     if (!lifecycles.has(context.lifecycle)) throw new Error(`${testCase.id} uses unknown lifecycle: ${context.lifecycle}`);
-    if (!relations.has(context.relation)) throw new Error(`${testCase.id} uses unknown relation: ${context.relation}`);
+    normalizeRepositoryRelation(context.relation, `${testCase.id}.context.relation`);
     buildAssessmentRoute(policy, context.artifacts);
 
     assertObject(testCase.evidence, `${testCase.id}.evidence`);
