@@ -76,7 +76,7 @@ function watchBrowserErrors(page) {
 }
 
 for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
-  test(`${style} gives external Contributed repositories a visible owner-centered orbit without fake membership`, async ({ page }) => {
+  test(`${style} keeps external Contributed repositories outside owned swept space without fake membership`, async ({ page }) => {
     await installGraph(page);
     const browserErrors = watchBrowserErrors(page);
     await page.goto(`/u/?username=example&style=${style}`);
@@ -86,9 +86,17 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
     const initial = await page.evaluate(() => {
       const emphasis = window.ProjectMapContributedEmphasis.snapshot();
       const graphNode = state.graph.nodes.find((node) => node.id === "repository:outside/project");
+      const renderNode = state.nodes.find((node) => node.id === "repository:outside/project");
+      draw();
+      const screen = worldToScreen(renderNode.x, renderNode.y);
+      const dpr = window.devicePixelRatio || 1;
+      const pixelX = Math.max(0, Math.min(canvas.width - 1, Math.round(screen.x * dpr)));
+      const pixelY = Math.max(0, Math.min(canvas.height - 1, Math.round(screen.y * dpr)));
+      const renderedPixel = Array.from(ctx.getImageData(pixelX, pixelY, 1, 1).data);
       return {
         emphasis,
         paletteColor: palette().contributed,
+        renderedPixel,
         graphGroupId: graphNode?.groupId ?? null,
         fakeMembership: state.graph.edges.some((edge) => ["membership", "member"].includes(edge.type) && (edge.source === graphNode?.id || edge.target === graphNode?.id)),
       };
@@ -96,15 +104,30 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
 
     expect(initial.emphasis.color).toBe("#E69F00");
     expect(initial.emphasis.style).toBe(style);
+    expect(initial.emphasis.sweepRadius).toBeGreaterThanOrEqual(220);
     expect(initial.paletteColor).toBe("#E69F00");
+    expect(initial.renderedPixel[0]).toBeGreaterThan(190);
+    expect(initial.renderedPixel[1]).toBeGreaterThan(110);
+    expect(initial.renderedPixel[2]).toBeLessThan(50);
+    expect(initial.renderedPixel[0]).toBeGreaterThan(initial.renderedPixel[1]);
     expect(initial.graphGroupId).toBeNull();
     expect(initial.fakeMembership).toBe(false);
 
     const first = initial.emphasis.repositories[0];
+    expect(first.clearance).toBeGreaterThan(100);
+    if (style === "galaxy-systems") {
+      expect(initial.emphasis.placement).toBe("external-rail");
+      expect(first.placement).toBe("external-rail");
+    } else {
+      expect(initial.emphasis.placement).toBe("external-orbit");
+      expect(first.placement).toBe("external-orbit");
+    }
+
     await page.waitForTimeout(650);
     const second = await page.evaluate(() => window.ProjectMapContributedEmphasis.snapshot().repositories[0]);
     const displacement = Math.hypot(second.x - first.x, second.y - first.y);
-    expect(displacement).toBeGreaterThan(0.35);
+    if (style === "galaxy-systems") expect(displacement).toBeLessThan(0.01);
+    else expect(displacement).toBeGreaterThan(0.35);
 
     await expect(page.locator('[data-status-filter="contributed"]')).toContainText("Contributed");
     expect(browserErrors).toEqual([]);
