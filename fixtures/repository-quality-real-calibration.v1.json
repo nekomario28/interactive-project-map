@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "status": "frozen-real-evidence-calibration",
+  "cases": [
+    {
+      "id": "interactive-project-map-application",
+      "repository": "nekomario28/interactive-project-map",
+      "context": {
+        "category": "visualization-knowledge",
+        "artifacts": ["application"]
+      },
+      "evidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@00e557cf65bd98f311fdff55e04b0ca800bafffc",
+            "claim": "README documents the product purpose, quick start, architecture, controls, validation behavior, Action inputs, and development path."
+          }
+        ],
+        "verification": [
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "actions:32754523464/verify",
+            "claim": "Exact-head Verify completed successfully, including tests, validation gates, and twelve-preset rendering comparison."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "package.json+package-lock.json@00e557cf65bd98f311fdff55e04b0ca800bafffc",
+            "claim": "Node minimum version, npm ci development path, verify command, pinned direct tool versions, and lockfile v3 are recorded."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "Repository declares an MIT license."
+          }
+        ]
+      },
+      "expectedFindings": {
+        "understandability": "supports",
+        "verification": "supports",
+        "reproducibility": "supports",
+        "stewardship": "supports"
+      }
+    },
+    {
+      "id": "projexd-group10-application",
+      "repository": "nekomario28/ProjExD_Group10",
+      "context": {
+        "category": "game-development",
+        "artifacts": ["application"]
+      },
+      "evidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@74a605fc94a1c577b5224deb0fa7349978962d0a",
+            "claim": "README documents runtime requirements, game rules, controls, implementation notes, feature ownership, and remaining TODOs."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@74a605fc94a1c577b5224deb0fa7349978962d0a",
+            "claim": "Basic runtime requirements Python >=3.10 and pygame >=2.1 are documented; this is only basic environment evidence, not an exact lockfile claim."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "absent",
+            "finding": "weakens",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "Public repository metadata has no declared license, limiting clear reuse terms."
+          }
+        ]
+      },
+      "expectedFindings": {
+        "understandability": "supports",
+        "verification": "unknown",
+        "reproducibility": "supports",
+        "stewardship": "weakens"
+      }
+    },
+    {
+      "id": "projexd4-contributed-application",
+      "repository": "c0c25034/ProjExD_4",
+      "context": {
+        "category": "game-development",
+        "artifacts": ["application"]
+      },
+      "evidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "absent",
+            "finding": "weakens",
+            "evidenceClass": "C",
+            "sourceId": "root-snapshot+repository-description@2026-08-25",
+            "claim": "Repository has no README and no description; the root snapshot contains only fig/ and musou_kokaton.py."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "absent",
+            "finding": "weakens",
+            "evidenceClass": "C",
+            "sourceId": "root-snapshot+musou_kokaton.py@28cecbfd65e40bacb082c9849451889f3eb35841",
+            "claim": "Code imports pygame, but the repository snapshot has no dependency manifest or documented install/run requirements."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "absent",
+            "finding": "weakens",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "Public repository metadata has no declared license."
+          }
+        ]
+      },
+      "expectedFindings": {
+        "understandability": "weakens",
+        "verification": "unknown",
+        "reproducibility": "weakens",
+        "stewardship": "weakens"
+      }
+    }
+  ]
+}
