@@ -1,4 +1,5 @@
 import {
+  isContributedRepository,
   repositoryOpacity,
   repositoryStatus,
   shouldDecorateArchived,
@@ -88,11 +89,43 @@ export function layoutRadialTree(graph, width, height) {
 
   const assigned = new Set(points.map((point) => point.node.id));
   const unassigned = repos.filter((repo) => !assigned.has(repo.id));
-  unassigned.forEach((repo, index) => {
-    const angle = -Math.PI / 2 + Math.PI * 2 * index / Math.max(1, unassigned.length);
+  const contributed = unassigned.filter(isContributedRepository).sort((a, b) => a.label.localeCompare(b.label));
+  const otherUnassigned = unassigned.filter((repo) => !isContributedRepository(repo));
+
+  otherUnassigned.forEach((repo, index) => {
+    const angle = -Math.PI / 2 + Math.PI * 2 * index / Math.max(1, otherUnassigned.length);
     const radius = repoBaseRadius + (index % 2) * laneGap;
     points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, node: repo });
   });
+
+  if (contributed.length) {
+    const occupiedRepositories = points.filter((point) => point.node.type === "repository");
+    const maxOwnedRadius = occupiedRepositories.reduce(
+      (max, point) => Math.max(max, Math.hypot(point.x - cx, point.y - cy)),
+      repoBaseRadius,
+    );
+    const externalGap = Math.max(42, minSize * 0.10);
+    const externalRadius = maxOwnedRadius + externalGap;
+    contributed.forEach((repo, index) => {
+      const angle = Math.PI * 2 * index / contributed.length;
+      points.push({
+        x: cx + Math.cos(angle) * externalRadius,
+        y: cy + Math.sin(angle) * externalRadius,
+        node: repo,
+      });
+    });
+
+    const maxRenderableRadius = minSize * 0.41;
+    if (externalRadius > maxRenderableRadius) {
+      const scale = maxRenderableRadius / externalRadius;
+      for (const point of points) {
+        if (point.node.type === "owner") continue;
+        point.x = cx + (point.x - cx) * scale;
+        point.y = cy + (point.y - cy) * scale;
+      }
+    }
+  }
+
   return points;
 }
 
