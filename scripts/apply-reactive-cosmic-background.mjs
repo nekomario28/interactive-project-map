@@ -8,9 +8,6 @@ const VIEWER_HTML = join("u", "index.html");
 const SCRIPT_MARKER = '<script src="../viewer.js" defer></script>';
 const SCRIPT_TAG = '<script src="../cosmic-background.js" defer></script>';
 
-// Kept under the original exported name so older build callers remain compatible.
-// The installed implementation is now the historical profile-local world-space
-// galaxy background, not the later screen-space parallax/meteor experiment.
 export async function applyReactiveCosmicBackground(outputDir = resolve(process.cwd(), "site")) {
   const sourceDir = resolve(process.cwd(), "scripts");
   const source = await readFile(join(sourceDir, SOURCE_NAME), "utf8");
@@ -20,17 +17,16 @@ export async function applyReactiveCosmicBackground(outputDir = resolve(process.
   const html = await readFile(htmlPath, "utf8");
   if (html.includes(SCRIPT_TAG)) return;
   if (!html.includes(SCRIPT_MARKER)) throw new Error("Could not locate shared viewer script in Pages viewer");
-  // Insert immediately after viewer.js. Style runtimes capture this background as
-  // their common Galaxy world and remain authoritative for foreground rendering.
+  // Insert immediately after viewer.js. postprocess-public-pages installs Galaxy
+  // and Obsidian style runtimes after the same marker, so this final pass places
+  // cosmic first and lets each style capture it as its base drawBackground.
   await writeFile(htmlPath, html.replace(SCRIPT_MARKER, `${SCRIPT_MARKER}\n${SCRIPT_TAG}`));
 }
-
-export const applyProfileGalaxyBackground = applyReactiveCosmicBackground;
 
 async function main() {
   const outputDir = resolve(process.argv[2] || join(process.cwd(), "site"));
   await applyReactiveCosmicBackground(outputDir);
-  console.log("Installed historical profile-local world-space galaxy background");
+  console.log("Installed reactive parallax starfield and low-frequency meteor background");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

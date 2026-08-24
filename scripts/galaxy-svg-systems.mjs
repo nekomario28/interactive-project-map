@@ -4,8 +4,6 @@ import { TAU, background, clamp, displayLabel, esc, groupMembers, hash, legend, 
 const ANIMATED_LIMIT = 80;
 const REPRESENTATIVE_LIMIT = 2;
 const STATIC_LABEL_STROKE_WIDTH = 1.4;
-const CONTRIBUTED_PER_LANE = 6;
-const AMBIENT_TWINKLE_SECONDS = 14;
 
 function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -14,14 +12,6 @@ function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 
     values.push(`${(centerX + Math.cos(angle) * radius).toFixed(2)} ${(centerY + Math.sin(angle) * radius).toFixed(2)}`);
   }
   return values.join(";");
-}
-
-function animatedBackground(markup) {
-  const marker = '<g data-profile-galaxy-background="ead72debca2a16608ebc5b799993c0234ea10cab">';
-  return markup.replace(
-    marker,
-    `${marker}<animate data-profile-galaxy-ambient-motion="twinkle" attributeName="opacity" values="0.92;1;0.92" dur="${AMBIENT_TWINKLE_SECONDS}s" repeatCount="indefinite"/>`,
-  );
 }
 
 function assignments(group, members) {
@@ -74,27 +64,50 @@ function representativeLabelMarkup(repo, phase, colors) {
   return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${colors.fg}" font-size="9.2" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
 }
 
-function contributedAssignments(repositories, minSize, categoryRadius, maxSystemRadius) {
+function externalLabelMarkup(repo, colors) {
+  return `<text x="14" y="3.2" text-anchor="start" fill="${colors.fg}" font-size="8.8" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
+}
+
+function contributedRailLayout(repositories, width, height) {
   const contributed = [...repositories]
     .filter((node) => node?.type === "repository" && node?.relation === "contributed")
     .sort(compareLayoutOrder);
-  if (!contributed.length) return [];
+  if (!contributed.length) {
+    return { assignments: [], railWidth: 0, railLeft: width, fadeLeft: width, top: 0, bottom: 0 };
+  }
 
-  // Restore the earlier owner-centered external orbit, but never repeat its old
-  // inward-lane bug. The first halo clears the owned category-system envelope and
-  // every additional lane expands outward.
-  const baseRadius = Math.max(minSize * 0.39, categoryRadius + maxSystemRadius + 34);
-  const laneSpacing = Math.max(34, minSize * 0.075);
-  return contributed.map((repo, index) => {
-    const lane = Math.floor(index / CONTRIBUTED_PER_LANE);
-    const inLane = index % CONTRIBUTED_PER_LANE;
-    const laneCount = Math.min(CONTRIBUTED_PER_LANE, contributed.length - lane * CONTRIBUTED_PER_LANE);
-    const seed = (hash(`${repo.id}:contributed-systems-svg-phase`) % 10000) / 10000;
-    const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
-    const radius = baseRadius + lane * laneSpacing;
-    const direction = (hash(`${repo.id}:contributed-systems-svg-direction`) & 1) === 0 ? 1 : -1;
-    return { repo, lane, phase, radius, direction, duration: 920 + lane * 180 };
-  });
+  const railWidth = clamp(width * 0.24, 152, 190);
+  const railLeft = width - railWidth;
+  const fadeLeft = railLeft - Math.min(30, railWidth * 0.18);
+  const top = Math.max(54, Math.min(60, height * 0.18));
+  const bottom = Math.max(top, height - 44);
+  const span = Math.max(1, bottom - top);
+  const anchorX = railLeft + Math.min(25, railWidth * 0.15);
+  const denominator = Math.max(1, contributed.length - 1);
+  const assignments = contributed.map((repo, index) => ({
+    repo,
+    x: anchorX,
+    y: contributed.length === 1 ? top + span / 2 : top + span * index / denominator,
+  }));
+  return { assignments, railWidth, railLeft, fadeLeft, top, bottom };
+}
+
+function contributedRailBackdrop(colors, width, height, layout) {
+  if (!layout.assignments.length) return "";
+  const fadeWidth = width - layout.fadeLeft;
+  const dividerX = layout.railLeft + 1;
+  return [
+    '<defs><linearGradient id="galaxy-systems-external-fade" x1="0" y1="0" x2="1" y2="0">',
+    `<stop offset="0%" stop-color="${colors.bg}" stop-opacity="0"/>`,
+    `<stop offset="18%" stop-color="${colors.bg}" stop-opacity="0.72"/>`,
+    `<stop offset="34%" stop-color="${colors.bg}" stop-opacity="0.94"/>`,
+    `<stop offset="100%" stop-color="${colors.bg}" stop-opacity="0.985"/>`,
+    "</linearGradient></defs>",
+    `<rect data-galaxy-external-backdrop="true" x="${layout.fadeLeft.toFixed(1)}" y="0" width="${fadeWidth.toFixed(1)}" height="${(height - 30).toFixed(1)}" fill="url(#galaxy-systems-external-fade)"/>`,
+    `<line x1="${dividerX.toFixed(1)}" y1="44" x2="${dividerX.toFixed(1)}" y2="${(height - 40).toFixed(1)}" stroke="${colors.contributed}" stroke-width="0.8" opacity="0.22"/>`,
+    `<text x="${(layout.railLeft + 16).toFixed(1)}" y="25" fill="${colors.contributed}" font-size="10.2" font-weight="650">Contributed</text>`,
+    `<text x="${(layout.railLeft + 16).toFixed(1)}" y="38" fill="${colors.muted}" font-size="8.2">external repositories</text>`,
+  ].join("");
 }
 
 function denseFallback(graph, theme, width, height) {
@@ -109,13 +122,16 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
   if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height);
 
   const colors = palette(theme);
-  const cx = width / 2;
-  const cy = height / 2 - 8;
   const minSize = Math.min(width, height);
   const groups = graph.nodes.filter((node) => node.type === "group").sort((a, b) => String(a.id).localeCompare(String(b.id)));
   const repos = graph.nodes.filter((node) => node.type === "repository");
   const ownedRepos = repos.filter((node) => node.relation !== "contributed");
   const owner = graph.nodes.find((node) => node.type === "owner");
+  const externalLayout = contributedRailLayout(repos, width, height);
+  const cx = externalLayout.assignments.length
+    ? (width - externalLayout.railWidth * 0.52) / 2
+    : width / 2;
+  const cy = height / 2 - 8;
   const count = Math.max(1, groups.length);
   const prepared = groups.map((group) => ({
     group,
@@ -150,24 +166,23 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
     return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
   }).join("");
 
-  const contributedTargets = contributedAssignments(repos, minSize, categoryRadius, maxSystemRadius);
-  const contributed = contributedTargets.map((target) => {
-    const x = cx + Math.cos(target.phase) * target.radius;
-    const y = cy + Math.sin(target.phase) * target.radius;
-    const motion = circleValues(target.radius, target.phase, target.direction, cx, cy);
-    return `<g data-galaxy-orbit="contributed" data-galaxy-placement="external-halo-orbit" data-galaxy-lane="${target.lane}" data-galaxy-radius="${target.radius.toFixed(1)}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${representativeLabelMarkup(target.repo, target.phase, colors)}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
-  }).join("");
+  const contributed = externalLayout.assignments.map((target) => (
+    `<g data-galaxy-orbit="contributed" data-galaxy-placement="external-rail" transform="translate(${target.x.toFixed(2)} ${target.y.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${externalLabelMarkup(target.repo, colors)}</g>`
+  )).join("");
 
   const nucleus = owner ? `<g transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)})"><circle cx="0" cy="0" r="42" fill="${colors.owner}" opacity="0.025"/>${nodeMarkup(owner, 0, 0, colors)}</g>` : "";
-  const graphMarkup = `<g data-galaxy-motion="systems">${nucleus}${systems}<g data-galaxy-external="true" data-galaxy-external-layout="halo">${contributed}</g></g>`;
+  const ownedGraphMarkup = `<g data-galaxy-motion="systems">${nucleus}${systems}</g>`;
+  const externalMarkup = externalLayout.assignments.length
+    ? `${contributedRailBackdrop(colors, width, height, externalLayout)}<g data-galaxy-external="true" data-galaxy-external-layout="rail">${contributed}</g>`
+    : "";
   return svgDocument({
     owner: graph.owner,
     width,
     height,
     preset: "systems",
     ariaLabel: "Galaxy Systems",
-    backgroundMarkup: animatedBackground(background(graph.owner, width, height, colors, 92, { cx, cy, groupCount: count, categoryRadius })),
-    graphMarkup,
+    backgroundMarkup: background(graph.owner, width, height, colors, 100),
+    graphMarkup: `${ownedGraphMarkup}${externalMarkup}`,
     legendMarkup: legend(colors, width, height, "Galaxy Systems"),
   });
 }
