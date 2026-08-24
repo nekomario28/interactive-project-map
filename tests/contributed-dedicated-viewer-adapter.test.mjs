@@ -23,7 +23,8 @@ for (const mode of DEDICATED_CONTRIBUTED_MODES) {
     assert.match(patched, /parts\.length !== 2/);
     assert.match(patched, /contributedRepositoryCount/);
     assert.match(patched, /repo\?\.relation === "contributed"/);
-    assert.match(patched, /contributed: "#55c7d7"/);
+    assert.match(patched, /contributed: "#E69F00"/);
+    assert.doesNotMatch(patched, /contributed: "#55c7d7"/);
     assert.match(patched, /External owner/);
     assert.match(patched, /ProjectMapContributedDedicatedViewer/);
     assert.equal(patchDedicatedViewerRuntime(patched, mode), patched);

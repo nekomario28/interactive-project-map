@@ -81,7 +81,7 @@ export function patchViewerLegend(source) {
 export function patchViewerCss(source) {
   if (source.includes(UI_CSS_MARKER)) return source;
   return `${source}\n\n${UI_CSS_MARKER}
-.legend .contributed { background: #55c7d7; }
+.legend .contributed { background: #E69F00; }
 
 @media (max-width: 480px) {
   .repository-filters .status-chip:disabled { display: none; }
