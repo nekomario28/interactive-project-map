@@ -14,7 +14,7 @@
     "contractId",
     "owner",
     "generatedAt",
-    "sourceRevision",
+    "generatorRevision",
     "taxonomyId",
     "assessmentPolicyId",
     "productionScoring",
@@ -22,9 +22,7 @@
     "repositories"
   ],
   "repositoryFields": [
-    "repositoryKey",
-    "graphNodeId",
-    "githubRepositoryId",
+    "identity",
     "context",
     "acquisition",
     "quality",
@@ -35,10 +33,18 @@
     "prominence",
     "productionScore"
   ],
+  "identityFields": [
+    "repositoryKey",
+    "graphNodeId",
+    "owner",
+    "name",
+    "githubRepositoryId"
+  ],
   "acquisitionLevels": ["L0", "L1", "L2"],
   "sectionStates": ["observed", "partial", "not-collected", "not-applicable", "unknown"],
   "invariants": [
     "assessment.json is a generated projection and not the authority for taxonomy or evidence sources",
+    "generatorRevision identifies generator code while observedAt identifies subject observation time",
     "repositoryKey is unique within an artifact",
     "owned repositories join graph nodes through repository:<name>",
     "contributed repositories join graph nodes through repository:<owner/name>",
