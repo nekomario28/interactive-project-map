@@ -38,9 +38,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Galaxy Systems Contributed external-rail release: Action 94abe621aae576d6a49e38fe7e146e0790387fc2 passed
-# Verify #780, including the 12-Contributed rail regression, full verify,
-# Chromium and iPhone WebKit. Contributed remains outside owned category motion.
+# Profile-local Galaxy world release: Action 4e5bbf4c4a4858770b4393ced718722fba724530 passed
+# Verify #801, including donor-background structure, twelve-preset comparison,
+# Contributed external-halo regressions, Chromium and iPhone WebKit.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@94abe621aae576d6a49e38fe7e146e0790387fc2
+        uses: nekomario28/interactive-project-map@4e5bbf4c4a4858770b4393ced718722fba724530
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
