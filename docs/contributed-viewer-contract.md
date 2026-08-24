@@ -1,6 +1,6 @@
 # Contributed viewer contract
 
-Status: **production-proven; visual contract updated 2026-08-24 JST**
+Status: **production-proven; visual contract updated 2026-08-25 JST**
 
 ## Purpose
 
@@ -29,11 +29,13 @@ All interactive presets must:
 
 ## Galaxy presentation contract
 
-Galaxy Classic / Systems / Hybrid may place contributed repositories on presentation-only owner-centered outer orbits because the normal Galaxy motion model is category-membership based and contributed repositories intentionally have no owned category membership.
+Galaxy Classic / Systems / Hybrid may use presentation-only external placement because the normal Galaxy motion model is category-membership based and contributed repositories intentionally have no owned category membership.
 
-The presentation must not add a synthetic category hub, `groupId`, ownership edge, or membership edge. The canonical `contribution` edge remains data-only and is not rendered as an ownership-like spoke.
+External placement must remain visually disjoint from the swept region of owned category systems. In particular, a second or later Contributed lane must never be moved inward through owned category orbits merely to fit more external repositories.
 
-Reduced-motion preferences must continue to pause the extra motion.
+For the static `Galaxy Systems` SVG, Contributed repositories use a dedicated edge rail rather than the owner-centered category motion field. The rail is presentation-only: it may use a background fade and subtle divider to preserve separation, but it must not introduce a synthetic category hub, `groupId`, ownership edge, or membership edge. Contributed nodes on the rail do not participate in the global category animation.
+
+Other Galaxy presentations may still use owner-centered external orbits when their geometry guarantees a disjoint external region. Reduced-motion preferences must continue to pause any extra motion that remains.
 
 ## Dedicated preset contract
 
@@ -48,7 +50,7 @@ Static SVG renderers consume the same canonical graph and should preserve the sa
 - Contributed must not disappear merely because it has no owned `groupId`.
 - Contributed must not be recolored as Original/Fork/Archived because of source flags.
 - The Contributed palette and explicit legend text should match the interactive presentation family.
-- A static renderer may use presentation-only layout context where necessary, but Galaxy-family SVGs should use owner-centered external placement rather than a fake owned-category-looking hub.
+- A static renderer may use presentation-only layout context where necessary, but it must keep Contributed spatially separate from owned taxonomy systems instead of making it look like another owned category.
 - Direct contribution edges should remain data-model evidence, not always-on visual spokes.
 
 The detailed static-renderer gap audit is recorded in `docs/static-svg-parity-audit-2026-08-24.md`.
