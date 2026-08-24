@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "ipm-live-profile-quality-enrichment-sources-v1",
+  "assessmentPolicyId": "ipm-repository-assessment-v1",
+  "status": "experimental-bounded-frozen-evidence-reuse",
+  "claimBoundary": "These selectors reuse frozen real-evidence calibration cases as bounded experimental Quality evidence inputs. They do not make the fixtures production authority, do not discover repositories, and do not refresh stale evidence automatically.",
+  "sources": [
+    {
+      "repositoryKey": "nekomario28/interactive-project-map",
+      "fixture": "fixtures/repository-quality-real-calibration.v1.json",
+      "caseId": "interactive-project-map-application",
+      "evidenceField": "evidence"
+    },
+    {
+      "repositoryKey": "nekomario28/projexd_group10",
+      "fixture": "fixtures/repository-quality-real-calibration.v1.json",
+      "caseId": "projexd-group10-application",
+      "evidenceField": "evidence"
+    },
+    {
+      "repositoryKey": "nekomario28/gz-sim",
+      "fixture": "fixtures/repository-quality-fork-library-calibration.v1.json",
+      "caseId": "gz-sim-library-fork-no-default-branch-delta",
+      "evidenceField": "qualityEvidence"
+    },
+    {
+      "repositoryKey": "nekomario28/turing-smart-screen-python-owl",
+      "fixture": "fixtures/repository-quality-fork-library-calibration.v1.json",
+      "caseId": "turing-library-fork-with-default-branch-delta",
+      "evidenceField": "qualityEvidence"
+    }
+  ]
+}
