@@ -186,35 +186,16 @@ function contributedRuntime() {
   if (typeof drawEdges === "function") {
     const baseDrawEdges = drawEdges;
     drawEdges = function contributedAwareDrawEdges(colors) {
+      if (!Array.isArray(state?.edges)) return baseDrawEdges(colors);
       const originalEdges = state.edges;
-      const contributionEdges = Array.isArray(originalEdges) ? originalEdges.filter((edge) => edge?.type === "contribution") : [];
-      if (!contributionEdges.length) return baseDrawEdges(colors);
-      state.edges = originalEdges.filter((edge) => edge?.type !== "contribution");
+      const visibleEdges = originalEdges.filter((edge) => edge?.type !== "contribution");
+      if (visibleEdges.length === originalEdges.length) return baseDrawEdges(colors);
+      state.edges = visibleEdges;
       try {
-        baseDrawEdges(colors);
+        return baseDrawEdges(colors);
       } finally {
         state.edges = originalEdges;
       }
-      for (const edge of contributionEdges) {
-        const sourceNode = state.byId?.get?.(edge.source);
-        const targetNode = state.byId?.get?.(edge.target);
-        if (!sourceNode || !targetNode) continue;
-        let opacity = 0.72;
-        if (state.query && typeof matchesQuery === "function" && !(matchesQuery(sourceNode) || matchesQuery(targetNode))) opacity *= 0.15;
-        if (state.selected && sourceNode !== state.selected && targetNode !== state.selected) opacity *= 0.16;
-        const source = worldToScreen(sourceNode.x, sourceNode.y);
-        const target = worldToScreen(targetNode.x, targetNode.y);
-        ctx.strokeStyle = colors.contributed || "#55c7d7";
-        ctx.globalAlpha = opacity;
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([2, 4]);
-        ctx.beginPath();
-        ctx.moveTo(source.x, source.y);
-        ctx.lineTo(target.x, target.y);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
     };
   }
 
@@ -268,11 +249,11 @@ export function patchSharedViewerRuntime(source) {
   );
   next = replaceRequired(next,
     '      archived: "#b97a7a",\n      selection: "#ffffff",',
-    '      archived: "#b97a7a",\n      contributed: "#62c8ba",\n      selection: "#ffffff",',
+    '      archived: "#b97a7a",\n      contributed: "#E69F00",\n      selection: "#ffffff",',
     "obsidian contributed palette");
   next = replaceRequired(next,
     '    archived: "#d9847b",\n    selection: "#ffffff",',
-    '    archived: "#d9847b",\n    contributed: "#55c7d7",\n    selection: "#ffffff",',
+    '    archived: "#d9847b",\n    contributed: "#E69F00",\n    selection: "#ffffff",',
     "galaxy contributed palette");
   if (next.includes(RUNTIME_MARKER)) return next;
   const anchor = '\ntry {\n  username = normalizeUsername(query.get("username"));';
@@ -283,7 +264,7 @@ export function patchSharedViewerRuntime(source) {
 
 export function patchViewerCss(source) {
   if (source.includes(CSS_MARKER)) return source;
-  return `${source}\n\n${CSS_MARKER}\n.control-cluster .status-contributed { --status-color: #55c7d7; }\n`;
+  return `${source}\n\n${CSS_MARKER}\n.control-cluster .status-contributed { --status-color: #E69F00; }\n`;
 }
 
 export async function applyContributedViewer(outputDir = resolve(process.cwd(), "site")) {
