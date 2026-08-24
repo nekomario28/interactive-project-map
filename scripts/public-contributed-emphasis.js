@@ -10,6 +10,8 @@ window.addEventListener("DOMContentLoaded", () => {
     style: null,
     owner: null,
     targets: [],
+    sweepRadius: 0,
+    placement: null,
     lastTime: performance.now(),
   };
 
@@ -28,6 +30,44 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function isContributed(node) {
     return node?.type === "repository" && node?.relation === "contributed";
+  }
+
+  function distance(a, b) {
+    return Math.hypot((a?.x || 0) - (b?.x || 0), (a?.y || 0) - (b?.y || 0));
+  }
+
+  function ownedSweepEnvelope(owner) {
+    const groups = state.nodes.filter((node) => node?.type === "group");
+    const groupById = new Map();
+    for (const group of groups) {
+      groupById.set(String(group.id), group);
+      groupById.set(String(group.id).replace(/^group:/, ""), group);
+    }
+
+    const membershipGroup = new Map();
+    for (const edge of state.edges || []) {
+      if (!["membership", "member"].includes(edge?.type)) continue;
+      const source = state.byId?.get?.(edge.source);
+      const target = state.byId?.get?.(edge.target);
+      if (source?.type === "group" && target?.type === "repository" && !isContributed(target)) membershipGroup.set(target.id, source);
+      else if (target?.type === "group" && source?.type === "repository" && !isContributed(source)) membershipGroup.set(source.id, target);
+    }
+
+    let envelope = 220;
+    for (const node of state.nodes) {
+      if (node === owner || isContributed(node)) continue;
+      let candidate = distance(owner, node);
+      if (node?.type === "repository") {
+        const group = membershipGroup.get(node.id) || groupById.get(String(node.groupId || ""));
+        if (group) {
+          const groupRadius = distance(owner, group);
+          const localRadius = distance(group, node);
+          candidate = Math.max(candidate, groupRadius + localRadius);
+        }
+      }
+      if (Number.isFinite(candidate)) envelope = Math.max(envelope, candidate);
+    }
+    return envelope;
   }
 
   if (typeof palette === "function") {
@@ -56,10 +96,56 @@ window.addEventListener("DOMContentLoaded", () => {
   function place(target) {
     const owner = runtime.owner;
     if (!owner) return;
-    target.node.x = owner.x + Math.cos(target.phase) * target.radius;
-    target.node.y = owner.y + Math.sin(target.phase) * target.radius;
+    if (target.placement === "external-rail") {
+      target.node.x = target.x;
+      target.node.y = target.y;
+    } else {
+      target.node.x = owner.x + Math.cos(target.phase) * target.radius;
+      target.node.y = owner.y + Math.sin(target.phase) * target.radius;
+    }
     target.node.vx = 0;
     target.node.vy = 0;
+  }
+
+  function systemsRailTargets(external, owner, sweepRadius) {
+    const rowsPerColumn = 6;
+    const rowSpacing = 74;
+    const columnSpacing = 190;
+    const railStartX = owner.x + sweepRadius + 150;
+    return external.map((node, index) => {
+      const lane = Math.floor(index / rowsPerColumn);
+      const row = index % rowsPerColumn;
+      const laneCount = Math.min(rowsPerColumn, external.length - lane * rowsPerColumn);
+      const x = railStartX + lane * columnSpacing;
+      const y = owner.y + (row - (laneCount - 1) / 2) * rowSpacing;
+      return {
+        node,
+        placement: "external-rail",
+        lane,
+        x,
+        y,
+        phase: 0,
+        radius: Math.hypot(x - owner.x, y - owner.y),
+        period: Infinity,
+        direction: 0,
+      };
+    });
+  }
+
+  function externalOrbitTargets(external, sweepRadius) {
+    const baseRadius = Math.max(345, sweepRadius + 125);
+    const perLane = 6;
+    return external.map((node, index) => {
+      const lane = Math.floor(index / perLane);
+      const inLane = index % perLane;
+      const laneCount = Math.min(perLane, external.length - lane * perLane);
+      const seed = (hashText(`${node.id}:contributed-orbit`) % 10000) / 10000;
+      const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
+      const radius = baseRadius + lane * 86 + ((hashText(`${node.id}:contributed-radius`) % 31) - 15);
+      const stylePeriod = state.style === "galaxy-classic" ? 520 : 980;
+      const direction = (hashText(`${node.id}:contributed-direction`) & 1) === 0 ? 1 : -1;
+      return { node, placement: "external-orbit", lane, phase, radius, period: stylePeriod + lane * 120, direction };
+    });
   }
 
   function initialize() {
@@ -67,6 +153,8 @@ window.addEventListener("DOMContentLoaded", () => {
     runtime.style = state?.style ?? null;
     runtime.targets = [];
     runtime.owner = null;
+    runtime.sweepRadius = 0;
+    runtime.placement = null;
     runtime.lastTime = performance.now();
     if (!isGalaxyStyle() || !Array.isArray(state.nodes)) return false;
 
@@ -76,23 +164,11 @@ window.addEventListener("DOMContentLoaded", () => {
       .sort((a, b) => (b.stars || 0) - (a.stars || 0) || String(a.id).localeCompare(String(b.id)));
     if (!owner || !external.length) return false;
     runtime.owner = owner;
-
-    const structural = state.nodes.filter((node) => node !== owner && !isContributed(node));
-    const extent = Math.max(220, ...structural.map((node) => Math.hypot(node.x - owner.x, node.y - owner.y)).filter(Number.isFinite));
-    const baseRadius = Math.max(345, extent + 105);
-    const perLane = 6;
-
-    runtime.targets = external.map((node, index) => {
-      const lane = Math.floor(index / perLane);
-      const inLane = index % perLane;
-      const laneCount = Math.min(perLane, external.length - lane * perLane);
-      const seed = (hashText(`${node.id}:contributed-orbit`) % 10000) / 10000;
-      const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
-      const radius = baseRadius + lane * 86 + ((hashText(`${node.id}:contributed-radius`) % 31) - 15);
-      const stylePeriod = state.style === "galaxy-classic" ? 520 : state.style === "galaxy-systems" ? 760 : 980;
-      const direction = (hashText(`${node.id}:contributed-direction`) & 1) === 0 ? 1 : -1;
-      return { node, phase, radius, period: stylePeriod + lane * 120, direction };
-    });
+    runtime.sweepRadius = ownedSweepEnvelope(owner);
+    runtime.placement = state.style === "galaxy-systems" ? "external-rail" : "external-orbit";
+    runtime.targets = runtime.placement === "external-rail"
+      ? systemsRailTargets(external, owner, runtime.sweepRadius)
+      : externalOrbitTargets(external, runtime.sweepRadius);
 
     for (const target of runtime.targets) place(target);
     if (typeof fitView === "function") fitView();
@@ -106,11 +182,14 @@ window.addEventListener("DOMContentLoaded", () => {
     const dt = Math.max(0, Math.min(50, now - runtime.lastTime));
     runtime.lastTime = now;
     if (!dt) return false;
+    let moved = false;
     for (const target of runtime.targets) {
+      if (target.placement !== "external-orbit") continue;
       target.phase += target.direction * TAU * dt / (target.period * 1000);
       place(target);
+      moved = true;
     }
-    return true;
+    return moved;
   }
 
   window.ProjectMapContributedEmphasis = Object.freeze({
@@ -118,7 +197,19 @@ window.addEventListener("DOMContentLoaded", () => {
       color: CONTRIBUTED,
       style: typeof state !== "undefined" ? state.style : null,
       reducedMotion: motionMedia.matches,
-      repositories: runtime.targets.map((target) => ({ id: target.node.id, x: target.node.x, y: target.node.y, radius: target.radius })),
+      placement: runtime.placement,
+      sweepRadius: runtime.sweepRadius,
+      repositories: runtime.targets.map((target) => ({
+        id: target.node.id,
+        x: target.node.x,
+        y: target.node.y,
+        radius: target.radius,
+        lane: target.lane,
+        placement: target.placement,
+        clearance: target.placement === "external-rail"
+          ? target.x - (runtime.owner?.x || 0) - runtime.sweepRadius
+          : target.radius - runtime.sweepRadius,
+      })),
     }),
   });
 
