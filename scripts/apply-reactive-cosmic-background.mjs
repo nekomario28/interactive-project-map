@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 const SCRIPT_NAME = "cosmic-background.js";
 const SOURCE_NAME = "public-cosmic-background.js";
 const VIEWER_HTML = join("u", "index.html");
-const SCRIPT_MARKER = '<script src="../view-state.js" defer></script>';
+const SCRIPT_MARKER = '<script src="../viewer.js" defer></script>';
 const SCRIPT_TAG = '<script src="../cosmic-background.js" defer></script>';
 
 export async function applyReactiveCosmicBackground(outputDir = resolve(process.cwd(), "site")) {
@@ -16,7 +16,10 @@ export async function applyReactiveCosmicBackground(outputDir = resolve(process.
   const htmlPath = join(outputDir, VIEWER_HTML);
   const html = await readFile(htmlPath, "utf8");
   if (html.includes(SCRIPT_TAG)) return;
-  if (!html.includes(SCRIPT_MARKER)) throw new Error("Could not locate shared view-state script in Pages viewer");
+  if (!html.includes(SCRIPT_MARKER)) throw new Error("Could not locate shared viewer script in Pages viewer");
+  // Insert immediately after viewer.js. postprocess-public-pages installs Galaxy
+  // and Obsidian style runtimes after the same marker, so this final pass places
+  // cosmic first and lets each style capture it as its base drawBackground.
   await writeFile(htmlPath, html.replace(SCRIPT_MARKER, `${SCRIPT_MARKER}\n${SCRIPT_TAG}`));
 }
 
