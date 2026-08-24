@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "status": "frozen-projection-equivalent-live-profile-snapshot",
+  "source": {
+    "repository": "nekomario28/nekomario28",
+    "revision": "f86924fc5f713003dea2634748a7931169e638f1",
+    "path": "project-map/graph.json",
+    "graphGeneratedAt": "2026-08-24T18:19:46.396Z",
+    "graphBlobSha": "3a362464cbbf8cef5c94770e813154fef8777780"
+  },
+  "projectionBoundary": "Only fields consumed by buildL0RepositoryAssessmentFromGraph are retained from the exact source graph snapshot.",
+  "graph": {
+    "owner": "nekomario28",
+    "generatedAt": "2026-08-24T18:19:46.396Z",
+    "repositoryCount": 14,
+    "groupCount": 6,
+    "nodes": [
+      {
+        "id": "repository:FTBPublicClaims",
+        "type": "repository",
+        "label": "FTBPublicClaims",
+        "stars": 0,
+        "forks": 0,
+        "fork": false,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft", "ecosystem:ftb-chunks", "platform:server"] }
+      },
+      {
+        "id": "repository:sable",
+        "type": "repository",
+        "label": "sable",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft"] }
+      },
+      {
+        "id": "repository:OffHandCombat",
+        "type": "repository",
+        "label": "OffHandCombat",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft", "platform:server"] }
+      },
+      {
+        "id": "repository:antifullbright",
+        "type": "repository",
+        "label": "antifullbright",
+        "stars": 0,
+        "forks": 0,
+        "fork": false,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft", "platform:server"] }
+      },
+      {
+        "id": "repository:workers",
+        "type": "repository",
+        "label": "workers",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft"] }
+      },
+      {
+        "id": "repository:recruits",
+        "type": "repository",
+        "label": "recruits",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft"] }
+      },
+      {
+        "id": "repository:BuyClaimChunks",
+        "type": "repository",
+        "label": "BuyClaimChunks",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "game-modding", "secondaryTags": ["artifact:game-mod", "platform:game", "ecosystem:minecraft", "ecosystem:ftb-chunks", "platform:server"] }
+      },
+      {
+        "id": "repository:lime_tidyup",
+        "type": "repository",
+        "label": "lime_tidyup",
+        "stars": 2,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "robotics-automation", "secondaryTags": ["artifact:documentation", "ecosystem:ros2", "topic:gazebo", "topic:manipulation", "platform:server"] }
+      },
+      {
+        "id": "repository:ros_gz",
+        "type": "repository",
+        "label": "ros_gz",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "robotics-automation", "secondaryTags": ["artifact:library", "ecosystem:ros2", "topic:gazebo"] }
+      },
+      {
+        "id": "repository:gz-sim",
+        "type": "repository",
+        "label": "gz-sim",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "robotics-automation", "secondaryTags": ["artifact:library", "ecosystem:ros2", "topic:gazebo", "platform:cli", "platform:server"] }
+      },
+      {
+        "id": "repository:FreeToken",
+        "type": "repository",
+        "label": "FreeToken",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "ai-ml", "secondaryTags": ["artifact:application", "platform:desktop", "platform:cli"] }
+      },
+      {
+        "id": "repository:ProjExD_Group10",
+        "type": "repository",
+        "label": "ProjExD_Group10",
+        "stars": 1,
+        "forks": 5,
+        "fork": false,
+        "archived": false,
+        "classification": { "categoryId": "uncategorized", "secondaryTags": [] },
+        "taxonomyAssignment": { "categoryId": "game-development", "secondaryTags": ["artifact:application", "platform:game", "ecosystem:pygame", "topic:board-game"] }
+      },
+      {
+        "id": "repository:turing-smart-screen-python-owl",
+        "type": "repository",
+        "label": "turing-smart-screen-python-owl",
+        "stars": 0,
+        "forks": 0,
+        "fork": true,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "hardware-embedded", "secondaryTags": ["artifact:library", "topic:device-integration", "platform:embedded"] }
+      },
+      {
+        "id": "repository:interactive-project-map",
+        "type": "repository",
+        "label": "interactive-project-map",
+        "stars": 1,
+        "forks": 0,
+        "fork": false,
+        "archived": false,
+        "taxonomyAssignment": { "categoryId": "visualization-knowledge", "secondaryTags": ["artifact:application", "ecosystem:github", "topic:project-visualization", "platform:web", "platform:mobile", "platform:api"] }
+      },
+      {
+        "id": "repository:c0c25034/projexd_4",
+        "type": "repository",
+        "label": "c0c25034/ProjExD_4",
+        "relation": "contributed",
+        "repositoryOwner": "c0c25034",
+        "repositoryName": "ProjExD_4",
+        "stars": 0,
+        "forks": 3,
+        "fork": false,
+        "archived": false,
+        "contribution": { "commits": 1, "pullRequests": 1, "mergedPullRequests": 1, "commitsTruncated": false, "pullRequestsTruncated": false },
+        "classification": { "categoryId": "uncategorized", "secondaryTags": [] }
+      }
+    ],
+    "edges": []
+  }
+}
