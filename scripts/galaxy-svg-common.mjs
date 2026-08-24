@@ -88,6 +88,8 @@ export function background(owner, width, height, colors, particleCount = 92, opt
   // Donor: nekomario28/nekomario28@ead72debca2a16608ebc5b799993c0234ea10cab
   // render_project_map.py + enhance_project_map_preview.py. The background shares
   // the galaxy's center/category axes rather than being unrelated screen-space noise.
+  // Keep the donor's rings, stars, associations and nucleus, but omit the central
+  // spiral-arm strokes so the background does not read as curved bars from the owner.
   const scale = Math.min(width / 760, height / 560);
   const cx = Number.isFinite(options.cx) ? options.cx : width / 2;
   const cy = Number.isFinite(options.cy) ? options.cy : height / 2 - 8;
@@ -106,17 +108,6 @@ export function background(owner, width, height, colors, particleCount = 92, opt
   const rings = [132, 194, 256].map((radius) => (
     `<ellipse data-profile-galaxy-ring="${radius}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(radius * scale).toFixed(1)}" ry="${(radius * yFlatten * scale).toFixed(1)}" fill="none" stroke="${colors.muted}" stroke-width="0.55" opacity="0.075"/>`
   )).join("");
-  const arms = Array.from({ length: groupCount }, (_, index) => {
-    const base = -Math.PI / 2 + TAU * index / groupCount;
-    const points = [];
-    for (let donorRadius = 92; donorRadius < 294; donorRadius += 8) {
-      const radius = donorRadius * scale;
-      const angle = base + ((donorRadius - 128) / 148) * 0.38;
-      points.push(`${(cx + Math.cos(angle) * radius).toFixed(1)},${(cy + Math.sin(angle) * radius * yFlatten).toFixed(1)}`);
-    }
-    const path = points.map((point, pointIndex) => `${pointIndex === 0 ? "M" : "L"}${point}`).join(" ");
-    return `<path data-profile-galaxy-arm="${index}" d="${path}" fill="none" stroke="${colors.group}" stroke-width="${(18 * scale).toFixed(1)}" stroke-linecap="round" opacity="0.025"/><path d="${path}" fill="none" stroke="${colors.group}" stroke-width="0.75" stroke-linecap="round" opacity="0.14"/>`;
-  }).join("");
   const categoryRadius = Number.isFinite(options.categoryRadius) ? options.categoryRadius : 155 * scale;
   const associations = Array.from({ length: groupCount }, (_, index) => (
     profileGalaxyAssociation(owner, index, groupCount, cx, cy, categoryRadius, scale, colors)
@@ -128,7 +119,7 @@ export function background(owner, width, height, colors, particleCount = 92, opt
     `<radialGradient id="profile-galaxy-association" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${colors.group}" stop-opacity="0.043"/><stop offset="42%" stop-color="${colors.group}" stop-opacity="0.025"/><stop offset="78%" stop-color="${colors.owner}" stop-opacity="0.008"/><stop offset="100%" stop-color="${colors.group}" stop-opacity="0"/></radialGradient>`,
     '</defs>',
     `<rect width="100%" height="100%" rx="16" fill="url(#galaxy-family-bg)"/>`,
-    `<g data-profile-galaxy-background="ead72debca2a16608ebc5b799993c0234ea10cab">${stars}${rings}${arms}${associations}<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(92 * scale).toFixed(1)}" fill="url(#profile-galaxy-nucleus)"/></g>`,
+    `<g data-profile-galaxy-background="ead72debca2a16608ebc5b799993c0234ea10cab">${stars}${rings}${associations}<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(92 * scale).toFixed(1)}" fill="url(#profile-galaxy-nucleus)"/></g>`,
   ].join("");
 }
 
