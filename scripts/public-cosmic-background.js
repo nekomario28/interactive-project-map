@@ -1,23 +1,22 @@
 "use strict";
-/* global state, ctx, hash, username, drawBackground, draw, worldToScreen, canvasSize */
+/* global state, ctx, hash, username, drawBackground, draw, worldToScreen, canvasSize, performance */
 
 (() => {
-  // Historical donor copied from the final profile-local Project Map before the
-  // Action migration:
+  // Historical background donor copied from the final profile-local Project Map
+  // before the Action migration:
   // nekomario28/nekomario28@ead72debca2a16608ebc5b799993c0234ea10cab
   //   scripts/render_project_map.py
   //   scripts/enhance_project_map_preview.py
-  // The important contract is not "stars behind a graph". Background and graph
-  // inhabit one world-space galaxy and are generated from the same category axes.
+  // Only the ambient background layer belongs here: stars, rings, loose stellar
+  // associations and the owner nucleus. Foreground/category decoration stays owned
+  // by IPM's native Galaxy runtimes.
   const DONOR_COMMIT = "ead72debca2a16608ebc5b799993c0234ea10cab";
   const Y_FLATTEN = 0.63;
   const STAR_COUNT = 92;
   const RINGS = Object.freeze([132, 194, 256]);
-  const ARM_START = 92;
-  const ARM_END = 294;
-  const ARM_STEP = 8;
   const STAR_INNER = 70;
   const STAR_SPAN = 242;
+  const TWINKLE_PERIOD_MS = 14000;
   const baseDrawBackground = drawBackground;
 
   function unit(seed) {
@@ -49,8 +48,6 @@
     const count = Math.max(1, groups.length);
     const groupIndex = index % count;
     const base = groupPhase(groups[groupIndex], groupIndex, count, owner);
-    // Same profile-local model: radius = 70 + sqrt(random) * 242 and a small
-    // spiral-sector angular offset. Hashes make the browser version deterministic.
     const radius = STAR_INNER + Math.sqrt(unit(hash(`${username}:profile-galaxy:radius:${index}`))) * STAR_SPAN;
     const angle = base
       + ((radius - 128) / 148) * 0.38
@@ -60,15 +57,21 @@
       y: owner.y + Math.sin(angle) * radius * Y_FLATTEN,
       radius: [0.45, 0.60, 0.75, 0.95][hash(`${username}:profile-galaxy:size:${index}`) % 4],
       opacity: range(hash(`${username}:profile-galaxy:opacity:${index}`), 0.10, 0.30),
+      twinklePhase: unit(hash(`${username}:profile-galaxy:twinkle:${index}`)) * Math.PI * 2,
     };
   }
 
-  function drawStellarDisk(colors, groups, owner) {
+  function twinkle(star, now) {
+    const phase = star.twinklePhase + (now % TWINKLE_PERIOD_MS) / TWINKLE_PERIOD_MS * Math.PI * 2;
+    return star.opacity * (0.78 + 0.22 * (0.5 + 0.5 * Math.sin(phase)));
+  }
+
+  function drawStellarDisk(colors, groups, owner, now) {
     ctx.fillStyle = colors.text;
     for (let index = 0; index < STAR_COUNT; index += 1) {
       const star = donorStar(index, groups, owner);
       const point = worldToScreen(star.x, star.y);
-      ctx.globalAlpha = star.opacity;
+      ctx.globalAlpha = twinkle(star, now);
       ctx.beginPath();
       ctx.arc(point.x, point.y, Math.max(0.35, star.radius * state.zoom), 0, Math.PI * 2);
       ctx.fill();
@@ -95,43 +98,6 @@
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
-  }
-
-  function traceArm(base, owner) {
-    ctx.beginPath();
-    let first = true;
-    for (let radius = ARM_START; radius < ARM_END; radius += ARM_STEP) {
-      const angle = base + ((radius - 128) / 148) * 0.38;
-      const point = worldToScreen(
-        owner.x + Math.cos(angle) * radius,
-        owner.y + Math.sin(angle) * radius * Y_FLATTEN,
-      );
-      if (first) {
-        ctx.moveTo(point.x, point.y);
-        first = false;
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
-    }
-  }
-
-  function drawSpiralSectors(colors, groups, owner) {
-    const count = Math.max(1, groups.length);
-    for (let index = 0; index < count; index += 1) {
-      const base = groupPhase(groups[index], index, count, owner);
-      ctx.strokeStyle = colors.group;
-      ctx.lineCap = "round";
-      ctx.globalAlpha = 0.025;
-      ctx.lineWidth = Math.max(1, 18 * state.zoom);
-      traceArm(base, owner);
-      ctx.stroke();
-      ctx.globalAlpha = 0.14;
-      ctx.lineWidth = Math.max(0.45, 0.75 * state.zoom);
-      traceArm(base, owner);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    ctx.lineCap = "butt";
   }
 
   function associationGeometry(groupIndex) {
@@ -176,8 +142,6 @@
         drawAssociationLobe(group, groupIndex, lobeIndex, owner);
       }
 
-      // The historical enhancer placed seven fixed local stars inside each loose
-      // association rather than drawing a hard category boundary.
       const point = worldToScreen(group.x, group.y);
       const { major, minor } = associationGeometry(groupIndex);
       ctx.fillStyle = colors.text;
@@ -228,9 +192,8 @@
     ctx.fillStyle = colors.background;
     ctx.fillRect(0, 0, width, height);
     const { owner, groups } = galaxyNodes();
-    drawStellarDisk(colors, groups, owner);
+    drawStellarDisk(colors, groups, owner, performance.now());
     drawRings(colors, owner);
-    drawSpiralSectors(colors, groups, owner);
     drawStellarAssociations(colors, groups, owner);
     drawNucleus(owner);
     ctx.globalAlpha = 1;
@@ -241,14 +204,15 @@
     const { owner, groups } = galaxyNodes();
     const firstStar = donorStar(0, groups, owner);
     return {
-      donor: "nekomario28/profile-local-common-center-galaxy",
+      donor: "nekomario28/profile-local-background",
       donorCommit: DONOR_COMMIT,
-      geometry: "world-space-spiral-sectors",
+      geometry: "world-space-category-background",
       starCount: STAR_COUNT,
       rings: [...RINGS],
       yFlatten: Y_FLATTEN,
       associationLobes: 4,
       associationStars: 7,
+      twinklePeriodMs: TWINKLE_PERIOD_MS,
       groupCount: groups.length,
       pan: { ...state.pan },
       zoom: state.zoom,
