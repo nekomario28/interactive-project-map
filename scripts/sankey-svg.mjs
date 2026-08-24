@@ -1,11 +1,18 @@
+import {
+  addExternalBundle,
+  isContributedRepository,
+  repositoryStatus,
+  withContributedColor,
+} from "./static-contributed.mjs";
+
 function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
-function statusOf(repo) { return repo.archived ? "archived" : repo.fork ? "fork" : "original"; }
 function palette(theme) {
-  return theme === "light"
+  const base = theme === "light"
     ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", owner: "#1677a5", group: "#376fbd", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
     : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", owner: "#64d2ff", group: "#6aa7ff", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
+  return withContributedColor(base, theme);
 }
 function groupMembers(group, repos) {
   const key = String(group.id).replace(/^group:/, "");
@@ -20,14 +27,16 @@ function bandPath(x1, y1Top, y1Bottom, x2, y2Top, y2Bottom) {
 function buildSankey(graph, width, height) {
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository");
-  const bundles = groups.map((group) => {
-    const members = groupMembers(group, repos);
-    const counts = { original: 0, fork: 0, archived: 0 };
-    for (const repo of members) counts[statusOf(repo)] += 1;
-    return { group, members, counts, total: members.length };
+  const ownedRepos = repos.filter((repo) => !isContributedRepository(repo));
+  let bundles = groups.map((group) => ({ group, members: groupMembers(group, ownedRepos) })).filter((bundle) => bundle.members.length);
+  bundles = addExternalBundle(bundles, repos);
+  bundles = bundles.map((bundle) => {
+    const counts = { original: 0, fork: 0, archived: 0, contributed: 0 };
+    for (const repo of bundle.members) counts[repositoryStatus(repo)] += 1;
+    return { ...bundle, counts, total: bundle.members.length };
   }).filter((bundle) => bundle.total > 0);
   const total = Math.max(1, bundles.reduce((sum, bundle) => sum + bundle.total, 0));
-  const statuses = ["original", "fork", "archived"];
+  const statuses = ["original", "fork", "archived", "contributed"];
   const statusTotals = Object.fromEntries(statuses.map((status) => [status, bundles.reduce((sum, bundle) => sum + bundle.counts[status], 0)]));
   const top = 48;
   const bottom = height - 43;
@@ -44,7 +53,7 @@ function buildSankey(graph, width, height) {
     groupNodes.push({ ...bundle, y: cursor, h });
     cursor += h + gap;
   }
-  const statusGap = 14;
+  const statusGap = 12;
   const statusUsable = usable - statusGap * (statuses.length - 1);
   const statusUnit = statusUsable / total;
   cursor = top;
@@ -68,7 +77,12 @@ export function renderSankeySvg(graph, theme, width, height) {
   let ownerCursor = layout.top;
   for (const group of layout.groupNodes) {
     const flowH = group.total * layout.unit;
-    pieces.push(`<path d="${bandPath(layout.ownerX + ownerWidth, ownerCursor, ownerCursor + flowH, layout.groupX, group.y, group.y + group.h)}" fill="${colors.group}" opacity="0.16"><title>${esc(graph.owner)} → ${esc(group.group.label)}: ${group.total}</title></path>`);
+    const external = group.group.external === true;
+    const flowColor = external ? colors.contributed : colors.group;
+    const title = external
+      ? `External contribution context → ${group.group.label}: ${group.total}`
+      : `${graph.owner} → ${group.group.label}: ${group.total}`;
+    pieces.push(`<path d="${bandPath(layout.ownerX + ownerWidth, ownerCursor, ownerCursor + flowH, layout.groupX, group.y, group.y + group.h)}" fill="${flowColor}" opacity="${external ? 0.24 : 0.16}"><title>${esc(title)}</title></path>`);
     ownerCursor += flowH;
   }
 
@@ -86,13 +100,14 @@ export function renderSankeySvg(graph, theme, width, height) {
     }
   }
 
-  pieces.push(`<rect x="${layout.ownerX}" y="${layout.top}" width="${ownerWidth}" height="${layout.usable}" rx="4" fill="${colors.owner}"/><text x="${layout.ownerX}" y="${layout.top - 8}" text-anchor="start" fill="${colors.fg}" font-size="10" font-weight="700">${esc(graph.owner)}</text>`);
+  pieces.push(`<rect x="${layout.ownerX}" y="${layout.top}" width="${ownerWidth}" height="${layout.usable}" rx="4" fill="${colors.owner}"/><text x="${layout.ownerX}" y="${layout.top - 8}" text-anchor="start" fill="${colors.fg}" font-size="10" font-weight="700">Portfolio context</text>`);
   for (const group of layout.groupNodes) {
-    pieces.push(`<rect x="${layout.groupX}" y="${group.y.toFixed(1)}" width="${groupWidth}" height="${group.h.toFixed(1)}" rx="3" fill="${colors.group}"/><text x="${layout.groupX - 7}" y="${(group.y + group.h / 2 + 3).toFixed(1)}" text-anchor="end" fill="${colors.muted}" font-size="9.2">${esc(group.group.label.length > 18 ? `${group.group.label.slice(0, 17)}…` : group.group.label)}</text>`);
+    const external = group.group.external === true;
+    pieces.push(`<rect x="${layout.groupX}" y="${group.y.toFixed(1)}" width="${groupWidth}" height="${group.h.toFixed(1)}" rx="3" fill="${external ? colors.contributed : colors.group}"/><text x="${layout.groupX - 7}" y="${(group.y + group.h / 2 + 3).toFixed(1)}" text-anchor="end" fill="${external ? colors.contributed : colors.muted}" font-size="9.2">${esc(group.group.label.length > 18 ? `${group.group.label.slice(0, 17)}…` : group.group.label)}</text>`);
   }
   for (const node of layout.statusNodes) {
     pieces.push(`<rect x="${layout.statusX}" y="${node.y.toFixed(1)}" width="${statusWidth}" height="${node.h.toFixed(1)}" rx="3" fill="${colors[node.status]}"/><text x="${layout.statusX + statusWidth + 7}" y="${(node.y + node.h / 2 + 3).toFixed(1)}" fill="${colors.fg}" font-size="9.5" font-weight="650">${node.status[0].toUpperCase()}${node.status.slice(1)} ${node.total}</text>`);
   }
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Sankey of ${esc(graph.owner)} public GitHub repositories by category and repository status">\n<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/><text x="18" y="21" fill="${colors.fg}" font-size="12" font-weight="700">Owner → Category → Status</text><g>${pieces.join("")}</g><text x="${width - 18}" y="${height - 14}" text-anchor="end" fill="${colors.muted}" font-size="9.5">Sankey · ${graph.repositoryCount} projects</text>\n</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Sankey of ${esc(graph.owner)} public GitHub repositories by portfolio context and repository status">\n<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/><text x="18" y="21" fill="${colors.fg}" font-size="12" font-weight="700">Portfolio context → Category / External → Status</text><g>${pieces.join("")}</g><text x="${width - 18}" y="${height - 14}" text-anchor="end" fill="${colors.muted}" font-size="9.5">Sankey · ${graph.repositoryCount} owned${graph.contributedRepositoryCount ? ` + ${graph.contributedRepositoryCount} contributed` : ""}</text>\n</svg>`;
 }
