@@ -147,7 +147,7 @@ export function patchInteractionPolishSunburst(source) {
         ctx.translate(x, y);
         ctx.rotate(flipped ? mid + Math.PI : mid);
         ctx.globalAlpha = matches(repo) ? (highlighted ? 1 : 0.96) : 0.12;
-        ctx.font = \`${highlighted ? 750 : 650} ${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif\`;
+        ctx.font = \`\${highlighted ? 750 : 650} \${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif\`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.lineJoin = "round";
