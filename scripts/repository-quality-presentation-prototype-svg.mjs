@@ -1,3 +1,57 @@
+export const REPOSITORY_QUALITY_PRESENTATION_THEMES = Object.freeze({
+  dark: Object.freeze({
+    colorScheme: "dark",
+    page: "#070a12",
+    card: "#101827",
+    cardStroke: "#25334a",
+    core: "#dbeafe",
+    coreStroke: "#93c5fd",
+    supports: "#4ade80",
+    weakens: "#fb7185",
+    neutral: "#94a3b8",
+    mixed: "#fbbf24",
+    unknown: "#cbd5e1",
+    optional: "#94a3b8",
+    unresolved: "#c084fc",
+    unavailable: "#64748b",
+    heading: "#f8fafc",
+    label: "#f8fafc",
+    meta: "#94a3b8",
+    coverage: "#cbd5e1",
+  }),
+  light: Object.freeze({
+    colorScheme: "light",
+    page: "#f8fafc",
+    card: "#ffffff",
+    cardStroke: "#cbd5e1",
+    core: "#e0f2fe",
+    coreStroke: "#0369a1",
+    supports: "#166534",
+    weakens: "#b91c1c",
+    neutral: "#475569",
+    mixed: "#92400e",
+    unknown: "#64748b",
+    optional: "#64748b",
+    unresolved: "#7e22ce",
+    unavailable: "#64748b",
+    heading: "#0f172a",
+    label: "#0f172a",
+    meta: "#475569",
+    coverage: "#334155",
+  }),
+});
+
+const TOKEN_PATTERN = Object.freeze({
+  "quality-supports": "supports-solid",
+  "quality-weakens": "weakens-long-dash",
+  "quality-neutral": "neutral-dot",
+  "quality-mixed": "mixed-dash-dot",
+  "quality-unknown": "unknown-sparse-dot",
+  "quality-optional": "optional-dash",
+  "quality-not-applicable": "not-applicable",
+  "quality-unresolved-applicability": "unresolved-dash-dot",
+});
+
 function escapeXml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -27,6 +81,10 @@ function arcPath(cx, cy, radius, startDegrees, endDegrees) {
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
+function tokenPattern(token) {
+  return TOKEN_PATTERN[token] ?? "unknown-pattern";
+}
+
 function detailRing(view, cx, cy) {
   if (view.mode !== "full-fixed-dimension-ring" || !Array.isArray(view.segments) || view.segments.length !== 8) {
     throw new Error("detail Quality presentation requires eight fixed-dimension segments");
@@ -36,7 +94,8 @@ function detailRing(view, cx, cy) {
   return view.segments.map((segment) => {
     const start = -90 + segment.slot * slotSize + gap;
     const end = -90 + (segment.slot + 1) * slotSize - gap;
-    return `<path class="qseg qdetail ${escapeXml(segment.token)}" data-dimension="${escapeXml(segment.id)}" d="${arcPath(cx, cy, 28, start, end)}" />`;
+    const token = escapeXml(segment.token);
+    return `<path class="qseg qdetail ${token}" data-dimension="${escapeXml(segment.id)}" data-pattern="${escapeXml(tokenPattern(segment.token))}" d="${arcPath(cx, cy, 28, start, end)}" />`;
   }).join("");
 }
 
@@ -54,16 +113,17 @@ function compactRing(view, cx, cy) {
     cursor += sweep;
     const token = escapeXml(segment.token);
     const finding = escapeXml(segment.findingState);
+    const pattern = escapeXml(tokenPattern(segment.token));
     if (sweep >= 359.99) {
-      return `<circle class="qseg qcompact ${token}" data-finding="${finding}" cx="${cx}" cy="${cy}" r="28" />`;
+      return `<circle class="qseg qcompact ${token}" data-finding="${finding}" data-pattern="${pattern}" cx="${cx}" cy="${cy}" r="28" />`;
     }
-    return `<path class="qseg qcompact ${token}" data-finding="${finding}" data-count="${segment.count}" d="${arcPath(cx, cy, 28, start, end)}" />`;
+    return `<path class="qseg qcompact ${token}" data-finding="${finding}" data-pattern="${pattern}" data-count="${segment.count}" d="${arcPath(cx, cy, 28, start, end)}" />`;
   }).join("");
 }
 
 function unavailableRing(view, cx, cy) {
   if (view.mode !== "unavailable") throw new Error("unavailable Quality presentation requires unavailable view");
-  return `<circle class="quality-unavailable-ring" data-reason="${escapeXml(view.reason)}" cx="${cx}" cy="${cy}" r="28" />`;
+  return `<circle class="quality-unavailable-ring" data-reason="${escapeXml(view.reason)}" data-pattern="unavailable-sparse-dash" cx="${cx}" cy="${cy}" r="28" />`;
 }
 
 function artifactLabel(entry) {
@@ -81,6 +141,28 @@ function cardRing(entry, viewName, cx, cy) {
   throw new Error(`unsupported Quality presentation view: ${viewName}`);
 }
 
+function themeStyle(theme) {
+  return `
+    :root { color-scheme: ${theme.colorScheme}; }
+    .card-bg { fill: ${theme.card}; stroke: ${theme.cardStroke}; stroke-width: 1; }
+    .repository-core { fill: ${theme.core}; stroke: ${theme.coreStroke}; stroke-width: 2; }
+    .qseg { fill: none; stroke-width: 5; stroke-linecap: round; }
+    .quality-supports { stroke: ${theme.supports}; }
+    .quality-weakens { stroke: ${theme.weakens}; stroke-dasharray: 8 3; }
+    .quality-neutral { stroke: ${theme.neutral}; stroke-dasharray: 2 3; }
+    .quality-mixed { stroke: ${theme.mixed}; stroke-dasharray: 8 2 2 2; }
+    .quality-unknown { stroke: ${theme.unknown}; stroke-dasharray: 1 4; }
+    .quality-optional { stroke: ${theme.optional}; stroke-width: 2; stroke-dasharray: 5 4; opacity: .72; }
+    .quality-not-applicable { stroke: transparent; }
+    .quality-unresolved-applicability { stroke: ${theme.unresolved}; stroke-dasharray: 7 2 1 2; }
+    .quality-unavailable-ring { fill: none; stroke: ${theme.unavailable}; stroke-width: 3; stroke-dasharray: 2 6; opacity: .82; }
+    .repo-label { fill: ${theme.label}; font: 600 13px system-ui, sans-serif; }
+    .artifact-label, .coverage-label, .summary { fill: ${theme.meta}; font: 12px system-ui, sans-serif; }
+    .coverage-label { fill: ${theme.coverage}; }
+    .heading { fill: ${theme.heading}; font: 700 18px system-ui, sans-serif; }
+  `;
+}
+
 export function renderRepositoryQualityPresentationPrototypeSvg(modelValue, options = {}) {
   if (!modelValue || typeof modelValue !== "object" || Array.isArray(modelValue)) throw new Error("presentation model must be an object");
   if (modelValue.presentationId !== "ipm-repository-quality-presentation-v1") throw new Error("unsupported Quality presentation model");
@@ -88,6 +170,9 @@ export function renderRepositoryQualityPresentationPrototypeSvg(modelValue, opti
 
   const viewName = options.view ?? "compact";
   if (!new Set(["compact", "detail"]).has(viewName)) throw new Error(`unsupported Quality presentation view: ${viewName}`);
+  const themeName = options.theme ?? "dark";
+  const theme = REPOSITORY_QUALITY_PRESENTATION_THEMES[themeName];
+  if (!theme) throw new Error(`unsupported Quality presentation theme: ${String(themeName)}`);
   const columns = Number.isInteger(options.columns) && options.columns > 0 ? options.columns : 3;
   const cardWidth = 278;
   const cardHeight = 126;
@@ -127,26 +212,9 @@ export function renderRepositoryQualityPresentationPrototypeSvg(modelValue, opti
   const unavailable = modelValue.diagnostics?.unavailable ?? modelValue.repositories.length - available;
   const title = `Experimental repository Quality — ${available} available / ${unavailable} unavailable`;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeXml(title)}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeXml(title)}" data-theme="${themeName}" style="background:${theme.page}">
   <title>${escapeXml(title)}</title>
-  <style>
-    :root { color-scheme: dark; }
-    .card-bg { fill: #101827; stroke: #25334a; stroke-width: 1; }
-    .repository-core { fill: #dbeafe; stroke: #93c5fd; stroke-width: 2; }
-    .qseg { fill: none; stroke-width: 5; stroke-linecap: round; }
-    .quality-supports { stroke: #4ade80; }
-    .quality-weakens { stroke: #fb7185; }
-    .quality-neutral { stroke: #94a3b8; }
-    .quality-mixed { stroke: #fbbf24; stroke-dasharray: 3 3; }
-    .quality-unknown { stroke: #475569; stroke-dasharray: 2 4; }
-    .quality-optional { stroke: #64748b; stroke-width: 2; opacity: .38; }
-    .quality-not-applicable { stroke: transparent; }
-    .quality-unresolved-applicability { stroke: #c084fc; stroke-dasharray: 2 3; }
-    .quality-unavailable-ring { fill: none; stroke: #475569; stroke-width: 3; stroke-dasharray: 2 6; opacity: .72; }
-    .repo-label { fill: #f8fafc; font: 600 13px system-ui, sans-serif; }
-    .artifact-label, .coverage-label, .summary { fill: #94a3b8; font: 12px system-ui, sans-serif; }
-    .coverage-label { fill: #cbd5e1; }
-    .heading { fill: #f8fafc; font: 700 18px system-ui, sans-serif; }
+  <style>${themeStyle(theme)}
   </style>
   <text class="heading" x="${padding}" y="${padding + 18}">Repository Quality · experimental ${viewName}</text>
   <text class="summary" x="${padding}" y="${padding + 42}">${available} available · ${unavailable} unavailable · Structure remains default</text>
