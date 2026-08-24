@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contractId": "ipm-repository-fork-quality-v1",
+  "status": "experimental-contract",
+  "evidenceOrigins": [
+    "local",
+    "upstream-inherited",
+    "upstream-accepted",
+    "mixed",
+    "unknown"
+  ],
+  "snapshotQualityRole": "current-fork-artifact-context",
+  "localDeltaQualityRole": "person-side-quality-candidate",
+  "upstreamContextRole": "context-only",
+  "rules": {
+    "forkSnapshotQualityDoesNotImplyPersonalMerit": true,
+    "upstreamInheritedEvidenceCannotEnterLocalDeltaQuality": true,
+    "localDeltaQualityRequiresObservedPresentDelta": true,
+    "acceptedUpstreamContributionMayCountAsPersonSideEvidence": true,
+    "upstreamImpactNeverBecomesLocalImpact": true,
+    "noObservedLocalDeltaIsBoundedToComparisonScope": true,
+    "forkPortfolioQualityPresentationUsesLocalDeltaOnly": true,
+    "unknownLocalDeltaDoesNotBecomeZero": true
+  }
+}

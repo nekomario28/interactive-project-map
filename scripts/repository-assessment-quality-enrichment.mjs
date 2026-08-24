@@ -1,4 +1,5 @@
 import { validateRepositoryAssessmentArtifact } from "./repository-assessment-artifact.mjs";
+import { isForkQualityBundle, selectForkPortfolioQualityVector } from "./repository-fork-quality.mjs";
 import { buildQualityConfidenceVector } from "./repository-quality-confidence.mjs";
 
 const QUALITY_SECTION_STATES = new Set(["observed", "partial"]);
@@ -14,20 +15,47 @@ function canonicalKey(value, label) {
   return value.toLowerCase();
 }
 
-function compatibleArtifacts(repository, qualityValue) {
+function compatibleArtifacts(repository, artifacts, label) {
   const context = object(repository.context.artifacts, `${repository.identity.repositoryKey}.context.artifacts`);
   if (context.state === "unknown") {
     throw new Error(`${repository.identity.repositoryKey} cannot receive Quality while artifact context is unknown`);
   }
-  if (!Array.isArray(qualityValue.artifacts) || qualityValue.artifacts.length === 0) {
-    throw new Error(`${repository.identity.repositoryKey} Quality vector must declare non-empty artifacts`);
+  if (!Array.isArray(artifacts) || artifacts.length === 0) {
+    throw new Error(`${label} must declare non-empty artifacts`);
   }
   const allowed = new Set(context.values);
-  for (const artifact of qualityValue.artifacts) {
+  for (const artifact of artifacts) {
     if (!allowed.has(artifact)) {
-      throw new Error(`${repository.identity.repositoryKey} Quality vector artifact ${artifact} is not present in assessment context`);
+      throw new Error(`${repository.identity.repositoryKey} Quality artifact ${artifact} is not present in assessment context`);
     }
   }
+}
+
+function validateQualityValue(policy, repository, quality) {
+  const lineage = repository.context.relation?.lineage;
+  if (lineage === "fork") {
+    if (!isForkQualityBundle(quality)) {
+      throw new Error(`${repository.identity.repositoryKey} fork Quality requires provenance-aware fork bundle`);
+    }
+    compatibleArtifacts(repository, quality.artifacts, `${repository.identity.repositoryKey}.forkQuality.artifacts`);
+    const snapshot = object(quality.snapshotQuality, `${repository.identity.repositoryKey}.forkQuality.snapshotQuality`);
+    const snapshotVector = object(snapshot.value, `${repository.identity.repositoryKey}.forkQuality.snapshotQuality.value`);
+    compatibleArtifacts(repository, snapshotVector.artifacts, `${repository.identity.repositoryKey}.fork snapshot Quality artifacts`);
+    buildQualityConfidenceVector(policy, snapshotVector);
+
+    const selected = selectForkPortfolioQualityVector(quality);
+    if (selected.state === "available") {
+      compatibleArtifacts(repository, selected.value.artifacts, `${repository.identity.repositoryKey}.fork local-delta Quality artifacts`);
+      buildQualityConfidenceVector(policy, selected.value);
+    }
+    return;
+  }
+
+  if (isForkQualityBundle(quality)) {
+    throw new Error(`${repository.identity.repositoryKey} non-fork repository cannot receive fork Quality bundle`);
+  }
+  compatibleArtifacts(repository, quality.artifacts, `${repository.identity.repositoryKey}.Quality artifacts`);
+  buildQualityConfidenceVector(policy, quality);
 }
 
 function elevatedLevel(current, requested) {
@@ -72,10 +100,7 @@ export function enrichAssessmentArtifactQuality(policyValue, artifactValue, enri
     const state = enrichment.state ?? "partial";
     if (!QUALITY_SECTION_STATES.has(state)) throw new Error(`unsupported Quality enrichment state for ${repositoryKey}: ${state}`);
     const quality = object(enrichment.value, `${repositoryKey}.quality`);
-    compatibleArtifacts(repository, quality);
-
-    // Derive Confidence as a structural validation pass without persisting a second Confidence authority.
-    buildQualityConfidenceVector(policy, quality);
+    validateQualityValue(policy, repository, quality);
 
     repository.quality = { state, value: quality };
     const requestedLevel = enrichment.acquisitionLevel ?? "L1";

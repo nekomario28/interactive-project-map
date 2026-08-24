@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "forkQualityContractId": "ipm-repository-fork-quality-v1",
+  "status": "frozen-fork-quality-provenance-calibration",
+  "cases": [
+    {
+      "id": "gz-sim-fork-inherited-snapshot-no-default-branch-delta",
+      "repository": "nekomario28/gz-sim",
+      "context": {
+        "artifacts": ["library"],
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "fork" }
+      },
+      "upstream": { "repositoryKey": "gazebosim/gz-sim" },
+      "snapshotEvidence": {
+        "understandability": [
+          {
+            "origin": "upstream-inherited",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@baeb72f5d7382850dba8e72df391a77655139b73",
+            "claim": "Current fork snapshot contains the upstream project documentation; this supports current artifact understandability but is inherited provenance."
+          }
+        ],
+        "reproducibility": [
+          {
+            "origin": "upstream-inherited",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "CMakeLists.txt@283ee05db0ee82798fe6ee9af8c4c8807158fcb9",
+            "claim": "Current fork snapshot contains the upstream build contract; this supports current artifact reproducibility but is inherited provenance."
+          }
+        ],
+        "stewardship": [
+          {
+            "origin": "upstream-inherited",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "Apache-2.0 stewardship is present on the current fork snapshot but inherited from upstream."
+          }
+        ]
+      },
+      "localDeltaObservation": {
+        "state": "observed",
+        "presence": "absent",
+        "scope": "gazebosim/main...nekomario28/main",
+        "evidence": "0 commits ahead; 2 behind; no local-ahead changed files"
+      },
+      "expected": {
+        "snapshotOrigin": "upstream-inherited",
+        "snapshotSupports": ["understandability", "reproducibility", "stewardship"],
+        "localDeltaQualityState": "not-applicable",
+        "portfolioQualityAvailable": false
+      }
+    },
+    {
+      "id": "turing-fork-mixed-snapshot-with-local-default-branch-delta",
+      "repository": "nekomario28/turing-smart-screen-python-owl",
+      "context": {
+        "artifacts": ["library"],
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "fork" }
+      },
+      "upstream": { "repositoryKey": "mathoudebine/turing-smart-screen-python" },
+      "snapshotEvidence": {
+        "understandability": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@ddedac6db0f51c95027107029507de6fe76db402",
+            "claim": "Local fork README documents the OWL CPU COOLER DISPLAY purpose, Rev. C protocol and ImageOnly setup."
+          }
+        ],
+        "reproducibility": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "requirements.txt@4ec6abb85948bb498e6fc6494b4df77205b87544",
+            "claim": "Local fork requirements record bounded dependency versions and platform/Python-version conditions."
+          }
+        ],
+        "stewardship": [
+          {
+            "origin": "upstream-inherited",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "GPL-3.0 stewardship is present on the fork snapshot but is not treated as locally authored evidence."
+          }
+        ]
+      },
+      "localDeltaObservation": {
+        "state": "observed",
+        "presence": "present",
+        "scope": "mathoudebine/main...nekomario28/main",
+        "evidence": "3 commits ahead; 24 behind; local changes include Rev. C display communication, config, requirements, README and workflow adjustments"
+      },
+      "localDeltaEvidence": {
+        "understandability": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "local-ahead:README.md",
+            "claim": "The local-ahead README changes document the fork-specific hardware/protocol behavior and setup."
+          }
+        ],
+        "reproducibility": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "local-ahead:requirements.txt",
+            "claim": "The local-ahead dependency changes bound the environment needed by the fork-specific implementation."
+          }
+        ]
+      },
+      "expected": {
+        "snapshotOrigin": "mixed",
+        "snapshotSupports": ["understandability", "reproducibility", "stewardship"],
+        "localDeltaQualityState": "partial",
+        "localDeltaSupports": ["understandability", "reproducibility"],
+        "localDeltaStewardship": "unknown",
+        "portfolioQualityAvailable": true
+      }
+    }
+  ]
+}

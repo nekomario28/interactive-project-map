@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import { runRepositoryAssessmentCandidateCli } from "../scripts/repository-assessment-candidate.mjs";
 import { buildRepositoryQualityOverlayProjection } from "../scripts/repository-quality-assessment-projection.mjs";
-import { buildQualityEvidenceVector } from "../scripts/repository-quality-evidence.mjs";
 import { validateRepositoryAssessmentArtifact } from "../scripts/repository-assessment-artifact.mjs";
+import { loadBoundedQualityEnrichments } from "../scripts/repository-quality-live-sidecar-candidate.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -16,52 +16,16 @@ const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, re
 
 const policy = readJson("data/repository-assessment-policy.v1.json");
 const live = readJson("fixtures/repository-assessment-live-profile-minimal-2026-08-25.json");
-const applications = readJson("fixtures/repository-quality-real-calibration.v1.json");
-const libraries = readJson("fixtures/repository-quality-fork-library-calibration.v1.json");
+const manifestPath = path.join(root, "data/repository-quality-live-profile-enrichment-sources.v1.json");
+const manifest = readJson("data/repository-quality-live-profile-enrichment-sources.v1.json");
 const generatorRevision = "0b4caf1dcdd2f67fe35f772afce45b8782112209";
 
-function app(id) {
-  return applications.cases.find((entry) => entry.id === id);
-}
-
-function library(idPart) {
-  return libraries.cases.find((entry) => entry.id.includes(idPart));
-}
-
-function quality(artifacts, evidence) {
-  return buildQualityEvidenceVector(policy, { artifacts, evidence });
-}
-
 function qualityBundle() {
-  const ipm = app("interactive-project-map-application");
-  const group10 = app("projexd-group10-application");
-  const gz = library("gz-sim");
-  const turing = library("turing");
+  const loaded = loadBoundedQualityEnrichments(manifest, { manifestPath });
   return {
     schemaVersion: 1,
     assessmentPolicyId: policy.policyId,
-    enrichments: [
-      {
-        repositoryKey: "nekomario28/interactive-project-map",
-        state: "partial",
-        value: quality(ipm.context.artifacts, ipm.evidence),
-      },
-      {
-        repositoryKey: "nekomario28/projexd_group10",
-        state: "partial",
-        value: quality(group10.context.artifacts, group10.evidence),
-      },
-      {
-        repositoryKey: "nekomario28/gz-sim",
-        state: "partial",
-        value: quality(gz.context.artifacts, gz.qualityEvidence),
-      },
-      {
-        repositoryKey: "nekomario28/turing-smart-screen-python-owl",
-        state: "partial",
-        value: quality(turing.context.artifacts, turing.qualityEvidence),
-      },
-    ],
+    enrichments: loaded.enrichments,
   };
 }
 
@@ -141,17 +105,31 @@ test("explicit candidate CLI reproduces the frozen current profile with four bou
     "nekomario28/turing-smart-screen-python-owl",
   ]);
 
+  const gz = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/gz-sim");
+  const turing = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
+  assert.equal(gz.quality.value.contractId, "ipm-repository-fork-quality-v1");
+  assert.equal(gz.quality.value.localDelta.quality.state, "not-applicable");
+  assert.equal(turing.quality.value.contractId, "ipm-repository-fork-quality-v1");
+  assert.equal(turing.quality.value.localDelta.quality.state, "partial");
+
   assert.equal(run.assessment.repositories.some((entry) => entry.identity.repositoryKey === "fivethirtyeight/data"), false);
   assert.equal(fs.readFileSync(run.graphPath, "utf8"), run.graphBefore);
 });
 
-test("candidate output projects to exactly four available and eleven unavailable Quality overlays", () => {
+test("candidate output projects to three attribution-safe available and twelve unavailable Quality overlays", () => {
   const run = runCandidate(tempDir());
   const projection = buildRepositoryQualityOverlayProjection(policy, run.assessment);
 
   assert.equal(projection.repositories.length, 15);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 4);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 11);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 3);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 12);
+
+  const gz = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
+  const turing = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
+  assert.equal(gz.qualityAttributionScope, "local-delta");
+  assert.equal(gz.overlayState, "unavailable");
+  assert.equal(turing.qualityAttributionScope, "local-delta");
+  assert.equal(turing.overlayState, "available");
 
   const contributed = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "c0c25034/projexd_4");
   assert.deepEqual(contributed.context.category, { state: "unknown", id: null });

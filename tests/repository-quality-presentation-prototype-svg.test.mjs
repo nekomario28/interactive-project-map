@@ -4,9 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildRepositoryAssessmentCandidate } from "../scripts/repository-assessment-candidate.mjs";
-import { buildQualityEvidenceVector } from "../scripts/repository-quality-evidence.mjs";
-import { buildRepositoryQualityPresentationModel } from "../scripts/repository-quality-presentation.mjs";
+import { buildLiveQualitySidecarCandidates } from "../scripts/repository-quality-live-sidecar-candidate.mjs";
 import {
   REPOSITORY_QUALITY_PRESENTATION_THEMES,
   renderRepositoryQualityPresentationPrototypeSvg,
@@ -15,40 +13,11 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
-
-const policy = readJson("data/repository-assessment-policy.v1.json");
 const live = readJson("fixtures/repository-assessment-live-profile-minimal-2026-08-25.json");
-const applications = readJson("fixtures/repository-quality-real-calibration.v1.json");
-const libraries = readJson("fixtures/repository-quality-fork-library-calibration.v1.json");
 const generatorRevision = "0b4caf1dcdd2f67fe35f772afce45b8782112209";
 
-function app(id) {
-  return applications.cases.find((entry) => entry.id === id);
-}
-
-function library(idPart) {
-  return libraries.cases.find((entry) => entry.id.includes(idPart));
-}
-
-function quality(artifacts, evidence) {
-  return buildQualityEvidenceVector(policy, { artifacts, evidence });
-}
-
 function model() {
-  const ipm = app("interactive-project-map-application");
-  const group10 = app("projexd-group10-application");
-  const gz = library("gz-sim");
-  const turing = library("turing");
-  const assessment = buildRepositoryAssessmentCandidate(live.graph, {
-    generatorRevision,
-    qualityEnrichments: [
-      { repositoryKey: "nekomario28/interactive-project-map", state: "partial", value: quality(ipm.context.artifacts, ipm.evidence) },
-      { repositoryKey: "nekomario28/projexd_group10", state: "partial", value: quality(group10.context.artifacts, group10.evidence) },
-      { repositoryKey: "nekomario28/gz-sim", state: "partial", value: quality(gz.context.artifacts, gz.qualityEvidence) },
-      { repositoryKey: "nekomario28/turing-smart-screen-python-owl", state: "partial", value: quality(turing.context.artifacts, turing.qualityEvidence) },
-    ],
-  }).artifact;
-  return buildRepositoryQualityPresentationModel(policy, live.graph, assessment);
+  return buildLiveQualitySidecarCandidates(live.graph, { generatorRevision }).presentation;
 }
 
 function rgb(hex) {
@@ -70,32 +39,31 @@ function contrastRatio(left, right) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-test("compact current-profile Quality prototype renders all fifteen repositories with explicit 4/11 availability", () => {
+test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 3/12 availability", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "compact", columns: 3 });
 
   assert.match(svg, /^<svg /);
   assert.match(svg, /data-theme="dark"/);
-  assert.match(svg, /4 available · 11 unavailable · Structure remains default/);
+  assert.match(svg, /3 available · 12 unavailable · Structure remains default/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
   assert.equal((svg.match(/class="repository-core"/g) ?? []).length, 15);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 4);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 11);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 11);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 3);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 12);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 12);
   assert.equal(svg.includes("data-dimension="), false);
   assert.match(svg, /data-finding="supports"/);
   assert.match(svg, /data-pattern="supports-solid"/);
   assert.match(svg, /data-pattern="unavailable-sparse-dash"/);
-  assert.match(svg, /Quality not collected/);
 });
 
-test("detail current-profile Quality prototype preserves dimension identity only for the four assessed repositories", () => {
+test("detail current-profile Quality prototype preserves dimension identity only for three attribution-safe repositories", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "detail", columns: 3 });
 
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 4);
-  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 32);
-  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 32);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 11);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 3);
+  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 24);
+  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 24);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 12);
   assert.match(svg, /4\/6 interpreted/);
 });
 
@@ -115,16 +83,10 @@ test("Quality semantic states retain non-color line-pattern identities", () => {
 test("dark and light Quality themes meet text and graphical-object contrast floors", () => {
   for (const [themeName, theme] of Object.entries(REPOSITORY_QUALITY_PRESENTATION_THEMES)) {
     for (const token of ["supports", "weakens", "neutral", "mixed", "unknown", "optional", "unresolved", "unavailable"]) {
-      assert.ok(
-        contrastRatio(theme[token], theme.card) >= 3,
-        `${themeName}.${token} must retain at least 3:1 contrast against the card`,
-      );
+      assert.ok(contrastRatio(theme[token], theme.card) >= 3, `${themeName}.${token} must retain at least 3:1 contrast against the card`);
     }
     for (const token of ["heading", "label", "meta", "coverage"]) {
-      assert.ok(
-        contrastRatio(theme[token], theme.card) >= 4.5,
-        `${themeName}.${token} must retain at least 4.5:1 contrast against the card`,
-      );
+      assert.ok(contrastRatio(theme[token], theme.card) >= 4.5, `${themeName}.${token} must retain at least 4.5:1 contrast against the card`);
     }
   }
 });
@@ -135,22 +97,26 @@ test("light theme preserves the same current-profile semantics without changing 
   assert.match(svg, /data-theme="light"/);
   assert.match(svg, /color-scheme: light/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 4);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 11);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 3);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 12);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
   assert.equal(svg.includes("data-score="), false);
   assert.equal(svg.includes("prominence"), false);
 });
 
-test("prototype renders assessment artifact labels and does not import popularity or prominence geometry", () => {
-  const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "compact", columns: 5 });
+test("prototype keeps fork snapshot context separate from attribution-safe ring availability", () => {
+  const presentation = model();
+  const gz = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
+  const turing = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
+  assert.equal(gz.qualityAttributionScope, "local-delta");
+  assert.equal(gz.overlayState, "unavailable");
+  assert.equal(turing.qualityAttributionScope, "local-delta");
+  assert.equal(turing.overlayState, "available");
 
+  const svg = renderRepositoryQualityPresentationPrototypeSvg(presentation, { view: "compact", columns: 5 });
   assert.match(svg, /interactive-project-map/);
-  assert.match(svg, /application/);
   assert.match(svg, /gz-sim/);
-  assert.match(svg, /library/);
-  assert.match(svg, /c0c25034\/ProjExD_4|ProjExD_4/);
-  assert.match(svg, /artifact unknown/);
+  assert.match(svg, /turing-smart-screen-python-owl/);
   assert.equal(svg.includes("data-score="), false);
   assert.equal(svg.includes("stargazers"), false);
   assert.equal(svg.includes("forks_count"), false);
@@ -164,16 +130,7 @@ test("prototype keeps external dataset donor out of the personal Quality canvas"
 });
 
 test("prototype rejects unsupported models, views, and themes", () => {
-  assert.throws(
-    () => renderRepositoryQualityPresentationPrototypeSvg({ presentationId: "wrong", repositories: [{}] }),
-    /unsupported Quality presentation model/,
-  );
-  assert.throws(
-    () => renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "score" }),
-    /unsupported Quality presentation view/,
-  );
-  assert.throws(
-    () => renderRepositoryQualityPresentationPrototypeSvg(model(), { theme: "sepia" }),
-    /unsupported Quality presentation theme/,
-  );
+  assert.throws(() => renderRepositoryQualityPresentationPrototypeSvg({ presentationId: "wrong", repositories: [{}] }), /unsupported Quality presentation model/);
+  assert.throws(() => renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "score" }), /unsupported Quality presentation view/);
+  assert.throws(() => renderRepositoryQualityPresentationPrototypeSvg(model(), { theme: "sepia" }), /unsupported Quality presentation theme/);
 });

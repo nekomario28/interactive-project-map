@@ -3,31 +3,37 @@
   "manifestId": "ipm-live-profile-quality-enrichment-sources-v1",
   "assessmentPolicyId": "ipm-repository-assessment-v1",
   "status": "experimental-bounded-frozen-evidence-reuse",
-  "claimBoundary": "These selectors reuse frozen real-evidence calibration cases as bounded experimental Quality evidence inputs. They do not make the fixtures production authority, do not discover repositories, and do not refresh stale evidence automatically.",
+  "claimBoundary": "These selectors reuse frozen real-evidence calibration cases as bounded experimental Quality evidence inputs. Fork sources are provenance-aware: current snapshot Quality remains context, while portfolio presentation may use only local-delta Quality. The manifest does not make fixtures production authority, discover repositories, or refresh stale evidence automatically.",
   "sources": [
     {
       "repositoryKey": "nekomario28/interactive-project-map",
+      "mode": "repository-snapshot",
       "fixture": "fixtures/repository-quality-real-calibration.v1.json",
       "caseId": "interactive-project-map-application",
-      "evidenceField": "evidence"
+      "evidenceField": "evidence",
+      "presentationExpected": "available"
     },
     {
       "repositoryKey": "nekomario28/projexd_group10",
+      "mode": "repository-snapshot",
       "fixture": "fixtures/repository-quality-real-calibration.v1.json",
       "caseId": "projexd-group10-application",
-      "evidenceField": "evidence"
+      "evidenceField": "evidence",
+      "presentationExpected": "available"
     },
     {
       "repositoryKey": "nekomario28/gz-sim",
-      "fixture": "fixtures/repository-quality-fork-library-calibration.v1.json",
-      "caseId": "gz-sim-library-fork-no-default-branch-delta",
-      "evidenceField": "qualityEvidence"
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",
+      "caseId": "gz-sim-fork-inherited-snapshot-no-default-branch-delta",
+      "presentationExpected": "unavailable"
     },
     {
       "repositoryKey": "nekomario28/turing-smart-screen-python-owl",
-      "fixture": "fixtures/repository-quality-fork-library-calibration.v1.json",
-      "caseId": "turing-library-fork-with-default-branch-delta",
-      "evidenceField": "qualityEvidence"
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",
+      "caseId": "turing-fork-mixed-snapshot-with-local-default-branch-delta",
+      "presentationExpected": "available"
     }
   ]
 }

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { buildL0RepositoryAssessmentFromGraph } from "../scripts/repository-assessment-from-graph.mjs";
 import { enrichAssessmentArtifactQuality } from "../scripts/repository-assessment-quality-enrichment.mjs";
 import { buildQualityEvidenceVector } from "../scripts/repository-quality-evidence.mjs";
-import { buildRepositoryQualityOverlayProjection } from "../scripts/repository-quality-assessment-projection.mjs";
+import { buildLiveQualitySidecarCandidates } from "../scripts/repository-quality-live-sidecar-candidate.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -16,55 +16,18 @@ const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, re
 const policy = readJson("data/repository-assessment-policy.v1.json");
 const live = readJson("fixtures/repository-assessment-live-profile-minimal-2026-08-25.json");
 const applications = readJson("fixtures/repository-quality-real-calibration.v1.json");
-const libraries = readJson("fixtures/repository-quality-fork-library-calibration.v1.json");
 const generatorRevision = "f6af4d01c8be331969a1389d9d2f1fee197a8755";
 
 function app(id) {
   return applications.cases.find((entry) => entry.id === id);
 }
 
-function library(idPart) {
-  return libraries.cases.find((entry) => entry.id.includes(idPart));
-}
-
 function quality(artifacts, evidence) {
   return buildQualityEvidenceVector(policy, { artifacts, evidence });
 }
 
-function enrichments() {
-  const ipm = app("interactive-project-map-application");
-  const group10 = app("projexd-group10-application");
-  const gz = library("gz-sim");
-  const turing = library("turing");
-  return [
-    {
-      repositoryKey: "nekomario28/interactive-project-map",
-      state: "partial",
-      value: quality(ipm.context.artifacts, ipm.evidence),
-    },
-    {
-      repositoryKey: "nekomario28/projexd_group10",
-      state: "partial",
-      value: quality(group10.context.artifacts, group10.evidence),
-    },
-    {
-      repositoryKey: "nekomario28/gz-sim",
-      state: "partial",
-      value: quality(gz.context.artifacts, gz.qualityEvidence),
-    },
-    {
-      repositoryKey: "nekomario28/turing-smart-screen-python-owl",
-      state: "partial",
-      value: quality(turing.context.artifacts, turing.qualityEvidence),
-    },
-  ];
-}
-
 function runLiveProjection() {
-  const l0 = buildL0RepositoryAssessmentFromGraph(live.graph, { generatorRevision });
-  const enriched = enrichAssessmentArtifactQuality(policy, l0.artifact, enrichments());
-  const projection = buildRepositoryQualityOverlayProjection(policy, enriched.artifact);
-  return { l0, enriched, projection };
+  return buildLiveQualitySidecarCandidates(live.graph, { generatorRevision });
 }
 
 test("frozen current profile projection reproduces full L0 diagnostics", () => {
@@ -72,7 +35,7 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   assert.equal(live.source.graphGeneratedAt, "2026-08-24T18:19:46.396Z");
   assert.equal(live.graph.nodes.filter((node) => node.type === "repository").length, 15);
 
-  const { l0 } = runLiveProjection();
+  const l0 = buildL0RepositoryAssessmentFromGraph(live.graph, { generatorRevision });
   assert.deepEqual(l0.diagnostics, {
     repositories: 15,
     owned: 14,
@@ -92,48 +55,54 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 and exposes exactly four overlays", () => {
-  const { l0, enriched, projection } = runLiveProjection();
+test("bounded Quality enrichment keeps live membership 15 -> 15 while fork attribution yields three portfolio overlays", () => {
+  const result = runLiveProjection();
 
-  assert.equal(l0.artifact.repositories.length, 15);
-  assert.equal(enriched.artifact.repositories.length, 15);
-  assert.equal(enriched.diagnostics.repositoriesBefore, 15);
-  assert.equal(enriched.diagnostics.repositoriesAfter, 15);
-  assert.equal(enriched.diagnostics.requested, 4);
-  assert.equal(enriched.diagnostics.applied, 4);
-  assert.equal(enriched.diagnostics.partial, 4);
-  assert.equal(enriched.diagnostics.acquisitionElevated, 4);
+  assert.equal(result.assessment.repositories.length, 15);
+  assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
+  assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
+  assert.equal(result.diagnostics.assessment.quality.requested, 4);
+  assert.equal(result.diagnostics.assessment.quality.applied, 4);
+  assert.equal(result.diagnostics.assessment.quality.partial, 4);
 
-  assert.equal(projection.repositories.length, 15);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 4);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 11);
+  assert.equal(result.presentation.repositories.length, 15);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 3);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 12);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 3);
 });
 
-test("current-profile Quality overlay summaries match frozen real calibration cases", () => {
-  const { projection } = runLiveProjection();
-  const byKey = new Map(projection.repositories.map((entry) => [entry.repositoryKey, entry]));
+test("current-profile Quality overlay summaries use local-delta-only scope for forks", () => {
+  const result = runLiveProjection();
+  const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
   const ipm = byKey.get("nekomario28/interactive-project-map");
+  assert.equal(ipm.qualityAttributionScope, "repository-snapshot");
   assert.equal(ipm.overlay.coverage.label, "4/6 interpreted");
   assert.equal(ipm.overlay.targetFindingCounts.supports, 4);
   assert.equal(ipm.overlay.targetFindingCounts.unknown, 2);
 
   const group10 = byKey.get("nekomario28/projexd_group10");
+  assert.equal(group10.qualityAttributionScope, "repository-snapshot");
   assert.equal(group10.overlay.targetFindingCounts.supports, 2);
   assert.equal(group10.overlay.targetFindingCounts.weakens, 1);
   assert.equal(group10.overlay.targetFindingCounts.unknown, 3);
 
-  for (const key of ["nekomario28/gz-sim", "nekomario28/turing-smart-screen-python-owl"]) {
-    const entry = byKey.get(key);
-    assert.equal(entry.overlay.coverage.targetDimensions, 6);
-    assert.equal(entry.overlay.targetFindingCounts.supports, 3);
-    assert.equal(entry.overlay.targetFindingCounts.unknown, 3);
-  }
+  const gz = byKey.get("nekomario28/gz-sim");
+  assert.equal(gz.qualityAttributionScope, "local-delta");
+  assert.equal(gz.overlayState, "unavailable");
+  assert.equal(gz.unavailableReason, "no-local-delta-observed-in-comparison-scope");
+
+  const turing = byKey.get("nekomario28/turing-smart-screen-python-owl");
+  assert.equal(turing.qualityAttributionScope, "local-delta");
+  assert.equal(turing.overlayState, "available");
+  assert.equal(turing.overlay.coverage.targetDimensions, 6);
+  assert.equal(turing.overlay.targetFindingCounts.supports, 2);
+  assert.equal(turing.overlay.targetFindingCounts.unknown, 4);
 });
 
 test("Quality enrichment does not smuggle L1 relation knowledge into the live L0 sidecar", () => {
-  const { enriched } = runLiveProjection();
-  const byKey = new Map(enriched.artifact.repositories.map((entry) => [entry.identity.repositoryKey, entry]));
+  const result = runLiveProjection();
+  const byKey = new Map(result.assessment.repositories.map((entry) => [entry.identity.repositoryKey, entry]));
 
   assert.deepEqual(byKey.get("nekomario28/projexd_group10").context.relation, {
     ownership: "owned",
@@ -153,7 +122,7 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
 });
 
 test("current contributed ProjExD_4 remains semantic-context unresolved and cannot be Quality-enriched through the L0 path", () => {
-  const { l0 } = runLiveProjection();
+  const l0 = buildL0RepositoryAssessmentFromGraph(live.graph, { generatorRevision });
   const contributed = l0.artifact.repositories.find((entry) => entry.identity.repositoryKey === "c0c25034/projexd_4");
 
   assert.deepEqual(contributed.context.category, { state: "unknown", id: null });
@@ -173,6 +142,6 @@ test("current contributed ProjExD_4 remains semantic-context unresolved and cann
 });
 
 test("live profile snapshot contains no external calibration donor membership", () => {
-  const { l0 } = runLiveProjection();
-  assert.equal(l0.artifact.repositories.some((entry) => entry.identity.repositoryKey === "fivethirtyeight/data"), false);
+  const result = runLiveProjection();
+  assert.equal(result.assessment.repositories.some((entry) => entry.identity.repositoryKey === "fivethirtyeight/data"), false);
 });

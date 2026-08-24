@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { buildRepositoryAssessmentCandidate } from "./repository-assessment-candidate.mjs";
+import { buildForkQualityBundle } from "./repository-fork-quality.mjs";
 import { buildRepositoryQualityPresentationCandidate } from "./repository-quality-presentation-candidate.mjs";
 import { buildQualityEvidenceVector } from "./repository-quality-evidence.mjs";
 
@@ -10,6 +11,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const policy = JSON.parse(fs.readFileSync(path.join(root, "data/repository-assessment-policy.v1.json"), "utf8"));
 const defaultManifestPath = path.join(root, "data/repository-quality-live-profile-enrichment-sources.v1.json");
+const SOURCE_MODES = new Set(["repository-snapshot", "fork-local-delta"]);
+const PRESENTATION_EXPECTATIONS = new Set(["available", "unavailable"]);
 
 function object(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
@@ -43,6 +46,56 @@ function resolveManifestFixture(manifestPath, fixturePath) {
   return path.resolve(path.dirname(manifestPath), fixturePath);
 }
 
+function loadFixture(fixtureCache, manifestPath, source) {
+  const fixturePath = resolveManifestFixture(manifestPath, source.fixture);
+  let fixture = fixtureCache.get(fixturePath);
+  if (!fixture) {
+    fixture = object(readJson(fixturePath, `Quality calibration fixture ${source.fixture}`), `Quality calibration fixture ${source.fixture}`);
+    if (fixture.schemaVersion !== 1) throw new Error(`${source.fixture} schemaVersion must be 1`);
+    if (fixture.policyId !== policy.policyId) throw new Error(`${source.fixture} policy mismatch`);
+    if (typeof fixture.status !== "string" || !fixture.status.startsWith("frozen-")) throw new Error(`${source.fixture} must remain a frozen evidence source`);
+    if (!Array.isArray(fixture.cases)) throw new Error(`${source.fixture} cases must be an array`);
+    fixtureCache.set(fixturePath, fixture);
+  }
+  return fixture;
+}
+
+function buildSnapshotSourceValue(source, selected) {
+  const context = object(selected.context, `${source.caseId}.context`);
+  if (!Array.isArray(context.artifacts) || context.artifacts.length === 0) throw new Error(`${source.caseId}.context.artifacts must be non-empty`);
+  const evidenceField = String(source.evidenceField || "");
+  if (!new Set(["evidence", "qualityEvidence"]).has(evidenceField)) throw new Error(`${source.caseId} has unsupported evidenceField`);
+  const evidence = object(selected[evidenceField], `${source.caseId}.${evidenceField}`);
+  return {
+    value: buildQualityEvidenceVector(policy, { artifacts: context.artifacts, evidence }),
+    artifacts: [...context.artifacts],
+    evidenceField,
+    qualityAttributionScope: "repository-snapshot",
+  };
+}
+
+function buildForkSourceValue(source, selected) {
+  const context = object(selected.context, `${source.caseId}.context`);
+  if (!Array.isArray(context.artifacts) || context.artifacts.length === 0) throw new Error(`${source.caseId}.context.artifacts must be non-empty`);
+  const relation = object(context.relation, `${source.caseId}.context.relation`);
+  if (relation.lineage !== "fork") throw new Error(`${source.caseId} fork-local-delta source must declare fork lineage`);
+  return {
+    value: buildForkQualityBundle(policy, {
+      relation,
+      artifacts: context.artifacts,
+      upstream: selected.upstream,
+      snapshotEvidence: selected.snapshotEvidence,
+      snapshotApplicability: selected.snapshotApplicability,
+      localDeltaObservation: selected.localDeltaObservation,
+      localDeltaEvidence: selected.localDeltaEvidence,
+      localDeltaApplicability: selected.localDeltaApplicability,
+    }),
+    artifacts: [...context.artifacts],
+    evidenceField: "fork-quality-bundle",
+    qualityAttributionScope: "local-delta",
+  };
+}
+
 export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
   const manifest = object(manifestValue, "Quality enrichment source manifest");
   if (manifest.schemaVersion !== 1) throw new Error("Quality enrichment source manifest schemaVersion must be 1");
@@ -54,49 +107,48 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
   const fixtureCache = new Map();
   const seenKeys = new Set();
   const sourceDiagnostics = [];
+  let expectedPresentationAvailable = 0;
+
   const enrichments = manifest.sources.map((sourceValue, index) => {
     const source = object(sourceValue, `manifest.sources[${index}]`);
     const repositoryKey = normalizedRepositoryKey(source.repositoryKey);
     if (seenKeys.has(repositoryKey)) throw new Error(`duplicate Quality enrichment repositoryKey: ${repositoryKey}`);
     seenKeys.add(repositoryKey);
 
-    const fixturePath = resolveManifestFixture(manifestPath, source.fixture);
-    let fixture = fixtureCache.get(fixturePath);
-    if (!fixture) {
-      fixture = object(readJson(fixturePath, `Quality calibration fixture ${source.fixture}`), `Quality calibration fixture ${source.fixture}`);
-      if (fixture.schemaVersion !== 1) throw new Error(`${source.fixture} schemaVersion must be 1`);
-      if (fixture.policyId !== policy.policyId) throw new Error(`${source.fixture} policy mismatch`);
-      if (typeof fixture.status !== "string" || !fixture.status.startsWith("frozen-")) throw new Error(`${source.fixture} must remain a frozen evidence source`);
-      if (!Array.isArray(fixture.cases)) throw new Error(`${source.fixture} cases must be an array`);
-      fixtureCache.set(fixturePath, fixture);
-    }
+    const mode = source.mode ?? "repository-snapshot";
+    if (!SOURCE_MODES.has(mode)) throw new Error(`${source.caseId ?? repositoryKey} has unsupported Quality source mode: ${mode}`);
+    const presentationExpected = source.presentationExpected ?? "available";
+    if (!PRESENTATION_EXPECTATIONS.has(presentationExpected)) throw new Error(`${source.caseId ?? repositoryKey} has unsupported presentationExpected`);
+    if (presentationExpected === "available") expectedPresentationAvailable += 1;
 
+    const fixture = loadFixture(fixtureCache, manifestPath, source);
     const selected = fixture.cases.find((entry) => entry?.id === source.caseId);
     if (!selected) throw new Error(`Quality calibration case not found: ${source.caseId}`);
     const selectedRepository = normalizedRepositoryKey(selected.repository);
     if (selectedRepository !== repositoryKey) {
       throw new Error(`Quality calibration repository mismatch for ${source.caseId}: ${selectedRepository} != ${repositoryKey}`);
     }
-    const context = object(selected.context, `${source.caseId}.context`);
-    if (!Array.isArray(context.artifacts) || context.artifacts.length === 0) throw new Error(`${source.caseId}.context.artifacts must be non-empty`);
-    const evidenceField = String(source.evidenceField || "");
-    if (!new Set(["evidence", "qualityEvidence"]).has(evidenceField)) throw new Error(`${source.caseId} has unsupported evidenceField`);
-    const evidence = object(selected[evidenceField], `${source.caseId}.${evidenceField}`);
-    const value = buildQualityEvidenceVector(policy, { artifacts: context.artifacts, evidence });
+
+    const built = mode === "fork-local-delta"
+      ? buildForkSourceValue(source, selected)
+      : buildSnapshotSourceValue(source, selected);
 
     sourceDiagnostics.push({
       repositoryKey,
+      mode,
       fixture: source.fixture,
       fixtureStatus: fixture.status,
       fixtureSnapshotDate: fixture.snapshotDate ?? null,
       caseId: source.caseId,
-      evidenceField,
-      artifacts: [...context.artifacts],
+      evidenceField: built.evidenceField,
+      qualityAttributionScope: built.qualityAttributionScope,
+      presentationExpected,
+      artifacts: built.artifacts,
     });
-    return { repositoryKey, state: "partial", value };
+    return { repositoryKey, state: "partial", value: built.value };
   });
 
-  return { enrichments, sourceDiagnostics };
+  return { enrichments, sourceDiagnostics, expectedPresentationAvailable };
 }
 
 export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
@@ -108,7 +160,7 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
 
   const manifestPath = path.resolve(options.manifestPath ?? defaultManifestPath);
   const manifest = options.manifest ?? readJson(manifestPath, "Quality enrichment source manifest");
-  const { enrichments, sourceDiagnostics } = loadBoundedQualityEnrichments(manifest, { manifestPath });
+  const { enrichments, sourceDiagnostics, expectedPresentationAvailable } = loadBoundedQualityEnrichments(manifest, { manifestPath });
   const assessmentResult = buildRepositoryAssessmentCandidate(graph, {
     generatorRevision: options.generatorRevision,
     generatedAt: options.assessmentGeneratedAt,
@@ -124,8 +176,8 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
   if (presentation.diagnostics.joinedRepositories !== repositoryNodes.length) {
     throw new Error("generated Quality presentation does not strictly join every repository node");
   }
-  if (presentation.diagnostics.available !== enrichments.length) {
-    throw new Error("generated Quality presentation available count does not match bounded enrichment count");
+  if (presentation.diagnostics.available !== expectedPresentationAvailable) {
+    throw new Error(`generated Quality presentation available count ${presentation.diagnostics.available} does not match manifest expectation ${expectedPresentationAvailable}`);
   }
 
   return {
@@ -148,11 +200,14 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
         quality: assessmentResult.diagnostics.quality,
       },
       presentation: presentation.diagnostics,
+      expectedPresentationAvailable,
       enrichmentSources: sourceDiagnostics,
       invariants: {
         sourceGraphGeneratedAtCopiedExactly: true,
         repositoryMembershipComesOnlyFromGraph: true,
         frozenEvidenceSourcesAreExplicit: true,
+        forkQualityUsesProvenanceAwareBundle: true,
+        forkPortfolioQualityUsesLocalDeltaOnly: true,
         publicationPerformed: false,
         defaultActionChanged: false,
       },

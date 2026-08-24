@@ -1,4 +1,5 @@
 import { validateRepositoryAssessmentArtifact } from "./repository-assessment-artifact.mjs";
+import { isForkQualityBundle, selectForkPortfolioQualityVector } from "./repository-fork-quality.mjs";
 import { buildQualityConfidenceVector } from "./repository-quality-confidence.mjs";
 import { buildQualityOverlayModel } from "./repository-quality-overlay.mjs";
 
@@ -25,19 +26,19 @@ function ensureQualityContextMatches(repository, qualityVector) {
   }
 }
 
-function unavailableRepositoryProjection(repository) {
+function unavailableRepositoryProjection(repository, reason = repository.quality.state, qualityAttributionScope = null) {
   return {
     repositoryKey: repository.identity.repositoryKey,
     graphNodeId: repository.identity.graphNodeId,
     qualitySectionState: repository.quality.state,
+    qualityAttributionScope,
     overlayState: "unavailable",
-    unavailableReason: repository.quality.state,
+    unavailableReason: reason,
     overlay: null,
   };
 }
 
-function availableRepositoryProjection(policy, repository) {
-  const qualityVector = object(repository.quality.value, `${repository.identity.repositoryKey}.quality.value`);
+function overlayProjection(policy, repository, qualityVector, qualityAttributionScope) {
   ensureQualityContextMatches(repository, qualityVector);
   const confidenceVector = buildQualityConfidenceVector(policy, qualityVector);
   const overlay = buildQualityOverlayModel(policy, qualityVector, confidenceVector);
@@ -45,10 +46,30 @@ function availableRepositoryProjection(policy, repository) {
     repositoryKey: repository.identity.repositoryKey,
     graphNodeId: repository.identity.graphNodeId,
     qualitySectionState: repository.quality.state,
+    qualityAttributionScope,
     overlayState: "available",
     unavailableReason: null,
     overlay,
   };
+}
+
+function availableRepositoryProjection(policy, repository) {
+  const qualityValue = object(repository.quality.value, `${repository.identity.repositoryKey}.quality.value`);
+  if (repository.context.relation?.lineage === "fork") {
+    if (!isForkQualityBundle(qualityValue)) {
+      return unavailableRepositoryProjection(repository, "fork-quality-requires-provenance-bundle", "local-delta");
+    }
+    const selected = selectForkPortfolioQualityVector(qualityValue);
+    if (selected.state !== "available") {
+      return unavailableRepositoryProjection(repository, selected.reason, "local-delta");
+    }
+    return overlayProjection(policy, repository, selected.value, "local-delta");
+  }
+
+  if (isForkQualityBundle(qualityValue)) {
+    throw new Error(`${repository.identity.repositoryKey} non-fork repository cannot expose fork Quality bundle`);
+  }
+  return overlayProjection(policy, repository, qualityValue, "repository-snapshot");
 }
 
 export function buildRepositoryQualityOverlayProjection(policyValue, artifactValue) {
@@ -82,6 +103,8 @@ export function buildRepositoryQualityOverlayProjection(policyValue, artifactVal
       uncollectedQualityDoesNotBecomeUnknownRing: true,
       confidenceDerivedFromQualityVector: true,
       fullAndCompactShareOneSemanticSource: true,
+      forkPortfolioQualityUsesLocalDeltaOnly: true,
+      forkSnapshotQualityDoesNotBecomePersonalQualityRing: true,
       productionRankingAllowed: false,
     },
   };

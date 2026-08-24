@@ -8,6 +8,7 @@ import {
   buildRepositoryAssessmentArtifact,
   makeAssessmentRepositorySkeleton,
 } from "../scripts/repository-assessment-artifact.mjs";
+import { buildForkQualityBundle } from "../scripts/repository-fork-quality.mjs";
 import { buildQualityEvidenceVector } from "../scripts/repository-quality-evidence.mjs";
 import { buildRepositoryQualityOverlayProjection } from "../scripts/repository-quality-assessment-projection.mjs";
 
@@ -16,7 +17,7 @@ const root = path.resolve(here, "..");
 const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
 const policy = readJson("data/repository-assessment-policy.v1.json");
 const applications = readJson("fixtures/repository-quality-real-calibration.v1.json");
-const libraries = readJson("fixtures/repository-quality-fork-library-calibration.v1.json");
+const forks = readJson("fixtures/repository-fork-quality-provenance-calibration.v1.json");
 const dataset = readJson("fixtures/repository-quality-external-dataset-calibration.v1.json");
 
 const GENERATED_AT = "2026-08-25T00:00:00.000Z";
@@ -24,6 +25,17 @@ const GENERATOR_REVISION = "263ee2057415aeb7f970a7ef9ac2fadad8de645f";
 
 function qualityVector(artifacts, evidence) {
   return buildQualityEvidenceVector(policy, { artifacts, evidence });
+}
+
+function forkVector(entry) {
+  return buildForkQualityBundle(policy, {
+    relation: entry.context.relation,
+    artifacts: entry.context.artifacts,
+    upstream: entry.upstream,
+    snapshotEvidence: entry.snapshotEvidence,
+    localDeltaObservation: entry.localDeltaObservation,
+    localDeltaEvidence: entry.localDeltaEvidence,
+  });
 }
 
 function repository(rootOwner, input) {
@@ -47,15 +59,15 @@ function appCase(id) {
   return applications.cases.find((entry) => entry.id === id);
 }
 
-function libraryCase(idPart) {
-  return libraries.cases.find((entry) => entry.id.includes(idPart));
+function forkCase(idPart) {
+  return forks.cases.find((entry) => entry.id.includes(idPart));
 }
 
 function buildPersonalArtifact() {
   const ipm = appCase("interactive-project-map-application");
   const group10 = appCase("projexd-group10-application");
-  const gz = libraryCase("gz-sim");
-  const turing = libraryCase("turing");
+  const gz = forkCase("gz-sim");
+  const turing = forkCase("turing");
 
   const repositories = [
     repository("nekomario28", {
@@ -75,16 +87,16 @@ function buildPersonalArtifact() {
     repository("nekomario28", {
       name: "gz-sim",
       relation: gz.context.relation,
-      categoryId: gz.context.category,
+      categoryId: "robotics-automation",
       artifacts: gz.context.artifacts,
-      qualityValue: qualityVector(gz.context.artifacts, gz.qualityEvidence),
+      qualityValue: forkVector(gz),
     }),
     repository("nekomario28", {
       name: "turing-smart-screen-python-owl",
       relation: turing.context.relation,
-      categoryId: turing.context.category,
+      categoryId: "hardware-embedded",
       artifacts: turing.context.artifacts,
-      qualityValue: qualityVector(turing.context.artifacts, turing.qualityEvidence),
+      qualityValue: forkVector(turing),
     }),
     repository("nekomario28", {
       name: "FTBPublicClaims",
@@ -119,33 +131,37 @@ function buildDatasetDonorArtifact() {
   });
 }
 
-test("real personal calibration cases project through assessment artifact envelopes", () => {
+test("real personal calibration cases project through assessment artifact envelopes without attributing inherited fork snapshot Quality", () => {
   const artifact = buildPersonalArtifact();
   const projection = buildRepositoryQualityOverlayProjection(policy, artifact);
 
   assert.equal(artifact.owner, "nekomario28");
   assert.equal(artifact.repositories.length, 5);
   assert.equal(projection.repositories.length, 5);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 4);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 1);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 3);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 2);
 
   const unassessed = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   assert.equal(unassessed.qualitySectionState, "not-collected");
   assert.equal(unassessed.overlay, null);
 
   const ipm = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/interactive-project-map");
+  assert.equal(ipm.qualityAttributionScope, "repository-snapshot");
   assert.equal(ipm.overlay.coverage.label, "4/6 interpreted");
-  assert.equal(ipm.overlay.targetFindingCounts.supports, 4);
 
   const group10 = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/projexd_group10");
   assert.equal(group10.overlay.targetFindingCounts.weakens, 1);
 
-  const forkKeys = new Set(["nekomario28/gz-sim", "nekomario28/turing-smart-screen-python-owl"]);
-  for (const entry of projection.repositories.filter((candidate) => forkKeys.has(candidate.repositoryKey))) {
-    assert.equal(entry.overlay.coverage.targetDimensions, 6);
-    assert.equal(entry.overlay.targetFindingCounts.supports, 3);
-    assert.equal(entry.overlay.targetFindingCounts.unknown, 3);
-  }
+  const gz = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
+  assert.equal(gz.qualityAttributionScope, "local-delta");
+  assert.equal(gz.overlayState, "unavailable");
+  assert.equal(gz.unavailableReason, "no-local-delta-observed-in-comparison-scope");
+
+  const turing = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
+  assert.equal(turing.qualityAttributionScope, "local-delta");
+  assert.equal(turing.overlayState, "available");
+  assert.equal(turing.overlay.targetFindingCounts.supports, 2);
+  assert.equal(turing.overlay.targetFindingCounts.unknown, 4);
 });
 
 test("external dataset donor stays in a donor-owned calibration artifact instead of personal portfolio identity", () => {
@@ -157,10 +173,10 @@ test("external dataset donor stays in a donor-owned calibration artifact instead
   assert.equal(donorArtifact.owner, "fivethirtyeight");
   assert.equal(donorArtifact.repositories.length, 1);
   assert.equal(donorArtifact.repositories[0].identity.repositoryKey, "fivethirtyeight/data");
-  assert.equal(donorArtifact.repositories[0].context.relation.ownership, "owned");
 
   const donor = donorProjection.repositories[0];
   assert.equal(donor.overlayState, "available");
+  assert.equal(donor.qualityAttributionScope, "repository-snapshot");
   assert.equal(donor.overlay.coverage.targetDimensions, 5);
   assert.equal(donor.overlay.coverage.directionalDimensions, 4);
   assert.equal(donor.overlay.targetFindingCounts.supports, 4);

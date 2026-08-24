@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildRepositoryAssessmentCandidate } from "../scripts/repository-assessment-candidate.mjs";
-import { buildQualityEvidenceVector } from "../scripts/repository-quality-evidence.mjs";
+import { loadBoundedQualityEnrichments } from "../scripts/repository-quality-live-sidecar-candidate.mjs";
 import {
   buildRepositoryQualityPresentationCandidate,
   runRepositoryQualityPresentationCandidateCli,
@@ -15,35 +15,13 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
-const policy = readJson("data/repository-assessment-policy.v1.json");
 const live = readJson("fixtures/repository-assessment-live-profile-minimal-2026-08-25.json");
-const applications = readJson("fixtures/repository-quality-real-calibration.v1.json");
-const libraries = readJson("fixtures/repository-quality-fork-library-calibration.v1.json");
+const manifestPath = path.join(root, "data/repository-quality-live-profile-enrichment-sources.v1.json");
+const manifest = readJson("data/repository-quality-live-profile-enrichment-sources.v1.json");
 const generatorRevision = "0b4caf1dcdd2f67fe35f772afce45b8782112209";
 
-function app(id) {
-  return applications.cases.find((entry) => entry.id === id);
-}
-
-function library(idPart) {
-  return libraries.cases.find((entry) => entry.id.includes(idPart));
-}
-
-function quality(artifacts, evidence) {
-  return buildQualityEvidenceVector(policy, { artifacts, evidence });
-}
-
 function enrichments() {
-  const ipm = app("interactive-project-map-application");
-  const group10 = app("projexd-group10-application");
-  const gz = library("gz-sim");
-  const turing = library("turing");
-  return [
-    { repositoryKey: "nekomario28/interactive-project-map", state: "partial", value: quality(ipm.context.artifacts, ipm.evidence) },
-    { repositoryKey: "nekomario28/projexd_group10", state: "partial", value: quality(group10.context.artifacts, group10.evidence) },
-    { repositoryKey: "nekomario28/gz-sim", state: "partial", value: quality(gz.context.artifacts, gz.qualityEvidence) },
-    { repositoryKey: "nekomario28/turing-smart-screen-python-owl", state: "partial", value: quality(turing.context.artifacts, turing.qualityEvidence) },
-  ];
+  return loadBoundedQualityEnrichments(manifest, { manifestPath }).enrichments;
 }
 
 function assessment() {
@@ -53,7 +31,7 @@ function assessment() {
   }).artifact;
 }
 
-test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/4/11 diagnostics", () => {
+test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/3/12 attribution-safe diagnostics", () => {
   const model = buildRepositoryQualityPresentationCandidate(live.graph, assessment());
   assert.equal(model.presentationId, "ipm-repository-quality-presentation-v1");
   assert.equal(model.status, "experimental-non-default");
@@ -61,15 +39,24 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
     graphRepositories: 15,
     assessmentRepositories: 15,
     joinedRepositories: 15,
-    available: 4,
-    unavailable: 11,
+    available: 3,
+    unavailable: 12,
     missingAssessmentGraphNodeIds: [],
     orphanAssessmentGraphNodeIds: [],
     strictJoin: true,
   });
   assert.equal(model.invariants.rendererDoesNotInferQuality, true);
+  assert.equal(model.invariants.forkPortfolioQualityUsesLocalDeltaOnly, true);
   assert.equal(model.invariants.productionRankingAllowed, false);
   assert.equal(model.modePolicy.defaultProductModeRemains, "structure");
+  assert.equal(model.modePolicy.forkPortfolioQualityUses, "local-delta-only");
+
+  const gz = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
+  const turing = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
+  assert.equal(gz.qualityAttributionScope, "local-delta");
+  assert.equal(gz.overlayState, "unavailable");
+  assert.equal(turing.qualityAttributionScope, "local-delta");
+  assert.equal(turing.overlayState, "available");
 });
 
 test("presentation candidate fails closed on membership mismatch", () => {
@@ -101,7 +88,8 @@ test("CLI writes only derived presentation and optional diagnostics while preser
     ]);
 
     assert.equal(model.diagnostics.joinedRepositories, 15);
-    assert.equal(model.diagnostics.available, 4);
+    assert.equal(model.diagnostics.available, 3);
+    assert.equal(model.diagnostics.unavailable, 12);
     assert.equal(JSON.parse(fs.readFileSync(outPath, "utf8")).presentationId, "ipm-repository-quality-presentation-v1");
     assert.deepEqual(JSON.parse(fs.readFileSync(diagnosticsPath, "utf8")), model.diagnostics);
     assert.equal(fs.readFileSync(graphPath, "utf8"), graphBytes);

@@ -156,7 +156,7 @@ test("Quality enrichment rejects artifact-route mismatch and unknown artifact co
       repositoryKey: "alice/toolkit",
       value: applicationQuality,
     }]),
-    /Quality vector artifact application is not present in assessment context/,
+    /Quality artifact application is not present in assessment context/,
   );
 
   const contributedQuality = quality(["application"], {
