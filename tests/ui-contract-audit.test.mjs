@@ -40,7 +40,7 @@ test("final Pages build keeps setup copy, legend semantics and Sunburst dense LO
     assert.match(presetCss, /\.contributed-option/);
 
     const viewerCss = await readFile(join(dir, "viewer.css"), "utf8");
-    assert.match(viewerCss, /\.legend \.contributed \{ background: #55c7d7; \}/);
+    assert.match(viewerCss, /\.legend \.contributed \{ background: #E69F00; \}/);
     assert.match(viewerCss, /\.repository-filters \.status-chip:disabled \{ display: none; \}/);
 
     for (const mode of VIEWER_DIRS) {
