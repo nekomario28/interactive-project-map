@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "status": "frozen-fork-library-calibration",
+  "cases": [
+    {
+      "id": "gz-sim-library-fork-no-default-branch-delta",
+      "repository": "nekomario28/gz-sim",
+      "upstream": "gazebosim/gz-sim",
+      "context": {
+        "category": "robotics-automation",
+        "artifacts": ["library"],
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "fork" }
+      },
+      "qualityEvidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@baeb72f5d7382850dba8e72df391a77655139b73",
+            "claim": "Current fork snapshot documents project purpose, features, install/usage, documentation, testing, contribution and versioning paths; provenance is inherited upstream project content and is project-side evidence only."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "CMakeLists.txt@283ee05db0ee82798fe6ee9af8c4c8807158fcb9",
+            "claim": "Current fork snapshot declares CMake >=3.22.1, project version/distribution, C++17 and build options/dependency discovery."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "Current fork metadata declares Apache-2.0; this is project-side stewardship evidence, not authored personal merit."
+          }
+        ]
+      },
+      "localDeltaObservation": {
+        "state": "observed",
+        "presence": "absent",
+        "scope": "gazebosim/main...nekomario28/main",
+        "evidence": "0 commits ahead; 2 behind; no local-ahead changed files"
+      },
+      "expected": {
+        "qualityFindings": {
+          "understandability": "supports",
+          "verification": "unknown",
+          "reproducibility": "supports",
+          "stewardship": "supports"
+        },
+        "confidence": { "targetDimensions": 6, "inspectedDimensions": 3, "directionalDimensions": 3 },
+        "localDeltaPresence": "absent"
+      }
+    },
+    {
+      "id": "turing-library-fork-with-default-branch-delta",
+      "repository": "nekomario28/turing-smart-screen-python-owl",
+      "upstream": "mathoudebine/turing-smart-screen-python",
+      "context": {
+        "category": "hardware-embedded",
+        "artifacts": ["library"],
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "fork" }
+      },
+      "qualityEvidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@ddedac6db0f51c95027107029507de6fe76db402",
+            "claim": "Current fork README explicitly documents the OWL CPU COOLER DISPLAY fork purpose, Rev. C protocol, ImageOnly theme setup, supported environments and library usage."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "requirements.txt@4ec6abb85948bb498e6fc6494b4df77205b87544",
+            "claim": "Current fork snapshot records bounded Python dependency versions and platform/Python-version conditions."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "github-repository-metadata:license",
+            "claim": "Current fork metadata declares GPL-3.0; this is project-side stewardship evidence, not proof that inherited repository quality was authored locally."
+          }
+        ]
+      },
+      "localDeltaObservation": {
+        "state": "observed",
+        "presence": "present",
+        "scope": "mathoudebine/main...nekomario28/main",
+        "evidence": "3 commits ahead; 24 behind; local changes include Rev. C display communication, config, requirements, README and workflow adjustments"
+      },
+      "expected": {
+        "qualityFindings": {
+          "understandability": "supports",
+          "verification": "unknown",
+          "reproducibility": "supports",
+          "stewardship": "supports"
+        },
+        "confidence": { "targetDimensions": 6, "inspectedDimensions": 3, "directionalDimensions": 3 },
+        "localDeltaPresence": "present"
+      }
+    }
+  ]
+}
