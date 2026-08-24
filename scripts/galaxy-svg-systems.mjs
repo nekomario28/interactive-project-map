@@ -4,7 +4,7 @@ import { TAU, background, clamp, displayLabel, esc, groupMembers, hash, legend, 
 const ANIMATED_LIMIT = 80;
 const REPRESENTATIVE_LIMIT = 2;
 const STATIC_LABEL_STROKE_WIDTH = 1.4;
-const EXTERNAL_GROUP_LABEL = "External contributions";
+const CONTRIBUTED_PER_LANE = 6;
 
 function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -65,25 +65,26 @@ function representativeLabelMarkup(repo, phase, colors) {
   return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${colors.fg}" font-size="9.2" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
 }
 
-function projectContributedForSystems(graph) {
-  const graphNodes = Array.isArray(graph?.nodes) ? graph.nodes : [];
-  const contributed = graphNodes.filter((node) => node?.type === "repository" && node?.relation === "contributed");
-  if (!contributed.length) return graph;
-  const ids = new Set(graphNodes.map((node) => node?.id).filter(Boolean));
-  let key = "__project_map_external_contributions__";
-  while (ids.has(`group:${key}`)) key += "_";
-  const groupId = `group:${key}`;
-  const nodes = graphNodes.map((node) => node?.type === "repository" && node?.relation === "contributed"
-    ? { ...node, groupId: key, groupLabel: EXTERNAL_GROUP_LABEL }
-    : node);
-  nodes.push({
-    id: groupId,
-    label: EXTERNAL_GROUP_LABEL,
-    type: "group",
-    relation: "contributed",
-    repositoryCount: contributed.length,
+function contributedAssignments(repositories, minSize, categoryRadius, maxSystemRadius) {
+  const contributed = [...repositories]
+    .filter((node) => node?.type === "repository" && node?.relation === "contributed")
+    .sort(compareLayoutOrder);
+  if (!contributed.length) return [];
+  const outerRadius = clamp(
+    Math.max(minSize * 0.39, categoryRadius + Math.min(maxSystemRadius, 64) + 22),
+    minSize * 0.39,
+    minSize * 0.47,
+  );
+  return contributed.map((repo, index) => {
+    const lane = Math.floor(index / CONTRIBUTED_PER_LANE);
+    const inLane = index % CONTRIBUTED_PER_LANE;
+    const laneCount = Math.min(CONTRIBUTED_PER_LANE, contributed.length - lane * CONTRIBUTED_PER_LANE);
+    const seed = (hash(`${repo.id}:contributed-systems-svg-phase`) % 10000) / 10000;
+    const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
+    const radius = Math.max(minSize * 0.30, outerRadius - lane * Math.max(26, minSize * 0.065));
+    const direction = (hash(`${repo.id}:contributed-systems-svg-direction`) & 1) === 0 ? 1 : -1;
+    return { repo, phase, radius, direction, duration: 760 + lane * 160 };
   });
-  return { ...graph, nodes };
 }
 
 function denseFallback(graph, theme, width, height) {
@@ -94,21 +95,21 @@ function denseFallback(graph, theme, width, height) {
 }
 
 export function renderGalaxySystemsSvg(graph, theme, width, height) {
-  const renderGraph = projectContributedForSystems(graph);
-  const repositoryCount = renderGraph.nodes.filter((node) => node.type === "repository").length;
-  if (repositoryCount > ANIMATED_LIMIT) return denseFallback(renderGraph, theme, width, height);
+  const repositoryCount = graph.nodes.filter((node) => node.type === "repository").length;
+  if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height);
 
   const colors = palette(theme);
   const cx = width / 2;
   const cy = height / 2 - 8;
   const minSize = Math.min(width, height);
-  const groups = renderGraph.nodes.filter((node) => node.type === "group").sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  const repos = renderGraph.nodes.filter((node) => node.type === "repository");
-  const owner = renderGraph.nodes.find((node) => node.type === "owner");
+  const groups = graph.nodes.filter((node) => node.type === "group").sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const repos = graph.nodes.filter((node) => node.type === "repository");
+  const ownedRepos = repos.filter((node) => node.relation !== "contributed");
+  const owner = graph.nodes.find((node) => node.type === "owner");
   const count = Math.max(1, groups.length);
   const prepared = groups.map((group) => ({
     group,
-    members: groupMembers(group, repos).sort(compareLayoutOrder),
+    members: groupMembers(group, ownedRepos).sort(compareLayoutOrder),
   }));
   for (const system of prepared) {
     system.assignments = assignments(system.group, system.members);
@@ -136,18 +137,25 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
       const labelMarkup = representative ? representativeLabelMarkup(target.repo, target.phase, colors) : "";
       return `<g data-galaxy-orbit="repository" data-static-representative="${representative}" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${labelMarkup}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
     }).join("");
-    return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${system.group.relation === "contributed" ? colors.contributed : colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
+    return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
+  }).join("");
+
+  const contributed = contributedAssignments(repos, minSize, categoryRadius, maxSystemRadius).map((target) => {
+    const x = cx + Math.cos(target.phase) * target.radius;
+    const y = cy + Math.sin(target.phase) * target.radius;
+    const motion = circleValues(target.radius, target.phase, target.direction, cx, cy);
+    return `<g data-galaxy-orbit="contributed" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${representativeLabelMarkup(target.repo, target.phase, colors)}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
   }).join("");
 
   const nucleus = owner ? `<g transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)})"><circle cx="0" cy="0" r="42" fill="${colors.owner}" opacity="0.025"/>${nodeMarkup(owner, 0, 0, colors)}</g>` : "";
-  const graphMarkup = `<g data-galaxy-motion="systems">${nucleus}${systems}</g>`;
+  const graphMarkup = `<g data-galaxy-motion="systems">${nucleus}${systems}<g data-galaxy-external="true">${contributed}</g></g>`;
   return svgDocument({
-    owner: renderGraph.owner,
+    owner: graph.owner,
     width,
     height,
     preset: "systems",
     ariaLabel: "Galaxy Systems",
-    backgroundMarkup: background(renderGraph.owner, width, height, colors, 100),
+    backgroundMarkup: background(graph.owner, width, height, colors, 100),
     graphMarkup,
     legendMarkup: legend(colors, width, height, "Galaxy Systems"),
   });
