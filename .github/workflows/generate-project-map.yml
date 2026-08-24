@@ -38,9 +38,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Radial Contributed overlap release: Action 74e579b5cf2968d91a98edbc60dc290bdf6c6c5e passed
-# Verify #754, including Radial outer-ring geometry, all-12-preset comparison,
-# Chromium and iPhone WebKit. Contributed remains external to owned category membership.
+# Galaxy Systems Contributed external-rail release: Action 94abe621aae576d6a49e38fe7e146e0790387fc2 passed
+# Verify #780, including the 12-Contributed rail regression, full verify,
+# Chromium and iPhone WebKit. Contributed remains outside owned category motion.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@74e579b5cf2968d91a98edbc60dc290bdf6c6c5e
+        uses: nekomario28/interactive-project-map@94abe621aae576d6a49e38fe7e146e0790387fc2
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
