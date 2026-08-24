@@ -11,6 +11,10 @@ import {
   validateRepositoryAssessmentFixtures,
   validateRepositoryAssessmentPolicy,
 } from "../scripts/repository-assessment-policy.mjs";
+import {
+  inferL0RepositoryRelation,
+  relationAttributionProfile,
+} from "../scripts/repository-relation.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -26,6 +30,22 @@ test("repository assessment policy validates against Standard Taxonomy v1", () =
 
 test("repository assessment fixtures validate against the policy contract", () => {
   assert.equal(validateRepositoryAssessmentFixtures(fixtures, policy, taxonomy), true);
+});
+
+test("repository relation is orthogonal and L0 does not assume solo authorship", () => {
+  assert.deepEqual(policy.repositoryRelationAxes.ownership, ["owned", "contributed"]);
+  assert.ok(policy.repositoryRelationAxes.collaboration.includes("unknown"));
+  assert.ok(policy.repositoryRelationAxes.lineage.includes("fork"));
+  assert.equal(policy.repositoryRelationContract.axesAreOrthogonal, true);
+  assert.equal(policy.repositoryRelationContract.forkIsLineageNotOwnership, true);
+  assert.equal(policy.relationStates, undefined);
+
+  const owned = inferL0RepositoryRelation({ external: false, fork: false });
+  assert.deepEqual(owned, { ownership: "owned", collaboration: "unknown", lineage: "original" });
+  assert.equal(relationAttributionProfile(owned), "unresolved");
+
+  const contributed = inferL0RepositoryRelation({ external: true, fork: false });
+  assert.equal(relationAttributionProfile(contributed), "contributed");
 });
 
 test("every Standard Taxonomy artifact facet resolves to an assessment module", () => {
@@ -83,7 +103,8 @@ test("contract fixtures preserve the critical ranking and authorship counterexam
   assert.equal(byId.get("frozen-dataset-without-ci").context.lifecycle, "frozen");
   assert.equal(byId.get("high-quality-zero-star-solo").evidence.stars, 0);
   assert.equal(byId.get("popular-solo-lower-quality").evidence.stars, 5000);
-  assert.equal(byId.get("famous-project-tiny-contribution").context.relation, "contributed");
+  assert.equal(byId.get("famous-project-tiny-contribution").context.relation.ownership, "contributed");
   assert.equal(byId.get("large-project-core-maintainer").evidence.maintainedCoreComponent, true);
-  assert.equal(byId.get("fork-with-small-local-delta").context.relation, "owned-fork");
+  assert.equal(byId.get("fork-with-small-local-delta").context.relation.lineage, "fork");
+  assert.equal(byId.get("owned-collaboration-unresolved").context.relation.collaboration, "unknown");
 });
