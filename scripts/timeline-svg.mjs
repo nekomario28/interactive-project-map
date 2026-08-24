@@ -1,12 +1,22 @@
+import {
+  addExternalBundle,
+  isContributedRepository,
+  repositoryOpacity,
+  repositoryStatus,
+  shouldDecorateArchived,
+  statusLegendItems,
+  withContributedColor,
+} from "./static-contributed.mjs";
+
 function esc(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] ?? char));
 }
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
-function statusOf(repo) { return repo.archived ? "archived" : repo.fork ? "fork" : "original"; }
 function palette(theme) {
-  return theme === "light"
+  const base = theme === "light"
     ? { bg: "#fbfcff", fg: "#172033", muted: "#667085", grid: "#d7deea", group: "#376fbd", lane: "#eef3f9", original: "#208847", fork: "#7357bd", archived: "#a34d45" }
     : { bg: "#070a12", fg: "#e8edf7", muted: "#9aa7bd", grid: "#283449", group: "#6aa7ff", lane: "#0b1220", original: "#57d17a", fork: "#b59aff", archived: "#d9847b" };
+  return withContributedColor(base, theme);
 }
 function dateMs(repo) {
   const value = repo.createdAt || repo.updatedAt;
@@ -30,6 +40,9 @@ export function renderTimelineSvg(graph, theme, width, height) {
   const colors = palette(theme);
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository").filter((repo) => dateMs(repo) > 0);
+  const ownedRepos = repos.filter((repo) => !isContributedRepository(repo));
+  let lanes = groups.map((group) => ({ group, members: groupMembers(group, ownedRepos) })).filter((lane) => lane.members.length);
+  lanes = addExternalBundle(lanes, repos);
   const now = Date.now();
   const minDate = repos.length ? Math.min(...repos.map(dateMs)) : now - 365 * 86400000;
   const maxDateRaw = repos.length ? Math.max(...repos.map(dateMs)) : now;
@@ -37,14 +50,14 @@ export function renderTimelineSvg(graph, theme, width, height) {
   const min = minDate - span * 0.025;
   const max = maxDateRaw + span * 0.04;
   const left = 146; const right = width - 22; const top = 34; const bottom = height - 48;
-  const laneHeight = Math.max(34, (bottom - top) / Math.max(1, groups.length));
+  const laneHeight = Math.max(30, (bottom - top) / Math.max(1, lanes.length));
   const xFor = (time) => left + ((time - min) / Math.max(1, max - min)) * (right - left);
-  const yForGroup = (index) => top + laneHeight * (index + 0.5);
+  const yForLane = (index) => top + laneHeight * (index + 0.5);
   const pieces = [];
 
-  groups.forEach((group, groupIndex) => {
-    if (groupIndex % 2 === 0) {
-      pieces.push(`<rect x="${left}" y="${(top + laneHeight * groupIndex).toFixed(1)}" width="${(right - left).toFixed(1)}" height="${laneHeight.toFixed(1)}" fill="${colors.lane}" opacity="0.45"/>`);
+  lanes.forEach((lane, laneIndex) => {
+    if (laneIndex % 2 === 0) {
+      pieces.push(`<rect x="${left}" y="${(top + laneHeight * laneIndex).toFixed(1)}" width="${(right - left).toFixed(1)}" height="${laneHeight.toFixed(1)}" fill="${colors.lane}" opacity="0.45"/>`);
     }
   });
 
@@ -55,20 +68,24 @@ export function renderTimelineSvg(graph, theme, width, height) {
   }
 
   const occupied = [];
-  groups.forEach((group, groupIndex) => {
-    const y = yForGroup(groupIndex);
-    const members = groupMembers(group, repos).sort((a, b) => dateMs(a) - dateMs(b));
+  lanes.forEach((lane, laneIndex) => {
+    const { group } = lane;
+    const y = yForLane(laneIndex);
+    const members = [...lane.members].sort((a, b) => dateMs(a) - dateMs(b));
     const groupLabel = group.label.length > 19 ? `${group.label.slice(0, 18)}…` : group.label;
-    pieces.push(`<line x1="${left}" y1="${y.toFixed(1)}" x2="${right}" y2="${y.toFixed(1)}" stroke="${colors.grid}" stroke-width="1" opacity="0.72"/>`);
-    pieces.push(`<text x="${left - 10}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" fill="${colors.fg}" font-size="9.7" font-weight="650">${esc(groupLabel)}</text>`);
+    const groupColor = group.external ? colors.contributed : colors.fg;
+    pieces.push(`<line x1="${left}" y1="${y.toFixed(1)}" x2="${right}" y2="${y.toFixed(1)}" stroke="${group.external ? colors.contributed : colors.grid}" stroke-width="1" opacity="${group.external ? 0.35 : 0.72}"${group.external ? ' stroke-dasharray="4 4"' : ""}/>`);
+    pieces.push(`<text x="${left - 10}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" fill="${groupColor}" font-size="9.7" font-weight="650">${esc(groupLabel)}</text>`);
     pieces.push(`<text x="${left - 10}" y="${(y + 15).toFixed(1)}" text-anchor="end" fill="${colors.muted}" font-size="8.2">${members.length} repo${members.length === 1 ? "" : "s"}</text>`);
     members.forEach((repo, repoIndex) => {
       const x = xFor(dateMs(repo));
       const jitter = ((repoIndex % 3) - 1) * 7;
       const cy = y + jitter;
-      const color = colors[statusOf(repo)];
-      pieces.push(`<g><title>${esc(repo.label)} · ${esc((repo.createdAt || repo.updatedAt || "").slice(0, 10))}</title><circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${repo.archived ? 4.2 : 4.8}" fill="${color}" opacity="${repo.archived ? "0.72" : repo.fork ? "0.82" : "0.96"}"${repo.archived ? ` stroke="${color}" stroke-width="1.2" stroke-dasharray="2 2"` : ""}/>`);
-      const important = (repo.stars ?? 0) > 0 || members.length <= 8;
+      const status = repositoryStatus(repo);
+      const color = colors[status];
+      const opacity = repositoryOpacity(repo, { archived: 0.72, fork: 0.82, contributed: 0.96 });
+      pieces.push(`<g><title>${esc(repo.label)} · ${status} · ${esc((repo.createdAt || repo.updatedAt || "").slice(0, 10))}</title><circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${shouldDecorateArchived(repo) ? 4.2 : 4.8}" fill="${color}" opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.2" stroke-dasharray="2 2"` : ""}/>`);
+      const important = (repo.stars ?? 0) > 0 || members.length <= 8 || isContributedRepository(repo);
       if (important) {
         const label = repo.label.length > 18 ? `${repo.label.slice(0, 17)}…` : repo.label;
         const w = labelWidth(label);
@@ -84,9 +101,9 @@ export function renderTimelineSvg(graph, theme, width, height) {
     });
   });
 
-  const legend = [[colors.original, "Original"], [colors.fork, "Fork"], [colors.archived, "Archived"]].map(([color, label], index) => {
-    const x = 18 + index * 88;
+  const legend = statusLegendItems(colors).map(([color, label], index) => {
+    const x = 18 + index * 94;
     return `<circle cx="${x + 4}" cy="${height - 17}" r="4" fill="${color}"/><text x="${x + 13}" y="${height - 13.5}" fill="${colors.muted}" font-size="9.5">${label}</text>`;
   }).join("");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Timeline of ${esc(graph.owner)} public GitHub repositories">\n<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/>\n<text x="18" y="20" fill="${colors.fg}" font-size="12" font-weight="700">Project creation timeline</text>\n<g>${pieces.join("")}</g><g>${legend}</g><text x="${width - 18}" y="${height - 13.5}" text-anchor="end" fill="${colors.muted}" font-size="9.5">Timeline · ${graph.repositoryCount} projects</text>\n</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Timeline of ${esc(graph.owner)} public GitHub repositories">\n<rect width="100%" height="100%" rx="16" fill="${colors.bg}"/>\n<text x="18" y="20" fill="${colors.fg}" font-size="12" font-weight="700">Project creation timeline</text>\n<g>${pieces.join("")}</g><g>${legend}</g><text x="${width - 18}" y="${height - 13.5}" text-anchor="end" fill="${colors.muted}" font-size="9.5">Timeline · ${graph.repositoryCount} owned${graph.contributedRepositoryCount ? ` + ${graph.contributedRepositoryCount} contributed` : ""}</text>\n</svg>`;
 }
