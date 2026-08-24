@@ -1,7 +1,8 @@
 import { renderGalaxySvg } from "./svg.mjs";
-import { TAU, background, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
+import { TAU, background, clamp, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
 
 const ANIMATED_LIMIT = 80;
+const CONTRIBUTED_PER_LANE = 6;
 
 function translationValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -53,8 +54,26 @@ function assignments(group, members) {
   return result;
 }
 
+function contributedAssignments(repositories, minSize) {
+  const contributed = repositories
+    .filter((repo) => repo?.type === "repository" && repo?.relation === "contributed")
+    .sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || String(a.id).localeCompare(String(b.id)));
+  if (!contributed.length) return [];
+  const outerRadius = clamp(minSize * 0.44, minSize * 0.40, minSize * 0.47);
+  return contributed.map((repo, index) => {
+    const lane = Math.floor(index / CONTRIBUTED_PER_LANE);
+    const inLane = index % CONTRIBUTED_PER_LANE;
+    const laneCount = Math.min(CONTRIBUTED_PER_LANE, contributed.length - lane * CONTRIBUTED_PER_LANE);
+    const seed = (hash(`${repo.id}:contributed-hybrid-svg-phase`) % 10000) / 10000;
+    const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
+    const radius = Math.max(minSize * 0.30, outerRadius - lane * Math.max(27, minSize * 0.067));
+    const direction = (hash(`${repo.id}:contributed-hybrid-svg-direction`) & 1) === 0 ? 1 : -1;
+    return { repo, phase, radius, direction, duration: 980 + lane * 180 };
+  });
+}
+
 function denseFallback(graph, theme, width, height) {
-  const denseGraph = { ...graph, repositoryCount: Math.max(81, graph.repositoryCount || 0) };
+  const denseGraph = { ...graph, repositoryCount: Math.max(81, graph.nodes.filter((node) => node.type === "repository").length) };
   return renderGalaxySvg(denseGraph, theme, width, height, "galaxy")
     .replace('role="img" aria-label="Galaxy-style map', 'role="img" data-galaxy-preset="hybrid-dense" aria-label="Galaxy-style map')
     .replace('>project map</text>', '>Galaxy Hybrid</text>');
@@ -76,7 +95,7 @@ function spiralDust(colors, cx, cy, minSize, armCount) {
 }
 
 export function renderGalaxyHybridSvg(graph, theme, width, height) {
-  const repositoryCount = graph.repositoryCount ?? graph.nodes.filter((node) => node.type === "repository").length;
+  const repositoryCount = graph.nodes.filter((node) => node.type === "repository").length;
   if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height);
 
   const colors = palette(theme);
@@ -84,11 +103,12 @@ export function renderGalaxyHybridSvg(graph, theme, width, height) {
   const cy = height / 2 - 8;
   const minSize = Math.min(width, height);
   const repos = graph.nodes.filter((node) => node.type === "repository");
+  const ownedRepos = repos.filter((node) => node.relation !== "contributed");
   const rawGroups = graph.nodes.filter((node) => node.type === "group");
   const owner = graph.nodes.find((node) => node.type === "owner");
   const prepared = rawGroups.map((group) => ({
     group,
-    members: groupMembers(group, repos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label)),
+    members: groupMembers(group, ownedRepos).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label)),
   })).sort((a, b) => b.members.length - a.members.length || String(a.group.id).localeCompare(String(b.group.id)));
   for (const system of prepared) system.assignments = assignments(system.group, system.members);
 
@@ -127,8 +147,15 @@ export function renderGalaxyHybridSvg(graph, theme, width, height) {
     return `<g data-hybrid-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><ellipse cx="0" cy="0" rx="${(maxRx + 14).toFixed(1)}" ry="${(maxRy + 14).toFixed(1)}" transform="rotate(${(orientation * 180 / Math.PI).toFixed(1)})" fill="${colors.group}" opacity="0.022"/>${laneGuides}${nodeMarkup(system.group, 0, 0, colors)}${repoMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="2400s" repeatCount="indefinite"/></g>`;
   }).join("");
 
+  const contributed = contributedAssignments(repos, minSize).map((target) => {
+    const x = cx + Math.cos(target.phase) * target.radius;
+    const y = cy + Math.sin(target.phase) * target.radius;
+    const motion = translationValues(target.radius, target.phase, target.direction, cx, cy);
+    return `<g data-galaxy-orbit="contributed" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: true })}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
+  }).join("");
+
   const nucleus = owner ? `<g transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)})"><circle cx="0" cy="0" r="46" fill="${colors.owner}" opacity="0.03"/>${nodeMarkup(owner, 0, 0, colors)}</g>` : "";
-  const graphMarkup = `<g data-galaxy-motion="hybrid">${spiralDust(colors, cx, cy, minSize, armCount)}${nucleus}${systems}</g>`;
+  const graphMarkup = `<g data-galaxy-motion="hybrid">${spiralDust(colors, cx, cy, minSize, armCount)}${nucleus}${systems}<g data-galaxy-external="true">${contributed}</g></g>`;
   return svgDocument({
     owner: graph.owner,
     width,
