@@ -4,7 +4,7 @@ import { renderGalaxySvg } from "../scripts/svg.mjs";
 import { renderGalaxyClassicSvg } from "../scripts/galaxy-svg-classic.mjs";
 import { renderGalaxySystemsSvg } from "../scripts/galaxy-svg-systems.mjs";
 import { renderGalaxyHybridSvg } from "../scripts/galaxy-svg-hybrid.mjs";
-import { renderRadialTreeSvg } from "../scripts/radial-svg.mjs";
+import { layoutRadialTree, renderRadialTreeSvg } from "../scripts/radial-svg.mjs";
 import { renderTreeSvg } from "../scripts/tree-svg.mjs";
 import { renderTreemapSvg } from "../scripts/treemap-svg.mjs";
 import { renderTimelineSvg } from "../scripts/timeline-svg.mjs";
@@ -98,6 +98,22 @@ test("shared static semantics keep Contributed primary over fork/archive source 
   assert.equal(repositoryStatus(repo), "contributed");
   assert.equal(shouldDecorateArchived(repo), false);
   assert.equal(visibleStructuralEdges(contributedGraph().edges).some((edge) => edge.type === "contribution"), false);
+});
+
+test("Radial Tree keeps Contributed on a separated outer ring", () => {
+  const width = 740;
+  const height = 420;
+  const cx = width / 2;
+  const cy = height / 2 - 4;
+  const points = layoutRadialTree(contributedGraph(), width, height);
+  const external = points.find((point) => point.node.id === "repository:outside/project");
+  const owned = points.filter((point) => point.node.type === "repository" && point.node.relation !== "contributed");
+  assert.ok(external);
+  const externalRadius = Math.hypot(external.x - cx, external.y - cy);
+  const maxOwnedRadius = Math.max(...owned.map((point) => Math.hypot(point.x - cx, point.y - cy)));
+  const nearestOwned = Math.min(...owned.map((point) => Math.hypot(point.x - external.x, point.y - external.y)));
+  assert.ok(externalRadius - maxOwnedRadius >= 28, `expected a clear outer radial gap, got ${externalRadius - maxOwnedRadius}`);
+  assert.ok(nearestOwned >= 28, `expected Contributed to avoid owned-node overlap, got ${nearestOwned}`);
 });
 
 for (const [name, render] of renderers) {
