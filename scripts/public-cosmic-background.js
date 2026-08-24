@@ -65,6 +65,19 @@
     }
   }
 
+  function firstVisibleStar(layer, width, height) {
+    const count = width < 720 ? Math.ceil(layer.count * 0.68) : layer.count;
+    for (let index = 0; index < count; index += 1) {
+      const point = starPoint(layer, index);
+      let visible = null;
+      forEachWrappedCopy(point, width, height, (x, y) => {
+        if (!visible && x >= 2 && x <= width - 2 && y >= 2 && y <= height - 2) visible = { x, y };
+      });
+      if (visible) return { ...point, ...visible, index };
+    }
+    return null;
+  }
+
   function drawStars(width, height) {
     const compact = width < 720;
     ctx.fillStyle = "#dce9ff";
@@ -245,7 +258,7 @@
       pan: { x: state.pan.x, y: state.pan.y },
       tile: { ...TILE },
       layers: LAYERS.map((layer) => ({ id: layer.id, parallax: effectiveParallax(layer) })),
-      nearStar: starPoint(LAYERS[2], 0),
+      nearStar: firstVisibleStar(LAYERS[2], size.width, size.height),
       meteor: meteor ? { active: true, ...meteor } : { active: false },
       viewport: size,
     };
