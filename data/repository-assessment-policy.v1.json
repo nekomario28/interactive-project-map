@@ -1,0 +1,339 @@
+{
+  "schemaVersion": 1,
+  "policyId": "ipm-repository-assessment-v1",
+  "status": "experimental-contract",
+  "taxonomyDependency": "ipm-standard-v1",
+  "applicabilityStates": [
+    "required",
+    "recommended",
+    "optional",
+    "not-applicable",
+    "external",
+    "unknown"
+  ],
+  "evidenceClasses": {
+    "A": "independently reproducible or machine-verified external evidence",
+    "B": "canonical project-owned benchmark, acceptance, release, or validation evidence",
+    "C": "direct repository structure, content, or metadata evidence",
+    "D": "maintainer declaration or unverified self-description",
+    "U": "unknown or unavailable"
+  },
+  "lifecycleStates": [
+    "active",
+    "maintenance",
+    "stable",
+    "frozen",
+    "snapshot",
+    "archived",
+    "experimental",
+    "unknown"
+  ],
+  "relationStates": [
+    "owned-solo",
+    "owned-team",
+    "owned-fork",
+    "contributed"
+  ],
+  "axes": {
+    "quality": {
+      "kind": "assessment",
+      "description": "Fitness and execution quality relative to applicable purpose and contract."
+    },
+    "impact": {
+      "kind": "assessment",
+      "description": "External interest, recognition, reuse, adoption, or ecosystem effect."
+    },
+    "scale": {
+      "kind": "assessment",
+      "description": "Technical and organizational scope and coordination complexity."
+    },
+    "maturity": {
+      "kind": "assessment",
+      "description": "Readiness relative to declared purpose and lifecycle."
+    },
+    "activity": {
+      "kind": "contextual",
+      "description": "Current activity/freshness state; not automatically health or quality."
+    },
+    "confidence": {
+      "kind": "evidence",
+      "description": "Strength and coverage of evidence behind the assessment."
+    },
+    "personalContribution": {
+      "kind": "person-side",
+      "description": "Demonstrated role, contribution, responsibility, duration, and breadth in shared/contributed work."
+    },
+    "portfolioProminence": {
+      "kind": "presentation",
+      "description": "Display priority derived from multiple axes; not synonymous with Quality."
+    }
+  },
+  "qualityDimensions": [
+    "understandability",
+    "verification",
+    "reproducibility",
+    "maintainability",
+    "integrity",
+    "interoperability",
+    "security-safety",
+    "stewardship"
+  ],
+  "artifactModules": {
+    "dataset": {
+      "emphasize": [
+        "understandability",
+        "reproducibility",
+        "integrity",
+        "interoperability",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "schema-metadata",
+        "provenance",
+        "license-usage",
+        "checksums-integrity",
+        "version-freeze-identity",
+        "accessibility-loader",
+        "generation-curation-reproducibility",
+        "limitations-bias-privacy"
+      ],
+      "claimBoundary": "Repository stewardship does not prove intrinsic data validity without direct validation evidence."
+    },
+    "model": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "integrity",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "model-card",
+        "training-provenance",
+        "evaluation-provenance",
+        "weight-version-identity",
+        "limitations-intended-use",
+        "safety-when-applicable"
+      ],
+      "claimBoundary": "Repository quality does not prove model capability."
+    },
+    "research": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "integrity",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "method",
+        "experiment-configuration",
+        "data-model-dependency-provenance",
+        "claim-evidence-traceability",
+        "negative-results-limitations",
+        "benchmark-identity"
+      ]
+    },
+    "library": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "maintainability",
+        "interoperability",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "api-docs",
+        "compatibility-contract",
+        "tests-validation",
+        "release-versioning",
+        "dependency-handling",
+        "examples-migration"
+      ]
+    },
+    "framework": {
+      "inherits": "library"
+    },
+    "application": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "maintainability",
+        "security-safety",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "install-run-path",
+        "tests-validation",
+        "release-operational-evidence",
+        "user-documentation",
+        "security-when-applicable"
+      ]
+    },
+    "service": {
+      "inherits": "application"
+    },
+    "tool": {
+      "inherits": "application"
+    },
+    "documentation": {
+      "emphasize": [
+        "understandability",
+        "integrity",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "reference-correctness",
+        "version-provenance",
+        "generation-reproducibility-when-applicable"
+      ]
+    },
+    "template": {
+      "inherits": "documentation"
+    },
+    "configuration": {
+      "inherits": "documentation"
+    },
+    "firmware": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "maintainability",
+        "integrity",
+        "security-safety",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "hardware-contract",
+        "build-identity",
+        "device-validation",
+        "release-versioning",
+        "safety-security-when-applicable"
+      ]
+    },
+    "game-mod": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "maintainability",
+        "interoperability",
+        "stewardship"
+      ],
+      "evidenceTopics": [
+        "supported-game-loader-versions",
+        "build-run-path",
+        "compatibility-contract",
+        "release-versioning",
+        "tests-validation-when-applicable"
+      ]
+    },
+    "other": {
+      "emphasize": [
+        "understandability",
+        "verification",
+        "reproducibility",
+        "integrity",
+        "stewardship"
+      ]
+    }
+  },
+  "impactSignals": {
+    "stars": {
+      "role": "strong external interest and recognition signal",
+      "axis": "impact",
+      "defaultTransformFamily": "log1p",
+      "directQualityEffect": false
+    },
+    "forks": {
+      "role": "reuse, modification, experimentation, and contribution-intent signal",
+      "axis": "impact",
+      "defaultTransformFamily": "log1p",
+      "directQualityEffect": false
+    },
+    "contributors": {
+      "role": "collaboration and project-scale context; not automatic personal merit",
+      "axes": ["impact", "scale"]
+    },
+    "dependents": {
+      "role": "ecosystem adoption signal",
+      "axis": "impact"
+    },
+    "downloads": {
+      "role": "consumption/adoption signal",
+      "axis": "impact"
+    },
+    "citations": {
+      "role": "research/scientific uptake signal where meaningful",
+      "axis": "impact"
+    }
+  },
+  "collaboration": {
+    "separateProjectAndPersonSide": true,
+    "personEvidence": [
+      "merged-prs",
+      "commits",
+      "reviews",
+      "issues",
+      "release-involvement",
+      "maintained-components",
+      "role-ownership-records",
+      "active-duration",
+      "accepted-upstream-evidence"
+    ],
+    "insufficientAlone": [
+      "commit-count",
+      "loc",
+      "authored-file-count",
+      "project-star-count"
+    ],
+    "forkRule": "Inherited upstream quality, documentation, tests, CI, security evidence, and popularity are not authored personal merit."
+  },
+  "ranking": {
+    "qualityAndProminenceAreDistinct": true,
+    "prominenceInputs": [
+      "quality",
+      "impact",
+      "scale",
+      "personalContribution",
+      "maturity",
+      "distinctiveness-category-coverage"
+    ],
+    "weights": null,
+    "tierThresholds": null,
+    "candidateTiers": [
+      "flagship",
+      "strong",
+      "solid",
+      "developing",
+      "experimental-reference"
+    ],
+    "globalPercentilesWithoutCorpus": false
+  },
+  "visualDirection": {
+    "nodeOrLabelProminence": "portfolioProminence",
+    "qualityRingOrTier": "quality",
+    "halo": "impact",
+    "innerArcOrDistinctTreatment": "personalContribution",
+    "continuousGeometryPolicy": "prefer quantized or tiered geometry when small score drift would cause layout churn"
+  },
+  "acquisitionLevels": {
+    "L0": "metadata for all eligible repositories",
+    "L1": "bounded repository structure and validation evidence",
+    "L2": "deep assessment only for bounded repositories/dimensions that require it"
+  },
+  "deferred": [
+    "universal-axis-weights",
+    "quality-composite-formula",
+    "portfolio-prominence-formula",
+    "tier-thresholds",
+    "global-category-percentiles",
+    "star-velocity-without-history",
+    "deep-scan-all-repositories",
+    "graph-json-integration",
+    "production-svg-mapping"
+  ]
+}

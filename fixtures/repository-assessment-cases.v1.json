@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "ipm-repository-assessment-cases-v1",
+  "purpose": "Contract-level cases used before selecting numeric scoring/prominence weights.",
+  "cases": [
+    {
+      "id": "frozen-dataset-without-ci",
+      "context": {
+        "category": "data-analytics",
+        "artifacts": ["dataset"],
+        "lifecycle": "frozen",
+        "relation": "owned-solo"
+      },
+      "evidence": {
+        "schemaMetadata": true,
+        "provenance": true,
+        "license": true,
+        "checksums": true,
+        "deterministicGeneration": true,
+        "externalDatasetValidation": true,
+        "ci": false,
+        "unitTests": false,
+        "recentActivity": false,
+        "stars": 18,
+        "forks": 3
+      },
+      "expectedInvariants": [
+        "missing CI is not automatically a Quality penalty",
+        "frozen lifecycle prevents low Activity from being treated as poor health",
+        "external dataset validation remains sourced external evidence",
+        "intrinsic data validity is not claimed beyond available validator evidence"
+      ]
+    },
+    {
+      "id": "high-quality-zero-star-solo",
+      "context": {
+        "category": "developer-tools",
+        "artifacts": ["tool"],
+        "lifecycle": "stable",
+        "relation": "owned-solo"
+      },
+      "evidence": {
+        "strongApplicableQualityEvidence": true,
+        "stars": 0,
+        "forks": 0
+      },
+      "expectedInvariants": [
+        "Quality can remain high with zero stars",
+        "Impact remains low when no other adoption evidence exists"
+      ]
+    },
+    {
+      "id": "popular-solo-lower-quality",
+      "context": {
+        "category": "applications-services",
+        "artifacts": ["application"],
+        "lifecycle": "active",
+        "relation": "owned-solo"
+      },
+      "evidence": {
+        "goodButLowerQualityThanHighQualityZeroStarFixture": true,
+        "stars": 5000,
+        "forks": 620
+      },
+      "expectedInvariants": [
+        "stars and forks materially raise Impact",
+        "stars and forks do not directly raise intrinsic Quality",
+        "portfolio prominence may exceed the zero-star higher-Quality repository",
+        "raw star count is not used as linear node area"
+      ]
+    },
+    {
+      "id": "famous-project-tiny-contribution",
+      "context": {
+        "category": "developer-tools",
+        "artifacts": ["framework"],
+        "lifecycle": "active",
+        "relation": "contributed"
+      },
+      "evidence": {
+        "projectStars": 100000,
+        "projectContributors": 1000,
+        "mergedPullRequestsByPerson": 1,
+        "contributionDescription": "typo-only",
+        "maintainer": false,
+        "releaseRole": false
+      },
+      "expectedInvariants": [
+        "project Impact and Scale can be very high",
+        "Personal Contribution remains low",
+        "the person does not inherit the project's full portfolio prominence",
+        "relation remains contributed rather than owned"
+      ]
+    },
+    {
+      "id": "large-project-core-maintainer",
+      "context": {
+        "category": "systems-infrastructure",
+        "artifacts": ["framework"],
+        "lifecycle": "active",
+        "relation": "contributed"
+      },
+      "evidence": {
+        "projectStars": 25000,
+        "projectContributors": 300,
+        "mergedPullRequestsByPerson": 42,
+        "reviews": 180,
+        "maintainedCoreComponent": true,
+        "releaseRole": true,
+        "sustainedDurationMonths": 24
+      },
+      "expectedInvariants": [
+        "project-side Impact and Scale remain separate from person-side evidence",
+        "Personal Contribution can be high",
+        "this project can become a flagship contribution without being solo-owned",
+        "contributor count is project scale context, not automatic person credit"
+      ]
+    },
+    {
+      "id": "fork-with-small-local-delta",
+      "context": {
+        "category": "developer-tools",
+        "artifacts": ["library"],
+        "lifecycle": "active",
+        "relation": "owned-fork"
+      },
+      "evidence": {
+        "upstreamStars": 30000,
+        "upstreamExcellentDocsTestsCiSecurity": true,
+        "localDelta": "one configuration change"
+      },
+      "expectedInvariants": [
+        "upstream popularity is not the owner's direct Impact",
+        "inherited docs/tests/CI/security are not authored personal Quality",
+        "local delta and personal contribution are assessed separately"
+      ]
+    },
+    {
+      "id": "mixed-research-dataset-model",
+      "context": {
+        "category": "ai-ml",
+        "artifacts": ["research", "dataset", "model"],
+        "lifecycle": "stable",
+        "relation": "owned-team"
+      },
+      "evidence": {
+        "methodDocumented": true,
+        "datasetProvenance": true,
+        "modelEvaluation": true,
+        "reproducibleExperimentConfig": true
+      },
+      "expectedInvariants": [
+        "assessment composes multiple artifact modules instead of forcing one archetype",
+        "primary semantic category remains AI & Machine Learning",
+        "repository hygiene does not by itself prove model capability or dataset intrinsic validity"
+      ]
+    }
+  ],
+  "crossCaseInvariants": [
+    "Quality ranking and portfolio prominence are distinct",
+    "Impact has material influence on portfolio prominence",
+    "not-applicable evidence mechanisms do not count as failures",
+    "unknown evidence is not silently scored as success or failure",
+    "project merit and personal merit remain separate for shared work",
+    "no global percentile is claimed from this local fixture set"
+  ]
+}
