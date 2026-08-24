@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "ipm-repository-impact-calibration-v1",
+  "observedAt": "2026-08-24",
+  "note": "Public metadata snapshots are frozen calibration evidence, not live-count assertions.",
+  "cases": [
+    {
+      "id": "ipm-low-recognition-original",
+      "source": "https://api.github.com/repos/nekomario28/interactive-project-map",
+      "input": {
+        "relation": "owned-solo",
+        "fork": false,
+        "stars": 1,
+        "forks": 0
+      },
+      "expected": {
+        "localRecognitionObserved": true,
+        "localRecognitionRaw": 1,
+        "upstreamContext": false
+      }
+    },
+    {
+      "id": "original-with-ambiguous-fork-interest",
+      "source": "https://api.github.com/repos/nekomario28/ProjExD_Group10",
+      "input": {
+        "relation": "owned-team",
+        "fork": false,
+        "stars": 1,
+        "forks": 5
+      },
+      "expected": {
+        "forkInterpretation": "reuse-derivative-interest",
+        "mustNotClaimIndependentAdopters": 5
+      }
+    },
+    {
+      "id": "gz-sim-upstream-context",
+      "source": "https://api.github.com/repos/nekomario28/gz-sim",
+      "input": {
+        "relation": "owned-fork",
+        "fork": true,
+        "stars": 0,
+        "forks": 0,
+        "parent": {
+          "stars": 1461,
+          "forks": 458
+        }
+      },
+      "expected": {
+        "localRecognitionRaw": 0,
+        "upstreamRecognitionRaw": 1461,
+        "attributionMode": "fork-local-only"
+      }
+    },
+    {
+      "id": "turing-upstream-context",
+      "source": "https://api.github.com/repos/nekomario28/turing-smart-screen-python-owl",
+      "input": {
+        "relation": "owned-fork",
+        "fork": true,
+        "stars": 0,
+        "forks": 0,
+        "parent": {
+          "stars": 2227,
+          "forks": 404
+        }
+      },
+      "expected": {
+        "localRecognitionRaw": 0,
+        "upstreamRecognitionRaw": 2227,
+        "attributionMode": "fork-local-only"
+      }
+    },
+    {
+      "id": "popular-original-synthetic",
+      "source": "synthetic-boundary-case",
+      "input": {
+        "relation": "owned-solo",
+        "fork": false,
+        "stars": 5000,
+        "forks": 620,
+        "dependents": 1200,
+        "downloads": 250000
+      },
+      "expected": {
+        "recognitionGreaterThanIpmFixture": true,
+        "nonlinearCountCompression": true,
+        "noDirectQualityEffect": true
+      }
+    },
+    {
+      "id": "contributed-famous-project",
+      "source": "synthetic-attribution-case",
+      "input": {
+        "relation": "contributed",
+        "fork": false,
+        "stars": 100000,
+        "forks": 15000,
+        "contributors": 1000
+      },
+      "expected": {
+        "attributionMode": "project-context-requires-contribution-gating",
+        "projectImpactVisible": true,
+        "personalContributionNotInferred": true
+      }
+    }
+  ]
+}
