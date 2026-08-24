@@ -1,7 +1,13 @@
+import {
+  normalizeRepositoryRelation,
+  relationAttributionProfile,
+  relationIsDirectOwnedSoloOriginal,
+  relationRequiresPersonalContribution,
+} from "./repository-relation.mjs";
+
 const OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const REPO_RE = /^[A-Za-z0-9._-]{1,100}$/;
 const REVISION_RE = /^[0-9a-f]{40}$/i;
-const RELATIONS = new Set(["owned-solo", "owned-team", "owned-fork", "contributed"]);
 const LIFECYCLES = new Set(["active", "maintenance", "stable", "frozen", "snapshot", "archived", "experimental", "unknown"]);
 const ACQUISITION_LEVELS = new Set(["L0", "L1", "L2"]);
 const SECTION_STATES = new Set(["observed", "partial", "not-collected", "not-applicable", "unknown"]);
@@ -50,29 +56,30 @@ export function canonicalRepositoryKey(owner, name) {
   return `${owner}/${name}`.toLowerCase();
 }
 
-export function expectedGraphNodeId(rootOwner, repositoryOwner, repositoryName, relation) {
+export function expectedGraphNodeId(rootOwner, repositoryOwner, repositoryName, relationValue) {
   if (!OWNER_RE.test(rootOwner)) throw new Error("root owner is invalid");
-  if (!RELATIONS.has(relation)) throw new Error(`unsupported relation: ${String(relation)}`);
+  const relation = normalizeRepositoryRelation(relationValue, "relation");
   const key = canonicalRepositoryKey(repositoryOwner, repositoryName);
-  if (relation === "contributed") {
+  if (relation.ownership === "contributed") {
     if (repositoryOwner.toLowerCase() === rootOwner.toLowerCase()) throw new Error("contributed repository must be externally owned");
     return `repository:${key}`;
   }
-  if (repositoryOwner.toLowerCase() !== rootOwner.toLowerCase()) throw new Error(`${relation} repository must be owned by artifact owner`);
+  if (repositoryOwner.toLowerCase() !== rootOwner.toLowerCase()) throw new Error("owned repository must be owned by artifact owner");
   return `repository:${repositoryName}`;
 }
 
 export function makeAssessmentRepositorySkeleton(rootOwner, input) {
   object(input, "repository input");
-  if (!RELATIONS.has(input.relation)) throw new Error(`unsupported relation: ${String(input.relation)}`);
+  const relation = normalizeRepositoryRelation(input.relation, "repository input.relation");
   if (!LIFECYCLES.has(input.lifecycle)) throw new Error(`unsupported lifecycle: ${String(input.lifecycle)}`);
   if (!Array.isArray(input.artifacts) || input.artifacts.length === 0 || input.artifacts.some((item) => typeof item !== "string" || !item)) {
     throw new Error("artifacts must be a non-empty string array");
   }
   if (typeof input.categoryId !== "string" || !input.categoryId) throw new Error("categoryId is required");
   const repositoryKey = canonicalRepositoryKey(input.owner, input.name);
-  const graphNodeId = expectedGraphNodeId(rootOwner, input.owner, input.name, input.relation);
+  const graphNodeId = expectedGraphNodeId(rootOwner, input.owner, input.name, relation);
   const observedAt = iso(input.observedAt, "observedAt");
+  const direct = relationIsDirectOwnedSoloOriginal(relation);
   return {
     identity: {
       repositoryKey,
@@ -85,7 +92,7 @@ export function makeAssessmentRepositorySkeleton(rootOwner, input) {
       categoryId: input.categoryId,
       artifacts: [...new Set(input.artifacts)],
       lifecycle: input.lifecycle,
-      relation: input.relation,
+      relation,
     },
     acquisition: {
       level: "L0",
@@ -95,7 +102,7 @@ export function makeAssessmentRepositorySkeleton(rootOwner, input) {
     impact: { state: "not-collected", value: null },
     scale: { state: "not-collected", value: null },
     lifecycle: { state: "not-collected", value: null },
-    personalContribution: input.relation === "owned-solo"
+    personalContribution: direct
       ? { state: "not-applicable", value: null }
       : { state: "not-collected", value: null },
     prominence: { state: "not-collected", value: null },
@@ -108,8 +115,8 @@ export function validateAssessmentRepository(rootOwner, value, label = "reposito
   const identity = object(repository.identity, `${label}.identity`);
   const context = object(repository.context, `${label}.context`);
   const acquisition = object(repository.acquisition, `${label}.acquisition`);
+  const relation = normalizeRepositoryRelation(context.relation, `${label}.context.relation`);
 
-  if (!RELATIONS.has(context.relation)) throw new Error(`${label}.context.relation is unsupported`);
   if (!LIFECYCLES.has(context.lifecycle)) throw new Error(`${label}.context.lifecycle is unsupported`);
   if (typeof context.categoryId !== "string" || !context.categoryId) throw new Error(`${label}.context.categoryId is required`);
   if (!Array.isArray(context.artifacts) || context.artifacts.length === 0 || context.artifacts.some((item) => typeof item !== "string" || !item)) {
@@ -118,7 +125,7 @@ export function validateAssessmentRepository(rootOwner, value, label = "reposito
 
   const key = canonicalRepositoryKey(identity.owner, identity.name);
   if (identity.repositoryKey !== key) throw new Error(`${label}.identity.repositoryKey must be canonical`);
-  const graphNodeId = expectedGraphNodeId(rootOwner, identity.owner, identity.name, context.relation);
+  const graphNodeId = expectedGraphNodeId(rootOwner, identity.owner, identity.name, relation);
   if (identity.graphNodeId !== graphNodeId) throw new Error(`${label}.identity.graphNodeId does not match current graph contract`);
   nullableProviderId(identity.githubRepositoryId, `${label}.identity.githubRepositoryId`);
 
@@ -127,8 +134,13 @@ export function validateAssessmentRepository(rootOwner, value, label = "reposito
 
   const sections = Object.fromEntries(SECTION_NAMES.map((name) => [name, section(repository[name], `${label}.${name}`)]));
   if (repository.productionScore !== null) throw new Error(`${label}.productionScore must remain null in experimental v1`);
-  if (context.relation === "owned-solo" && sections.personalContribution.state !== "not-applicable") {
-    throw new Error(`${label}.personalContribution must be not-applicable for owned-solo`);
+
+  const profile = relationAttributionProfile(relation);
+  if (profile === "direct" && sections.personalContribution.state !== "not-applicable") {
+    throw new Error(`${label}.personalContribution must be not-applicable for direct owned-solo-original work`);
+  }
+  if (profile !== "direct" && sections.personalContribution.state === "not-applicable") {
+    throw new Error(`${label}.personalContribution cannot be not-applicable while attribution is gated or unresolved`);
   }
 
   if (sections.prominence.value != null) {
@@ -136,7 +148,10 @@ export function validateAssessmentRepository(rootOwner, value, label = "reposito
     if (typeof prominence.candidateId !== "string" || !prominence.candidateId) throw new Error(`${label}.prominence.value.candidateId is required`);
     unitOrNull(prominence.projectProminence, `${label}.prominence.value.projectProminence`);
     const personal = unitOrNull(prominence.personalPortfolioProminence, `${label}.prominence.value.personalPortfolioProminence`);
-    if (context.relation !== "owned-solo" && sections.personalContribution.state !== "observed" && personal !== null) {
+    if (profile === "unresolved" && personal !== null) {
+      throw new Error(`${label} cannot fabricate personal prominence while repository relation attribution is unresolved`);
+    }
+    if (relationRequiresPersonalContribution(relation) && sections.personalContribution.state !== "observed" && personal !== null) {
       throw new Error(`${label} cannot fabricate personal prominence without observed Personal Contribution`);
     }
   }
