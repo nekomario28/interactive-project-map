@@ -79,7 +79,9 @@ async function sampleBackground(page) {
 }
 
 test("shared cosmic background moves continuously with camera pan and paints wrapped stars", async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // Keep the canvas larger than the 960×720 star tile so the same deterministic
+  // near-layer star remains observable before and after the camera translation.
+  const context = await browser.newContext({ viewport: { width: 1600, height: 1200 } });
   const page = await context.newPage();
   await installFixture(page);
   await page.goto("/u/?username=example&style=galaxy-systems");
@@ -99,6 +101,7 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   const after = await sampleBackground(page);
   expect(after).not.toBeNull();
   expect(after.brightest).toBeGreaterThan(60);
+  expect(after.snap.nearStar.index).toBe(before.snap.nearStar.index);
   expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.tile.width)).toBeCloseTo(120 * 0.32, 3);
   expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.tile.height)).toBeCloseTo(-75 * 0.32, 3);
 
