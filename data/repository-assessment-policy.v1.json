@@ -42,12 +42,18 @@
     "experimental",
     "unknown"
   ],
-  "relationStates": [
-    "owned-solo",
-    "owned-team",
-    "owned-fork",
-    "contributed"
-  ],
+  "repositoryRelationAxes": {
+    "ownership": ["owned", "contributed"],
+    "collaboration": ["solo", "team", "unknown"],
+    "lineage": ["original", "fork", "unknown"]
+  },
+  "repositoryRelationContract": {
+    "axesAreOrthogonal": true,
+    "l0OwnedCollaborationDefault": "unknown",
+    "forkIsLineageNotOwnership": true,
+    "contributedIsOwnershipRelationNotCollaboration": true,
+    "unknownDoesNotGrantDirectPersonalCredit": true
+  },
   "axes": {
     "quality": {
       "kind": "assessment",

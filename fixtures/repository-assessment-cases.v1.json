@@ -9,7 +9,7 @@
         "category": "data-analytics",
         "artifacts": ["dataset"],
         "lifecycle": "frozen",
-        "relation": "owned-solo"
+        "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "original" }
       },
       "evidence": {
         "schemaMetadata": true,
@@ -37,7 +37,7 @@
         "category": "developer-tools",
         "artifacts": ["tool"],
         "lifecycle": "stable",
-        "relation": "owned-solo"
+        "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "original" }
       },
       "evidence": {
         "strongApplicableQualityEvidence": true,
@@ -55,7 +55,7 @@
         "category": "applications-services",
         "artifacts": ["application"],
         "lifecycle": "active",
-        "relation": "owned-solo"
+        "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "original" }
       },
       "evidence": {
         "goodButLowerQualityThanHighQualityZeroStarFixture": true,
@@ -75,7 +75,7 @@
         "category": "developer-tools",
         "artifacts": ["framework"],
         "lifecycle": "active",
-        "relation": "contributed"
+        "relation": { "ownership": "contributed", "collaboration": "unknown", "lineage": "original" }
       },
       "evidence": {
         "projectStars": 100000,
@@ -89,7 +89,7 @@
         "project Impact and Scale can be very high",
         "Personal Contribution remains low",
         "the person does not inherit the project's full portfolio prominence",
-        "relation remains contributed rather than owned"
+        "ownership relation remains contributed rather than owned"
       ]
     },
     {
@@ -98,7 +98,7 @@
         "category": "systems-infrastructure",
         "artifacts": ["framework"],
         "lifecycle": "active",
-        "relation": "contributed"
+        "relation": { "ownership": "contributed", "collaboration": "team", "lineage": "original" }
       },
       "evidence": {
         "projectStars": 25000,
@@ -122,7 +122,7 @@
         "category": "developer-tools",
         "artifacts": ["library"],
         "lifecycle": "active",
-        "relation": "owned-fork"
+        "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "fork" }
       },
       "evidence": {
         "upstreamStars": 30000,
@@ -141,7 +141,7 @@
         "category": "ai-ml",
         "artifacts": ["research", "dataset", "model"],
         "lifecycle": "stable",
-        "relation": "owned-team"
+        "relation": { "ownership": "owned", "collaboration": "team", "lineage": "original" }
       },
       "evidence": {
         "methodDocumented": true,
@@ -154,6 +154,23 @@
         "primary semantic category remains AI & Machine Learning",
         "repository hygiene does not by itself prove model capability or dataset intrinsic validity"
       ]
+    },
+    {
+      "id": "owned-collaboration-unresolved",
+      "context": {
+        "category": "developer-tools",
+        "artifacts": ["tool"],
+        "lifecycle": "active",
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "original" }
+      },
+      "evidence": {
+        "stars": 12,
+        "forks": 1
+      },
+      "expectedInvariants": [
+        "L0 ownership does not imply solo authorship",
+        "personal prominence is not fabricated until collaboration is resolved"
+      ]
     }
   ],
   "crossCaseInvariants": [
@@ -162,6 +179,8 @@
     "not-applicable evidence mechanisms do not count as failures",
     "unknown evidence is not silently scored as success or failure",
     "project merit and personal merit remain separate for shared work",
+    "ownership collaboration and lineage remain orthogonal",
+    "fork lineage is not encoded as ownership",
     "no global percentile is claimed from this local fixture set"
   ]
 }

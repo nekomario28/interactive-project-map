@@ -2,14 +2,13 @@
   "schemaVersion": 1,
   "fixtureId": "ipm-repository-impact-calibration-v1",
   "observedAt": "2026-08-24",
-  "note": "Public metadata snapshots are frozen calibration evidence, not live-count assertions.",
+  "note": "Public metadata snapshots are frozen calibration evidence, not live-count assertions. Collaboration is unknown unless separately evidenced.",
   "cases": [
     {
       "id": "ipm-low-recognition-original",
       "source": "https://api.github.com/repos/nekomario28/interactive-project-map",
       "input": {
-        "relation": "owned-solo",
-        "fork": false,
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "original" },
         "stars": 1,
         "forks": 0
       },
@@ -23,8 +22,7 @@
       "id": "original-with-ambiguous-fork-interest",
       "source": "https://api.github.com/repos/nekomario28/ProjExD_Group10",
       "input": {
-        "relation": "owned-team",
-        "fork": false,
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "original" },
         "stars": 1,
         "forks": 5
       },
@@ -37,8 +35,7 @@
       "id": "gz-sim-upstream-context",
       "source": "https://api.github.com/repos/nekomario28/gz-sim",
       "input": {
-        "relation": "owned-fork",
-        "fork": true,
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "fork" },
         "stars": 0,
         "forks": 0,
         "parent": {
@@ -49,15 +46,14 @@
       "expected": {
         "localRecognitionRaw": 0,
         "upstreamRecognitionRaw": 1461,
-        "attributionMode": "fork-local-only"
+        "attributionProfile": "fork"
       }
     },
     {
       "id": "turing-upstream-context",
       "source": "https://api.github.com/repos/nekomario28/turing-smart-screen-python-owl",
       "input": {
-        "relation": "owned-fork",
-        "fork": true,
+        "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "fork" },
         "stars": 0,
         "forks": 0,
         "parent": {
@@ -68,15 +64,14 @@
       "expected": {
         "localRecognitionRaw": 0,
         "upstreamRecognitionRaw": 2227,
-        "attributionMode": "fork-local-only"
+        "attributionProfile": "fork"
       }
     },
     {
       "id": "popular-original-synthetic",
       "source": "synthetic-boundary-case",
       "input": {
-        "relation": "owned-solo",
-        "fork": false,
+        "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "original" },
         "stars": 5000,
         "forks": 620,
         "dependents": 1200,
@@ -92,14 +87,13 @@
       "id": "contributed-famous-project",
       "source": "synthetic-attribution-case",
       "input": {
-        "relation": "contributed",
-        "fork": false,
+        "relation": { "ownership": "contributed", "collaboration": "unknown", "lineage": "original" },
         "stars": 100000,
         "forks": 15000,
         "contributors": 1000
       },
       "expected": {
-        "attributionMode": "project-context-requires-contribution-gating",
+        "attributionProfile": "contributed",
         "projectImpactVisible": true,
         "personalContributionNotInferred": true
       }

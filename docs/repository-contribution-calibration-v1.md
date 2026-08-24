@@ -2,7 +2,9 @@
 
 Status: **experimental evidence-vector calibration / no Personal Contribution score yet**
 
-This document defines the person-side evidence boundary for large team projects, externally owned contributed repositories, and forks. It complements [`repository-impact-calibration-v1.md`](repository-impact-calibration-v1.md): project reputation remains project-side evidence, while the assessed person's role is represented independently.
+This document defines the person-side evidence boundary for team projects, externally owned contributed repositories, forks, and repositories whose collaboration state is not yet known. Project reputation remains project-side evidence while the assessed person's role is represented independently.
+
+Relation semantics follow [`repository-relation-axes-v1.md`](repository-relation-axes-v1.md).
 
 ## Core separation
 
@@ -11,93 +13,119 @@ Never compute personal contribution from project popularity or size:
 ```text
 PROJECT SIDE
   stars / forks / adoption
-  project quality
-  project scale
+  project Quality
+  project Scale
   contributor population
 
 PERSON SIDE
   accepted changes
   review participation
   maintained components
-  maintainer / ownership role
+  maintainer responsibility
   release responsibility
   sustained duration
-  other direct responsibility evidence
+  local delta for forks
 ```
 
-A 100k-star project can have very high project Impact while a particular person's Personal Contribution remains unknown, small, medium, or large depending on direct evidence.
+A 100k-star project can have very high project Impact while a particular person's Personal Contribution remains unknown, small, or substantial depending on direct evidence.
 
 ## Counts are evidence, not merit by themselves
 
-The extractor preserves counts such as merged PRs, commits, reviews, issues, and active duration, but does not turn them into a scalar score.
+Merged PRs, commits, reviews, issues, and active duration are retained as observations. They do not directly become a contribution score.
 
-Important counterexamples:
+Counterexamples:
 
 - one PR can be a typo or a major subsystem;
-- hundreds of commits can be mechanical/generated churn;
-- a small number of architectural changes can carry high responsibility;
-- review/release/component ownership can matter more than raw authored LOC;
-- long duration without material responsibility is not automatically high contribution.
+- many commits can be mechanical/generated churn;
+- a few architectural changes can carry high responsibility;
+- review/release/component ownership can matter more than LOC;
+- duration without material responsibility is not automatically high contribution.
 
-Therefore `mergedPullRequests=42` is an observation, not `Contribution=72`.
+`mergedPullRequests = 42` is evidence, not `Contribution = 72`.
 
 ## Responsibility evidence
 
-Responsibility-oriented evidence is preserved separately from activity volume:
+Keep responsibility signals separate from activity volume:
 
 ```text
 maintainer role
 release involvement
-maintained/core component ownership
+maintained/core component responsibility
 ```
 
-Additional repository-specific authority may be added later if it has a stable, auditable source.
+Missing boolean evidence remains `unknown` rather than silently becoming false.
 
-Review participation is kept as an activity/collaboration signal; review count alone does not prove maintainer authority.
+## Orthogonal relation semantics
 
-## Relation semantics
+### Direct personal project
 
-### `owned-solo`
-
-If the relation itself has been established from trustworthy evidence, person-side attribution can be direct. Namespace ownership alone is not enough to assign this relation.
-
-### `owned-team`
-
-Project ownership does not mean one person authored the whole project. Person-side prominence requires contribution/responsibility evidence when the UI makes claims about the individual.
-
-### `owned-fork`
-
-Only the local delta and direct fork work can support personal contribution. Upstream project activity/reputation remains outside the person-side extractor.
-
-### `contributed`
-
-The externally owned project's Impact/Quality/Scale may be visible as project context, but portfolio attribution requires a Personal Contribution gate.
-
-## Missing evidence
-
-Each evidence channel distinguishes `observed` from `unknown`. Missing reviews, release role, or maintained-component evidence must not be silently converted to false unless the source actually establishes false.
-
-Boolean responsibility fields therefore use:
+Direct attribution is permitted only for a fully established:
 
 ```text
-observed true
-observed false
-unknown
+ownership = owned
+collaboration = solo
+lineage = original
 ```
 
-This prevents a limited API query from asserting that someone is not a maintainer merely because maintainer evidence was not fetched.
+Namespace ownership alone does not prove `solo`.
+
+### Team project
+
+```text
+ownership = owned
+collaboration = team
+lineage = original
+```
+
+Project merit remains project-side. Individual prominence requires person-side contribution/responsibility evidence.
+
+### Fork lineage
+
+```text
+lineage = fork
+```
+
+Only local delta and direct work can support authored personal merit. Upstream project Quality/Impact/Scale remain context-only. Fork lineage can coexist with unknown/solo/team collaboration; it is not an ownership state.
+
+### Contributed ownership relation
+
+```text
+ownership = contributed
+```
+
+Externally owned project Quality/Impact/Scale may be shown as project context, but personal portfolio attribution is gated by Personal Contribution. The external project's collaboration can remain unknown without weakening this boundary.
+
+### Unresolved owned collaboration
+
+```text
+ownership = owned
+collaboration = unknown
+lineage = original
+```
+
+This is the normal safe L0 state when graph metadata proves ownership but not solo/team authorship. It must **not** be treated as direct solo work. Project-side assessment may continue; personal prominence remains unresolved.
 
 ## No project-side leakage
 
-The person-side extractor rejects project-wide popularity/scale inputs such as project stars, project forks, project contributor count, project Impact, project Quality, or project Scale. Those belong in the project-side vector and are joined only at later portfolio-prominence calibration.
+The person-side extractor rejects project-wide values such as:
 
-This is deliberately strict: it makes accidental reputation inheritance a detectable contract violation rather than a subtle weighting bug.
+```text
+project stars
+project forks
+project contributor count
+project Quality
+project Impact
+project Scale
+```
+
+Those are joined only later by prominence calibration. This makes accidental reputation inheritance a visible contract error.
 
 ## Output direction
 
-The output is an inspectable vector:
-
 ```text
+relation
+  ownership / collaboration / lineage
+
 activity
   merged PRs
   commits
@@ -108,13 +136,13 @@ activity
 responsibility
   maintainer role
   release involvement
-  maintained core/component responsibility
+  maintained component responsibility
 
 local delta
-  required/unknown/observed for forks
+  unknown/observed for fork lineage
 
-attribution
-  relation-specific contribution gate requirements
+attribution profile
+  direct | team | fork | contributed | unresolved
 
 compositePersonalContribution
   null in this phase
@@ -122,11 +150,13 @@ compositePersonalContribution
 
 ## Acceptance invariants
 
-1. Project stars/forks/contributor population cannot enter the person-side extractor.
+1. Project reputation/Scale cannot enter the person-side extractor.
 2. One merged PR alone does not determine contribution magnitude.
-3. Maintainer/release/core-component evidence is preserved separately from activity counts.
+3. Responsibility evidence remains distinct from activity counts.
 4. Missing role evidence remains unknown rather than false.
-5. `contributed` and `owned-team` require person-side evidence before individual attribution.
-6. `owned-fork` requires local-delta evidence for personal attribution.
-7. `owned-solo` direct attribution depends on the relation having already been established, not GitHub namespace ownership alone.
-8. No scalar Personal Contribution score or prominence weight is frozen in this phase.
+5. `ownership=contributed` requires person-side evidence before personal prominence.
+6. `collaboration=team` requires person-side evidence before personal prominence.
+7. `lineage=fork` requires local-delta attribution rather than upstream inheritance.
+8. Only `owned × solo × original` permits direct attribution.
+9. `owned × unknown × original` never silently becomes solo.
+10. No scalar Personal Contribution score is frozen in this phase.

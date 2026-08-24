@@ -4,30 +4,22 @@ Status: **experimental evidence-vector calibration / no composite Impact score y
 
 This document narrows the `Impact` axis defined by [`repository-assessment-model-v1.md`](repository-assessment-model-v1.md). The goal is to preserve the importance of stars, forks, large collaborative projects, and downstream adoption without turning one popularity counter into repository Quality or personal merit.
 
-## Why this calibration step exists
+Repository attribution follows [`repository-relation-axes-v1.md`](repository-relation-axes-v1.md): ownership, collaboration, and lineage are separate axes.
 
-The first repository-assessment contract intentionally leaves numeric weights unfrozen. Real repository metadata immediately shows why.
+## Calibration evidence
 
-Observed public snapshots on 2026-08-24:
+Observed public snapshots on 2026-08-24 were frozen as calibration fixtures:
 
-| Repository | Relation | Repo stars | Repo forks | Upstream stars | Upstream forks | Calibration lesson |
+| Repository | Lineage | Repo stars | Repo forks | Upstream stars | Upstream forks | Lesson |
 |---|---|---:|---:|---:|---:|---|
-| `nekomario28/interactive-project-map` | original | 1 | 0 | — | — | Low public recognition does not invalidate strong repository-quality evidence. |
-| `nekomario28/ProjExD_Group10` | original | 1 | 5 | — | — | A fork count is a derivative/reuse/collaboration signal, not five proven independent adopters. |
-| `nekomario28/gz-sim` | fork | 0 | 0 | 1461 | 458 | Large upstream reputation is useful project context but is not the fork owner's local Impact. |
-| `nekomario28/turing-smart-screen-python-owl` | fork | 0 | 0 | 2227 | 404 | The same upstream/local separation is required even when inherited project quality is substantial. |
+| `nekomario28/interactive-project-map` | original | 1 | 0 | — | — | Low recognition does not invalidate strong Quality evidence. |
+| `nekomario28/ProjExD_Group10` | original | 1 | 5 | — | — | Fork count is reuse/derivative interest, not five proven adopters. |
+| `nekomario28/gz-sim` | fork | 0 | 0 | 1461 | 458 | Upstream reputation is context, not local Impact. |
+| `nekomario28/turing-smart-screen-python-owl` | fork | 0 | 0 | 2227 | 404 | The same upstream/local separation applies even to highly visible upstreams. |
 
-These are calibration snapshots, not live assertions. Their purpose is to freeze the semantic counterexamples that a later scoring formula must continue to satisfy.
+These are frozen evidence snapshots, not live-count assertions.
 
-## Impact is an evidence vector first
-
-Do not start from:
-
-```text
-impact = stars + forks + contributors
-```
-
-Use separate evidence channels:
+## Impact is a vector first
 
 ```text
 recognition
@@ -39,128 +31,130 @@ reuse / derivative interest
 adoption
   dependents
   downloads / installs
-  deployments or domain-specific consumption when trustworthy
+  deployments when trustworthy
 
 research / domain uptake
-  citations or equivalent domain evidence when relevant
+  citations or domain-specific uptake
 
 collaboration / coordination context
   contributors
 
 upstream context
-  parent/source stars and forks for a fork
+  source stars/forks when lineage = fork
 ```
 
-A later composite Impact score may combine compatible channels, but the vector remains the inspectable authority.
+The vector remains inspectable even if a later scalar Impact score is introduced.
 
 ## Stars
 
-Stars are the strongest generally available GitHub-native public recognition signal in the current IPM metadata budget.
-
 Rules:
 
-1. stars materially influence `Impact` and eventually `portfolioProminence`;
-2. stars do not directly modify intrinsic `Quality`;
-3. star counts are heavy-tailed and use a nonlinear transform family such as `log1p` before any composition or geometry;
-4. zero stars is an observed value, not missing evidence;
-5. a missing star observation is `unknown`, not zero;
-6. current total stars do not prove historical growth velocity.
+1. stars materially influence Impact and later portfolio prominence;
+2. stars do not directly modify intrinsic Quality;
+3. heavy-tailed counts use a nonlinear transform family such as `log1p`;
+4. observed zero is not missing evidence;
+5. missing observations remain unknown;
+6. one current total does not prove growth velocity.
 
-## Forks
+## Fork count
 
-Fork count is important but semantically broader than adoption.
+A repository's `forks_count` is named **reuse/derivative interest** because forks can represent reuse, modification, contribution workflow, experimentation, classroom/team work, derivatives, or abandoned copies.
 
-A fork can represent:
+Do not label the raw count `adopters` without stronger downstream evidence.
 
-- reuse or modification;
-- contribution workflow;
-- experimentation;
-- classroom/team collaboration;
-- a derivative project;
-- an abandoned copy.
+## Fork lineage and upstream context
 
-Therefore a GitHub `forks_count` observation is named **reuse/derivative interest**, not `adopters`.
-
-A later assessment may strengthen the interpretation when downstream activity, dependents, releases, package use, accepted contributions, or other evidence disambiguates it. The baseline extractor must not make that stronger claim.
-
-## Upstream reputation for forks
-
-For a fork, maintain two different views:
+`fork` is represented by:
 
 ```text
-LOCAL FORK / REPOSITORY
+relation.lineage = fork
+```
+
+not by a compound ownership relation.
+
+Keep local and upstream views separate:
+
+```text
+LOCAL REPOSITORY
   local stars
   local forks
-  local delta / personal contribution
+  local delta
+  personal contribution
 
 UPSTREAM CONTEXT
   upstream stars
   upstream forks
-  upstream project quality / scale when separately assessed
+  separately assessed upstream Quality / Scale
 ```
 
-Upstream reputation can explain that a contribution occurred in an important project, but it cannot be copied into the fork owner's local Impact or Quality.
+Upstream reputation may explain the importance of the surrounding project but cannot be copied into local Impact or authored personal merit.
 
-For an externally owned `relation: contributed` repository, repository Impact is project-side context. Portfolio attribution must still be gated by `Personal Contribution` rather than granting the contributor the whole project's reputation.
+The extractor rejects a duplicate `fork` boolean once lineage is present so the relation has one authority.
 
-## Contributors
+## Contributed ownership
 
-Contributor count is primarily collaboration/coordination evidence and may also support project Scale or community Impact. It is not a direct measure of the assessed person's contribution.
+For externally owned work:
 
-`contributors = 300` plus one tiny personal change must remain different from a maintainer role with review/release/component ownership evidence.
+```text
+relation.ownership = contributed
+```
 
-## Missing vs zero
+Project-side Impact remains visible regardless of whether project collaboration is known. Personal portfolio credit remains separately gated by Personal Contribution.
+
+This means a 100k-star project can correctly have very high project Impact while a one-line personal change receives very little personal prominence.
+
+## Collaboration context
+
+Contributor count can support project collaboration/coordination context and Scale. It does not identify how much the portfolio owner contributed.
+
+`contributors = 300` plus one tiny personal change is different from a maintainer role backed by reviews, release work, maintained components, and sustained activity.
+
+## Missing versus zero
 
 The Impact vector distinguishes:
 
 ```text
-observed: 0
+observed zero
 unknown / not acquired
-not applicable
+not applicable where meaningful
 ```
 
-This matters especially for dependents/downloads/citations because IPM does not currently acquire all of them for every repository. A missing endpoint/query must not make a project look like it has zero adoption.
+Missing dependents/downloads/citations must not become numeric zero merely because IPM does not acquire them at L0.
 
-## Absolute vs portfolio-relative presentation
+## Absolute versus portfolio-relative presentation
 
-Pure portfolio-relative normalization is not sufficient. If the largest project in a portfolio has one star, it should not receive the same absolute halo as a genuinely high-impact project merely because it ranks first locally.
-
-Likewise, pure absolute normalization loses useful within-portfolio ordering for low-impact or early portfolios.
-
-Keep two concepts separate:
+Keep both concepts available:
 
 ```text
 absolute transformed evidence
-  e.g. log1p(stars), log1p(forks)
+  log1p(stars), log1p(forks), ...
 
 portfolio-relative position
-  rank / percentile / tier within the current portfolio
+  rank / percentile / tier within this portfolio
 ```
 
-Do not merge them until corpus calibration establishes an interpretable mapping. A local percentile must be labeled local.
+A local percentile is never a global percentile. Pure local ranking also cannot make one star look globally equivalent to thousands of stars.
 
-## No scalar Impact formula in this phase
+## Deferred scalar decisions
 
-This phase intentionally does not freeze:
+This phase does not freeze:
 
 - star-vs-fork weights;
-- an absolute saturation point;
-- contributor weight;
-- adoption/citation weights;
-- a global percentile mapping;
-- a portfolio-relative/absolute blend;
-- a final halo radius formula.
-
-The deterministic implementation only extracts the evidence vector and preserves attribution boundaries. The next calibration phase can compare candidate scalar mappings against multiple real portfolios without re-fetching the semantic rules from chat.
+- saturation points;
+- contributor/adoption/citation weights;
+- global percentile mappings;
+- absolute-versus-local blends;
+- final halo geometry.
 
 ## Acceptance invariants
 
 1. `stars=0` is distinguishable from unknown stars.
-2. More observed stars produce a larger transformed recognition signal, with nonlinear compression.
-3. More observed forks produce a larger reuse/derivative-interest signal, not a literal adopter count.
-4. Missing dependents/downloads/citations remain unknown.
-5. Fork upstream stars/forks appear only in `upstreamContext` and never in the local repository signals.
-6. `owned-fork` attribution is local-fork-only; inherited upstream reputation is context.
-7. `contributed` attribution requires a separate Personal Contribution gate.
-8. No Impact evidence channel directly changes Quality.
-9. No scalar Impact or portfolio-prominence weights are introduced by the extractor.
+2. More observed stars increase transformed recognition with nonlinear compression.
+3. Fork count increases reuse/derivative-interest evidence, not literal adopter count.
+4. Missing adoption/citation evidence remains unknown.
+5. `relation.lineage = fork` keeps upstream popularity in `upstreamContext` only.
+6. Ownership/collaboration/lineage remain independently inspectable.
+7. `relation.ownership = contributed` requires a Personal Contribution gate for personal prominence.
+8. Unknown owned collaboration never silently becomes solo attribution.
+9. No Impact channel directly changes Quality.
+10. The extractor does not freeze a scalar Impact or production prominence formula.

@@ -10,9 +10,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const fixtures = JSON.parse(fs.readFileSync(path.join(root, "fixtures/repository-impact-calibration.v1.json"), "utf8"));
 const byId = new Map(fixtures.cases.map((entry) => [entry.id, entry]));
+const SOLO_ORIGINAL = { ownership: "owned", collaboration: "solo", lineage: "original" };
+const OWNED_FORK = { ownership: "owned", collaboration: "unknown", lineage: "fork" };
 
 test("zero is observed and missing optional adoption evidence remains unknown", () => {
-  const evidence = buildRepositoryImpactEvidence({ relation: "owned-solo", fork: false, stars: 0, forks: 0 });
+  const evidence = buildRepositoryImpactEvidence({ relation: SOLO_ORIGINAL, stars: 0, forks: 0 });
   assert.equal(evidence.projectSide.recognition.state, "observed");
   assert.equal(evidence.projectSide.recognition.raw, 0);
   assert.equal(evidence.projectSide.adoption.dependents.state, "unknown");
@@ -49,13 +51,14 @@ test("fork upstream reputation is context only and cannot become local fork Impa
     assert.equal(evidence.upstreamContext.contextOnly, true);
     assert.equal(evidence.upstreamContext.eligibleForLocalImpact, false);
     assert.ok(evidence.upstreamContext.recognition.raw > 1000);
-    assert.equal(evidence.attribution.mode, "fork-local-only");
+    assert.equal(evidence.attribution.profile, "fork");
+    assert.equal(evidence.attribution.upstreamMetricsAreContextOnly, true);
     assert.equal(evidence.compositeImpact, null);
   }
 });
 
 test("a fork with unavailable parent metadata preserves unknown upstream context rather than zero", () => {
-  const evidence = buildRepositoryImpactEvidence({ relation: "owned-fork", fork: true, stars: 0, forks: 0 });
+  const evidence = buildRepositoryImpactEvidence({ relation: OWNED_FORK, stars: 0, forks: 0 });
   assert.equal(evidence.upstreamContext.state, "unknown");
   assert.equal(evidence.upstreamContext.recognition.raw, null);
   assert.equal(evidence.upstreamContext.reuseDerivativeInterest.raw, null);
@@ -67,27 +70,27 @@ test("contributed project Impact requires a separate Personal Contribution gate"
   assert.equal(evidence.projectSide.recognition.raw, 100000);
   assert.equal(evidence.projectSide.collaborationContext.contributors.raw, 1000);
   assert.equal(evidence.projectSide.collaborationContext.personalContributionInferred, false);
-  assert.equal(evidence.attribution.mode, "project-context-requires-contribution-gating");
+  assert.equal(evidence.attribution.profile, "contributed");
   assert.equal(evidence.attribution.requiresPersonalContributionGate, true);
   assert.equal(evidence.portfolioProminenceEffect, null);
 });
 
 test("count normalization is monotonic and compresses heavy tails", () => {
-  const one = buildRepositoryImpactEvidence({ relation: "owned-solo", fork: false, stars: 1, forks: 0 });
-  const hundred = buildRepositoryImpactEvidence({ relation: "owned-solo", fork: false, stars: 100, forks: 0 });
-  const tenThousand = buildRepositoryImpactEvidence({ relation: "owned-solo", fork: false, stars: 10000, forks: 0 });
+  const one = buildRepositoryImpactEvidence({ relation: SOLO_ORIGINAL, stars: 1, forks: 0 });
+  const hundred = buildRepositoryImpactEvidence({ relation: SOLO_ORIGINAL, stars: 100, forks: 0 });
+  const tenThousand = buildRepositoryImpactEvidence({ relation: SOLO_ORIGINAL, stars: 10000, forks: 0 });
   assert.ok(one.projectSide.recognition.transformed < hundred.projectSide.recognition.transformed);
   assert.ok(hundred.projectSide.recognition.transformed < tenThousand.projectSide.recognition.transformed);
   assert.ok(tenThousand.projectSide.recognition.transformed < 100 * hundred.projectSide.recognition.transformed);
 });
 
-test("invalid fork relation combinations fail closed", () => {
+test("fork lineage is single-source and duplicate fork flags fail closed", () => {
   assert.throws(
-    () => buildRepositoryImpactEvidence({ relation: "owned-solo", fork: true, stars: 0, forks: 0 }),
-    /fork=true requires owned-fork/,
+    () => buildRepositoryImpactEvidence({ relation: OWNED_FORK, fork: true, stars: 0, forks: 0 }),
+    /encoded by relation.lineage/,
   );
   assert.throws(
-    () => buildRepositoryImpactEvidence({ relation: "owned-fork", fork: false, stars: 0, forks: 0 }),
-    /owned-fork relation requires fork=true/,
+    () => buildRepositoryImpactEvidence({ relation: SOLO_ORIGINAL, stars: 0, forks: 0, parent: { stars: 1, forks: 1 } }),
+    /only valid when relation.lineage is fork/,
   );
 });

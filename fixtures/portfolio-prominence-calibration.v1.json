@@ -5,43 +5,48 @@
   "cases": [
     {
       "id": "high-quality-zero-star-solo",
-      "relation": "owned-solo",
+      "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "original" },
       "components": { "quality": 0.95, "impact": 0.05, "scale": 0.35, "maturity": 0.90, "personalContribution": null, "confidence": 0.90 }
     },
     {
       "id": "popular-solo-lower-quality",
-      "relation": "owned-solo",
+      "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "original" },
       "components": { "quality": 0.80, "impact": 0.95, "scale": 0.55, "maturity": 0.85, "personalContribution": null, "confidence": 0.90 }
     },
     {
       "id": "famous-project-tiny-contribution",
-      "relation": "contributed",
+      "relation": { "ownership": "contributed", "collaboration": "unknown", "lineage": "original" },
       "components": { "quality": 0.95, "impact": 1.00, "scale": 1.00, "maturity": 0.95, "personalContribution": 0.05, "confidence": 0.95 }
     },
     {
       "id": "large-project-core-maintainer",
-      "relation": "contributed",
+      "relation": { "ownership": "contributed", "collaboration": "team", "lineage": "original" },
       "components": { "quality": 0.92, "impact": 0.95, "scale": 0.95, "maturity": 0.90, "personalContribution": 0.90, "confidence": 0.95 }
     },
     {
       "id": "fork-with-small-local-delta",
-      "relation": "owned-fork",
+      "relation": { "ownership": "owned", "collaboration": "solo", "lineage": "fork" },
       "components": { "quality": 0.60, "impact": 0.02, "scale": 0.15, "maturity": 0.55, "personalContribution": 0.10, "confidence": 0.85 }
     },
     {
       "id": "meaningful-team-project",
-      "relation": "owned-team",
+      "relation": { "ownership": "owned", "collaboration": "team", "lineage": "original" },
       "components": { "quality": 0.78, "impact": 0.20, "scale": 0.65, "maturity": 0.75, "personalContribution": 0.80, "confidence": 0.85 }
     },
     {
       "id": "research-dataset-model-team",
-      "relation": "owned-team",
+      "relation": { "ownership": "owned", "collaboration": "team", "lineage": "original" },
       "components": { "quality": 0.90, "impact": 0.30, "scale": 0.55, "maturity": 0.90, "personalContribution": 0.75, "confidence": 0.80 }
     },
     {
       "id": "shared-project-unknown-personal-contribution",
-      "relation": "contributed",
+      "relation": { "ownership": "contributed", "collaboration": "unknown", "lineage": "original" },
       "components": { "quality": 0.90, "impact": 0.90, "scale": 0.90, "maturity": 0.90, "personalContribution": null, "confidence": 0.70 }
+    },
+    {
+      "id": "owned-collaboration-unresolved",
+      "relation": { "ownership": "owned", "collaboration": "unknown", "lineage": "original" },
+      "components": { "quality": 0.88, "impact": 0.40, "scale": 0.60, "maturity": 0.80, "personalContribution": null, "confidence": 0.75 }
     }
   ],
   "requiredCrossCaseConstraints": [
@@ -51,6 +56,7 @@
     "famous-project-tiny-contribution project prominence remains high while personal prominence is contribution-gated",
     "fork-with-small-local-delta does not receive upstream reputation through this formula",
     "shared-project-unknown-personal-contribution has project prominence but no fabricated personal prominence",
+    "owned-collaboration-unresolved has project prominence but no fabricated personal prominence",
     "activity is not an input",
     "confidence is preserved but does not change merit score in v1 calibration"
   ]

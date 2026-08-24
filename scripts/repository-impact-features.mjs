@@ -1,4 +1,8 @@
-const RELATIONS = new Set(["owned-solo", "owned-team", "owned-fork", "contributed"]);
+import {
+  normalizeRepositoryRelation,
+  relationAttributionProfile,
+  relationRequiresPersonalContribution,
+} from "./repository-relation.mjs";
 
 function observedCount(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
@@ -18,18 +22,10 @@ function requiredCount(value, label) {
   return { state: "observed", raw, transformed: Math.log1p(raw) };
 }
 
-function attributionMode(relation) {
-  if (relation === "owned-fork") return "fork-local-only";
-  if (relation === "contributed") return "project-context-requires-contribution-gating";
-  return "direct-project";
-}
-
 export function buildRepositoryImpactEvidence(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("impact input must be an object");
-  if (!RELATIONS.has(input.relation)) throw new Error(`unsupported relation: ${String(input.relation)}`);
-  if (typeof input.fork !== "boolean") throw new Error("fork must be boolean");
-  if (input.relation === "owned-fork" && input.fork !== true) throw new Error("owned-fork relation requires fork=true");
-  if (input.relation !== "owned-fork" && input.fork === true) throw new Error("fork=true requires owned-fork relation in v1 input");
+  const relation = normalizeRepositoryRelation(input.relation, "impact input.relation");
+  if (Object.hasOwn(input, "fork")) throw new Error("fork is encoded by relation.lineage and must not be duplicated");
 
   const stars = requiredCount(input.stars, "stars");
   const forks = requiredCount(input.forks, "forks");
@@ -38,8 +34,11 @@ export function buildRepositoryImpactEvidence(input) {
   const citations = optionalCount(input.citations, "citations");
   const contributors = optionalCount(input.contributors, "contributors");
 
+  const isFork = relation.lineage === "fork";
+  if (!isFork && input.parent != null) throw new Error("parent impact context is only valid when relation.lineage is fork");
+
   let upstreamContext = null;
-  if (input.fork) {
+  if (isFork) {
     if (!input.parent || typeof input.parent !== "object" || Array.isArray(input.parent)) {
       upstreamContext = {
         state: "unknown",
@@ -61,7 +60,7 @@ export function buildRepositoryImpactEvidence(input) {
 
   return {
     schemaVersion: 1,
-    relation: input.relation,
+    relation,
     projectSide: {
       recognition: {
         ...stars,
@@ -89,9 +88,11 @@ export function buildRepositoryImpactEvidence(input) {
     },
     upstreamContext,
     attribution: {
-      mode: attributionMode(input.relation),
-      requiresPersonalContributionGate: input.relation === "contributed",
-      upstreamMetricsAreContextOnly: input.fork,
+      profile: relationAttributionProfile(relation),
+      requiresPersonalContributionGate: relationRequiresPersonalContribution(relation),
+      upstreamMetricsAreContextOnly: isFork,
+      collaborationState: relation.collaboration,
+      lineageState: relation.lineage,
     },
     compositeImpact: null,
     portfolioProminenceEffect: null,

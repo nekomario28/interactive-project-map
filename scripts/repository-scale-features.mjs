@@ -1,4 +1,9 @@
-const RELATIONS = new Set(["owned-solo", "owned-team", "owned-fork", "contributed"]);
+import {
+  normalizeRepositoryRelation,
+  relationAttributionProfile,
+  relationRequiresLocalDelta,
+} from "./repository-relation.mjs";
+
 const FORBIDDEN_PERSON_KEYS = new Set([
   "mergedPullRequests",
   "commitsByPerson",
@@ -53,14 +58,17 @@ function collectSignals(side) {
 
 export function buildRepositoryScaleEvidence(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("scale input must be an object");
-  if (!RELATIONS.has(input.relation)) throw new Error(`unsupported relation: ${String(input.relation)}`);
+  const relation = normalizeRepositoryRelation(input.relation, "scale input.relation");
   for (const key of Object.keys(input)) {
     if (FORBIDDEN_PERSON_KEYS.has(key)) throw new Error(`${key} is person-side evidence and must not enter project Scale extraction`);
   }
 
   const projectSide = buildSide(input);
+  const isFork = relationRequiresLocalDelta(relation);
+  if (!isFork && input.parent != null) throw new Error("parent scale context is only valid when relation.lineage is fork");
+
   let upstreamContext = null;
-  if (input.relation === "owned-fork") {
+  if (isFork) {
     if (input.parent == null) {
       upstreamContext = { state: "unknown", contextOnly: true, eligibleForLocalScale: false };
     } else {
@@ -78,7 +86,7 @@ export function buildRepositoryScaleEvidence(input) {
 
   return {
     schemaVersion: 1,
-    relation: input.relation,
+    relation,
     projectSide: {
       ...projectSide,
       signals: collectSignals(projectSide),
@@ -88,8 +96,11 @@ export function buildRepositoryScaleEvidence(input) {
     },
     upstreamContext,
     attribution: {
-      upstreamScaleIsContextOnly: input.relation === "owned-fork",
+      profile: relationAttributionProfile(relation),
+      upstreamScaleIsContextOnly: isFork,
       personalContributionInferred: false,
+      collaborationState: relation.collaboration,
+      lineageState: relation.lineage,
     },
     compositeScale: null,
     portfolioProminenceEffect: null,

@@ -1,4 +1,10 @@
-const RELATIONS = new Set(["owned-solo", "owned-team", "owned-fork", "contributed"]);
+import {
+  normalizeRepositoryRelation,
+  relationAttributionProfile,
+  relationRequiresLocalDelta,
+  relationRequiresPersonalContribution,
+} from "./repository-relation.mjs";
+
 const FORBIDDEN_PROJECT_SIDE_KEYS = [
   "projectStars",
   "projectForks",
@@ -29,37 +35,50 @@ function optionalText(value, label) {
 }
 
 function attributionForRelation(relation) {
-  if (relation === "owned-solo") {
+  const profile = relationAttributionProfile(relation);
+  if (profile === "direct") {
     return {
-      mode: "direct-solo-context",
+      profile,
+      mode: "direct-solo-original-context",
       requiresPersonalContributionGate: false,
       requiresLocalDeltaEvidence: false,
     };
   }
-  if (relation === "owned-fork") {
+  if (profile === "fork") {
     return {
+      profile,
       mode: "fork-local-delta",
       requiresPersonalContributionGate: true,
       requiresLocalDeltaEvidence: true,
     };
   }
-  if (relation === "contributed") {
+  if (profile === "contributed") {
     return {
+      profile,
       mode: "external-project-contribution-gated",
+      requiresPersonalContributionGate: true,
+      requiresLocalDeltaEvidence: relationRequiresLocalDelta(relation),
+    };
+  }
+  if (profile === "team") {
+    return {
+      profile,
+      mode: "team-contribution-gated",
       requiresPersonalContributionGate: true,
       requiresLocalDeltaEvidence: false,
     };
   }
   return {
-    mode: "team-contribution-gated",
+    profile,
+    mode: "unresolved-attribution",
     requiresPersonalContributionGate: true,
-    requiresLocalDeltaEvidence: false,
+    requiresLocalDeltaEvidence: relationRequiresLocalDelta(relation),
   };
 }
 
 export function buildPersonalContributionEvidence(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("contribution input must be an object");
-  if (!RELATIONS.has(input.relation)) throw new Error(`unsupported relation: ${String(input.relation)}`);
+  const relation = normalizeRepositoryRelation(input.relation, "contribution input.relation");
 
   for (const key of FORBIDDEN_PROJECT_SIDE_KEYS) {
     if (Object.hasOwn(input, key)) throw new Error(`${key} is project-side evidence and must not enter Personal Contribution extraction`);
@@ -94,11 +113,11 @@ export function buildPersonalContributionEvidence(input) {
   if (responsibility.releaseInvolvement.state === "observed" && responsibility.releaseInvolvement.value) responsibilitySignals.push("release-involvement");
   if (responsibility.maintainedCoreComponent.state === "observed" && responsibility.maintainedCoreComponent.value) responsibilitySignals.push("maintained-core-component");
 
-  const attribution = attributionForRelation(input.relation);
+  const attribution = attributionForRelation(relation);
 
   return {
     schemaVersion: 1,
-    relation: input.relation,
+    relation,
     activity,
     responsibility,
     localDelta,
@@ -109,7 +128,8 @@ export function buildPersonalContributionEvidence(input) {
     },
     attribution: {
       ...attribution,
-      localDeltaState: input.relation === "owned-fork" ? localDelta.state : "not-applicable",
+      localDeltaState: relationRequiresLocalDelta(relation) ? localDelta.state : "not-applicable",
+      directPersonalMeritPermitted: !relationRequiresPersonalContribution(relation),
     },
     compositePersonalContribution: null,
     portfolioProminenceEffect: null,

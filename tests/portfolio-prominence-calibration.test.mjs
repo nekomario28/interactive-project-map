@@ -16,6 +16,8 @@ const readJson = (relativePath) => JSON.parse(fs.readFileSync(path.join(root, re
 const config = readJson("data/portfolio-prominence-candidates.v1.json");
 const fixture = readJson("fixtures/portfolio-prominence-calibration.v1.json");
 
+const SOLO_ORIGINAL = { ownership: "owned", collaboration: "solo", lineage: "original" };
+const CONTRIBUTED = { ownership: "contributed", collaboration: "unknown", lineage: "original" };
 const results = evaluateProminenceCandidates(config.candidates, fixture.cases);
 
 for (const [candidateId, candidate] of Object.entries(config.candidates)) {
@@ -38,6 +40,7 @@ for (const [candidateId, candidate] of Object.entries(config.candidates)) {
     assert.ok(tiny.personalPortfolioProminence < 0.2);
     assert.ok(maintainer.personalPortfolioProminence > tiny.personalPortfolioProminence);
     assert.ok(maintainer.personalPortfolioProminence > 0.75);
+    assert.equal(tiny.attribution.profile, "contributed");
   });
 
   test(`${candidateId} does not fabricate a personal score when contribution is unknown`, () => {
@@ -47,14 +50,21 @@ for (const [candidateId, candidate] of Object.entries(config.candidates)) {
     assert.equal(unknown.attribution.state, "unknown-personal-contribution");
   });
 
+  test(`${candidateId} does not assume owned unknown-collaboration means solo`, () => {
+    const unresolved = results[candidateId]["owned-collaboration-unresolved"];
+    assert.ok(unresolved.projectProminence > 0);
+    assert.equal(unresolved.personalPortfolioProminence, null);
+    assert.equal(unresolved.attribution.profile, "unresolved");
+    assert.equal(unresolved.attribution.state, "unresolved-relation");
+  });
+
   test(`${candidateId} keeps confidence separate from merit`, () => {
-    const candidate = config.candidates[candidateId];
     const base = scoreProminenceCandidate(candidate, {
-      relation: "owned-solo",
+      relation: SOLO_ORIGINAL,
       components: { quality: 0.8, impact: 0.4, scale: 0.5, maturity: 0.7, confidence: 0.2 },
     });
     const strongerConfidence = scoreProminenceCandidate(candidate, {
-      relation: "owned-solo",
+      relation: SOLO_ORIGINAL,
       components: { quality: 0.8, impact: 0.4, scale: 0.5, maturity: 0.7, confidence: 1.0 },
     });
     assert.equal(base.projectProminence, strongerConfidence.projectProminence);
@@ -66,11 +76,11 @@ for (const [candidateId, candidate] of Object.entries(config.candidates)) {
 test("project prominence is independent of Personal Contribution; personal prominence is monotonic", () => {
   const candidate = config.candidates["balanced-v1"];
   const low = scoreProminenceCandidate(candidate, {
-    relation: "contributed",
+    relation: CONTRIBUTED,
     components: { quality: 0.9, impact: 0.9, scale: 0.9, maturity: 0.9, personalContribution: 0.1, confidence: 0.9 },
   });
   const high = scoreProminenceCandidate(candidate, {
-    relation: "contributed",
+    relation: CONTRIBUTED,
     components: { quality: 0.9, impact: 0.9, scale: 0.9, maturity: 0.9, personalContribution: 0.9, confidence: 0.9 },
   });
   assert.equal(low.projectProminence, high.projectProminence);
@@ -82,7 +92,7 @@ test("raw Activity, star counts, and other uncalibrated inputs are rejected", ()
   const components = { quality: 0.8, impact: 0.8, scale: 0.6, maturity: 0.8, confidence: 0.8 };
   for (const [key, value] of [["activity", 0.9], ["stars", 5000], ["loc", 100000]]) {
     assert.throws(
-      () => scoreProminenceCandidate(candidate, { relation: "owned-solo", components, [key]: value }),
+      () => scoreProminenceCandidate(candidate, { relation: SOLO_ORIGINAL, components, [key]: value }),
       /not a calibrated prominence input/,
     );
   }
@@ -91,6 +101,7 @@ test("raw Activity, star counts, and other uncalibrated inputs are rejected", ()
 test("candidate set remains calibration-only and does not freeze tiers", () => {
   assert.equal(config.status, "calibration-only");
   assert.equal(config.activityPolicy, "not-a-prominence-input");
+  assert.ok(config.relationPolicy.includes("orthogonal"));
   assert.ok(config.notFrozen.includes("production-formula"));
   assert.ok(config.notFrozen.includes("tier-thresholds"));
   for (const candidateId of Object.keys(config.candidates)) {
