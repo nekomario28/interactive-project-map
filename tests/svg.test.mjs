@@ -96,7 +96,7 @@ test("Galaxy Systems static frame is category-first and labels at most two repre
   assert.match(svg, /text-anchor="(?:start|end|middle)" fill="#[0-9a-f]{6}" font-size="9\.2"/, "representative labels should use outward radial anchors");
 });
 
-test("Galaxy Systems projects Contributed repositories into a presentation-only external system", () => {
+test("Galaxy Systems keeps Contributed on a direct presentation-only owner-centered orbit", () => {
   const graph = buildGraph("example", Array.from({ length: 6 }, (_, index) => repo(index)), true, true);
   const contributed = contributedNode();
   graph.nodes.push(contributed);
@@ -106,14 +106,17 @@ test("Galaxy Systems projects Contributed repositories into a presentation-only 
   assert.equal("groupId" in contributed, false, "canonical Contributed node must start without owned category membership");
   const svg = renderGalaxySystemsSvg(graph, "dark", 740, 420);
 
-  assert.match(svg, /External contributions/);
+  assert.doesNotMatch(svg, /External contributions/);
+  assert.match(svg, /data-galaxy-orbit="contributed"/);
   assert.match(svg, /external\/accepted-work/);
   assert.match(svg, /Contributed/);
   assert.match(svg, /fill="#E69F00"/);
   assert.doesNotMatch(svg, /stroke="#E69F00"[^>]+stroke-dasharray="3 3"/);
   assert.equal("groupId" in contributed, false, "SVG projection must not mutate canonical graph membership");
-  const repositoryMarkers = svg.match(/data-galaxy-orbit="repository"/g) ?? [];
-  assert.equal(repositoryMarkers.length, graph.nodes.filter((node) => node.type === "repository").length, "every owned and Contributed repository should remain in Systems SVG");
+  const ownedRepositoryMarkers = svg.match(/data-galaxy-orbit="repository"/g) ?? [];
+  const contributedMarkers = svg.match(/data-galaxy-orbit="contributed"/g) ?? [];
+  assert.equal(ownedRepositoryMarkers.length, graph.nodes.filter((node) => node.type === "repository" && node.relation !== "contributed").length, "every owned repository should remain in its category system");
+  assert.equal(contributedMarkers.length, 1, "Contributed should remain visible without pretending to be a category member");
 });
 
 test("Galaxy Hybrid emits a rotating spiral with local elliptical repository systems", () => {
