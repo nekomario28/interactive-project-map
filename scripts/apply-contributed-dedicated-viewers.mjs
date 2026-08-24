@@ -217,7 +217,7 @@ function contributedDedicatedRuntime(mode) {
   if (typeof palette === "function") {
     const basePalette = palette;
     palette = function contributedAwarePalette() {
-      return { ...basePalette(), contributed: "#55c7d7" };
+      return { ...basePalette(), contributed: "#E69F00" };
     };
   }
 
