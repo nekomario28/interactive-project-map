@@ -86,9 +86,17 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
     const initial = await page.evaluate(() => {
       const emphasis = window.ProjectMapContributedEmphasis.snapshot();
       const graphNode = state.graph.nodes.find((node) => node.id === "repository:outside/project");
+      const renderNode = state.nodes.find((node) => node.id === "repository:outside/project");
+      draw();
+      const screen = worldToScreen(renderNode.x, renderNode.y);
+      const dpr = window.devicePixelRatio || 1;
+      const pixelX = Math.max(0, Math.min(canvas.width - 1, Math.round(screen.x * dpr)));
+      const pixelY = Math.max(0, Math.min(canvas.height - 1, Math.round(screen.y * dpr)));
+      const renderedPixel = Array.from(ctx.getImageData(pixelX, pixelY, 1, 1).data);
       return {
         emphasis,
         paletteColor: palette().contributed,
+        renderedPixel,
         graphGroupId: graphNode?.groupId ?? null,
         fakeMembership: state.graph.edges.some((edge) => ["membership", "member"].includes(edge.type) && (edge.source === graphNode?.id || edge.target === graphNode?.id)),
       };
@@ -97,6 +105,10 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
     expect(initial.emphasis.color).toBe("#E69F00");
     expect(initial.emphasis.style).toBe(style);
     expect(initial.paletteColor).toBe("#E69F00");
+    expect(initial.renderedPixel[0]).toBeGreaterThan(190);
+    expect(initial.renderedPixel[1]).toBeGreaterThan(110);
+    expect(initial.renderedPixel[2]).toBeLessThan(50);
+    expect(initial.renderedPixel[0]).toBeGreaterThan(initial.renderedPixel[1]);
     expect(initial.graphGroupId).toBeNull();
     expect(initial.fakeMembership).toBe(false);
 
