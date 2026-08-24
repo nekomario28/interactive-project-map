@@ -1,0 +1,108 @@
+name: Radial Contributed release proof
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/radial-contributed-release-proof.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  generate:
+    permissions:
+      contents: read
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@8f3d89e41f427ced13d5e6d791234a37f796c721
+    with:
+      theme: dark
+      style: radial
+      max_repos: "100"
+      forks: true
+      archived: true
+      contributed: true
+
+  verify:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout exact reusable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 8f3d89e41f427ced13d5e6d791234a37f796c721
+
+      - name: Assert R resolves inner F
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'uses: nekomario28/interactive-project-map@74e579b5cf2968d91a98edbc60dc290bdf6c6c5e' .github/workflows/generate-project-map.yml
+          grep -q '74e579b5cf2968d91a98edbc60dc290bdf6c6c5e' src/action-ref.ts
+          grep -q 'PUBLIC_ACTION_REF = "74e579b5cf2968d91a98edbc60dc290bdf6c6c5e"' scripts/postprocess-public-pages.mjs
+
+      - name: Download exact-R generated artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: project-map-generated
+          path: project-map
+
+      - name: Validate real-profile Radial Contributed separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s project-map/galaxy.svg
+          test -s project-map/graph.json
+          grep -q 'Radial Tree · Classic' project-map/galaxy.svg
+          grep -q '#E69F00' project-map/galaxy.svg
+          grep -q '>Contributed</text>' project-map/galaxy.svg
+          if grep -q 'External contributions' project-map/galaxy.svg; then
+            echo 'Radial must not synthesize an owned-looking External contributions category.' >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('node:fs');
+          const graph = JSON.parse(fs.readFileSync('project-map/graph.json', 'utf8'));
+          const svg = fs.readFileSync('project-map/galaxy.svg', 'utf8');
+          const owner = 'nekomario28';
+          const contributed = graph.nodes.filter((node) => node?.type === 'repository' && node?.relation === 'contributed');
+          const contributedIds = new Set(contributed.map((node) => node.id));
+          if (contributed.length < 1) throw new Error('real profile has no accepted Contributed repositories');
+          if (graph.contributedRepositoryCount !== contributed.length) throw new Error('Contributed count mismatch');
+          for (const node of contributed) {
+            if (!node.repositoryOwner || !node.repositoryName || String(node.repositoryOwner).toLowerCase() === owner) throw new Error('invalid external repository identity');
+            if ('groupId' in node || 'groupLabel' in node) throw new Error('Contributed repository gained owned category membership');
+          }
+          if (graph.edges.some((edge) => ['ownership', 'membership'].includes(edge?.type) && contributedIds.has(edge?.target))) {
+            throw new Error('ownership path reaches Contributed repository');
+          }
+
+          const root = svg.match(/<svg[^>]*width="([0-9.]+)"[^>]*height="([0-9.]+)"/);
+          if (!root) throw new Error('could not read SVG dimensions');
+          const width = Number(root[1]);
+          const height = Number(root[2]);
+          const cx = width / 2;
+          const cy = height / 2 - 4;
+          const records = [];
+          const pattern = /<g><title>([\s\S]*?) · (original|fork|archived|contributed)<\/title><circle cx="([0-9.]+)" cy="([0-9.]+)"/g;
+          let match;
+          while ((match = pattern.exec(svg))) {
+            records.push({ label: match[1], status: match[2], x: Number(match[3]), y: Number(match[4]) });
+          }
+          const external = records.filter((record) => record.status === 'contributed');
+          const owned = records.filter((record) => record.status !== 'contributed');
+          if (external.length !== contributed.length) throw new Error(`SVG Contributed count mismatch: ${external.length} vs ${contributed.length}`);
+          if (!owned.length) throw new Error('no owned repository geometry found');
+          const radius = (record) => Math.hypot(record.x - cx, record.y - cy);
+          const maxOwnedRadius = Math.max(...owned.map(radius));
+          const minExternalRadius = Math.min(...external.map(radius));
+          const radialGap = minExternalRadius - maxOwnedRadius;
+          let nearestOwned = Infinity;
+          for (const ext of external) {
+            for (const own of owned) nearestOwned = Math.min(nearestOwned, Math.hypot(ext.x - own.x, ext.y - own.y));
+          }
+          if (!(radialGap >= 24)) throw new Error(`Radial Contributed outer gap too small: ${radialGap.toFixed(2)}px`);
+          if (!(nearestOwned >= 24)) throw new Error(`Radial Contributed too close to owned node: ${nearestOwned.toFixed(2)}px`);
+          console.log(`Exact R Radial proof: ${graph.repositoryCount} owned + ${contributed.length} Contributed; radial gap=${radialGap.toFixed(2)}px; nearest=${nearestOwned.toFixed(2)}px`);
+          NODE
