@@ -226,3 +226,46 @@ test("dedicated viewers disable a status that is absent from the generated graph
     groupCount: 2,
   });
 });
+
+test("Radial and Tree render archived/fork Contributed repositories as the primary orange status", async ({ browser }) => {
+  for (const style of ["radial", "tree"]) {
+    await test.step(style, async () => {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+      const browserErrors = watchBrowserErrors(page);
+      await installFixture(page);
+      await page.goto(`/${style}/?username=example&style=${style}`);
+      await expect(page.locator("#status")).toBeHidden();
+
+      const sample = await expect.poll(async () => page.evaluate((id) => {
+        const node = state.nodes.find((item) => item.id === id);
+        if (!node) return null;
+        const point = worldToScreen(node.x, node.y);
+        const dpr = window.devicePixelRatio || 1;
+        const pixel = ctx.getImageData(Math.round(point.x * dpr), Math.round(point.y * dpr), 1, 1).data;
+        return {
+          status: nodeStatus(node),
+          palette: palette().contributed,
+          pixel: Array.from(pixel),
+        };
+      }, contributedId), { timeout: 5_000 }).not.toBeNull();
+
+      const rendered = await page.evaluate((id) => {
+        const node = state.nodes.find((item) => item.id === id);
+        const point = worldToScreen(node.x, node.y);
+        const dpr = window.devicePixelRatio || 1;
+        const pixel = ctx.getImageData(Math.round(point.x * dpr), Math.round(point.y * dpr), 1, 1).data;
+        return { status: nodeStatus(node), palette: palette().contributed, pixel: Array.from(pixel) };
+      }, contributedId);
+      expect(rendered.status).toBe("contributed");
+      expect(rendered.palette).toBe("#E69F00");
+      expect(rendered.pixel[0]).toBeGreaterThan(190);
+      expect(rendered.pixel[1]).toBeGreaterThan(110);
+      expect(rendered.pixel[1]).toBeLessThan(190);
+      expect(rendered.pixel[2]).toBeLessThan(70);
+      expect(rendered.pixel[3]).toBe(255);
+      expect(browserErrors).toEqual([]);
+      await context.close();
+    });
+  }
+});
