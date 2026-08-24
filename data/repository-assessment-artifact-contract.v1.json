@@ -40,6 +40,18 @@
     "name",
     "githubRepositoryId"
   ],
+  "contextFields": [
+    "category",
+    "artifacts",
+    "lifecycle",
+    "relation"
+  ],
+  "contextEvidence": {
+    "categoryStates": ["observed", "unknown"],
+    "artifactStates": ["observed", "partial", "unknown"],
+    "unknownCategoryId": null,
+    "unknownArtifactValues": []
+  },
   "repositoryRelationAxes": {
     "ownership": ["owned", "contributed"],
     "collaboration": ["solo", "team", "unknown"],
@@ -56,6 +68,7 @@
     "ownership collaboration and lineage are orthogonal relation axes",
     "fork is lineage and never substitutes for ownership or collaboration",
     "L0 owned non-fork repositories default collaboration to unknown rather than solo",
+    "L0 category and artifact context may remain explicitly unknown instead of fabricating defaults",
     "productionScoring is false while production weights and tiers are unfrozen",
     "productionScore remains null in v1 experimental artifacts",
     "missing sections remain explicit rather than being converted to numeric zero",
