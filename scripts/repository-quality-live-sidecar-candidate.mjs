@@ -35,12 +35,33 @@ function normalizedRepositoryKey(value) {
   return key;
 }
 
+function normalizedSnapshotDate(value, label) {
+  const date = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) {
+    throw new Error(`${label} must expose an ISO calendar snapshotDate`);
+  }
+  return date;
+}
+
 function resolveManifestFixture(manifestPath, fixturePath) {
   if (typeof fixturePath !== "string" || !fixturePath) throw new Error("enrichment source fixture is required");
   if (path.isAbsolute(fixturePath)) return fixturePath;
   const fromRoot = path.resolve(root, fixturePath);
   if (fs.existsSync(fromRoot)) return fromRoot;
   return path.resolve(path.dirname(manifestPath), fixturePath);
+}
+
+function summarizeEvidenceProvenance(sourceDiagnostics) {
+  const snapshotDates = [...new Set(sourceDiagnostics.map((entry) => entry.fixtureSnapshotDate))].sort();
+  if (snapshotDates.length === 0) throw new Error("bounded Quality evidence sources must expose at least one snapshotDate");
+  return {
+    mode: "bounded-frozen-evidence-reuse",
+    automaticReassessment: false,
+    sourceCount: sourceDiagnostics.length,
+    snapshotDates,
+    oldestSnapshotDate: snapshotDates[0],
+    newestSnapshotDate: snapshotDates[snapshotDates.length - 1],
+  };
 }
 
 export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
@@ -67,6 +88,7 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
       if (fixture.schemaVersion !== 1) throw new Error(`${source.fixture} schemaVersion must be 1`);
       if (fixture.policyId !== policy.policyId) throw new Error(`${source.fixture} policy mismatch`);
       if (typeof fixture.status !== "string" || !fixture.status.startsWith("frozen-")) throw new Error(`${source.fixture} must remain a frozen evidence source`);
+      normalizedSnapshotDate(fixture.snapshotDate, source.fixture);
       if (!Array.isArray(fixture.cases)) throw new Error(`${source.fixture} cases must be an array`);
       fixtureCache.set(fixturePath, fixture);
     }
@@ -88,7 +110,7 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
       repositoryKey,
       fixture: source.fixture,
       fixtureStatus: fixture.status,
-      fixtureSnapshotDate: fixture.snapshotDate ?? null,
+      fixtureSnapshotDate: normalizedSnapshotDate(fixture.snapshotDate, source.fixture),
       caseId: source.caseId,
       evidenceField,
       artifacts: [...context.artifacts],
@@ -109,13 +131,21 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
   const manifestPath = path.resolve(options.manifestPath ?? defaultManifestPath);
   const manifest = options.manifest ?? readJson(manifestPath, "Quality enrichment source manifest");
   const { enrichments, sourceDiagnostics } = loadBoundedQualityEnrichments(manifest, { manifestPath });
+  const evidenceProvenance = summarizeEvidenceProvenance(sourceDiagnostics);
   const assessmentResult = buildRepositoryAssessmentCandidate(graph, {
     generatorRevision: options.generatorRevision,
     generatedAt: options.assessmentGeneratedAt,
     qualityEnrichments: enrichments,
   });
   const assessment = assessmentResult.artifact;
-  const presentation = buildRepositoryQualityPresentationCandidate(graph, assessment);
+  const basePresentation = buildRepositoryQualityPresentationCandidate(graph, assessment);
+  const presentation = {
+    ...basePresentation,
+    source: {
+      ...basePresentation.source,
+      qualityEvidence: evidenceProvenance,
+    },
+  };
 
   if (presentation.source.graphGeneratedAt !== graph.generatedAt) {
     throw new Error("generated Quality presentation is not bound to the source graph.generatedAt");
@@ -148,11 +178,13 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
         quality: assessmentResult.diagnostics.quality,
       },
       presentation: presentation.diagnostics,
+      evidenceProvenance,
       enrichmentSources: sourceDiagnostics,
       invariants: {
         sourceGraphGeneratedAtCopiedExactly: true,
         repositoryMembershipComesOnlyFromGraph: true,
         frozenEvidenceSourcesAreExplicit: true,
+        evidenceSnapshotProvenanceIsExplicit: true,
         publicationPerformed: false,
         defaultActionChanged: false,
       },
