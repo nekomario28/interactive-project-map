@@ -31,6 +31,15 @@ for (const mode of DEDICATED_CONTRIBUTED_MODES) {
   });
 }
 
+test("C4b Radial puts Contributed beyond the owned repository radius", async () => {
+  const source = await readFile(new URL("../scripts/public-radial-viewer.js", import.meta.url), "utf8");
+  const patched = patchDedicatedViewerRuntime(source, "radial");
+  assert.match(patched, /contributedAwareRadialLayout/);
+  assert.match(patched, /maxOwnedRadius \+ 86/);
+  assert.match(patched, /Math\.max\(390, maxOwnedRadius \+ 86\)/);
+  assert.doesNotMatch(patched, /groupLabel: "External contributions"[\s\S]*contributedAwareRadialLayout/);
+});
+
 test("C4b category-only layouts project Contributed into presentation-only external context", async () => {
   for (const mode of ["timeline", "cluster", "sunburst", "matrix", "sankey"]) {
     const source = await readFile(new URL(`../scripts/public-${mode}-viewer.js`, import.meta.url), "utf8");
