@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Galaxy Systems Contributed external rail passed the full renderer, comparison and browser gates before this promotion.
-export const PUBLIC_ACTION_REF = "94abe621aae576d6a49e38fe7e146e0790387fc2";
+// Pre-profile-import native IPM visuals passed Verify #874 and direct profile proof #190.
+export const PUBLIC_ACTION_REF = "c871a6e5e47b11dad5cd82ec940ca2d6efa7199e";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
