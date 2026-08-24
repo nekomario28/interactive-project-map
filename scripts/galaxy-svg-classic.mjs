@@ -1,5 +1,5 @@
-import { TAU, background, clamp, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
-import { isContributedRepository } from "./static-contributed.mjs";
+import { TAU, background, groupMembers, hash, legend, nodeMarkup, palette, svgDocument } from "./galaxy-svg-common.mjs";
+import { isContributedRepository, visibleStructuralEdges } from "./static-contributed.mjs";
 
 const CONTRIBUTED_PER_LANE = 8;
 
@@ -55,6 +55,17 @@ function contributedPoints(repositories, cx, cy, minSize) {
   });
 }
 
+function structuralLines(graph, points, colors) {
+  const byId = new Map(points.map((point) => [point.node.id, point]));
+  return visibleStructuralEdges(graph.edges).map((edge) => {
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
+    if (!source || !target) return "";
+    const relation = edge.type === "relation";
+    return `<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${relation ? colors.relation : colors.edge}" stroke-width="${relation ? 1.3 : 0.9}" opacity="${relation ? 0.56 : 0.30}"${relation ? ' stroke-dasharray="5 4"' : ""}/>`;
+  }).join("");
+}
+
 export function renderGalaxyClassicSvg(graph, theme, width, height) {
   const colors = palette(theme);
   const cx = width / 2;
@@ -65,6 +76,8 @@ export function renderGalaxyClassicSvg(graph, theme, width, height) {
   const owner = graph.nodes.find((node) => node.type === "owner");
   const owned = ownedRepositoryPoints(groups, repositories, cx, cy, minSize);
   const external = contributedPoints(repositories, cx, cy, minSize);
+  const ownerPoint = owner ? { node: owner, x: cx, y: cy } : null;
+  const allPoints = [...(ownerPoint ? [ownerPoint] : []), ...owned, ...external];
 
   const groupGuides = owned.filter((point) => point.group).map((point) => {
     const radius = Math.max(32, minSize * 0.085);
@@ -85,7 +98,7 @@ export function renderGalaxyClassicSvg(graph, theme, width, height) {
     preset: "classic",
     ariaLabel: "Galaxy-style",
     backgroundMarkup: background(graph.owner, width, height, colors, 100),
-    graphMarkup: `<g data-galaxy-motion="classic-static">${groupGuides}${nucleus}${ownedMarkup}<g data-galaxy-external="true">${externalMarkup}</g></g>`,
+    graphMarkup: `<g data-galaxy-motion="classic-static">${groupGuides}<g>${structuralLines(graph, allPoints, colors)}</g>${nucleus}${ownedMarkup}<g data-galaxy-external="true">${externalMarkup}</g></g>`,
     legendMarkup: legend(colors, width, height, "Galaxy Classic"),
   });
 }
