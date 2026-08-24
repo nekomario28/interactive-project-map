@@ -221,6 +221,29 @@ function contributedDedicatedRuntime(mode) {
     };
   }
 
+  if (MODE === "radial" && typeof buildRadialLayout === "function") {
+    const baseBuildRadialLayout = buildRadialLayout;
+    buildRadialLayout = function contributedAwareRadialLayout(graph) {
+      const nodes = baseBuildRadialLayout(graph);
+      const contributed = nodes
+        .filter((node) => node?.type === "repository" && node?.relation === "contributed")
+        .sort((a, b) => a.label.localeCompare(b.label));
+      if (!contributed.length) return nodes;
+      const ownedRepositories = nodes.filter((node) => node?.type === "repository" && node?.relation !== "contributed");
+      const maxOwnedRadius = ownedRepositories.reduce(
+        (max, node) => Math.max(max, Math.hypot(Number(node.x) || 0, Number(node.y) || 0)),
+        292,
+      );
+      const externalRadius = Math.max(390, maxOwnedRadius + 86);
+      contributed.forEach((node, index) => {
+        const angle = Math.PI * 2 * index / contributed.length;
+        node.x = Math.cos(angle) * externalRadius;
+        node.y = Math.sin(angle) * externalRadius;
+      });
+      return nodes;
+    };
+  }
+
   if (EXTERNAL_LAYOUT_MODES.has(MODE) && typeof buildLayout === "function") {
     const baseBuildLayout = buildLayout;
     buildLayout = function contributedAwareBuildLayout(graph) {
