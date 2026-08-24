@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Accepted-Contributed behavior was proven against the real public profile before this promotion.
-export const PUBLIC_ACTION_REF = "1557cfae847c96bf8810fe74bcfef7cb22aec7b3";
+// Static Contributed parity passed the full exact-head renderer and browser gates before this promotion.
+export const PUBLIC_ACTION_REF = "a5519222947325ff71a20309c483feba1085c718";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
