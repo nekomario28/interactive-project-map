@@ -1,5 +1,10 @@
-const RELATIONS = new Set(["owned-solo", "owned-team", "owned-fork", "contributed"]);
+import {
+  normalizeRepositoryRelation,
+  relationAttributionProfile,
+} from "./repository-relation.mjs";
+
 const COMPONENTS = ["quality", "impact", "scale", "maturity"];
+const ATTRIBUTION_PROFILES = ["direct", "team", "fork", "contributed"];
 const ALLOWED_INPUT_KEYS = new Set(["id", "relation", "components"]);
 const ALLOWED_COMPONENT_KEYS = new Set([...COMPONENTS, "personalContribution", "confidence"]);
 
@@ -31,18 +36,21 @@ export function validateProminenceCandidate(candidate) {
   const sum = COMPONENTS.reduce((total, key) => total + unit(weights[key], `projectWeights.${key}`), 0);
   if (Math.abs(sum - 1) > 1e-9) throw new Error("projectWeights must sum to 1");
 
-  const attribution = object(candidate.relationAttribution, "relationAttribution");
-  for (const relation of RELATIONS) {
-    const rule = object(attribution[relation], `relationAttribution.${relation}`);
-    if (rule.mode !== "direct" && rule.mode !== "contribution-gated") throw new Error(`${relation} mode is unsupported`);
-    const base = unit(rule.base, `${relation}.base`);
-    const slope = unit(rule.personalContributionSlope, `${relation}.personalContributionSlope`);
-    if (base + slope > 1 + 1e-9) throw new Error(`${relation} attribution can exceed 1`);
-    if (relation === "owned-solo" && (rule.mode !== "direct" || base !== 1 || slope !== 0)) {
-      throw new Error("owned-solo attribution must stay direct");
+  const profiles = object(candidate.attributionProfiles, "attributionProfiles");
+  if (Object.keys(profiles).sort().join(",") !== [...ATTRIBUTION_PROFILES].sort().join(",")) {
+    throw new Error("attributionProfiles has unexpected profiles");
+  }
+  for (const profile of ATTRIBUTION_PROFILES) {
+    const rule = object(profiles[profile], `attributionProfiles.${profile}`);
+    if (rule.mode !== "direct" && rule.mode !== "contribution-gated") throw new Error(`${profile} mode is unsupported`);
+    const base = unit(rule.base, `${profile}.base`);
+    const slope = unit(rule.personalContributionSlope, `${profile}.personalContributionSlope`);
+    if (base + slope > 1 + 1e-9) throw new Error(`${profile} attribution can exceed 1`);
+    if (profile === "direct" && (rule.mode !== "direct" || base !== 1 || slope !== 0)) {
+      throw new Error("direct attribution profile must stay direct");
     }
-    if (relation !== "owned-solo" && rule.mode !== "contribution-gated") {
-      throw new Error(`${relation} must stay contribution-gated`);
+    if (profile !== "direct" && rule.mode !== "contribution-gated") {
+      throw new Error(`${profile} must stay contribution-gated`);
     }
   }
   return true;
@@ -52,7 +60,7 @@ export function scoreProminenceCandidate(candidate, input) {
   validateProminenceCandidate(candidate);
   object(input, "input");
   rejectUnknownKeys(input, ALLOWED_INPUT_KEYS, "input");
-  if (!RELATIONS.has(input.relation)) throw new Error(`unsupported relation: ${String(input.relation)}`);
+  const relation = normalizeRepositoryRelation(input.relation, "input.relation");
   const components = object(input.components, "components");
   rejectUnknownKeys(components, ALLOWED_COMPONENT_KEYS, "components");
   const values = Object.fromEntries(COMPONENTS.map((key) => [key, unit(components[key], key)]));
@@ -63,14 +71,20 @@ export function scoreProminenceCandidate(candidate, input) {
     0,
   );
 
-  const rule = candidate.relationAttribution[input.relation];
-  let attributionFactor = 1;
-  let personalPortfolioProminence = projectProminence;
-  let attributionState = "direct";
-  if (rule.mode === "contribution-gated") {
-    if (personalContribution == null) {
-      attributionFactor = null;
-      personalPortfolioProminence = null;
+  const profile = relationAttributionProfile(relation);
+  let attributionFactor = null;
+  let personalPortfolioProminence = null;
+  let attributionState = profile;
+
+  if (profile === "unresolved") {
+    attributionState = "unresolved-relation";
+  } else {
+    const rule = candidate.attributionProfiles[profile];
+    if (rule.mode === "direct") {
+      attributionFactor = 1;
+      personalPortfolioProminence = projectProminence;
+      attributionState = "direct";
+    } else if (personalContribution == null) {
       attributionState = "unknown-personal-contribution";
     } else {
       attributionFactor = rule.base + rule.personalContributionSlope * personalContribution;
@@ -81,11 +95,15 @@ export function scoreProminenceCandidate(candidate, input) {
 
   return {
     schemaVersion: 1,
-    relation: input.relation,
+    relation,
     components: { ...values, personalContribution, confidence },
     projectProminence,
     personalPortfolioProminence,
-    attribution: { state: attributionState, factor: attributionFactor },
+    attribution: {
+      state: attributionState,
+      profile,
+      factor: attributionFactor,
+    },
     confidencePolicy: { weightedIntoMerit: false, value: confidence },
     tier: null,
   };
