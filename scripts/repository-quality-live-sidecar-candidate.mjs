@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { buildRepositoryAssessmentCandidate } from "./repository-assessment-candidate.mjs";
+import { assertLiveEvidenceCarrierAuthority } from "./repository-evidence-carrier-authority.mjs";
 import { buildForkQualityBundle } from "./repository-fork-quality.mjs";
 import { buildRepositoryQualityPresentationCandidate } from "./repository-quality-presentation-candidate.mjs";
 import { buildQualityEvidenceVector } from "./repository-quality-evidence.mjs";
@@ -152,6 +153,7 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
     if (selectedRepository !== repositoryKey) {
       throw new Error(`Quality calibration repository mismatch for ${source.caseId}: ${selectedRepository} != ${repositoryKey}`);
     }
+    assertLiveEvidenceCarrierAuthority(selected, source.caseId ?? repositoryKey);
 
     const built = mode === "fork-local-delta"
       ? buildForkSourceValue(source, selected)
