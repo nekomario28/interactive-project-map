@@ -22,6 +22,14 @@
       "presentationExpected": "available"
     },
     {
+      "repositoryKey": "nekomario28/antifullbright",
+      "mode": "repository-snapshot",
+      "fixture": "fixtures/repository-quality-game-mod-calibration.v1.json",
+      "caseId": "antifullbright-game-mod-1.1.0",
+      "evidenceField": "evidence",
+      "presentationExpected": "available"
+    },
+    {
       "repositoryKey": "nekomario28/gz-sim",
       "mode": "fork-local-delta",
       "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",
