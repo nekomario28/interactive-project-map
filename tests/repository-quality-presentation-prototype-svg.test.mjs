@@ -39,34 +39,35 @@ function contrastRatio(left, right) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 5/10 availability", () => {
+test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 6/9 availability", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "compact", columns: 3 });
 
   assert.match(svg, /^<svg /);
   assert.match(svg, /data-theme="dark"/);
-  assert.match(svg, /5 available · 10 unavailable · Structure remains default/);
+  assert.match(svg, /6 available · 9 unavailable · Structure remains default/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
   assert.equal((svg.match(/class="repository-core"/g) ?? []).length, 15);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 5);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 10);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 10);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 6);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 9);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 9);
   assert.equal(svg.includes("data-dimension="), false);
   assert.match(svg, /data-repository-key="nekomario28\/antifullbright" data-quality-state="available"/);
   assert.match(svg, /data-repository-key="nekomario28\/buyclaimchunks" data-quality-state="available"/);
+  assert.match(svg, /data-repository-key="nekomario28\/ftbpublicclaims" data-quality-state="available"/);
   assert.match(svg, /5\/6 interpreted/);
   assert.match(svg, /data-finding="supports"/);
   assert.match(svg, /data-pattern="supports-solid"/);
   assert.match(svg, /data-pattern="unavailable-sparse-dash"/);
 });
 
-test("detail current-profile Quality prototype preserves dimension identity only for five attribution-safe repositories", () => {
+test("detail current-profile Quality prototype preserves dimension identity only for six attribution-safe repositories", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "detail", columns: 3 });
 
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 5);
-  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 40);
-  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 40);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 10);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 6);
+  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 48);
+  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 48);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 9);
   assert.match(svg, /4\/6 interpreted/);
   assert.match(svg, /5\/6 interpreted/);
 });
@@ -101,8 +102,8 @@ test("light theme preserves the same current-profile semantics without changing 
   assert.match(svg, /data-theme="light"/);
   assert.match(svg, /color-scheme: light/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 5);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 10);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 6);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 9);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
   assert.equal(svg.includes("data-score="), false);
   assert.equal(svg.includes("prominence"), false);
@@ -110,9 +111,12 @@ test("light theme preserves the same current-profile semantics without changing 
 
 test("prototype keeps fork snapshot context separate from attribution-safe ring availability", () => {
   const presentation = model();
+  const ftb = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   const gz = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   const turing = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
   const buyclaim = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
+  assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
+  assert.equal(ftb.overlayState, "available");
   assert.equal(gz.qualityAttributionScope, "local-delta");
   assert.equal(gz.overlayState, "unavailable");
   assert.equal(turing.qualityAttributionScope, "local-delta");
@@ -122,6 +126,7 @@ test("prototype keeps fork snapshot context separate from attribution-safe ring 
 
   const svg = renderRepositoryQualityPresentationPrototypeSvg(presentation, { view: "compact", columns: 5 });
   assert.match(svg, /antifullbright/);
+  assert.match(svg, /FTBPublicClaims/i);
   assert.match(svg, /interactive-project-map/);
   assert.match(svg, /gz-sim/);
   assert.match(svg, /turing-smart-screen-python-owl/);
