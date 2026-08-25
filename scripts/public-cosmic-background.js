@@ -22,6 +22,9 @@
     envelopeGraph: null,
     envelopeStyle: "",
     envelopeWorldRadius: 0,
+    cameraFrame: null,
+    motionReduced: null,
+    depthTransforms: new Map(),
   };
 
   function unit(seed) {
@@ -48,27 +51,77 @@
     return motionReduced() ? 0 : depth;
   }
 
-  function cameraDepthTransform(depth) {
-    const effective = effectiveDepth(depth);
-    if (effective === 0) {
-      return { depth: 0, scale: 1, translationFactor: 0, translateX: 0, translateY: 0 };
-    }
-    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);
-    const scale = Math.pow(zoom, effective);
-    const translationFactor = Math.abs(zoom - 1) < 1e-6
-      ? effective
-      : (scale - 1) / (zoom - 1);
+  function identityDepthTransform(depth) {
+    return { depth, scale: 1, translationFactor: depth, translateX: 0, translateY: 0 };
+  }
+
+  function cameraFrame(size = canvasSize()) {
     return {
-      depth: effective,
-      scale,
-      translationFactor,
-      translateX: state.pan.x * translationFactor,
-      translateY: state.pan.y * translationFactor,
+      zoom: clamp(Number(state.zoom) || 1, 0.04, 6),
+      originX: size.width / 2 + state.pan.x,
+      originY: size.height / 2 + state.pan.y,
+      width: size.width,
+      height: size.height,
     };
   }
 
-  function layerTile(layer) {
-    const transform = cameraDepthTransform(layer.depth);
+  function resetDepthTransforms(frame, reduced) {
+    runtime.cameraFrame = frame;
+    runtime.motionReduced = reduced;
+    runtime.depthTransforms.clear();
+    for (const layer of LAYERS) runtime.depthTransforms.set(layer.depth, identityDepthTransform(reduced ? 0 : layer.depth));
+    runtime.depthTransforms.set(HAZE_DEPTH, identityDepthTransform(reduced ? 0 : HAZE_DEPTH));
+  }
+
+  function syncDepthTransforms(size = canvasSize()) {
+    const current = cameraFrame(size);
+    const reduced = motionReduced();
+    const previous = runtime.cameraFrame;
+    const viewportChanged = previous && (Math.abs(previous.width - current.width) > 0.5 || Math.abs(previous.height - current.height) > 0.5);
+    if (!previous || viewportChanged || runtime.motionReduced !== reduced) {
+      resetDepthTransforms(current, reduced);
+      return;
+    }
+
+    if (reduced) {
+      runtime.cameraFrame = current;
+      return;
+    }
+
+    const ratio = current.zoom / previous.zoom;
+    const deltaX = current.originX - ratio * previous.originX;
+    const deltaY = current.originY - ratio * previous.originY;
+    const cameraChanged = Math.abs(ratio - 1) > 1e-12 || Math.abs(deltaX) > 1e-9 || Math.abs(deltaY) > 1e-9;
+    if (!cameraChanged) return;
+
+    for (const depth of [...LAYERS.map((layer) => layer.depth), HAZE_DEPTH]) {
+      const old = runtime.depthTransforms.get(depth) || identityDepthTransform(depth);
+      const depthScale = Math.pow(ratio, depth);
+      const translationFactor = Math.abs(ratio - 1) < 1e-9
+        ? depth
+        : (depthScale - 1) / (ratio - 1);
+      const translatedX = deltaX * translationFactor;
+      const translatedY = deltaY * translationFactor;
+      runtime.depthTransforms.set(depth, {
+        depth,
+        scale: depthScale * old.scale,
+        translationFactor: depth,
+        translateX: depthScale * old.translateX + translatedX,
+        translateY: depthScale * old.translateY + translatedY,
+      });
+    }
+    runtime.cameraFrame = current;
+  }
+
+  function cameraDepthTransform(depth, size = canvasSize()) {
+    syncDepthTransforms(size);
+    const effective = effectiveDepth(depth);
+    if (effective === 0) return identityDepthTransform(0);
+    return runtime.depthTransforms.get(depth) || identityDepthTransform(depth);
+  }
+
+  function layerTile(layer, size) {
+    const transform = cameraDepthTransform(layer.depth, size);
     return { width: TILE.width * transform.scale, height: TILE.height * transform.scale, scale: transform.scale, transform };
   }
 
@@ -77,7 +130,8 @@
   }
 
   function starPoint(layer, index, width, height) {
-    const tile = layerTile(layer);
+    const size = { width, height };
+    const tile = layerTile(layer, size);
     const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);
     const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);
     const baseX = unit(xSeed) * TILE.width;
@@ -137,10 +191,6 @@
     ctx.globalAlpha = 1;
   }
 
-  function hazeScale() {
-    return cameraDepthTransform(HAZE_DEPTH).scale;
-  }
-
   function hazePoint(index, transform, tile, width, height) {
     const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width;
     const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height;
@@ -154,8 +204,8 @@
     const obsidian = state.style === "obsidian";
     const tint = obsidian ? [124, 110, 246] : [82, 126, 216];
     const alpha = obsidian ? 0.050 : 0.032;
-    const transform = cameraDepthTransform(HAZE_DEPTH);
-    const scale = hazeScale();
+    const transform = cameraDepthTransform(HAZE_DEPTH, { width, height });
+    const scale = transform.scale;
     const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale, scale };
     const radius = Math.max(340, Math.min(560, Math.max(width, height) * 0.48)) * Math.sqrt(scale);
     const copiesX = Math.ceil(width / tile.width) + 1;
@@ -382,6 +432,7 @@
   }
 
   drawBackground = function reactiveCosmicBackground(colors, width, height) {
+    syncDepthTransforms({ width, height });
     ctx.fillStyle = colors.background;
     ctx.fillRect(0, 0, width, height);
     drawHaze(width, height);
@@ -403,6 +454,7 @@
 
   function snapshot() {
     const size = canvasSize();
+    syncDepthTransforms(size);
     const meteor = meteorStateAt(performance.now());
     const envelope = state.graph ? galaxyEnvelope() : null;
     return {
@@ -411,7 +463,7 @@
       zoom: state.zoom,
       tile: { ...TILE },
       layers: LAYERS.map((layer) => {
-        const transform = cameraDepthTransform(layer.depth);
+        const transform = cameraDepthTransform(layer.depth, size);
         return {
           id: layer.id,
           depth: layer.depth,
@@ -419,6 +471,8 @@
           zoomParallax: layer.depth,
           zoomScale: transform.scale,
           translationFactor: transform.translationFactor,
+          translateX: transform.translateX,
+          translateY: transform.translateY,
         };
       }),
       cameraFixedPoint: cameraFixedPoint(size),
@@ -430,6 +484,7 @@
   }
 
   function syncMotionPreference() {
+    resetDepthTransforms(cameraFrame(), motionReduced());
     if (motionReduced()) {
       clearMeteorTimer();
       runtime.meteor = null;
