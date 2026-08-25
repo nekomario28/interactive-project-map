@@ -4,6 +4,7 @@
 (() => {
   const TILE = { width: 960, height: 720 };
   const HAZE_TILE = { width: 1680, height: 1180 };
+  const GALAXY_DUST_COUNT = 64;
   const LAYERS = Object.freeze([
     { id: "far", count: 46, parallax: 0.08, zoomParallax: 0.05, radius: [0.38, 0.72], opacity: [0.10, 0.22] },
     { id: "mid", count: 36, parallax: 0.18, zoomParallax: 0.12, radius: [0.52, 1.02], opacity: [0.12, 0.28] },
@@ -17,6 +18,9 @@
     meteorSequence: 0,
     meteorTimer: null,
     meteorFrame: null,
+    envelopeGraph: null,
+    envelopeStyle: "",
+    envelopeWorldRadius: 0,
   };
 
   function unit(seed) {
@@ -162,7 +166,7 @@
     }
   }
 
-  function sceneWorldRadius() {
+  function measuredSceneWorldRadius() {
     let radius = 0;
     if (Array.isArray(state.nodes)) {
       for (const node of state.nodes) {
@@ -171,6 +175,16 @@
       }
     }
     return clamp((radius || 330) + 150, 320, 1800);
+  }
+
+  function sceneWorldRadius() {
+    const style = String(state.style || "");
+    if (runtime.envelopeGraph !== state.graph || runtime.envelopeStyle !== style || runtime.envelopeWorldRadius <= 0) {
+      runtime.envelopeGraph = state.graph;
+      runtime.envelopeStyle = style;
+      runtime.envelopeWorldRadius = measuredSceneWorldRadius();
+    }
+    return runtime.envelopeWorldRadius;
   }
 
   function galaxyEnvelope() {
@@ -185,6 +199,25 @@
       angle: (unit(hash(`${username}:galaxy-envelope:angle`)) - 0.5) * 0.5,
       viewport: size,
     };
+  }
+
+  function drawGalaxyDust(radius, core) {
+    const radiusScale = clamp(radius / 720, 0.72, 1.3);
+    ctx.fillStyle = `rgb(${core[0]},${core[1]},${core[2]})`;
+    for (let index = 0; index < GALAXY_DUST_COUNT; index += 1) {
+      const angle = unit(hash(`${username}:galaxy-dust:a:${index}`)) * Math.PI * 2;
+      const radial = Math.sqrt(unit(hash(`${username}:galaxy-dust:d:${index}`)));
+      const distance = radius * (0.13 + radial * 0.72);
+      const x = Math.cos(angle) * distance;
+      const y = Math.sin(angle) * distance * 0.82;
+      const opacity = range(hash(`${username}:galaxy-dust:o:${index}`), 0.010, 0.038) * (1 - radial * 0.38);
+      const pointRadius = range(hash(`${username}:galaxy-dust:r:${index}`), 0.42, 1.16) * radiusScale;
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   function drawGalaxyEnvelope(width, height) {
@@ -221,13 +254,7 @@
       ctx.fillRect(x - lobeRadius, -lobeRadius, lobeRadius * 2, lobeRadius * 2);
     }
 
-    ctx.globalAlpha = obsidian ? 0.020 : 0.026;
-    ctx.strokeStyle = `rgb(${core[0]},${core[1]},${core[2]})`;
-    ctx.lineWidth = clamp(radius * 0.045, 5, 28);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, radius * 0.72, radius * 0.20, 0, Math.PI * 0.12, Math.PI * 0.88);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
+    drawGalaxyDust(radius, core);
     ctx.restore();
   }
 
