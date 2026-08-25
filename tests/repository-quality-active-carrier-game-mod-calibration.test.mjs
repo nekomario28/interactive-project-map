@@ -103,10 +103,15 @@ test("verification provenance names exact-head push runs and bounds reproducibil
   assert.equal(subject.expected.stableRelease, "not-claimed");
 });
 
-test("calibration does not auto-admit an unmerged active carrier to the live Quality manifest", () => {
-  const liveKeys = manifest.sources.map((entry) => entry.repositoryKey.toLowerCase());
+test("live admission may select the default FTBPublicClaims snapshot without admitting the unmerged active carrier", () => {
+  const liveSource = manifest.sources.find((entry) => entry.repositoryKey.toLowerCase() === subject.repository.toLowerCase());
 
-  assert.equal(liveKeys.includes(subject.repository.toLowerCase()), false);
+  assert.ok(liveSource);
+  assert.equal(liveSource.mode, "repository-snapshot");
+  assert.equal(liveSource.fixture, "fixtures/repository-quality-game-mod-calibration.v1.json");
+  assert.equal(liveSource.caseId, "ftbpublicclaims-game-mod-default-8caaab");
+  assert.notEqual(liveSource.fixture, "fixtures/repository-quality-active-carrier-game-mod-calibration.v1.json");
+  assert.notEqual(liveSource.caseId, subject.id);
   assert.equal(subject.carrier.productionAdmissionEligible, false);
   assert.equal(subject.expected.productionAdmissionEligible, false);
   assert.notEqual(subject.carrier.branch, subject.carrier.defaultBranch);
