@@ -38,10 +38,10 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Native pre-profile-import IPM release: stable v1 R 36828be099e1cd160476b1be4ba32a2b9601911c
-# resolves Action F c871a6e5e47b11dad5cd82ec940ca2d6efa7199e. F passed Verify #874;
-# release-chain Verify #881 passed full verify, 12 presets, Chromium and iPhone WebKit;
-# direct-profile proofs #190/#192 and production commit e16164c5 confirmed native background + external rail.
+# Contributed world-coherence release candidate: Action F 37500d3e3b231452b7281a78374f32d04c6445ea.
+# F passed Verify #968: full verify, twelve-preset rendering, Chromium and iPhone WebKit.
+# Exact real-profile Action proof #199 passed with shared external halo and no fake owned membership.
+# Move stable v1 only after this reusable-workflow release commit passes exact caller proof.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@c871a6e5e47b11dad5cd82ec940ca2d6efa7199e
+        uses: nekomario28/interactive-project-map@37500d3e3b231452b7281a78374f32d04c6445ea
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}

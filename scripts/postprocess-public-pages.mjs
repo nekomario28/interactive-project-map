@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Pre-profile-import native IPM visuals passed Verify #874 and direct profile proof #190.
-export const PUBLIC_ACTION_REF = "c871a6e5e47b11dad5cd82ec940ca2d6efa7199e";
+// Contributed world-coherence F passed Verify #968 and exact real-profile Action proof #199.
+export const PUBLIC_ACTION_REF = "37500d3e3b231452b7281a78374f32d04c6445ea";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
