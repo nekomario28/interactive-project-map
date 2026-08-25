@@ -1,0 +1,117 @@
+name: Temporary camera-depth patch
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Apply fractional camera-depth transform
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old in text:
+                  return text.replace(old, new, 1)
+              if new in text:
+                  return text
+              raise SystemExit(f"missing patch anchor: {label}")
+
+          cosmic_path = Path('scripts/public-cosmic-background.js')
+          cosmic = cosmic_path.read_text()
+          cosmic = replace_once(cosmic,
+          '''  const HAZE_TILE = { width: 1680, height: 1180 };\n  const GALAXY_DUST_COUNT = 64;\n  const LAYERS = Object.freeze([\n    { id: "far", count: 46, parallax: 0.08, zoomParallax: 0.05, radius: [0.38, 0.72], opacity: [0.10, 0.22] },\n    { id: "mid", count: 36, parallax: 0.18, zoomParallax: 0.12, radius: [0.52, 1.02], opacity: [0.12, 0.28] },\n    { id: "near", count: 24, parallax: 0.32, zoomParallax: 0.22, radius: [0.72, 1.42], opacity: [0.15, 0.34] },\n  ]);''',
+          '''  const HAZE_TILE = { width: 1680, height: 1180 };\n  const HAZE_DEPTH = 0.035;\n  const GALAXY_DUST_COUNT = 64;\n  const LAYERS = Object.freeze([\n    { id: "far", count: 46, depth: 0.08, radius: [0.38, 0.72], opacity: [0.10, 0.22] },\n    { id: "mid", count: 36, depth: 0.18, radius: [0.52, 1.02], opacity: [0.12, 0.28] },\n    { id: "near", count: 24, depth: 0.32, radius: [0.72, 1.42], opacity: [0.15, 0.34] },\n  ]);''', 'layer depths')
+
+          cosmic = replace_once(cosmic,
+          '''  function effectiveParallax(layer) {\n    return motionReduced() ? 0 : layer.parallax;\n  }\n\n  function effectiveZoomScale(layer) {\n    if (motionReduced()) return 1;\n    return Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), layer.zoomParallax);\n  }\n\n  function layerTile(layer) {\n    const scale = effectiveZoomScale(layer);\n    return { width: TILE.width * scale, height: TILE.height * scale, scale };\n  }''',
+          '''  function effectiveDepth(depth) {\n    return motionReduced() ? 0 : depth;\n  }\n\n  function cameraDepthTransform(depth) {\n    const effective = effectiveDepth(depth);\n    if (effective === 0) {\n      return { depth: 0, scale: 1, translationFactor: 0, translateX: 0, translateY: 0 };\n    }\n    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);\n    const scale = Math.pow(zoom, effective);\n    const translationFactor = Math.abs(zoom - 1) < 1e-6\n      ? effective\n      : (scale - 1) / (zoom - 1);\n    return {\n      depth: effective,\n      scale,\n      translationFactor,\n      translateX: state.pan.x * translationFactor,\n      translateY: state.pan.y * translationFactor,\n    };\n  }\n\n  function layerTile(layer) {\n    const transform = cameraDepthTransform(layer.depth);\n    return { width: TILE.width * transform.scale, height: TILE.height * transform.scale, scale: transform.scale, transform };\n  }''', 'fractional camera transform')
+
+          cosmic = replace_once(cosmic,
+          '''  function starPoint(layer, index, width, height) {\n    const parallax = effectiveParallax(layer);\n    const tile = layerTile(layer);\n    const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);\n    const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);\n    const baseX = unit(xSeed) * TILE.width + state.pan.x * parallax;\n    const baseY = unit(ySeed) * TILE.height + state.pan.y * parallax;\n    return {\n      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale), tile.width),\n      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale), tile.height),''',
+          '''  function starPoint(layer, index, width, height) {\n    const tile = layerTile(layer);\n    const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);\n    const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);\n    const baseX = unit(xSeed) * TILE.width;\n    const baseY = unit(ySeed) * TILE.height;\n    return {\n      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + tile.transform.translateX, tile.width),\n      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + tile.transform.translateY, tile.height),''', 'star transform')
+
+          cosmic = replace_once(cosmic,
+          '''  function hazeScale() {\n    return motionReduced() ? 1 : Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), 0.035);\n  }\n\n  function hazePoint(index, parallax, tile, width, height) {\n    const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width + state.pan.x * parallax;\n    const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height + state.pan.y * parallax;\n    return {\n      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale), tile.width),\n      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale), tile.height),\n    };\n  }''',
+          '''  function hazeScale() {\n    return cameraDepthTransform(HAZE_DEPTH).scale;\n  }\n\n  function hazePoint(index, transform, tile, width, height) {\n    const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width;\n    const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height;\n    return {\n      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + transform.translateX, tile.width),\n      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + transform.translateY, tile.height),\n    };\n  }''', 'haze point transform')
+
+          cosmic = replace_once(cosmic,
+          '''    const scale = hazeScale();\n    const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale, scale };\n    const radius = Math.max(340, Math.min(560, Math.max(width, height) * 0.48)) * Math.sqrt(scale);\n    const parallax = motionReduced() ? 0 : 0.035;\n    const copiesX = Math.ceil(width / tile.width) + 1;''',
+          '''    const transform = cameraDepthTransform(HAZE_DEPTH);\n    const scale = hazeScale();\n    const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale, scale };\n    const radius = Math.max(340, Math.min(560, Math.max(width, height) * 0.48)) * Math.sqrt(scale);\n    const copiesX = Math.ceil(width / tile.width) + 1;''', 'haze draw transform')
+          cosmic = replace_once(cosmic,
+          '''      const base = hazePoint(index, parallax, tile, width, height);''',
+          '''      const base = hazePoint(index, transform, tile, width, height);''', 'haze call')
+
+          cosmic = replace_once(cosmic,
+          '''  function snapshot() {\n    const size = canvasSize();''',
+          '''  function cameraFixedPoint(size = canvasSize()) {\n    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);\n    if (Math.abs(zoom - 1) < 1e-6) return null;\n    return {\n      x: size.width / 2 - state.pan.x / (zoom - 1),\n      y: size.height / 2 - state.pan.y / (zoom - 1),\n    };\n  }\n\n  function snapshot() {\n    const size = canvasSize();''', 'camera fixed point')
+
+          cosmic = replace_once(cosmic,
+          '''      layers: LAYERS.map((layer) => ({\n        id: layer.id,\n        parallax: effectiveParallax(layer),\n        zoomParallax: layer.zoomParallax,\n        zoomScale: effectiveZoomScale(layer),\n      })),\n      nearStar: firstVisibleStar(LAYERS[2], size.width, size.height),''',
+          '''      layers: LAYERS.map((layer) => {\n        const transform = cameraDepthTransform(layer.depth);\n        return {\n          id: layer.id,\n          depth: layer.depth,\n          parallax: transform.depth,\n          zoomParallax: layer.depth,\n          zoomScale: transform.scale,\n          translationFactor: transform.translationFactor,\n        };\n      }),\n      cameraFixedPoint: cameraFixedPoint(size),\n      nearStar: firstVisibleStar(LAYERS[2], size.width, size.height),''', 'snapshot layers')
+          cosmic_path.write_text(cosmic)
+
+          unit_path = Path('tests/reactive-cosmic-background.test.mjs')
+          unit = unit_path.read_text()
+          unit = replace_once(unit,
+          '''  assert.match(source, /parallax: 0\\.08, zoomParallax: 0\\.05/);\n  assert.match(source, /parallax: 0\\.18, zoomParallax: 0\\.12/);\n  assert.match(source, /parallax: 0\\.32, zoomParallax: 0\\.22/);\n  assert.match(source, /state\\.pan\\.x \\* parallax/);\n  assert.match(source, /state\\.pan\\.y \\* parallax/);\n  assert.match(source, /Math\\.pow\\(clamp\\(Number\\(state\\.zoom\\)/);''',
+          '''  assert.match(source, /depth: 0\\.08/);\n  assert.match(source, /depth: 0\\.18/);\n  assert.match(source, /depth: 0\\.32/);\n  assert.match(source, /function cameraDepthTransform\\(depth\\)/);\n  assert.match(source, /\\(scale - 1\\) \\/ \\(zoom - 1\\)/);\n  assert.match(source, /state\\.pan\\.x \\* translationFactor/);\n  assert.match(source, /state\\.pan\\.y \\* translationFactor/);\n  assert.match(source, /Math\\.pow\\(zoom, effective\\)/);\n  assert.match(source, /function cameraFixedPoint/);''', 'unit depth assertions')
+          unit_path.write_text(unit)
+
+          e2e_path = Path('tests/e2e/reactive-cosmic-background.spec.mjs')
+          e2e = e2e_path.read_text()
+          e2e = replace_once(e2e,
+          '''  expect(before.snap.layers.map((layer) => layer.zoomParallax)).toEqual([0.05, 0.12, 0.22]);''',
+          '''  expect(before.snap.layers.map((layer) => layer.zoomParallax)).toEqual([0.08, 0.18, 0.32]);''', 'e2e depth values')
+          e2e = replace_once(e2e,
+          '''  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * 0.32 * nearLayer.zoomScale, 3);\n  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * 0.32 * nearLayer.zoomScale, 3);''',
+          '''  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * nearLayer.translationFactor, 3);\n  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * nearLayer.translationFactor, 3);''', 'e2e pan expectation')
+
+          anchor_test = r'''test("off-center zoom keeps a depth star on the same camera fixed point", async ({ browser }) => {\n  const context = await browser.newContext({ viewport: { width: 1400, height: 980 } });\n  const page = await context.newPage();\n  await installFixture(page);\n  await page.goto("/u/?username=example&style=galaxy-systems");\n  await expect(page.locator("#status")).toBeHidden();\n  await expect.poll(() => page.evaluate(() => Boolean(window.ProjectMapCameraCoherence && window.ProjectMapCosmicBackground))).toBe(true);\n\n  const result = await page.evaluate(() => {\n    state.zoom = 1;\n    state.pan.x = 0;\n    state.pan.y = 0;\n    draw();\n    const before = window.ProjectMapCosmicBackground.snapshot();\n    const anchor = { x: before.nearStar.x, y: before.nearStar.y };\n    const world = screenToWorld(anchor.x, anchor.y);\n    window.ProjectMapCameraCoherence.zoomAt(anchor.x, anchor.y, 1.35);\n    const after = window.ProjectMapCosmicBackground.snapshot();\n    return { anchor, anchoredWorld: worldToScreen(world.x, world.y), before, after };\n  });\n\n  expect(result.after.zoom).toBeGreaterThan(result.before.zoom);\n  expect(result.after.nearStar.index).toBe(result.before.nearStar.index);\n  expect(Math.abs(result.anchoredWorld.x - result.anchor.x)).toBeLessThan(0.75);\n  expect(Math.abs(result.anchoredWorld.y - result.anchor.y)).toBeLessThan(0.75);\n  expect(result.after.cameraFixedPoint.x).toBeCloseTo(result.anchor.x, 5);\n  expect(result.after.cameraFixedPoint.y).toBeCloseTo(result.anchor.y, 5);\n  expect(Math.abs(result.after.nearStar.x - result.before.nearStar.x)).toBeLessThan(0.75);\n  expect(Math.abs(result.after.nearStar.y - result.before.nearStar.y)).toBeLessThan(0.75);\n\n  await context.close();\n});\n\n'''.replace('\\n', '\n')
+          marker = 'test("meteor is a real background canvas event and remains behind graph content", async ({ browser }) => {'
+          if anchor_test not in e2e:
+              if marker not in e2e:
+                  raise SystemExit('missing e2e insertion marker')
+              e2e = e2e.replace(marker, anchor_test + marker, 1)
+          e2e_path.write_text(e2e)
+
+          doc_path = Path('docs/reactive-cosmic-background.md')
+          doc = doc_path.read_text()
+          doc = replace_once(doc,
+          '''- Camera pan drives three depth layers at `0.08`, `0.18`, and `0.32` of `state.pan`.\n- Camera zoom drives those same layers more weakly than graph geometry using zoom exponents `0.05`, `0.12`, and `0.22`. Near stars therefore react more strongly than mid stars, and mid more strongly than far stars, while repositories remain the dominant foreground geometry.\n- Star radius grows only with the square root of each depth scale so zoom does not turn the background into visual noise.\n- Star/depth scaling is centered on the viewport rather than the canvas origin, avoiding the impression that a flat texture is stretching from one corner.\n- The subtle infinite haze remains slower than the star planes.''',
+          '''- Each star plane has one depth coefficient: far `0.08`, mid `0.18`, near `0.32`. The same depth weakens both pan and zoom instead of composing two unrelated camera responses.\n- Cosmic planes use a fractional form of the foreground affine camera transform. Layer scale is `zoom ^ depth`; its pan translation factor is `depth` at unit zoom and `(layerScale - 1) / (zoom - 1)` otherwise. This preserves the foreground camera's fixed screen point while making distant planes move and scale less.\n- Pointer-anchored zoom therefore keeps the same focal point across repositories and cosmic depth layers rather than letting stars/haze shear around the viewport center while foreground geometry stays under the cursor.\n- Star radius grows only with the square root of each depth scale so zoom does not turn the background into visual noise.\n- The subtle infinite haze uses the same fractional-camera formulation at depth `0.035`, remaining slower than the star planes.''', 'cosmic depth contract')
+          doc = replace_once(doc,
+          '''- source tests assert wheel normalization, shared wheel/pinch/keyboard bounds, scene-aware zoom limits, scene-aware pan limits, elastic overscroll plus hard settle, depth exponents, stable world-anchored envelope behavior, diffuse dust rather than an explicit arc, script ordering, and reduced-motion support;\n- browser tests prove pointer-anchored zoom, elastic pan resistance and post-interaction containment, far < mid < near depth response, world-center envelope alignment, wrapped pan continuity, actual canvas brightness for the diffuse galaxy body, stable envelope radius under live node movement, meteor rendering, and reduced-motion freezing;''',
+          '''- source tests assert wheel normalization, shared wheel/pinch/keyboard bounds, scene-aware zoom limits, scene-aware pan limits, elastic overscroll plus hard settle, the fractional camera-depth transform, stable world-anchored envelope behavior, diffuse dust rather than an explicit arc, script ordering, and reduced-motion support;\n- browser tests prove pointer-anchored zoom, a visible depth star remaining fixed when used as an off-center zoom anchor, elastic pan resistance and post-interaction containment, far < mid < near depth response, world-center envelope alignment, wrapped pan continuity, actual canvas brightness for the diffuse galaxy body, stable envelope radius under live node movement, meteor rendering, and reduced-motion freezing;''', 'verification contract')
+          doc_path.write_text(doc)
+          PY
+
+          node --check scripts/public-cosmic-background.js
+          node --test tests/reactive-cosmic-background.test.mjs
+          git diff --check
+
+          if git diff --quiet; then
+            echo "Camera-depth patch already applied."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/public-cosmic-background.js tests/reactive-cosmic-background.test.mjs tests/e2e/reactive-cosmic-background.spec.mjs docs/reactive-cosmic-background.md
+          git commit -m 'Make cosmic depth follow the camera fixed point'
+          git push origin "HEAD:${HEAD_BRANCH}"
