@@ -26,16 +26,22 @@ test("camera coherence normalizes input and derives shared scene-aware zoom boun
   assert.match(source, /ProjectMapCameraCoherence/);
 });
 
-test("reactive cosmic background keeps pan-linked depth, zoom parallax, stable diffuse galaxy body, and sparse meteors", async () => {
+test("reactive cosmic background composes camera deltas across depth while preserving world and screen-space layers", async () => {
   const source = await readFile(cosmicSourceUrl, "utf8");
   assert.match(source, /depth: 0\.08/);
   assert.match(source, /depth: 0\.18/);
   assert.match(source, /depth: 0\.32/);
-  assert.match(source, /function cameraDepthTransform\(depth\)/);
-  assert.match(source, /\(scale - 1\) \/ \(zoom - 1\)/);
-  assert.match(source, /state\.pan\.x \* translationFactor/);
-  assert.match(source, /state\.pan\.y \* translationFactor/);
-  assert.match(source, /Math\.pow\(zoom, effective\)/);
+  assert.match(source, /depthTransforms: new Map\(\)/);
+  assert.match(source, /function syncDepthTransforms\(size = canvasSize\(\)\)/);
+  assert.match(source, /const ratio = current\.zoom \/ previous\.zoom/);
+  assert.match(source, /const deltaX = current\.originX - ratio \* previous\.originX/);
+  assert.match(source, /Math\.pow\(ratio, depth\)/);
+  assert.match(source, /\(depthScale - 1\) \/ \(ratio - 1\)/);
+  assert.match(source, /scale: depthScale \* old\.scale/);
+  assert.match(source, /translateX: depthScale \* old\.translateX \+ translatedX/);
+  assert.match(source, /translateY: depthScale \* old\.translateY \+ translatedY/);
+  assert.match(source, /viewportChanged/);
+  assert.match(source, /resetDepthTransforms\(current, reduced\)/);
   assert.match(source, /function cameraFixedPoint/);
   assert.match(source, /function drawGalaxyEnvelope\(width, height\)/);
   assert.match(source, /worldToScreen\(0, 0\)/);
