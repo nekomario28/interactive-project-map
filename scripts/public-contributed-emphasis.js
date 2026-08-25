@@ -96,55 +96,36 @@ window.addEventListener("DOMContentLoaded", () => {
   function place(target) {
     const owner = runtime.owner;
     if (!owner) return;
-    if (target.placement === "external-rail") {
-      target.node.x = target.x;
-      target.node.y = target.y;
-    } else {
-      target.node.x = owner.x + Math.cos(target.phase) * target.radius;
-      target.node.y = owner.y + Math.sin(target.phase) * target.radius;
-    }
+    target.node.x = owner.x + Math.cos(target.phase) * target.radius;
+    target.node.y = owner.y + Math.sin(target.phase) * target.radius;
     target.node.vx = 0;
     target.node.vy = 0;
   }
 
-  function systemsRailTargets(external, owner, sweepRadius) {
-    const rowsPerColumn = 6;
-    const rowSpacing = 74;
-    const columnSpacing = 190;
-    const railStartX = owner.x + sweepRadius + 150;
-    return external.map((node, index) => {
-      const lane = Math.floor(index / rowsPerColumn);
-      const row = index % rowsPerColumn;
-      const laneCount = Math.min(rowsPerColumn, external.length - lane * rowsPerColumn);
-      const x = railStartX + lane * columnSpacing;
-      const y = owner.y + (row - (laneCount - 1) / 2) * rowSpacing;
-      return {
-        node,
-        placement: "external-rail",
-        lane,
-        x,
-        y,
-        phase: 0,
-        radius: Math.hypot(x - owner.x, y - owner.y),
-        period: Infinity,
-        direction: 0,
-      };
-    });
-  }
-
-  function externalOrbitTargets(external, sweepRadius) {
+  function externalHaloTargets(external, sweepRadius) {
+    // Keep Contributed in the same Galaxy world without placing it inside owned
+    // taxonomy space. The first halo clears the swept owned envelope and every
+    // later lane expands outward.
     const baseRadius = Math.max(345, sweepRadius + 125);
     const perLane = 6;
     return external.map((node, index) => {
       const lane = Math.floor(index / perLane);
       const inLane = index % perLane;
       const laneCount = Math.min(perLane, external.length - lane * perLane);
-      const seed = (hashText(`${node.id}:contributed-orbit`) % 10000) / 10000;
+      const seed = (hashText(`${node.id}:contributed-halo`) % 10000) / 10000;
       const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
       const radius = baseRadius + lane * 86 + ((hashText(`${node.id}:contributed-radius`) % 31) - 15);
-      const stylePeriod = state.style === "galaxy-classic" ? 520 : 980;
+      const stylePeriod = state.style === "galaxy-classic" ? 520 : state.style === "galaxy-systems" ? 1080 : 980;
       const direction = (hashText(`${node.id}:contributed-direction`) & 1) === 0 ? 1 : -1;
-      return { node, placement: "external-orbit", lane, phase, radius, period: stylePeriod + lane * 120, direction };
+      return {
+        node,
+        placement: "external-halo-orbit",
+        lane,
+        phase,
+        radius,
+        period: stylePeriod + lane * 140,
+        direction,
+      };
     });
   }
 
@@ -163,13 +144,11 @@ window.addEventListener("DOMContentLoaded", () => {
       .filter(isContributed)
       .sort((a, b) => (b.stars || 0) - (a.stars || 0) || String(a.id).localeCompare(String(b.id)));
     if (!owner || !external.length) return false;
+
     runtime.owner = owner;
     runtime.sweepRadius = ownedSweepEnvelope(owner);
-    runtime.placement = state.style === "galaxy-systems" ? "external-rail" : "external-orbit";
-    runtime.targets = runtime.placement === "external-rail"
-      ? systemsRailTargets(external, owner, runtime.sweepRadius)
-      : externalOrbitTargets(external, runtime.sweepRadius);
-
+    runtime.placement = "external-halo-orbit";
+    runtime.targets = externalHaloTargets(external, runtime.sweepRadius);
     for (const target of runtime.targets) place(target);
     if (typeof fitView === "function") fitView();
     else if (typeof draw === "function") draw();
@@ -182,14 +161,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const dt = Math.max(0, Math.min(50, now - runtime.lastTime));
     runtime.lastTime = now;
     if (!dt) return false;
-    let moved = false;
     for (const target of runtime.targets) {
-      if (target.placement !== "external-orbit") continue;
       target.phase += target.direction * TAU * dt / (target.period * 1000);
       place(target);
-      moved = true;
     }
-    return moved;
+    return true;
   }
 
   window.ProjectMapContributedEmphasis = Object.freeze({
@@ -206,9 +182,7 @@ window.addEventListener("DOMContentLoaded", () => {
         radius: target.radius,
         lane: target.lane,
         placement: target.placement,
-        clearance: target.placement === "external-rail"
-          ? target.x - (runtime.owner?.x || 0) - runtime.sweepRadius
-          : target.radius - runtime.sweepRadius,
+        clearance: target.radius - runtime.sweepRadius,
       })),
     }),
   });
