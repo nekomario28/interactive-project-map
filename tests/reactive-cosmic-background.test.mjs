@@ -26,7 +26,7 @@ test("camera coherence normalizes input and derives shared scene-aware zoom boun
   assert.match(source, /ProjectMapCameraCoherence/);
 });
 
-test("reactive cosmic background keeps pan-linked depth, zoom parallax, galaxy envelope, and sparse meteors", async () => {
+test("reactive cosmic background keeps pan-linked depth, zoom parallax, stable diffuse galaxy body, and sparse meteors", async () => {
   const source = await readFile(cosmicSourceUrl, "utf8");
   assert.match(source, /parallax: 0\.08, zoomParallax: 0\.05/);
   assert.match(source, /parallax: 0\.18, zoomParallax: 0\.12/);
@@ -36,7 +36,12 @@ test("reactive cosmic background keeps pan-linked depth, zoom parallax, galaxy e
   assert.match(source, /Math\.pow\(clamp\(Number\(state\.zoom\)/);
   assert.match(source, /function drawGalaxyEnvelope\(width, height\)/);
   assert.match(source, /worldToScreen\(0, 0\)/);
-  assert.match(source, /function sceneWorldRadius\(\)/);
+  assert.match(source, /function measuredSceneWorldRadius\(\)/);
+  assert.match(source, /runtime\.envelopeGraph !== state\.graph/);
+  assert.match(source, /runtime\.envelopeStyle !== style/);
+  assert.match(source, /GALAXY_DUST_COUNT = 64/);
+  assert.match(source, /function drawGalaxyDust\(radius, core\)/);
+  assert.doesNotMatch(source, /ctx\.ellipse\(/);
   assert.match(source, /function wrap\(value, size\)/);
   assert.match(source, /METEOR_MIN_DELAY = 22_000/);
   assert.match(source, /METEOR_DELAY_SPAN = 34_000/);
