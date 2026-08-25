@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-07-25",
+  "calibrationObservedAt": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "forkQualityContractId": "ipm-repository-fork-quality-v1",
+  "status": "frozen-fork-local-delta-game-mod-calibration",
+  "cases": [
+    {
+      "id": "buyclaimchunks-fork-local-default-main-1.1.1",
+      "repository": "nekomario28/BuyClaimChunks",
+      "revision": "22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+      "evidenceEventDate": "2026-07-25",
+      "carrier": {
+        "authorityScope": "repository-default-branch",
+        "branch": "main",
+        "defaultBranch": "main",
+        "authorityMatch": true,
+        "productionAdmissionEligible": true
+      },
+      "context": {
+        "category": "game-modding",
+        "artifacts": ["game-mod"],
+        "relation": {
+          "ownership": "owned",
+          "collaboration": "unknown",
+          "lineage": "fork"
+        }
+      },
+      "upstream": {
+        "repositoryKey": "SkyAdri-mc/BuyClaimChunks",
+        "revision": "3ff3da62fd8addf319165d8018d1b795be7f5187"
+      },
+      "snapshotEvidence": {},
+      "localDeltaObservation": {
+        "state": "observed",
+        "presence": "present",
+        "scope": "SkyAdri-mc/BuyClaimChunks@3ff3da62fd8addf319165d8018d1b795be7f5187...nekomario28/BuyClaimChunks@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+        "evidence": "Default main is 21 commits ahead and 0 behind the upstream main merge base. Local-ahead changes include the NeoForge 1.21.1 port, bilingual documentation, build/release workflows, pricing and payment code, GameTests, packaged-JAR validation, restart integration, licensing/NOTICE, and dedicated-server validation tooling."
+      },
+      "localDeltaApplicability": {
+        "security-safety": "optional"
+      },
+      "localDeltaEvidence": {
+        "understandability": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The local-ahead README documents purpose, Minecraft/NeoForge/Java/FTB compatibility, installation, command semantics, transaction ordering, configuration, pricing, migration, troubleshooting, source-build validation, and fork attribution."
+          }
+        ],
+        "verification": [
+          {
+            "origin": "local",
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#37:30166821071@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The main-branch push workflow explicitly checked out exact revision 22d7adcbe5f711a3bc7e2cb8593c60e19838dce1 and passed unit tests/build, packaged release-JAR verification, all six required NeoForge GameTests, FTB Chunks purchase-and-restart integration, dedicated-server startup to Done, and evidence artifact upload."
+          },
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "BuyClaimChunksGameTests.java+BuyClaimChunksRestartIntegrationGameTests.java@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "Local-ahead GameTests cover command registration, multi-stack payment, insufficient-payment no-consumption behavior, default pricing, real /buyclaim quota/payment behavior, and second-JVM quota persistence."
+          }
+        ],
+        "reproducibility": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "build.gradle+gradle.properties+.github/workflows/build.yml@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The local delta records the Java 21 / Minecraft 1.21.1 / NeoForge 21.1 toolchain and dependency/build contract together with executable clean-test-build, GameTest, restart-integration, JAR-audit, and server-smoke workflow steps."
+          },
+          {
+            "origin": "local",
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#37:artifact@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The exact-head workflow produced the named buyclaimchunks-22d7adc... evidence artifact and recorded upload digest 3fbaa4eecba431bafdf24b051c0353395f83477c6f144c39bc37062ce03aac88; this proves a bounded successful build artifact, not byte-identical rebuild determinism."
+          }
+        ],
+        "interoperability": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md+gradle.properties@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The local delta specifies the supported Minecraft 1.21.1, NeoForge 21.1, FTB Chunks 2101.1.x, FTB Teams, FTB Library, and Architectury compatibility boundary and preserves a separate legacy Forge branch."
+          },
+          {
+            "origin": "local",
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#37:ftb-restart-integration@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The exact-head runtime loaded BuyClaimChunks Continued with FTB Chunks 2101.1.20, FTB Teams 2101.1.9, FTB Library 2101.1.30, Architectury 13.0.8 and NeoForge 21.1.242, then verified a real quota purchase and reload through FTB's persisted data path."
+          }
+        ],
+        "security-safety": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md+BuyClaimChunksGameTests.java@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The local transaction contract updates FTB quota before consuming payment, rejects invalid/overflowed/insufficient transactions, and includes a GameTest asserting insufficient payment leaves inventory unchanged."
+          }
+        ],
+        "stewardship": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "LICENSE+NOTICE+README.md+CHANGELOG.md@22d7adcbe5f711a3bc7e2cb8593c60e19838dce1",
+            "claim": "The local delta adds an MIT license, preserves original-author attribution and fork provenance in NOTICE/README, documents maintained-version boundaries, and records release changes."
+          }
+        ]
+      },
+      "expected": {
+        "snapshotOrigin": "unknown",
+        "snapshotSupports": [],
+        "localDeltaQualityState": "partial",
+        "localDeltaSupports": [
+          "understandability",
+          "verification",
+          "reproducibility",
+          "interoperability",
+          "security-safety",
+          "stewardship"
+        ],
+        "localDeltaMaintainability": "unknown",
+        "securitySafetyApplicability": "optional",
+        "portfolioQualityAvailable": true,
+        "compositeQualityScore": null
+      },
+      "claimBoundaries": {
+        "qualityAttribution": "local-delta-only",
+        "upstreamQualityPersonalCredit": "excluded",
+        "futureOpenPacFeaturePr": "excluded",
+        "byteIdenticalRebuild": "not-verified",
+        "releasePublication": "not-claimed"
+      }
+    }
+  ]
+}
