@@ -38,10 +38,10 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Taxonomy artifact-identity release candidate: Action F 9d018370d7b22d82d8974ae1ac018de5589dd85a.
-# F passed Verify #1054: full Verify, twelve-preset rendering, Chromium and iPhone WebKit.
-# Exact real-profile Action proof #203 passed with lime_tidyup as artifact:service,
-# incidental artifact:documentation absent, and ROS2/Gazebo facets preserved.
+# Native Contributed rail release candidate: Action F_rail 4029926b4568475867cac44456efe1559fb54e4b.
+# F_rail passed Verify #1065: full Verify, twelve-preset rendering, Chromium and iPhone WebKit.
+# Exact real-profile rail proof #205 passed with native background, stationary Systems rail,
+# inherited sans font, canonical Contributed semantics, and no halo/donor leakage.
 # Move stable v1 only after this reusable-workflow release commit passes exact caller proof.
 jobs:
   generate:
@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@9d018370d7b22d82d8974ae1ac018de5589dd85a
+        uses: nekomario28/interactive-project-map@4029926b4568475867cac44456efe1559fb54e4b
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}

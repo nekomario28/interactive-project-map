@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Taxonomy artifact-identity F passed Verify #1054 and exact real-profile Action proof #203.
-export const PUBLIC_ACTION_REF = "9d018370d7b22d82d8974ae1ac018de5589dd85a";
+// Native Contributed rail F_rail passed Verify #1065 and exact real-profile rail proof #205.
+export const PUBLIC_ACTION_REF = "4029926b4568475867cac44456efe1559fb54e4b";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
