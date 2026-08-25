@@ -76,7 +76,7 @@ function watchBrowserErrors(page) {
 }
 
 for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
-  test(`${style} keeps external Contributed repositories in the shared Galaxy halo outside owned swept space`, async ({ page }) => {
+  test(`${style} keeps external Contributed repositories outside owned swept space without fake membership`, async ({ page }) => {
     await installGraph(page);
     const browserErrors = watchBrowserErrors(page);
     await page.goto(`/u/?username=example&style=${style}`);
@@ -115,13 +115,19 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid"]) {
 
     const first = initial.emphasis.repositories[0];
     expect(first.clearance).toBeGreaterThan(100);
-    expect(initial.emphasis.placement).toBe("external-halo-orbit");
-    expect(first.placement).toBe("external-halo-orbit");
+    if (style === "galaxy-systems") {
+      expect(initial.emphasis.placement).toBe("external-rail");
+      expect(first.placement).toBe("external-rail");
+    } else {
+      expect(initial.emphasis.placement).toBe("external-orbit");
+      expect(first.placement).toBe("external-orbit");
+    }
 
     await page.waitForTimeout(650);
     const second = await page.evaluate(() => window.ProjectMapContributedEmphasis.snapshot().repositories[0]);
     const displacement = Math.hypot(second.x - first.x, second.y - first.y);
-    expect(displacement).toBeGreaterThan(0.35);
+    if (style === "galaxy-systems") expect(displacement).toBeLessThan(0.01);
+    else expect(displacement).toBeGreaterThan(0.35);
 
     await expect(page.locator('[data-status-filter="contributed"]')).toContainText("Contributed");
     expect(browserErrors).toEqual([]);
