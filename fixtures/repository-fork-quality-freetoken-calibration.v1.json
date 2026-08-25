@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-08-24",
+  "calibrationObservedAt": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "forkQualityContractId": "ipm-repository-fork-quality-v1",
+  "status": "frozen-fork-local-delta-application-calibration",
+  "cases": [
+    {
+      "id": "freetoken-fork-local-default-main-moe-telemetry-b2c0f16",
+      "repository": "nekomario28/FreeToken",
+      "revision": "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa",
+      "evidenceEventDate": "2026-08-24",
+      "carrier": {
+        "authorityScope": "repository-default-branch",
+        "branch": "main",
+        "defaultBranch": "main",
+        "authorityMatch": true,
+        "productionAdmissionEligible": true
+      },
+      "context": {
+        "category": "ai-ml",
+        "artifacts": ["application"],
+        "relation": {
+          "ownership": "owned",
+          "collaboration": "unknown",
+          "lineage": "fork"
+        }
+      },
+      "upstream": {
+        "repositoryKey": "FlashML-org/FreeToken",
+        "revision": "2757bb5f91156fc8a44d88ec4b302a81f10c9e81",
+        "mergeBaseRevision": "f0abe587a11cca53bb3c37a9596fad24973ace62"
+      },
+      "snapshotEvidence": {},
+      "localDeltaObservation": {
+        "state": "observed",
+        "presence": "present",
+        "scope": "FlashML-org/FreeToken@2757bb5f91156fc8a44d88ec4b302a81f10c9e81...nekomario28/FreeToken@b2c0f162ae74c22898fb61b7369b4d7a3474bbfa",
+        "evidence": "The current default heads are diverged: the fork main is 2 commits ahead and 7 behind upstream main, with merge base f0abe587a11cca53bb3c37a9596fad24973ace62. The meaningful local delta is feature commit 3ab9469657d83b02da6fd1fcd28f2b2f4b297355, merged into fork default main as b2c0f162ae74c22898fb61b7369b4d7a3474bbfa. It adds opt-in MoE decode cache telemetry, typed message propagation, stats/control-CLI projection, documentation, and focused tests."
+      },
+      "localDeltaEvidence": {
+        "understandability": [
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "docs/cli.md@3ab9469657d83b02da6fd1fcd28f2b2f4b297355",
+            "claim": "The local delta documents --moe-collect-stats as opt-in telemetry and states that the exposed H2D value is logical payload rather than measured PCIe bandwidth; the control CLI uses the same bounded terminology."
+          }
+        ],
+        "verification": [
+          {
+            "origin": "local",
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "pull-request:nekomario28/FreeToken#1@3ab9469657d83b02da6fd1fcd28f2b2f4b297355",
+            "claim": "The merged local PR freezes exact base f0abe587a11cca53bb3c37a9596fad24973ace62 and exact feature head 3ab9469657d83b02da6fd1fcd28f2b2f4b297355, records the focused CPU regression command as 98 passed with one expected fallback warning, records compileall and git diff --check as passed, and reports a bounded RX 7800 XT-class ROCm counter-path check whose ACTIVE/MISS/CALLS values matched the test vectors."
+          },
+          {
+            "origin": "local",
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "tests/server/test_moe_stats.py+tests/server/test_message_wire.py+tests/scheduler/test_scheduler_status.py@3ab9469657d83b02da6fd1fcd28f2b2f4b297355",
+            "claim": "The local delta adds focused tests for hit/miss and logical-payload derivation, missing-snapshot behavior, regular-LRU versus hybrid fetch semantics, payload-not-bandwidth labeling, wire round trips, and throttled scheduler status propagation."
+          }
+        ],
+        "reproducibility": [
+          {
+            "origin": "local",
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "pull-request:nekomario28/FreeToken#1:validation-recipe@3ab9469657d83b02da6fd1fcd28f2b2f4b297355",
+            "claim": "The local PR records exact base/head identities and an explicit PYTHONPATH/TVM_FFI_CACHE_DIR pytest recipe covering scheduler, message-wire and MoE-stats tests, plus compileall and diff-check commands. This supports reproduction of the bounded feature validation, not full application or artifact determinism."
+          }
+        ]
+      },
+      "expected": {
+        "snapshotOrigin": "unknown",
+        "snapshotSupports": [],
+        "localDeltaQualityState": "partial",
+        "targetDimensions": 6,
+        "localDeltaSupports": [
+          "understandability",
+          "verification",
+          "reproducibility"
+        ],
+        "localDeltaMaintainability": "unknown",
+        "localDeltaSecuritySafety": "unknown",
+        "localDeltaStewardship": "unknown",
+        "portfolioQualityAvailable": true,
+        "compositeQualityScore": null
+      },
+      "claimBoundaries": {
+        "qualityAttribution": "local-delta-only",
+        "upstreamQualityPersonalCredit": "excluded",
+        "upstreamLicenseStewardshipPersonalCredit": "excluded",
+        "exactHeadAutomatedActions": "none-observed",
+        "prValidationReceipt": "project-owned-bounded-validation-not-independent-ci",
+        "fullCheckpointServeOnSupportedNvidiaCuda": "not-run",
+        "rocmDeviceCheck": "counter-path-only-not-full-checkpoint-serve",
+        "h2dPayloadAsMeasuredBandwidth": "excluded",
+        "byteIdenticalRebuild": "not-verified",
+        "releasePublication": "not-claimed",
+        "liveQualityAdmission": "not-claimed-by-calibration"
+      }
+    }
+  ]
+}
