@@ -190,8 +190,11 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   const loaded = loadBoundedQualityEnrichments(manifest, { manifestPath });
   const antiSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
   const ipmSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/interactive-project-map");
+  const buyclaimSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   assert.equal(antiSource.calibratedRevision, "154bd1a1085412ca7a5abe797abf253a43dd29a8");
   assert.equal(ipmSource.calibratedRevision, null);
+  assert.equal(buyclaimSource.calibratedRevision, "22d7adcbe5f711a3bc7e2cb8593c60e19838dce1");
+  assert.equal(buyclaimSource.fixtureSnapshotDate, "2026-07-25");
 
   const candidate = applyBoundedEvidenceRevalidation(loaded.sourceDiagnostics, antifullbrightObservation);
   assert.equal(candidate.target.disposition, "revalidated-unchanged-exact-revision");
@@ -199,8 +202,8 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(candidate.target.effectiveSnapshotDate, "2026-08-25");
   assert.equal(candidate.assessmentFreshnessChanged, false);
   assert.equal(candidate.presentationFreshnessChanged, false);
-  assert.deepEqual(candidate.evidenceFreshness.assessment.snapshotDates, ["2026-08-25"]);
-  assert.deepEqual(candidate.evidenceFreshness.portfolioPresentation.snapshotDates, ["2026-08-25"]);
+  assert.deepEqual(candidate.evidenceFreshness.assessment.snapshotDates, ["2026-07-25", "2026-08-25"]);
+  assert.deepEqual(candidate.evidenceFreshness.portfolioPresentation.snapshotDates, ["2026-07-25", "2026-08-25"]);
 
   const baseline = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision });
   const revalidated = buildLiveQualitySidecarCandidates(live.graph, {
@@ -209,8 +212,8 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   });
 
   assert.deepEqual(revalidated.assessment, baseline.assessment);
-  assert.equal(revalidated.presentation.diagnostics.available, 4);
-  assert.equal(revalidated.presentation.diagnostics.unavailable, 11);
+  assert.equal(revalidated.presentation.diagnostics.available, 5);
+  assert.equal(revalidated.presentation.diagnostics.unavailable, 10);
   assert.equal(revalidated.diagnostics.revalidation.target.disposition, "revalidated-unchanged-exact-revision");
   assert.equal(revalidated.diagnostics.invariants.automaticEvidenceRefreshPerformed, false);
   assert.equal(revalidated.diagnostics.invariants.explicitBoundedRevalidationPerformed, true);
@@ -228,6 +231,12 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(anti.evidenceFreshness.snapshotDate, "2026-08-25");
   assert.equal(anti.evidenceFreshness.revalidatedAt, "2026-08-25T06:20:00.000Z");
   assert.equal(anti.evidenceFreshness.observedRevision, "154bd1a1085412ca7a5abe797abf253a43dd29a8");
+
+  const buyclaim = revalidated.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
+  assert.equal(buyclaim.overlayState, "available");
+  assert.equal(buyclaim.evidenceFreshness.snapshotDate, "2026-07-25");
+  assert.equal(buyclaim.evidenceFreshness.revalidatedAt, undefined);
+  assert.equal(buyclaim.evidenceFreshness.observedRevision, undefined);
 
   const otherAvailable = revalidated.presentation.repositories.filter(
     (entry) => entry.overlayState === "available" && entry.repositoryKey !== "nekomario28/antifullbright",

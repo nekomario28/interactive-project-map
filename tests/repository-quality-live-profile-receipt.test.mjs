@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while five assessment sources yield four portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while six assessment sources yield five portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 5);
-  assert.equal(result.diagnostics.assessment.quality.applied, 5);
-  assert.equal(result.diagnostics.assessment.quality.partial, 5);
+  assert.equal(result.diagnostics.assessment.quality.requested, 6);
+  assert.equal(result.diagnostics.assessment.quality.applied, 6);
+  assert.equal(result.diagnostics.assessment.quality.partial, 6);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 4);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 11);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 4);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 5);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 10);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 5);
 });
 
-test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright snapshot Quality", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright plus BuyClaimChunks", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -108,6 +108,19 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
   assert.equal(turing.overlay.coverage.targetDimensions, 6);
   assert.equal(turing.overlay.targetFindingCounts.supports, 2);
   assert.equal(turing.overlay.targetFindingCounts.unknown, 4);
+
+  const buyclaim = byKey.get("nekomario28/buyclaimchunks");
+  assert.equal(buyclaim.qualityAttributionScope, "local-delta");
+  assert.equal(buyclaim.overlayState, "available");
+  assert.equal(buyclaim.overlay.coverage.targetDimensions, 6);
+  assert.equal(buyclaim.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(buyclaim.overlay.targetFindingCounts.supports, 5);
+  assert.equal(buyclaim.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(buyclaim.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  const buyclaimSecurity = buyclaim.overlay.segments.find((segment) => segment.id === "security-safety");
+  assert.equal(buyclaimSecurity.applicability, "optional");
+  assert.equal(buyclaimSecurity.findingState, "supports");
+  assert.equal(buyclaim.evidenceFreshness.snapshotDate, "2026-07-25");
 });
 
 test("Quality enrichment does not smuggle L1 relation knowledge into the live L0 sidecar", () => {
@@ -130,6 +143,11 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
     lineage: "fork",
   });
   assert.deepEqual(byKey.get("nekomario28/turing-smart-screen-python-owl").context.relation, {
+    ownership: "owned",
+    collaboration: "unknown",
+    lineage: "fork",
+  });
+  assert.deepEqual(byKey.get("nekomario28/buyclaimchunks").context.relation, {
     ownership: "owned",
     collaboration: "unknown",
     lineage: "fork",

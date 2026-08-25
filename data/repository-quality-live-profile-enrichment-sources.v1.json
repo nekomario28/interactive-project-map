@@ -42,6 +42,13 @@
       "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",
       "caseId": "turing-fork-mixed-snapshot-with-local-default-branch-delta",
       "presentationExpected": "available"
+    },
+    {
+      "repositoryKey": "nekomario28/BuyClaimChunks",
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-buyclaimchunks-calibration.v1.json",
+      "caseId": "buyclaimchunks-fork-local-default-main-1.1.1",
+      "presentationExpected": "available"
     }
   ]
 }

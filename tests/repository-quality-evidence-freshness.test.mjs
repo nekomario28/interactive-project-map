@@ -21,7 +21,7 @@ function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "ipm-quality-freshness-"));
 }
 
-function freshness(scope, sourceCount, snapshotDates = ["2026-08-25"]) {
+function freshness(scope, sourceCount, snapshotDates) {
   return {
     mode: "bounded-frozen-snapshots",
     scope,
@@ -33,39 +33,51 @@ function freshness(scope, sourceCount, snapshotDates = ["2026-08-25"]) {
   };
 }
 
-test("live presentation exposes only presentation-eligible frozen freshness while assessment retains all bounded sources", () => {
+test("live presentation exposes presentation-eligible frozen freshness without laundering the older BuyClaim evidence date", () => {
   const result = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision: revision });
+  const mixedDates = ["2026-07-25", "2026-08-25"];
 
   assert.deepEqual(
     result.presentation.evidenceFreshness,
-    freshness("portfolio-quality-presented-sources", 4),
+    freshness("portfolio-quality-presented-sources", 5, mixedDates),
   );
   assert.deepEqual(
     result.diagnostics.evidenceFreshness.assessment,
-    freshness("all-bounded-assessment-sources", 5),
+    freshness("all-bounded-assessment-sources", 6, mixedDates),
   );
   assert.deepEqual(result.diagnostics.evidenceFreshness.portfolioPresentation, result.presentation.evidenceFreshness);
   assert.equal(result.diagnostics.invariants.frozenEvidenceFreshnessIsPublished, true);
   assert.equal(result.diagnostics.invariants.automaticEvidenceRefreshPerformed, false);
   assert.equal(result.diagnostics.invariants.presentationFreshnessUsesPresentationEligibleSourcesOnly, true);
-  assert.ok(result.diagnostics.enrichmentSources.every((entry) => entry.fixtureSnapshotDate === "2026-08-25"));
 
   const available = result.presentation.repositories.filter((entry) => entry.overlayState === "available");
   const unavailable = result.presentation.repositories.filter((entry) => entry.overlayState !== "available");
-  assert.equal(available.length, 4);
-  assert.equal(unavailable.length, 11);
+  assert.equal(available.length, 5);
+  assert.equal(unavailable.length, 10);
   assert.ok(available.every((entry) => entry.evidenceFreshness?.state === "frozen-snapshot"));
-  assert.ok(available.every((entry) => entry.evidenceFreshness?.snapshotDate === "2026-08-25"));
   assert.ok(available.every((entry) => entry.evidenceFreshness?.automaticRefresh === false));
   assert.ok(unavailable.every((entry) => entry.evidenceFreshness == null));
 
-  const antifullbright = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/antifullbright");
-  assert.ok(antifullbright, "AntiFullbright must receive frozen presentation freshness with its admitted repository-snapshot Quality");
-  assert.equal(antifullbright.evidenceFreshness.snapshotDate, "2026-08-25");
+  const buyclaim = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/buyclaimchunks");
+  assert.ok(buyclaim, "BuyClaimChunks must receive local-delta frozen presentation freshness");
+  assert.equal(buyclaim.evidenceFreshness.snapshotDate, "2026-07-25");
+
+  const buyclaimSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
+  assert.equal(buyclaimSource?.fixtureSnapshotDate, "2026-07-25");
+  assert.equal(buyclaimSource?.presentationExpected, "available");
+  assert.equal(buyclaimSource?.qualityAttributionScope, "local-delta");
+
+  for (const key of [
+    "nekomario28/interactive-project-map",
+    "nekomario28/projexd_group10",
+    "nekomario28/antifullbright",
+    "nekomario28/turing-smart-screen-python-owl",
+  ]) {
+    assert.equal(available.find((entry) => String(entry.repositoryKey).toLowerCase() === key)?.evidenceFreshness?.snapshotDate, "2026-08-25", key);
+  }
 
   const projexd = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/projexd_group10");
   assert.ok(projexd, "case-insensitive source/presentation join must preserve ProjExD_Group10 freshness");
-  assert.equal(projexd.evidenceFreshness.snapshotDate, "2026-08-25");
 
   const gzSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   assert.equal(gzSource?.presentationExpected, "unavailable");
@@ -104,12 +116,14 @@ test("freshness provenance follows frozen evidence dates, not graph regeneration
   const result = buildLiveQualitySidecarCandidates(graph, { generatorRevision: revision });
 
   assert.equal(result.presentation.source.graphGeneratedAt, "2030-01-01T00:00:00.000Z");
+  assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-25"]);
+  assert.equal(result.presentation.evidenceFreshness.oldestSnapshotDate, "2026-07-25");
   assert.equal(result.presentation.evidenceFreshness.newestSnapshotDate, "2026-08-25");
   assert.equal(result.diagnostics.evidenceFreshness.assessment.newestSnapshotDate, "2026-08-25");
   assert.notEqual(result.presentation.source.graphGeneratedAt.slice(0, 10), result.presentation.evidenceFreshness.newestSnapshotDate);
 });
 
-test("assessment freshness may include an unavailable fork source without leaking that date into portfolio presentation freshness", () => {
+test("assessment freshness may include an unavailable older fork source without leaking that source into portfolio freshness", () => {
   const dir = tempDir();
   try {
     const forkFixture = JSON.parse(fs.readFileSync(path.join(root, "fixtures/repository-fork-quality-provenance-calibration.v1.json"), "utf8"));
@@ -129,11 +143,11 @@ test("assessment freshness may include an unavailable fork source without leakin
 
     assert.deepEqual(
       result.diagnostics.evidenceFreshness.assessment,
-      freshness("all-bounded-assessment-sources", 5, ["2026-08-24", "2026-08-25"]),
+      freshness("all-bounded-assessment-sources", 6, ["2026-07-25", "2026-08-24", "2026-08-25"]),
     );
     assert.deepEqual(
       result.presentation.evidenceFreshness,
-      freshness("portfolio-quality-presented-sources", 4, ["2026-08-25"]),
+      freshness("portfolio-quality-presented-sources", 5, ["2026-07-25", "2026-08-25"]),
     );
     const gzSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
     assert.equal(gzSource?.fixtureSnapshotDate, "2026-08-24");
