@@ -6,6 +6,7 @@ import { buildRepositoryAssessmentCandidate } from "./repository-assessment-cand
 import { buildForkQualityBundle } from "./repository-fork-quality.mjs";
 import { buildRepositoryQualityPresentationCandidate } from "./repository-quality-presentation-candidate.mjs";
 import { buildQualityEvidenceVector } from "./repository-quality-evidence.mjs";
+import { applyBoundedEvidenceRevalidation } from "./repository-quality-evidence-revalidation-candidate.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -48,6 +49,13 @@ function frozenSnapshotDate(value, label) {
     throw new Error(`${label}.snapshotDate must be an explicit YYYY-MM-DD frozen evidence date`);
   }
   return date;
+}
+
+function calibratedRevision(value, label) {
+  if (value == null) return null;
+  const revision = String(value).trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(revision)) throw new Error(`${label}.revision must be an exact 40-hex Git revision when present`);
+  return revision;
 }
 
 function resolveManifestFixture(manifestPath, fixturePath) {
@@ -156,6 +164,7 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
       fixtureStatus: fixture.status,
       fixtureSnapshotDate: fixture.snapshotDate,
       caseId: source.caseId,
+      calibratedRevision: calibratedRevision(selected.revision, source.caseId),
       evidenceField: built.evidenceField,
       qualityAttributionScope: built.qualityAttributionScope,
       presentationExpected,
@@ -167,9 +176,13 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
   return { enrichments, sourceDiagnostics, expectedPresentationAvailable };
 }
 
+function sourceSnapshotDate(source) {
+  return source.effectiveSnapshotDate ?? source.fixtureSnapshotDate;
+}
+
 function summarizeFrozenEvidenceFreshness(sources, scope) {
   if (!sources.length) throw new Error(`bounded Quality evidence freshness dates are unavailable for ${scope}`);
-  const snapshotDates = [...new Set(sources.map((source) => source.fixtureSnapshotDate))].sort();
+  const snapshotDates = [...new Set(sources.map((source) => sourceSnapshotDate(source)))].sort();
   return {
     mode: "bounded-frozen-snapshots",
     scope,
@@ -194,9 +207,13 @@ function attachFrozenEvidenceFreshness(presentation, sourceDiagnostics) {
     if (!source) throw new Error(`Quality-available repository has no presentation-eligible frozen freshness source: ${entry.repositoryKey}`);
     entry.evidenceFreshness = {
       state: "frozen-snapshot",
-      snapshotDate: source.fixtureSnapshotDate,
+      snapshotDate: sourceSnapshotDate(source),
       automaticRefresh: false,
     };
+    if (source.revalidation?.disposition === "revalidated-unchanged-exact-revision") {
+      entry.evidenceFreshness.revalidatedAt = source.revalidation.observedAt;
+      entry.evidenceFreshness.observedRevision = source.revalidation.observedRevision;
+    }
   }
 
   return { assessment, portfolioPresentation };
@@ -212,6 +229,10 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
   const manifestPath = path.resolve(options.manifestPath ?? defaultManifestPath);
   const manifest = options.manifest ?? readJson(manifestPath, "Quality enrichment source manifest");
   const { enrichments, sourceDiagnostics, expectedPresentationAvailable } = loadBoundedQualityEnrichments(manifest, { manifestPath });
+  const revalidation = options.revalidationRequest == null
+    ? null
+    : applyBoundedEvidenceRevalidation(sourceDiagnostics, options.revalidationRequest);
+  const effectiveSourceDiagnostics = revalidation?.sourceDiagnostics ?? sourceDiagnostics;
   const assessmentResult = buildRepositoryAssessmentCandidate(graph, {
     generatorRevision: options.generatorRevision,
     generatedAt: options.assessmentGeneratedAt,
@@ -219,7 +240,7 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
   });
   const assessment = assessmentResult.artifact;
   const presentation = buildRepositoryQualityPresentationCandidate(graph, assessment);
-  const evidenceFreshness = attachFrozenEvidenceFreshness(presentation, sourceDiagnostics);
+  const evidenceFreshness = attachFrozenEvidenceFreshness(presentation, effectiveSourceDiagnostics);
 
   if (presentation.source.graphGeneratedAt !== graph.generatedAt) {
     throw new Error("generated Quality presentation is not bound to the source graph.generatedAt");
@@ -254,13 +275,25 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
       presentation: presentation.diagnostics,
       expectedPresentationAvailable,
       evidenceFreshness,
-      enrichmentSources: sourceDiagnostics,
+      revalidation: revalidation == null ? null : {
+        candidateId: revalidation.candidateId,
+        status: revalidation.status,
+        target: revalidation.target,
+        baselineFreshness: revalidation.baselineFreshness,
+        evidenceFreshness: revalidation.evidenceFreshness,
+        assessmentFreshnessChanged: revalidation.assessmentFreshnessChanged,
+        presentationFreshnessChanged: revalidation.presentationFreshnessChanged,
+        invariants: revalidation.invariants,
+      },
+      enrichmentSources: effectiveSourceDiagnostics,
       invariants: {
         sourceGraphGeneratedAtCopiedExactly: true,
         repositoryMembershipComesOnlyFromGraph: true,
         frozenEvidenceSourcesAreExplicit: true,
         frozenEvidenceFreshnessIsPublished: true,
         automaticEvidenceRefreshPerformed: false,
+        explicitBoundedRevalidationPerformed: revalidation != null,
+        revalidationChangesQualityInterpretation: false,
         forkQualityUsesProvenanceAwareBundle: true,
         forkPortfolioQualityUsesLocalDeltaOnly: true,
         presentationFreshnessUsesPresentationEligibleSourcesOnly: true,

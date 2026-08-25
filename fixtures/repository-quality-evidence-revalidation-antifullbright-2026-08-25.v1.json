@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "requestId": "antifullbright-main-exact-revision-2026-08-25",
+  "decisionOwner": "maintainer-explicit",
+  "reason": "source-revision-check",
+  "repositoryKey": "nekomario28/antifullbright",
+  "caseId": "antifullbright-game-mod-1.1.0",
+  "observedAt": "2026-08-25T06:20:00.000Z",
+  "observation": {
+    "status": "available",
+    "snapshotDate": "2026-08-25",
+    "revision": "154bd1a1085412ca7a5abe797abf253a43dd29a8"
+  },
+  "source": {
+    "kind": "github-default-branch-head",
+    "repository": "nekomario28/antifullbright",
+    "branch": "main"
+  },
+  "claimBoundary": "The default-branch head was explicitly re-observed and exactly matched the frozen game-mod calibration revision. This receipt does not reinterpret Quality findings, change the bounded source selection, perform automatic refresh, or publish anything."
+}
