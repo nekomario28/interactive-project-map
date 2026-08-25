@@ -19,10 +19,11 @@ function repo(index) {
   };
 }
 
-test("Galaxy Systems uses a thinner stroke for compact static labels", () => {
+test("Galaxy Systems uses a stable inherited sans font and thinner compact label strokes", () => {
   const graph = buildGraph("example", Array.from({ length: 8 }, (_, index) => repo(index)), true, true);
   const svg = renderGalaxySystemsSvg(graph, "dark", 740, 420);
 
+  assert.match(svg, /<svg\b[^>]*font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"/);
   assert.match(svg, /data-static-category="[^"]+">[^]*?font-size="10\.5"[^>]*stroke-width="1\.4"/);
   assert.match(svg, /data-static-representative="true"[^]*?font-size="9\.2"[^>]*stroke-width="1\.4"/);
   assert.match(svg, /font-size="13\.5"[^>]*stroke-width="2\.3"/, "owner label should keep the existing stroke");
