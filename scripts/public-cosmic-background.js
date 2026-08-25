@@ -1,13 +1,13 @@
 "use strict";
-/* global state, canvas, ctx, hash, username, drawBackground, draw, canvasSize */
+/* global state, canvas, ctx, hash, username, drawBackground, draw, canvasSize, worldToScreen */
 
 (() => {
   const TILE = { width: 960, height: 720 };
   const HAZE_TILE = { width: 1680, height: 1180 };
   const LAYERS = Object.freeze([
-    { id: "far", count: 46, parallax: 0.08, radius: [0.38, 0.72], opacity: [0.10, 0.22] },
-    { id: "mid", count: 36, parallax: 0.18, radius: [0.52, 1.02], opacity: [0.12, 0.28] },
-    { id: "near", count: 24, parallax: 0.32, radius: [0.72, 1.42], opacity: [0.15, 0.34] },
+    { id: "far", count: 46, parallax: 0.08, zoomParallax: 0.05, radius: [0.38, 0.72], opacity: [0.10, 0.22] },
+    { id: "mid", count: 36, parallax: 0.18, zoomParallax: 0.12, radius: [0.52, 1.02], opacity: [0.12, 0.28] },
+    { id: "near", count: 24, parallax: 0.32, zoomParallax: 0.22, radius: [0.72, 1.42], opacity: [0.15, 0.34] },
   ]);
   const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
   const METEOR_MIN_DELAY = 22_000;
@@ -27,6 +27,10 @@
     return minimum + (maximum - minimum) * unit(seed);
   }
 
+  function clamp(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, value));
+  }
+
   function wrap(value, size) {
     return ((value % size) + size) % size;
   }
@@ -39,26 +43,39 @@
     return motionReduced() ? 0 : layer.parallax;
   }
 
+  function effectiveZoomScale(layer) {
+    if (motionReduced()) return 1;
+    return Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), layer.zoomParallax);
+  }
+
+  function layerTile(layer) {
+    const scale = effectiveZoomScale(layer);
+    return { width: TILE.width * scale, height: TILE.height * scale, scale };
+  }
+
   function starPoint(layer, index) {
     const parallax = effectiveParallax(layer);
+    const tile = layerTile(layer);
     const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);
     const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);
     return {
-      x: wrap(unit(xSeed) * TILE.width + state.pan.x * parallax, TILE.width),
-      y: wrap(unit(ySeed) * TILE.height + state.pan.y * parallax, TILE.height),
-      radius: range(hash(`${username}:cosmic:${layer.id}:r:${index}`), layer.radius[0], layer.radius[1]),
+      x: wrap(unit(xSeed) * tile.width + state.pan.x * parallax, tile.width),
+      y: wrap(unit(ySeed) * tile.height + state.pan.y * parallax, tile.height),
+      radius: range(hash(`${username}:cosmic:${layer.id}:r:${index}`), layer.radius[0], layer.radius[1]) * Math.sqrt(tile.scale),
       opacity: range(hash(`${username}:cosmic:${layer.id}:o:${index}`), layer.opacity[0], layer.opacity[1]),
+      tile,
     };
   }
 
   function forEachWrappedCopy(point, width, height, callback) {
-    const maxX = Math.ceil(width / TILE.width) + 1;
-    const maxY = Math.ceil(height / TILE.height) + 1;
+    const tile = point.tile || TILE;
+    const maxX = Math.ceil(width / tile.width) + 1;
+    const maxY = Math.ceil(height / tile.height) + 1;
     for (let tileX = -1; tileX <= maxX; tileX += 1) {
-      const x = point.x + tileX * TILE.width;
+      const x = point.x + tileX * tile.width;
       if (x < -3 || x > width + 3) continue;
       for (let tileY = -1; tileY <= maxY; tileY += 1) {
-        const y = point.y + tileY * TILE.height;
+        const y = point.y + tileY * tile.height;
         if (y < -3 || y > height + 3) continue;
         callback(x, y);
       }
@@ -96,29 +113,35 @@
     ctx.globalAlpha = 1;
   }
 
-  function hazePoint(index, parallax) {
+  function hazeScale() {
+    return motionReduced() ? 1 : Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), 0.035);
+  }
+
+  function hazePoint(index, parallax, tile) {
     return {
-      x: wrap(unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width + state.pan.x * parallax, HAZE_TILE.width),
-      y: wrap(unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height + state.pan.y * parallax, HAZE_TILE.height),
+      x: wrap(unit(hash(`${username}:haze:x:${index}`)) * tile.width + state.pan.x * parallax, tile.width),
+      y: wrap(unit(hash(`${username}:haze:y:${index}`)) * tile.height + state.pan.y * parallax, tile.height),
     };
   }
 
   function drawHaze(width, height) {
     const obsidian = state.style === "obsidian";
     const tint = obsidian ? [124, 110, 246] : [82, 126, 216];
-    const alpha = obsidian ? 0.055 : 0.034;
-    const radius = Math.max(340, Math.min(520, Math.max(width, height) * 0.48));
+    const alpha = obsidian ? 0.050 : 0.032;
+    const scale = hazeScale();
+    const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale };
+    const radius = Math.max(340, Math.min(560, Math.max(width, height) * 0.48)) * Math.sqrt(scale);
     const parallax = motionReduced() ? 0 : 0.035;
-    const copiesX = Math.ceil(width / HAZE_TILE.width) + 1;
-    const copiesY = Math.ceil(height / HAZE_TILE.height) + 1;
+    const copiesX = Math.ceil(width / tile.width) + 1;
+    const copiesY = Math.ceil(height / tile.height) + 1;
 
     for (let index = 0; index < 2; index += 1) {
-      const base = hazePoint(index, parallax);
+      const base = hazePoint(index, parallax, tile);
       for (let tileX = -1; tileX <= copiesX; tileX += 1) {
-        const x = base.x + tileX * HAZE_TILE.width;
+        const x = base.x + tileX * tile.width;
         if (x < -radius || x > width + radius) continue;
         for (let tileY = -1; tileY <= copiesY; tileY += 1) {
-          const y = base.y + tileY * HAZE_TILE.height;
+          const y = base.y + tileY * tile.height;
           if (y < -radius || y > height + radius) continue;
           const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
           gradient.addColorStop(0, `rgba(${tint[0]},${tint[1]},${tint[2]},${alpha})`);
@@ -129,6 +152,75 @@
         }
       }
     }
+  }
+
+  function sceneWorldRadius() {
+    let radius = 0;
+    if (Array.isArray(state.nodes)) {
+      for (const node of state.nodes) {
+        if (!Number.isFinite(node?.x) || !Number.isFinite(node?.y)) continue;
+        radius = Math.max(radius, Math.hypot(node.x, node.y));
+      }
+    }
+    return clamp((radius || 330) + 150, 320, 1800);
+  }
+
+  function galaxyEnvelope() {
+    const size = canvasSize();
+    const center = worldToScreen(0, 0);
+    const worldRadius = sceneWorldRadius();
+    const rawRadius = worldRadius * clamp(Number(state.zoom) || 1, 0.04, 6) * 1.08;
+    return {
+      center,
+      worldRadius,
+      screenRadius: clamp(rawRadius, 150, Math.max(size.width, size.height) * 2.8),
+      angle: (unit(hash(`${username}:galaxy-envelope:angle`)) - 0.5) * 0.5,
+      viewport: size,
+    };
+  }
+
+  function drawGalaxyEnvelope(width, height) {
+    if (!state.graph || !Array.isArray(state.nodes) || state.nodes.length === 0) return;
+    const envelope = galaxyEnvelope();
+    const { center, screenRadius: radius, angle } = envelope;
+    if (center.x < -radius || center.x > width + radius || center.y < -radius || center.y > height + radius) return;
+
+    const obsidian = state.style === "obsidian";
+    const tint = obsidian ? [126, 104, 238] : [62, 113, 211];
+    const core = obsidian ? [176, 146, 255] : [112, 177, 255];
+
+    ctx.save();
+    ctx.translate(center.x, center.y);
+    ctx.rotate(angle);
+    ctx.scale(1, 0.58);
+
+    const halo = ctx.createRadialGradient(0, 0, radius * 0.04, 0, 0, radius);
+    halo.addColorStop(0, `rgba(${core[0]},${core[1]},${core[2]},${obsidian ? 0.050 : 0.058})`);
+    halo.addColorStop(0.34, `rgba(${tint[0]},${tint[1]},${tint[2]},${obsidian ? 0.040 : 0.047})`);
+    halo.addColorStop(0.72, `rgba(${tint[0]},${tint[1]},${tint[2]},0.018)`);
+    halo.addColorStop(1, `rgba(${tint[0]},${tint[1]},${tint[2]},0)`);
+    ctx.fillStyle = halo;
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+
+    const lobeRadius = radius * 0.56;
+    for (const direction of [-1, 1]) {
+      const x = direction * radius * 0.24;
+      const lobe = ctx.createRadialGradient(x, 0, 0, x, 0, lobeRadius);
+      lobe.addColorStop(0, `rgba(${core[0]},${core[1]},${core[2]},0.024)`);
+      lobe.addColorStop(0.55, `rgba(${tint[0]},${tint[1]},${tint[2]},0.012)`);
+      lobe.addColorStop(1, `rgba(${tint[0]},${tint[1]},${tint[2]},0)`);
+      ctx.fillStyle = lobe;
+      ctx.fillRect(x - lobeRadius, -lobeRadius, lobeRadius * 2, lobeRadius * 2);
+    }
+
+    ctx.globalAlpha = obsidian ? 0.020 : 0.026;
+    ctx.strokeStyle = `rgb(${core[0]},${core[1]},${core[2]})`;
+    ctx.lineWidth = clamp(radius * 0.045, 5, 28);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, radius * 0.72, radius * 0.20, 0, Math.PI * 0.12, Math.PI * 0.88);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function meteorStateAt(now) {
@@ -244,6 +336,7 @@
     ctx.fillStyle = colors.background;
     ctx.fillRect(0, 0, width, height);
     drawHaze(width, height);
+    drawGalaxyEnvelope(width, height);
     drawStars(width, height);
     if (!motionReduced()) drawMeteor(width, height);
     ctx.globalAlpha = 1;
@@ -253,12 +346,20 @@
   function snapshot() {
     const size = canvasSize();
     const meteor = meteorStateAt(performance.now());
+    const envelope = state.graph ? galaxyEnvelope() : null;
     return {
       reducedMotion: motionReduced(),
       pan: { x: state.pan.x, y: state.pan.y },
+      zoom: state.zoom,
       tile: { ...TILE },
-      layers: LAYERS.map((layer) => ({ id: layer.id, parallax: effectiveParallax(layer) })),
+      layers: LAYERS.map((layer) => ({
+        id: layer.id,
+        parallax: effectiveParallax(layer),
+        zoomParallax: layer.zoomParallax,
+        zoomScale: effectiveZoomScale(layer),
+      })),
       nearStar: firstVisibleStar(LAYERS[2], size.width, size.height),
+      envelope,
       meteor: meteor ? { active: true, ...meteor } : { active: false },
       viewport: size,
     };
