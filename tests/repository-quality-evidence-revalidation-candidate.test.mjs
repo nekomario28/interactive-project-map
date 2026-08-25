@@ -190,9 +190,13 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   const loaded = loadBoundedQualityEnrichments(manifest, { manifestPath });
   const antiSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
   const ipmSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/interactive-project-map");
+  const ftbSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   const buyclaimSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   assert.equal(antiSource.calibratedRevision, "154bd1a1085412ca7a5abe797abf253a43dd29a8");
   assert.equal(ipmSource.calibratedRevision, null);
+  assert.equal(ftbSource.calibratedRevision, "8caaab65266a94e7bdedc6ad2f66030c7e394edf");
+  assert.equal(ftbSource.fixtureSnapshotDate, "2026-08-25");
+  assert.equal(ftbSource.presentationExpected, "available");
   assert.equal(buyclaimSource.calibratedRevision, "22d7adcbe5f711a3bc7e2cb8593c60e19838dce1");
   assert.equal(buyclaimSource.fixtureSnapshotDate, "2026-07-25");
 
@@ -212,8 +216,8 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   });
 
   assert.deepEqual(revalidated.assessment, baseline.assessment);
-  assert.equal(revalidated.presentation.diagnostics.available, 5);
-  assert.equal(revalidated.presentation.diagnostics.unavailable, 10);
+  assert.equal(revalidated.presentation.diagnostics.available, 6);
+  assert.equal(revalidated.presentation.diagnostics.unavailable, 9);
   assert.equal(revalidated.diagnostics.revalidation.target.disposition, "revalidated-unchanged-exact-revision");
   assert.equal(revalidated.diagnostics.invariants.automaticEvidenceRefreshPerformed, false);
   assert.equal(revalidated.diagnostics.invariants.explicitBoundedRevalidationPerformed, true);
@@ -231,6 +235,12 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(anti.evidenceFreshness.snapshotDate, "2026-08-25");
   assert.equal(anti.evidenceFreshness.revalidatedAt, "2026-08-25T06:20:00.000Z");
   assert.equal(anti.evidenceFreshness.observedRevision, "154bd1a1085412ca7a5abe797abf253a43dd29a8");
+
+  const ftb = revalidated.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
+  assert.equal(ftb.overlayState, "available");
+  assert.equal(ftb.evidenceFreshness.snapshotDate, "2026-08-25");
+  assert.equal(ftb.evidenceFreshness.revalidatedAt, undefined);
+  assert.equal(ftb.evidenceFreshness.observedRevision, undefined);
 
   const buyclaim = revalidated.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   assert.equal(buyclaim.overlayState, "available");

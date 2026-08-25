@@ -33,17 +33,17 @@ function freshness(scope, sourceCount, snapshotDates) {
   };
 }
 
-test("live presentation exposes presentation-eligible frozen freshness without laundering the older BuyClaim evidence date", () => {
+test("live presentation exposes presentation-eligible frozen freshness without laundering older evidence dates", () => {
   const result = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision: revision });
   const mixedDates = ["2026-07-25", "2026-08-25"];
 
   assert.deepEqual(
     result.presentation.evidenceFreshness,
-    freshness("portfolio-quality-presented-sources", 5, mixedDates),
+    freshness("portfolio-quality-presented-sources", 6, mixedDates),
   );
   assert.deepEqual(
     result.diagnostics.evidenceFreshness.assessment,
-    freshness("all-bounded-assessment-sources", 6, mixedDates),
+    freshness("all-bounded-assessment-sources", 7, mixedDates),
   );
   assert.deepEqual(result.diagnostics.evidenceFreshness.portfolioPresentation, result.presentation.evidenceFreshness);
   assert.equal(result.diagnostics.invariants.frozenEvidenceFreshnessIsPublished, true);
@@ -52,8 +52,8 @@ test("live presentation exposes presentation-eligible frozen freshness without l
 
   const available = result.presentation.repositories.filter((entry) => entry.overlayState === "available");
   const unavailable = result.presentation.repositories.filter((entry) => entry.overlayState !== "available");
-  assert.equal(available.length, 5);
-  assert.equal(unavailable.length, 10);
+  assert.equal(available.length, 6);
+  assert.equal(unavailable.length, 9);
   assert.ok(available.every((entry) => entry.evidenceFreshness?.state === "frozen-snapshot"));
   assert.ok(available.every((entry) => entry.evidenceFreshness?.automaticRefresh === false));
   assert.ok(unavailable.every((entry) => entry.evidenceFreshness == null));
@@ -71,10 +71,16 @@ test("live presentation exposes presentation-eligible frozen freshness without l
     "nekomario28/interactive-project-map",
     "nekomario28/projexd_group10",
     "nekomario28/antifullbright",
+    "nekomario28/ftbpublicclaims",
     "nekomario28/turing-smart-screen-python-owl",
   ]) {
     assert.equal(available.find((entry) => String(entry.repositoryKey).toLowerCase() === key)?.evidenceFreshness?.snapshotDate, "2026-08-25", key);
   }
+
+  const ftbSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
+  assert.equal(ftbSource?.fixtureSnapshotDate, "2026-08-25");
+  assert.equal(ftbSource?.presentationExpected, "available");
+  assert.equal(ftbSource?.qualityAttributionScope, "repository-snapshot");
 
   const projexd = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/projexd_group10");
   assert.ok(projexd, "case-insensitive source/presentation join must preserve ProjExD_Group10 freshness");
@@ -143,11 +149,11 @@ test("assessment freshness may include an unavailable older fork source without 
 
     assert.deepEqual(
       result.diagnostics.evidenceFreshness.assessment,
-      freshness("all-bounded-assessment-sources", 6, ["2026-07-25", "2026-08-24", "2026-08-25"]),
+      freshness("all-bounded-assessment-sources", 7, ["2026-07-25", "2026-08-24", "2026-08-25"]),
     );
     assert.deepEqual(
       result.presentation.evidenceFreshness,
-      freshness("portfolio-quality-presented-sources", 5, ["2026-07-25", "2026-08-25"]),
+      freshness("portfolio-quality-presented-sources", 6, ["2026-07-25", "2026-08-25"]),
     );
     const gzSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
     assert.equal(gzSource?.fixtureSnapshotDate, "2026-08-24");
