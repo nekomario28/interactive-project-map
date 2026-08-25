@@ -91,6 +91,7 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   expect(before.brightest).toBeGreaterThan(60);
   expect(before.snap.layers.map((layer) => layer.parallax)).toEqual([0.08, 0.18, 0.32]);
   expect(before.snap.layers.map((layer) => layer.zoomParallax)).toEqual([0.05, 0.12, 0.22]);
+  const nearLayer = before.snap.layers.find((layer) => layer.id === "near");
 
   await page.evaluate(() => {
     state.pan.x += 120;
@@ -101,8 +102,8 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   expect(after).not.toBeNull();
   expect(after.brightest).toBeGreaterThan(60);
   expect(after.snap.nearStar.index).toBe(before.snap.nearStar.index);
-  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * 0.32, 3);
-  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * 0.32, 3);
+  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * 0.32 * nearLayer.zoomScale, 3);
+  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * 0.32 * nearLayer.zoomScale, 3);
 
   await context.close();
 });
