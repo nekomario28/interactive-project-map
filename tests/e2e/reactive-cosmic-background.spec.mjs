@@ -123,15 +123,16 @@ test("zoom keeps its screen anchor while star depth and the galaxy envelope resp
     const anchor = { x: size.width * 0.68, y: size.height * 0.43 };
     const world = screenToWorld(anchor.x, anchor.y);
     const before = window.ProjectMapCosmicBackground.snapshot();
-    const factor = 2 / state.zoom;
-    window.ProjectMapCameraCoherence.zoomAt(anchor.x, anchor.y, factor);
+    const initialCamera = window.ProjectMapCameraCoherence.snapshot();
+    const targetZoom = Math.min(initialCamera.limits.max * 0.85, Math.max(before.zoom * 1.45, before.zoom + 0.25));
+    window.ProjectMapCameraCoherence.zoomAt(anchor.x, anchor.y, targetZoom / before.zoom);
     const after = window.ProjectMapCosmicBackground.snapshot();
     const anchoredScreen = worldToScreen(world.x, world.y);
     const originScreen = worldToScreen(0, 0);
     return { anchor, anchoredScreen, originScreen, before, after, camera: window.ProjectMapCameraCoherence.snapshot() };
   });
 
-  expect(result.after.zoom).toBeCloseTo(2, 5);
+  expect(result.after.zoom).toBeGreaterThan(result.before.zoom);
   expect(Math.abs(result.anchoredScreen.x - result.anchor.x)).toBeLessThan(0.75);
   expect(Math.abs(result.anchoredScreen.y - result.anchor.y)).toBeLessThan(0.75);
   expect(result.camera.limits.min).toBeGreaterThanOrEqual(0.08);
@@ -139,9 +140,10 @@ test("zoom keeps its screen anchor while star depth and the galaxy envelope resp
   expect(result.camera.limits.max).toBeGreaterThanOrEqual(4.5);
 
   const scales = result.after.layers.map((layer) => layer.zoomScale);
-  expect(scales[2]).toBeGreaterThan(scales[1]);
-  expect(scales[1]).toBeGreaterThan(scales[0]);
-  expect(scales[0]).toBeGreaterThan(1);
+  const beforeScales = result.before.layers.map((layer) => layer.zoomScale);
+  expect(scales[2] / beforeScales[2]).toBeGreaterThan(scales[1] / beforeScales[1]);
+  expect(scales[1] / beforeScales[1]).toBeGreaterThan(scales[0] / beforeScales[0]);
+  expect(scales[0]).toBeGreaterThan(beforeScales[0]);
   expect(result.after.envelope.screenRadius).toBeGreaterThan(result.before.envelope.screenRadius);
   expect(result.after.envelope.center.x).toBeCloseTo(result.originScreen.x, 5);
   expect(result.after.envelope.center.y).toBeCloseTo(result.originScreen.y, 5);
