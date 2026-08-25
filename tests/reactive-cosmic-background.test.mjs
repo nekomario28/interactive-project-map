@@ -8,7 +8,7 @@ import { applyReactiveCosmicBackground } from "../scripts/apply-reactive-cosmic-
 const cosmicSourceUrl = new URL("../scripts/public-cosmic-background.js", import.meta.url);
 const cameraSourceUrl = new URL("../scripts/public-camera-coherence.js", import.meta.url);
 
-test("camera coherence normalizes wheel input and derives scene-aware zoom bounds", async () => {
+test("camera coherence normalizes input and derives shared scene-aware zoom bounds", async () => {
   const source = await readFile(cameraSourceUrl, "utf8");
   assert.match(source, /WheelEvent\.DOM_DELTA_LINE/);
   assert.match(source, /WheelEvent\.DOM_DELTA_PAGE/);
@@ -18,6 +18,11 @@ test("camera coherence normalizes wheel input and derives scene-aware zoom bound
   assert.match(source, /stopImmediatePropagation/);
   assert.match(source, /screenToWorld\(screenX, screenY\)/);
   assert.match(source, /worldToScreen\(before\.x, before\.y\)/);
+  assert.match(source, /function enforceZoomBoundsAt/);
+  assert.match(source, /queueMicrotask/);
+  assert.match(source, /state\.pointers\?\.size !== 2/);
+  assert.match(source, /canvas\.addEventListener\("keydown", handleKeyboard, \{ capture: true \}\)/);
+  assert.match(source, /canvas\.addEventListener\("pointermove", handlePointerMoveBounds, \{ capture: true, passive: true \}\)/);
   assert.match(source, /ProjectMapCameraCoherence/);
 });
 
