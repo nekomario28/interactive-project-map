@@ -53,14 +53,20 @@
     return { width: TILE.width * scale, height: TILE.height * scale, scale };
   }
 
-  function starPoint(layer, index) {
+  function scaleAroundViewport(value, center, scale) {
+    return center + (value - center) * scale;
+  }
+
+  function starPoint(layer, index, width, height) {
     const parallax = effectiveParallax(layer);
     const tile = layerTile(layer);
     const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);
     const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);
+    const baseX = unit(xSeed) * TILE.width + state.pan.x * parallax;
+    const baseY = unit(ySeed) * TILE.height + state.pan.y * parallax;
     return {
-      x: wrap(unit(xSeed) * tile.width + state.pan.x * parallax, tile.width),
-      y: wrap(unit(ySeed) * tile.height + state.pan.y * parallax, tile.height),
+      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale), tile.width),
+      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale), tile.height),
       radius: range(hash(`${username}:cosmic:${layer.id}:r:${index}`), layer.radius[0], layer.radius[1]) * Math.sqrt(tile.scale),
       opacity: range(hash(`${username}:cosmic:${layer.id}:o:${index}`), layer.opacity[0], layer.opacity[1]),
       tile,
@@ -85,7 +91,7 @@
   function firstVisibleStar(layer, width, height) {
     const count = width < 720 ? Math.ceil(layer.count * 0.68) : layer.count;
     for (let index = 0; index < count; index += 1) {
-      const point = starPoint(layer, index);
+      const point = starPoint(layer, index, width, height);
       let visible = null;
       forEachWrappedCopy(point, width, height, (x, y) => {
         if (!visible && x >= 2 && x <= width - 2 && y >= 2 && y <= height - 2) visible = { x, y };
@@ -101,7 +107,7 @@
     for (const layer of LAYERS) {
       const count = compact ? Math.ceil(layer.count * 0.68) : layer.count;
       for (let index = 0; index < count; index += 1) {
-        const point = starPoint(layer, index);
+        const point = starPoint(layer, index, width, height);
         ctx.globalAlpha = point.opacity;
         forEachWrappedCopy(point, width, height, (x, y) => {
           ctx.beginPath();
@@ -117,10 +123,12 @@
     return motionReduced() ? 1 : Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), 0.035);
   }
 
-  function hazePoint(index, parallax, tile) {
+  function hazePoint(index, parallax, tile, width, height) {
+    const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width + state.pan.x * parallax;
+    const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height + state.pan.y * parallax;
     return {
-      x: wrap(unit(hash(`${username}:haze:x:${index}`)) * tile.width + state.pan.x * parallax, tile.width),
-      y: wrap(unit(hash(`${username}:haze:y:${index}`)) * tile.height + state.pan.y * parallax, tile.height),
+      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale), tile.width),
+      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale), tile.height),
     };
   }
 
@@ -129,14 +137,14 @@
     const tint = obsidian ? [124, 110, 246] : [82, 126, 216];
     const alpha = obsidian ? 0.050 : 0.032;
     const scale = hazeScale();
-    const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale };
+    const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale, scale };
     const radius = Math.max(340, Math.min(560, Math.max(width, height) * 0.48)) * Math.sqrt(scale);
     const parallax = motionReduced() ? 0 : 0.035;
     const copiesX = Math.ceil(width / tile.width) + 1;
     const copiesY = Math.ceil(height / tile.height) + 1;
 
     for (let index = 0; index < 2; index += 1) {
-      const base = hazePoint(index, parallax, tile);
+      const base = hazePoint(index, parallax, tile, width, height);
       for (let tileX = -1; tileX <= copiesX; tileX += 1) {
         const x = base.x + tileX * tile.width;
         if (x < -radius || x > width + radius) continue;
