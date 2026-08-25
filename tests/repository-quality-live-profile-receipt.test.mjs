@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while five assessment sources yield four portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while six assessment sources yield five portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 5);
-  assert.equal(result.diagnostics.assessment.quality.applied, 5);
-  assert.equal(result.diagnostics.assessment.quality.partial, 5);
+  assert.equal(result.diagnostics.assessment.quality.requested, 6);
+  assert.equal(result.diagnostics.assessment.quality.applied, 6);
+  assert.equal(result.diagnostics.assessment.quality.partial, 6);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 4);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 11);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 4);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 5);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 10);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 5);
 });
 
-test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright snapshot Quality", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit both game-mod snapshot cases", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -97,6 +97,19 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
   assert.equal(antifullbright.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
   assert.equal(antifullbright.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
 
+  const ftb = byKey.get("nekomario28/ftbpublicclaims");
+  assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
+  assert.equal(ftb.overlayState, "available");
+  assert.equal(ftb.overlay.coverage.targetDimensions, 6);
+  assert.equal(ftb.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(ftb.overlay.coverage.label, "5/6 interpreted");
+  assert.equal(ftb.overlay.targetFindingCounts.supports, 5);
+  assert.equal(ftb.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(ftb.overlay.segments.find((segment) => segment.id === "verification").findingState, "unknown");
+  assert.equal(ftb.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "supports");
+  assert.equal(ftb.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
+  assert.equal(ftb.overlay.segments.find((segment) => segment.id === "security-safety").findingState, "supports");
+
   const gz = byKey.get("nekomario28/gz-sim");
   assert.equal(gz.qualityAttributionScope, "local-delta");
   assert.equal(gz.overlayState, "unavailable");
@@ -114,16 +127,13 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
   const result = runLiveProjection();
   const byKey = new Map(result.assessment.repositories.map((entry) => [entry.identity.repositoryKey, entry]));
 
-  assert.deepEqual(byKey.get("nekomario28/antifullbright").context.relation, {
-    ownership: "owned",
-    collaboration: "unknown",
-    lineage: "original",
-  });
-  assert.deepEqual(byKey.get("nekomario28/projexd_group10").context.relation, {
-    ownership: "owned",
-    collaboration: "unknown",
-    lineage: "original",
-  });
+  for (const key of ["nekomario28/antifullbright", "nekomario28/ftbpublicclaims", "nekomario28/projexd_group10"]) {
+    assert.deepEqual(byKey.get(key).context.relation, {
+      ownership: "owned",
+      collaboration: "unknown",
+      lineage: "original",
+    });
+  }
   assert.deepEqual(byKey.get("nekomario28/gz-sim").context.relation, {
     ownership: "owned",
     collaboration: "unknown",
