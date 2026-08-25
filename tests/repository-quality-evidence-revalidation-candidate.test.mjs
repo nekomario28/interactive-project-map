@@ -64,15 +64,7 @@ function syntheticSources() {
 }
 
 test("one explicitly re-observed eligible source advances independently even when peers share the same frozen date", () => {
-  const result = applyBoundedEvidenceRevalidation(
-    syntheticSources(),
-    request("example/alpha", "alpha", {
-      status: "available",
-      snapshotDate: "2026-08-25",
-      revision: revA,
-    }),
-  );
-
+  const result = applyBoundedEvidenceRevalidation(syntheticSources(), request("example/alpha", "alpha", { status: "available", snapshotDate: "2026-08-25", revision: revA }));
   assert.equal(result.target.disposition, "revalidated-unchanged-exact-revision");
   assert.equal(result.target.previousSnapshotDate, "2026-08-24");
   assert.equal(result.target.effectiveSnapshotDate, "2026-08-25");
@@ -80,7 +72,6 @@ test("one explicitly re-observed eligible source advances independently even whe
   assert.equal(result.presentationFreshnessChanged, true);
   assert.deepEqual(result.evidenceFreshness.assessment.snapshotDates, ["2026-08-24", "2026-08-25"]);
   assert.deepEqual(result.evidenceFreshness.portfolioPresentation.snapshotDates, ["2026-08-24", "2026-08-25"]);
-
   const byKey = new Map(result.sourceDiagnostics.map((entry) => [entry.repositoryKey, entry]));
   assert.equal(byKey.get("example/alpha").effectiveSnapshotDate, "2026-08-25");
   assert.equal(byKey.get("example/beta").effectiveSnapshotDate, "2026-08-24");
@@ -91,15 +82,7 @@ test("one explicitly re-observed eligible source advances independently even whe
 });
 
 test("revalidating a presentation-ineligible source changes assessment freshness without leaking into portfolio freshness", () => {
-  const result = applyBoundedEvidenceRevalidation(
-    syntheticSources(),
-    request("example/gamma", "gamma", {
-      status: "available",
-      snapshotDate: "2026-08-25",
-      revision: revC,
-    }),
-  );
-
+  const result = applyBoundedEvidenceRevalidation(syntheticSources(), request("example/gamma", "gamma", { status: "available", snapshotDate: "2026-08-25", revision: revC }));
   assert.equal(result.target.presentationExpected, "unavailable");
   assert.equal(result.target.disposition, "revalidated-unchanged-exact-revision");
   assert.equal(result.assessmentFreshnessChanged, true);
@@ -109,15 +92,7 @@ test("revalidating a presentation-ineligible source changes assessment freshness
 });
 
 test("a changed observed revision cannot launder old Quality evidence into a newer freshness date", () => {
-  const result = applyBoundedEvidenceRevalidation(
-    syntheticSources(),
-    request("example/alpha", "alpha", {
-      status: "available",
-      snapshotDate: "2026-08-25",
-      revision: "dddddddddddddddddddddddddddddddddddddddd",
-    }),
-  );
-
+  const result = applyBoundedEvidenceRevalidation(syntheticSources(), request("example/alpha", "alpha", { status: "available", snapshotDate: "2026-08-25", revision: "dddddddddddddddddddddddddddddddddddddddd" }));
   assert.equal(result.target.disposition, "requires-recalibration");
   assert.equal(result.target.effectiveSnapshotDate, "2026-08-24");
   assert.equal(result.assessmentFreshnessChanged, false);
@@ -130,15 +105,7 @@ test("a changed observed revision cannot launder old Quality evidence into a new
 test("missing calibrated revision fails closed instead of inferring revision identity from evidence text", () => {
   const sources = syntheticSources();
   sources[1].calibratedRevision = null;
-  const result = applyBoundedEvidenceRevalidation(
-    sources,
-    request("example/beta", "beta", {
-      status: "available",
-      snapshotDate: "2026-08-25",
-      revision: revB,
-    }),
-  );
-
+  const result = applyBoundedEvidenceRevalidation(sources, request("example/beta", "beta", { status: "available", snapshotDate: "2026-08-25", revision: revB }));
   assert.equal(result.target.disposition, "requires-calibration-revision");
   assert.equal(result.target.effectiveSnapshotDate, "2026-08-24");
   assert.equal(result.assessmentFreshnessChanged, false);
@@ -146,11 +113,7 @@ test("missing calibrated revision fails closed instead of inferring revision ide
 });
 
 test("temporarily unavailable source retains its last frozen snapshot and remains fail-open", () => {
-  const result = applyBoundedEvidenceRevalidation(
-    syntheticSources(),
-    request("example/alpha", "alpha", { status: "unavailable" }),
-  );
-
+  const result = applyBoundedEvidenceRevalidation(syntheticSources(), request("example/alpha", "alpha", { status: "unavailable" }));
   assert.equal(result.target.disposition, "source-unavailable-retain-frozen");
   assert.equal(result.target.effectiveSnapshotDate, "2026-08-24");
   assert.equal(result.assessmentFreshnessChanged, false);
@@ -160,30 +123,10 @@ test("temporarily unavailable source retains its last frozen snapshot and remain
 
 test("revalidation request is single-target, identity-bound and cannot move freshness backwards or into the future", () => {
   const sources = syntheticSources();
-  assert.throws(
-    () => applyBoundedEvidenceRevalidation(sources, request("example/missing", "missing", { status: "unavailable" })),
-    /target is not selected/,
-  );
-  assert.throws(
-    () => applyBoundedEvidenceRevalidation(sources, request("example/alpha", "beta", { status: "unavailable" })),
-    /case mismatch/,
-  );
-  assert.throws(
-    () => applyBoundedEvidenceRevalidation(sources, request("example/alpha", "alpha", {
-      status: "available",
-      snapshotDate: "2026-08-23",
-      revision: revA,
-    })),
-    /cannot move backwards/,
-  );
-  assert.throws(
-    () => applyBoundedEvidenceRevalidation(sources, request("example/alpha", "alpha", {
-      status: "available",
-      snapshotDate: "2026-08-26",
-      revision: revA,
-    })),
-    /cannot be later than observedAt/,
-  );
+  assert.throws(() => applyBoundedEvidenceRevalidation(sources, request("example/missing", "missing", { status: "unavailable" })), /target is not selected/);
+  assert.throws(() => applyBoundedEvidenceRevalidation(sources, request("example/alpha", "beta", { status: "unavailable" })), /case mismatch/);
+  assert.throws(() => applyBoundedEvidenceRevalidation(sources, request("example/alpha", "alpha", { status: "available", snapshotDate: "2026-08-23", revision: revA })), /cannot move backwards/);
+  assert.throws(() => applyBoundedEvidenceRevalidation(sources, request("example/alpha", "alpha", { status: "available", snapshotDate: "2026-08-26", revision: revA })), /cannot be later than observedAt/);
 });
 
 test("real AntiFullbright re-observation matches the frozen exact revision without changing Quality interpretation", () => {
@@ -191,10 +134,14 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   const antiSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
   const ipmSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/interactive-project-map");
   const buyclaimSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
+  const ftbSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   assert.equal(antiSource.calibratedRevision, "154bd1a1085412ca7a5abe797abf253a43dd29a8");
   assert.equal(ipmSource.calibratedRevision, null);
   assert.equal(buyclaimSource.calibratedRevision, "22d7adcbe5f711a3bc7e2cb8593c60e19838dce1");
   assert.equal(buyclaimSource.fixtureSnapshotDate, "2026-07-25");
+  assert.equal(ftbSource.calibratedRevision, "8caaab65266a94e7bdedc6ad2f66030c7e394edf");
+  assert.equal(ftbSource.fixtureSnapshotDate, "2026-08-25");
+  assert.equal(ftbSource.qualityAttributionScope, "repository-snapshot");
 
   const candidate = applyBoundedEvidenceRevalidation(loaded.sourceDiagnostics, antifullbrightObservation);
   assert.equal(candidate.target.disposition, "revalidated-unchanged-exact-revision");
@@ -206,14 +153,10 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.deepEqual(candidate.evidenceFreshness.portfolioPresentation.snapshotDates, ["2026-07-25", "2026-08-25"]);
 
   const baseline = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision });
-  const revalidated = buildLiveQualitySidecarCandidates(live.graph, {
-    generatorRevision,
-    revalidationRequest: antifullbrightObservation,
-  });
-
+  const revalidated = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision, revalidationRequest: antifullbrightObservation });
   assert.deepEqual(revalidated.assessment, baseline.assessment);
-  assert.equal(revalidated.presentation.diagnostics.available, 5);
-  assert.equal(revalidated.presentation.diagnostics.unavailable, 10);
+  assert.equal(revalidated.presentation.diagnostics.available, 6);
+  assert.equal(revalidated.presentation.diagnostics.unavailable, 9);
   assert.equal(revalidated.diagnostics.revalidation.target.disposition, "revalidated-unchanged-exact-revision");
   assert.equal(revalidated.diagnostics.invariants.automaticEvidenceRefreshPerformed, false);
   assert.equal(revalidated.diagnostics.invariants.explicitBoundedRevalidationPerformed, true);
@@ -238,9 +181,13 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(buyclaim.evidenceFreshness.revalidatedAt, undefined);
   assert.equal(buyclaim.evidenceFreshness.observedRevision, undefined);
 
-  const otherAvailable = revalidated.presentation.repositories.filter(
-    (entry) => entry.overlayState === "available" && entry.repositoryKey !== "nekomario28/antifullbright",
-  );
+  const ftb = revalidated.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
+  assert.equal(ftb.overlayState, "available");
+  assert.equal(ftb.evidenceFreshness.snapshotDate, "2026-08-25");
+  assert.equal(ftb.evidenceFreshness.revalidatedAt, undefined);
+  assert.equal(ftb.evidenceFreshness.observedRevision, undefined);
+
+  const otherAvailable = revalidated.presentation.repositories.filter((entry) => entry.overlayState === "available" && entry.repositoryKey !== "nekomario28/antifullbright");
   assert.ok(otherAvailable.every((entry) => entry.evidenceFreshness.revalidatedAt == null));
   assert.ok(otherAvailable.every((entry) => entry.evidenceFreshness.observedRevision == null));
 });
