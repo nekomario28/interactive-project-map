@@ -79,8 +79,6 @@ async function sampleBackground(page) {
 }
 
 test("shared cosmic background moves continuously with camera pan and paints wrapped stars", async ({ browser }) => {
-  // Keep the canvas larger than the 960×720 star tile so the same deterministic
-  // near-layer star remains observable before and after the camera translation.
   const context = await browser.newContext({ viewport: { width: 1600, height: 1200 } });
   const page = await context.newPage();
   await installFixture(page);
@@ -92,6 +90,7 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   expect(before).not.toBeNull();
   expect(before.brightest).toBeGreaterThan(60);
   expect(before.snap.layers.map((layer) => layer.parallax)).toEqual([0.08, 0.18, 0.32]);
+  expect(before.snap.layers.map((layer) => layer.zoomParallax)).toEqual([0.05, 0.12, 0.22]);
 
   await page.evaluate(() => {
     state.pan.x += 120;
@@ -102,8 +101,49 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   expect(after).not.toBeNull();
   expect(after.brightest).toBeGreaterThan(60);
   expect(after.snap.nearStar.index).toBe(before.snap.nearStar.index);
-  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.tile.width)).toBeCloseTo(120 * 0.32, 3);
-  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.tile.height)).toBeCloseTo(-75 * 0.32, 3);
+  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * 0.32, 3);
+  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * 0.32, 3);
+
+  await context.close();
+});
+
+test("zoom keeps its screen anchor while star depth and the galaxy envelope respond to camera scale", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1400, height: 980 } });
+  const page = await context.newPage();
+  await installFixture(page);
+  await page.goto("/u/?username=example&style=galaxy-systems");
+  await expect(page.locator("#status")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => Boolean(window.ProjectMapCameraCoherence && window.ProjectMapCosmicBackground))).toBe(true);
+
+  expect(await page.evaluate(() => window.ProjectMapCameraCoherence.normalizedWheelPixels(new WheelEvent("wheel", { deltaY: 3, deltaMode: WheelEvent.DOM_DELTA_LINE })))).toBe(48);
+
+  const result = await page.evaluate(() => {
+    const size = canvasSize();
+    const anchor = { x: size.width * 0.68, y: size.height * 0.43 };
+    const world = screenToWorld(anchor.x, anchor.y);
+    const before = window.ProjectMapCosmicBackground.snapshot();
+    const factor = 2 / state.zoom;
+    window.ProjectMapCameraCoherence.zoomAt(anchor.x, anchor.y, factor);
+    const after = window.ProjectMapCosmicBackground.snapshot();
+    const anchoredScreen = worldToScreen(world.x, world.y);
+    const originScreen = worldToScreen(0, 0);
+    return { anchor, anchoredScreen, originScreen, before, after, camera: window.ProjectMapCameraCoherence.snapshot() };
+  });
+
+  expect(result.after.zoom).toBeCloseTo(2, 5);
+  expect(Math.abs(result.anchoredScreen.x - result.anchor.x)).toBeLessThan(0.75);
+  expect(Math.abs(result.anchoredScreen.y - result.anchor.y)).toBeLessThan(0.75);
+  expect(result.camera.limits.min).toBeGreaterThanOrEqual(0.08);
+  expect(result.camera.limits.min).toBeLessThan(result.camera.limits.fit);
+  expect(result.camera.limits.max).toBeGreaterThanOrEqual(4.5);
+
+  const scales = result.after.layers.map((layer) => layer.zoomScale);
+  expect(scales[2]).toBeGreaterThan(scales[1]);
+  expect(scales[1]).toBeGreaterThan(scales[0]);
+  expect(scales[0]).toBeGreaterThan(1);
+  expect(result.after.envelope.screenRadius).toBeGreaterThan(result.before.envelope.screenRadius);
+  expect(result.after.envelope.center.x).toBeCloseTo(result.originScreen.x, 5);
+  expect(result.after.envelope.center.y).toBeCloseTo(result.originScreen.y, 5);
 
   await context.close();
 });
@@ -117,8 +157,6 @@ test("meteor is a real background canvas event and remains behind graph content"
   await expect.poll(() => page.evaluate(() => Boolean(window.ProjectMapCosmicBackground))).toBe(true);
   expect(await page.evaluate(() => window.ProjectMapCosmicBackground.spawnMeteor())).toBe(true);
 
-  // Sample the meteor after its fade-in, not on the first frame where the head
-  // has technically entered the viewport but is intentionally still faint.
   await expect.poll(async () => page.evaluate(() => {
     const snap = window.ProjectMapCosmicBackground.snapshot();
     return snap.meteor.active
@@ -151,7 +189,7 @@ test("meteor is a real background canvas event and remains behind graph content"
   await context.close();
 });
 
-test("reduced motion freezes parallax and suppresses meteors", async ({ browser }) => {
+test("reduced motion freezes star parallax and depth scaling while suppressing meteors", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1000, height: 760 }, reducedMotion: "reduce" });
   const page = await context.newPage();
   await installFixture(page);
@@ -162,16 +200,20 @@ test("reduced motion freezes parallax and suppresses meteors", async ({ browser 
   const before = await page.evaluate(() => window.ProjectMapCosmicBackground.snapshot());
   expect(before.reducedMotion).toBe(true);
   expect(before.layers.every((layer) => layer.parallax === 0)).toBe(true);
+  expect(before.layers.every((layer) => layer.zoomScale === 1)).toBe(true);
   expect(await page.evaluate(() => window.ProjectMapCosmicBackground.spawnMeteor())).toBe(false);
 
   await page.evaluate(() => {
     state.pan.x += 200;
     state.pan.y += 140;
+    state.zoom *= 1.8;
     draw();
   });
   const after = await page.evaluate(() => window.ProjectMapCosmicBackground.snapshot());
   expect(after.nearStar.x).toBeCloseTo(before.nearStar.x, 5);
   expect(after.nearStar.y).toBeCloseTo(before.nearStar.y, 5);
+  expect(after.nearStar.radius).toBeCloseTo(before.nearStar.radius, 5);
+  expect(after.layers.every((layer) => layer.zoomScale === 1)).toBe(true);
   expect(after.meteor.active).toBe(false);
 
   await context.close();
