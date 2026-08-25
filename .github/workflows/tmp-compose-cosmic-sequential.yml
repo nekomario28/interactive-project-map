@@ -1,0 +1,116 @@
+name: TEMP compose sequential cosmic camera fix
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/tmp-compose-cosmic-sequential.yml"
+      - "tests/e2e/cosmic-sequential-anchor.spec.mjs"
+
+permissions:
+  contents: write
+
+jobs:
+  compose:
+    if: github.head_ref == 'fix/cosmic-sequential-anchor-20260825'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Compose clean candidate from exact base
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TARGET_BRANCH: fix/cosmic-sequential-anchor-v2-20260825
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
+            echo "Target branch already exists; refusing to rewrite it."
+            exit 0
+          fi
+          git fetch --no-tags origin "$PR_HEAD_SHA"
+          git switch -c "$TARGET_BRANCH" "$PR_BASE_SHA"
+          git show "$PR_HEAD_SHA:tests/e2e/cosmic-sequential-anchor.spec.mjs" > tests/e2e/cosmic-sequential-anchor.spec.mjs
+
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              return text.replace(old, new, 1)
+
+          cosmic_path = Path("scripts/public-cosmic-background.js")
+          cosmic = cosmic_path.read_text()
+          cosmic = replace_once(
+              cosmic,
+              '''    envelopeWorldRadius: 0,\n  };''',
+              '''    envelopeWorldRadius: 0,\n    cameraGraph: null,\n    cameraStyle: "",\n    cameraViewport: "",\n    cameraTransform: null,\n    depthTransforms: new Map(),\n  };''',
+              "runtime camera state",
+          )
+
+          old_transform = '''  function effectiveDepth(depth) {\n    return motionReduced() ? 0 : depth;\n  }\n\n  function cameraDepthTransform(depth) {\n    const effective = effectiveDepth(depth);\n    if (effective === 0) {\n      return { depth: 0, scale: 1, translationFactor: 0, translateX: 0, translateY: 0 };\n    }\n    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);\n    const scale = Math.pow(zoom, effective);\n    const translationFactor = Math.abs(zoom - 1) < 1e-6\n      ? effective\n      : (scale - 1) / (zoom - 1);\n    return {\n      depth: effective,\n      scale,\n      translationFactor,\n      translateX: state.pan.x * translationFactor,\n      translateY: state.pan.y * translationFactor,\n    };\n  }\n'''
+          new_transform = '''  function effectiveDepth(depth) {\n    return motionReduced() ? 0 : depth;\n  }\n\n  function foregroundCameraTransform(size = canvasSize()) {\n    const scale = clamp(Number(state.zoom) || 1, 0.04, 6);\n    return {\n      scale,\n      translateX: size.width * 0.5 * (1 - scale) + state.pan.x,\n      translateY: size.height * 0.5 * (1 - scale) + state.pan.y,\n    };\n  }\n\n  function affinePower(transform, depth) {\n    const effective = effectiveDepth(depth);\n    if (effective === 0) return { depth: 0, scale: 1, translateX: 0, translateY: 0 };\n    const scale = Math.pow(transform.scale, effective);\n    const translationFactor = Math.abs(transform.scale - 1) < 1e-6\n      ? effective\n      : (scale - 1) / (transform.scale - 1);\n    return {\n      depth: effective,\n      scale,\n      translateX: transform.translateX * translationFactor,\n      translateY: transform.translateY * translationFactor,\n    };\n  }\n\n  function composeAffine(outer, inner) {\n    return {\n      scale: outer.scale * inner.scale,\n      translateX: outer.scale * inner.translateX + outer.translateX,\n      translateY: outer.scale * inner.translateY + outer.translateY,\n    };\n  }\n\n  function cameraDelta(before, after) {\n    const scale = after.scale / before.scale;\n    return {\n      scale,\n      translateX: after.translateX - scale * before.translateX,\n      translateY: after.translateY - scale * before.translateY,\n    };\n  }\n\n  function resetDepthTransforms(size, camera) {\n    runtime.cameraGraph = state.graph;\n    runtime.cameraStyle = String(state.style || "");\n    runtime.cameraViewport = `${size.width}x${size.height}`;\n    runtime.cameraTransform = camera;\n    runtime.depthTransforms.clear();\n    for (const depth of [...LAYERS.map((layer) => layer.depth), HAZE_DEPTH]) {\n      runtime.depthTransforms.set(depth, affinePower(camera, depth));\n    }\n  }\n\n  function syncDepthTransforms(size = canvasSize()) {\n    const camera = foregroundCameraTransform(size);\n    const style = String(state.style || "");\n    const viewport = `${size.width}x${size.height}`;\n    if (motionReduced()) {\n      runtime.cameraGraph = state.graph;\n      runtime.cameraStyle = style;\n      runtime.cameraViewport = viewport;\n      runtime.cameraTransform = camera;\n      runtime.depthTransforms.clear();\n      return;\n    }\n    if (runtime.cameraGraph !== state.graph || runtime.cameraStyle !== style || runtime.cameraViewport !== viewport || !runtime.cameraTransform) {\n      resetDepthTransforms(size, camera);\n      return;\n    }\n    const previous = runtime.cameraTransform;\n    const changed = Math.abs(camera.scale - previous.scale) >= 1e-12\n      || Math.abs(camera.translateX - previous.translateX) >= 1e-9\n      || Math.abs(camera.translateY - previous.translateY) >= 1e-9;\n    if (!changed) return;\n    const delta = cameraDelta(previous, camera);\n    for (const depth of [...LAYERS.map((layer) => layer.depth), HAZE_DEPTH]) {\n      const prior = runtime.depthTransforms.get(depth) || affinePower(previous, depth);\n      runtime.depthTransforms.set(depth, composeAffine(affinePower(delta, depth), prior));\n    }\n    runtime.cameraTransform = camera;\n  }\n\n  function cameraDepthTransform(depth, size = canvasSize()) {\n    const effective = effectiveDepth(depth);\n    if (effective === 0) return { depth: 0, scale: 1, translateX: 0, translateY: 0 };\n    syncDepthTransforms(size);\n    return runtime.depthTransforms.get(depth) || affinePower(foregroundCameraTransform(size), depth);\n  }\n'''
+          cosmic = replace_once(cosmic, old_transform, new_transform, "camera depth transform")
+          cosmic = replace_once(
+              cosmic,
+              '''      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + tile.transform.translateX, tile.width),\n      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + tile.transform.translateY, tile.height),''',
+              '''      x: wrap(baseX * tile.scale + tile.transform.translateX, tile.width),\n      y: wrap(baseY * tile.scale + tile.transform.translateY, tile.height),''',
+              "star affine application",
+          )
+          cosmic = replace_once(
+              cosmic,
+              '''      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + transform.translateX, tile.width),\n      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + transform.translateY, tile.height),''',
+              '''      x: wrap(baseX * tile.scale + transform.translateX, tile.width),\n      y: wrap(baseY * tile.scale + transform.translateY, tile.height),''',
+              "haze affine application",
+          )
+          cosmic = replace_once(
+              cosmic,
+              '''          translationFactor: transform.translationFactor,''',
+              '''          translationFactor: effectiveDepth(layer.depth),''',
+              "snapshot pan response",
+          )
+          cosmic_path.write_text(cosmic)
+
+          unit_path = Path("tests/reactive-cosmic-background.test.mjs")
+          unit = unit_path.read_text()
+          old_assertions = '''  assert.match(source, /function cameraDepthTransform\\(depth\\)/);\n  assert.match(source, /\\(scale - 1\\) \\/ \\(zoom - 1\\)/);\n  assert.match(source, /state\\.pan\\.x \\* translationFactor/);\n  assert.match(source, /state\\.pan\\.y \\* translationFactor/);\n  assert.match(source, /Math\\.pow\\(zoom, effective\\)/);'''
+          new_assertions = '''  assert.match(source, /function cameraDepthTransform\\(depth, size = canvasSize\\(\\)\\)/);\n  assert.match(source, /function affinePower\\(transform, depth\\)/);\n  assert.match(source, /function cameraDelta\\(before, after\\)/);\n  assert.match(source, /function composeAffine\\(outer, inner\\)/);\n  assert.match(source, /runtime\\.depthTransforms/);\n  assert.match(source, /Math\\.pow\\(transform\\.scale, effective\\)/);'''
+          unit = replace_once(unit, old_assertions, new_assertions, "source assertions")
+          unit_path.write_text(unit)
+
+          contract_path = Path("docs/reactive-cosmic-background.md")
+          contract = contract_path.read_text()
+          contract = replace_once(
+              contract,
+              '- Cosmic planes use a fractional form of the foreground affine camera transform. Layer scale is `zoom ^ depth`; its pan translation factor is `depth` at unit zoom and `(layerScale - 1) / (zoom - 1)` otherwise. This preserves the foreground camera\'s fixed screen point while making distant planes move and scale less.\n- Pointer-anchored zoom therefore keeps the same focal point across repositories and cosmic depth layers rather than letting stars/haze shear around the viewport center while foreground geometry stays under the cursor.',
+              '- Cosmic planes keep one persistent affine transform per depth. The initial camera is fractionalized once; every later foreground camera delta is fractionalized and composed onto the existing layer transform. Layer scale still resolves to `zoom ^ depth`, while translation follows the actual gesture sequence rather than being reconstructed from one absolute pan/zoom pair.\n- Pointer-anchored zoom therefore keeps the active focal point across repositories and cosmic depth layers even after previous pans or zooms changed the camera fixed point. A later zoom anchor must not inherit drift from an earlier anchor.',
+              "cosmic contract composition",
+          )
+          contract = contract.replace(
+              '- The subtle infinite haze uses the same fractional-camera formulation at depth `0.035`, remaining slower than the star planes.',
+              '- The subtle infinite haze uses the same sequential fractional-camera composition at depth `0.035`, remaining slower than the star planes.',
+          )
+          contract = contract.replace(
+              'a visible depth star remaining fixed when used as an off-center zoom anchor, elastic pan resistance',
+              'a visible depth star remaining fixed when used as an off-center zoom anchor, the same star remaining fixed under a second anchor after an intervening pan, elastic pan resistance',
+          )
+          contract_path.write_text(contract)
+
+          research_path = Path("docs/camera-background-zoom-research-2026-08-25.md")
+          research = research_path.read_text()
+          research += '''\n## Phase 5 — Sequential gesture composition\n\nA second browser discriminator exposed a limitation in the first absolute fractional-camera formulation. Exact PR #253 evidence performed `zoom -> pan -> zoom at the moved near-layer star`. The second zoom displaced that star by `3.361777501284678 px` on Chromium, identically on retry, while the other 98 browser tests passed. This is deterministic composition drift rather than timing noise.\n\nThe reason is algebraic: taking a fractional power of the final affine camera transform preserves one fixed point, but `T -> T^depth` is not generally a homomorphism when successive pan/zoom transforms have different fixed points. Reconstructing a depth plane from one absolute camera state therefore loses gesture-order information.\n\nThe corrected model keeps the layer affine transform as state and processes the camera incrementally:\n\n```text\nD = T_next * inverse(T_previous)\nL_next = D^depth * L_previous\n```\n\nFor `D(x) = s*x + t`, the fractional delta is:\n\n```text\ns_d = s^depth\nt_d = t * depth                         when s ~= 1\n    = t * (s_d - 1) / (s - 1)          otherwise\n```\n\nA pure pan therefore still moves a plane by `pan * depth`. A zoom delta around any screen anchor has that same fixed point after fractionalization, so applying it to the existing layer transform preserves the new anchor regardless of earlier gestures. Scale remains path-independent (`zoom ^ depth`); only the translation correctly retains camera history.\n\nThis follows the transform-composition model used by zoomable interfaces rather than treating pan and scale as independent decoration. D3 stores current zoom state on the zoomed element and derives `scaleBy` / `translateBy` from that current transform; CSS `transform-origin` is likewise defined as translations around the transform rather than a detached center parameter. Godot's parallax guidance reinforces that depth is camera-relative movement, with lower scroll scale representing farther layers.\n\nSources:\n\n- D3 zoom current-transform and scale/translate operations: https://d3js.org/d3-zoom\n- MDN `transform-origin` transform composition: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/transform-origin\n- Godot 2D Parallax camera-relative `scroll_scale`: https://docs.godotengine.org/en/stable/tutorials/2d/2d_parallax.html\n\nImplementation boundary remains shared `/u/` only. The world-anchored galaxy envelope continues to use the foreground camera directly; reduced-motion keeps non-essential star/haze depth transforms at identity.\n'''
+          research_path.write_text(research)
+          PY
+
+          git diff --check
+          git add scripts/public-cosmic-background.js tests/reactive-cosmic-background.test.mjs tests/e2e/cosmic-sequential-anchor.spec.mjs docs/reactive-cosmic-background.md docs/camera-background-zoom-research-2026-08-25.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Keep cosmic depth coherent across camera gestures"
+          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
