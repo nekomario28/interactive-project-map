@@ -5,6 +5,7 @@
   const LINE_PIXELS = 16;
   const MAX_WHEEL_PIXELS = 140;
   const WHEEL_SENSITIVITY = 0.00145;
+  const KEY_ZOOM_FACTOR = 1.16;
 
   function clampValue(value, minimum, maximum) {
     return Math.max(minimum, Math.min(maximum, value));
@@ -47,16 +48,28 @@
     };
   }
 
-  function zoomAt(screenX, screenY, factor, { redraw = true } = {}) {
-    if (!Number.isFinite(factor) || factor <= 0) return snapshot();
+  function reanchorZoom(screenX, screenY, nextZoom, { redraw = true } = {}) {
     const before = screenToWorld(screenX, screenY);
-    const limits = zoomLimits();
-    state.zoom = clampValue(state.zoom * factor, limits.min, limits.max);
+    state.zoom = nextZoom;
     const after = worldToScreen(before.x, before.y);
     state.pan.x += screenX - after.x;
     state.pan.y += screenY - after.y;
     if (redraw) draw();
     return snapshot();
+  }
+
+  function zoomAt(screenX, screenY, factor, { redraw = true } = {}) {
+    if (!Number.isFinite(factor) || factor <= 0) return snapshot();
+    const limits = zoomLimits();
+    const nextZoom = clampValue(state.zoom * factor, limits.min, limits.max);
+    return reanchorZoom(screenX, screenY, nextZoom, { redraw });
+  }
+
+  function enforceZoomBoundsAt(screenX, screenY, { redraw = true } = {}) {
+    const limits = zoomLimits();
+    const nextZoom = clampValue(state.zoom, limits.min, limits.max);
+    if (Math.abs(nextZoom - state.zoom) < 1e-9) return snapshot();
+    return reanchorZoom(screenX, screenY, nextZoom, { redraw });
   }
 
   function handleWheel(event) {
@@ -69,6 +82,27 @@
     zoomAt(screenX, screenY, Math.exp(-pixels * WHEEL_SENSITIVITY));
   }
 
+  function handleKeyboard(event) {
+    if (!["+", "=", "-"].includes(event.key)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const size = canvasSize();
+    zoomAt(size.width / 2, size.height / 2, event.key === "-" ? 1 / KEY_ZOOM_FACTOR : KEY_ZOOM_FACTOR);
+  }
+
+  function handlePointerMoveBounds() {
+    if (state.pointers?.size !== 2) return;
+    // The base viewer owns pinch distance and the primary pinch transform.
+    // Run after that event dispatch so every input path shares the same bounds.
+    queueMicrotask(() => {
+      if (state.pointers?.size !== 2) return;
+      const pair = [...state.pointers.values()];
+      if (pair.length < 2) return;
+      const midpoint = { x: (pair[0].x + pair[1].x) / 2, y: (pair[0].y + pair[1].y) / 2 };
+      enforceZoomBoundsAt(midpoint.x, midpoint.y);
+    });
+  }
+
   function snapshot() {
     const limits = zoomLimits();
     return {
@@ -79,12 +113,15 @@
   }
 
   canvas.addEventListener("wheel", handleWheel, { capture: true, passive: false });
+  canvas.addEventListener("keydown", handleKeyboard, { capture: true });
+  canvas.addEventListener("pointermove", handlePointerMoveBounds, { capture: true, passive: true });
 
   window.ProjectMapCameraCoherence = Object.freeze({
     normalizedWheelPixels,
     sceneFitZoom,
     zoomLimits,
     zoomAt,
+    enforceZoomBoundsAt,
     snapshot,
   });
 })();
