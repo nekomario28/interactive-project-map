@@ -45,6 +45,18 @@ function repoText(repo: GitHubRepo): string {
   ].filter(Boolean).join("\n");
 }
 
+function repoIdentityText(repo: GitHubRepo): string {
+  return [
+    repo.name,
+    repo.description,
+    ...(repo.topics ?? []),
+    ...(repo.frameworks ?? []),
+    ...(repo.manifests ?? []),
+    repo.classification?.categoryLabel,
+    ...(repo.classification?.secondaryTags ?? []),
+  ].filter(Boolean).join("\n");
+}
+
 function signalScores(repo: GitHubRepo): Map<string, number> {
   const scores = new Map(STANDARD_TAXONOMY_CATEGORIES.map((category) => [category.id, 0]));
   const prior = P1_STANDARD_PRIORS[repo.classification?.categoryId ?? ""];
@@ -74,6 +86,7 @@ function canonicalFacet(value: unknown): string {
 
 function standardFacets(repo: GitHubRepo, categoryId: string): string[] {
   const text = normalize(repoText(repo));
+  const identityText = normalize(repoIdentityText(repo));
   const tags: string[] = [];
   const add = (tag: string): void => { if (tag && !tags.includes(tag)) tags.push(tag); };
 
@@ -87,7 +100,7 @@ function standardFacets(repo: GitHubRepo, categoryId: string): string[] {
   else if (/\b(?:cli tool|developer tool|build tool|debugger|linter|formatter|code generator|test runner)\b/u.test(text)) add("artifact:tool");
   else if (/\b(?:dataset|corpus)\b/u.test(text)) add("artifact:dataset");
   else if (/\b(?:model|model weights)\b/u.test(text) && categoryId === "ai-ml") add("artifact:model");
-  else if (/\b(?:documentation|docs site)\b/u.test(text)) add("artifact:documentation");
+  else if (/\b(?:documentation|docs site)\b/u.test(identityText)) add("artifact:documentation");
   else if (/\btemplate\b/u.test(text)) add("artifact:template");
   else if (/\bfirmware\b/u.test(text)) add("artifact:firmware");
   else if (/\b(?:service|server|api service)\b/u.test(text)) add("artifact:service");
