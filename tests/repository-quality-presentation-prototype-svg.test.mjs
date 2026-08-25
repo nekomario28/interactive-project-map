@@ -39,33 +39,34 @@ function contrastRatio(left, right) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 4/11 availability", () => {
+test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 5/10 availability", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "compact", columns: 3 });
 
   assert.match(svg, /^<svg /);
   assert.match(svg, /data-theme="dark"/);
-  assert.match(svg, /4 available · 11 unavailable · Structure remains default/);
+  assert.match(svg, /5 available · 10 unavailable · Structure remains default/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
   assert.equal((svg.match(/class="repository-core"/g) ?? []).length, 15);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 4);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 11);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 11);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 5);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 10);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 10);
   assert.equal(svg.includes("data-dimension="), false);
   assert.match(svg, /data-repository-key="nekomario28\/antifullbright" data-quality-state="available"/);
+  assert.match(svg, /data-repository-key="nekomario28\/ftbpublicclaims" data-quality-state="available"/);
   assert.match(svg, /5\/6 interpreted/);
   assert.match(svg, /data-finding="supports"/);
   assert.match(svg, /data-pattern="supports-solid"/);
   assert.match(svg, /data-pattern="unavailable-sparse-dash"/);
 });
 
-test("detail current-profile Quality prototype preserves dimension identity only for four attribution-safe repositories", () => {
+test("detail current-profile Quality prototype preserves dimension identity only for five attribution-safe repositories", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "detail", columns: 3 });
 
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 4);
-  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 32);
-  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 32);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 11);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 5);
+  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 40);
+  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 40);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 10);
   assert.match(svg, /4\/6 interpreted/);
   assert.match(svg, /5\/6 interpreted/);
 });
@@ -100,8 +101,8 @@ test("light theme preserves the same current-profile semantics without changing 
   assert.match(svg, /data-theme="light"/);
   assert.match(svg, /color-scheme: light/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 4);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 11);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 5);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 10);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
   assert.equal(svg.includes("data-score="), false);
   assert.equal(svg.includes("prominence"), false);
@@ -118,6 +119,7 @@ test("prototype keeps fork snapshot context separate from attribution-safe ring 
 
   const svg = renderRepositoryQualityPresentationPrototypeSvg(presentation, { view: "compact", columns: 5 });
   assert.match(svg, /antifullbright/);
+  assert.match(svg, /ftbpublicclaims/i);
   assert.match(svg, /interactive-project-map/);
   assert.match(svg, /gz-sim/);
   assert.match(svg, /turing-smart-screen-python-owl/);
