@@ -4,13 +4,15 @@ Status: evidence-backed design input for the shared interactive `/u/` camera/bac
 
 ## Problem observed
 
-The foreground camera already performs pointer-anchored zoom: the world point under the wheel pointer is re-anchored to the same screen point after scale changes. The cosmic background, however, currently combines two different coordinate rules:
+The foreground camera already performs pointer-anchored zoom: the world point under the wheel pointer is re-anchored to the same screen point after scale changes. The original cosmic background combined two different coordinate rules:
 
-- star/haze scale is centered on the viewport center;
-- raw screen-space `state.pan` is added before that scale, so the pan contribution is itself multiplied by the depth zoom scale;
-- the galaxy envelope is world-anchored through `worldToScreen(0, 0)`.
+- star/haze scale was centered on the viewport center;
+- raw screen-space `state.pan` was added before that scale, so the pan contribution was itself multiplied by the depth zoom scale;
+- the galaxy envelope was world-anchored through `worldToScreen(0, 0)`.
 
-That means an off-center zoom can keep repository geometry stable under the pointer while the star/haze planes slide in a different coordinate frame. The effect is especially visible because zoom re-anchoring changes both `state.zoom` and `state.pan` at once.
+That meant an off-center zoom could keep repository geometry stable under the pointer while the star/haze planes slid in a different coordinate frame. The effect was especially visible because zoom re-anchoring changes both `state.zoom` and `state.pan` at once.
+
+A first repair replaced the independent pan/zoom coefficients with an absolute fractional camera transform. Browser evidence proved that repair for one off-center zoom from the identity camera. A stronger sequential test then exposed a second defect: after a zoom and an intervening pan, zooming again around the star's new location moved that star by `3.361777501284678 px`. The absolute fractionalization is therefore not compositional when the camera fixed point changes.
 
 ## Phase 1 — Zoomable-interface / HCI evidence
 
@@ -26,13 +28,13 @@ Implication for IPM: the interaction focal point should remain one coherent spat
 
 ## Phase 2 — Information-visualization transform evidence
 
-D3 zoom models zoom as one affine transform and lets callers supply the point around which visual movement is minimized. Its `translateTo`/`scaleBy` formulation makes the transform point explicit, and its Canvas example also highlights that transform order matters.
+D3 zoom represents a view as one scale-plus-translation transform. Its `translateTo` and `scaleBy` APIs make the reference point explicit, and the Canvas guidance emphasizes that transform order matters.
 
 Source:
 
 - D3 zoom: https://d3js.org/d3-zoom
 
-Implication for IPM: depth should be derived from the camera transform rather than composing unrelated `pan` and `zoom` effects in different orders.
+Implication for IPM: depth should be derived from camera transforms, not from unrelated pan and zoom effects composed in different orders.
 
 ## Phase 3 — Game-camera / parallax evidence
 
@@ -42,11 +44,11 @@ Source:
 
 - Godot 2D Parallax: https://docs.godotengine.org/en/stable/tutorials/2d/2d_parallax.html
 
-Implication for IPM: each cosmic layer should have one depth parameter that weakens the same camera transform. Independent pan and zoom coordinate systems are harder to reason about and can produce contradictory depth cues.
+Implication for IPM: each cosmic layer should have one depth parameter that weakens the same camera movement. Independent coordinate systems create contradictory depth cues.
 
 ## Phase 4 — Motion/accessibility evidence
 
-MDN notes that large scaling and panning motions can be vestibular-motion triggers and recommends honoring `prefers-reduced-motion` by removing or reducing non-essential motion.
+Large scaling and panning motions can be vestibular-motion triggers. `prefers-reduced-motion` provides an explicit user preference for reducing non-essential motion.
 
 Source:
 
@@ -54,45 +56,95 @@ Source:
 
 Implication for IPM: reduced-motion keeps non-essential star/haze parallax frozen. The world-anchored galaxy envelope may still follow explicit camera geometry because detaching it would break spatial correctness.
 
-## Synthesis — fractional camera transform
+## Phase 5 — Interruptible / changing-target navigation
 
-Use one `depth` value per background plane. The foreground camera transform around viewport center is:
+Reach and North's work on smooth, efficient and interruptible zooming treats target changes during an interaction as a first-class problem. A camera path should remain smooth when the user's target changes rather than assuming one fixed center for the whole navigation sequence.
+
+Source:
+
+- Andrew Reach and Chris North, *Smooth, Efficient, and Interruptible Zooming and Panning*: https://arxiv.org/abs/1801.09358
+
+Implication for IPM: a depth model that is correct only for a single fixed point is insufficient. Wheel/pinch navigation is a sequence of transforms whose anchor can move between events. The background should weaken and compose each camera delta rather than recomputing one absolute fractional transform from the current camera state.
+
+## Phase 6 — Mapping / scene-rendering ownership
+
+Mapbox camera options expose an `around` location that remains at the same screen position across zoom, pitch or bearing changes. Cesium models the star field as a SkyBox around the scene rather than as ordinary world geometry.
+
+Sources:
+
+- Mapbox GL JS `CameraOptions.around`: https://docs.mapbox.com/mapbox-gl-js/api/properties/
+- Cesium `SkyBox`: https://cesium.com/learn/cesiumjs/ref-doc/SkyBox.html
+
+Implication for IPM: not every background element should own the same coordinate system. Repository geometry and the diffuse galaxy envelope are world-relative; decorative star/haze planes are camera-relative depth cues; meteors are screen-space events. The layers should be deliberately separated rather than accidentally sharing or contradicting transforms.
+
+## Synthesis — fractional camera-delta composition
+
+Represent the foreground camera in screen space as an affine transform:
 
 ```text
-x' = center + pan + zoom * (x - center)
+screen = zoom * world + origin
+origin = viewportCenter + pan
 ```
 
-For a depth plane with `0 < depth < 1`, use a weaker transform with:
+For consecutive camera states `C0` and `C1`, first derive the exact screen-space delta that maps the old screen position to the new one:
 
 ```text
-layerScale = zoom ^ depth
+ratio = zoom1 / zoom0
+deltaTranslation = origin1 - ratio * origin0
+Delta(screen) = ratio * screen + deltaTranslation
+```
+
+For a background plane with `0 < depth < 1`, weaken **that delta** rather than the absolute camera state:
+
+```text
+depthScale = ratio ^ depth
 translationFactor =
-  depth                              when zoom ~= 1
-  (layerScale - 1) / (zoom - 1)      otherwise
+  depth                                      when ratio ~= 1
+  (depthScale - 1) / (ratio - 1)            otherwise
 
-layerX = center
-       + layerScale * (baseX - center)
-       + panX * translationFactor
+depthDelta(screen) =
+  depthScale * screen
+  + deltaTranslation * translationFactor
 ```
 
-The same formula applies to Y.
+Then compose each new `depthDelta` onto that plane's accumulated affine transform in interaction order.
 
-This has two useful properties:
+This has three useful properties:
 
-1. At `zoom = 1`, ordinary panning reduces exactly to `pan * depth`, preserving the familiar parallax interpretation.
-2. For a camera transform that has a fixed screen point, every depth layer has the same fixed point while scaling by a weaker amount. Pointer zoom therefore produces depth without the background shearing away from the interaction focus.
+1. Pure pan becomes exactly `panDelta * depth`.
+2. A zoom delta preserves the same fixed screen point as the foreground delta while scaling less strongly.
+3. A later zoom can use a different fixed point without discarding earlier pan/zoom history; the transforms compose in the same order as the actual camera interaction.
 
-The transform is deterministic from current camera state and does not require storing gesture history.
+This is intentionally path-dependent: the current background pose represents the camera movements the user actually made. That is preferable to deriving an incompatible absolute transform that silently assumes all prior movement shared one fixed point.
+
+Viewport resize is treated as a rebase, not as navigation. Star/haze depth transforms reset to identity at the new viewport geometry so layout changes do not masquerade as camera motion.
+
+## Coordinate ownership
+
+- **Repository nodes / graph geometry:** full world camera transform.
+- **Diffuse galaxy envelope:** full world camera transform; it describes the graph's world-space body.
+- **Stars / haze:** accumulated fractional camera deltas using one depth coefficient per plane.
+- **Meteors:** screen-space events independent of graph camera motion.
+- **Reduced motion:** stars/haze reset/freeze at identity while the explicit world geometry remains coherent.
 
 ## Implementation boundary
 
 - Shared interactive `/u/` only.
 - Keep deterministic wrapped stars, sparse haze, world-anchored galaxy envelope and meteor behavior.
-- Replace separate star `parallax` / `zoomParallax` coefficients with a single depth coefficient per layer: far `0.08`, mid `0.18`, near `0.32`.
-- Apply the same fractional-camera formulation to haze at depth `0.035`.
-- Keep reduced-motion star/haze transform at identity.
+- Far/mid/near star depth coefficients remain `0.08 / 0.18 / 0.32`; haze remains `0.035`.
 - Do not change graph semantics, dedicated viewers, static SVG output or stable `v1`.
+- Do not add inertial zoom merely to mask transform errors; geometric coherence is solved first.
 
 ## Verification target
 
-In addition to existing pan/brightness/wrapping checks, browser evidence should perform an off-center zoom using a visible near-layer star itself as the zoom anchor. With the fractional camera transform, that star remains at the same screen point (modulo sub-pixel tolerance) while other layers scale by their weaker depth. This directly tests the failure mode that motivated the change rather than only asserting `far < mid < near` scale ratios.
+Browser evidence must cover more than one identity-origin zoom:
+
+1. ordinary pan still moves each depth plane by its expected weaker amount;
+2. a first off-center zoom preserves the chosen foreground/depth fixed point;
+3. after a zoom and an intervening pan, a second zoom around the star's new location keeps that same star within sub-pixel tolerance;
+4. far/mid/near layers preserve ordered depth response;
+5. the galaxy envelope remains world-anchored;
+6. reduced-motion freezes decorative star/haze depth motion and suppresses meteors;
+7. Chromium and iPhone WebKit both pass on the exact final head.
+
+The sequential-anchor regression is the discriminator: before composed camera deltas it failed deterministically with `3.361777501284678 px` horizontal drift against a `<0.75 px` contract.
