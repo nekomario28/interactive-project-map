@@ -1,0 +1,275 @@
+name: Temporary OffHandCombat Quality admission
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Apply bounded OffHandCombat admission
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          OFFHAND_KEY = "nekomario28/offhandcombat"
+          OFFHAND_REV = "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1"
+          OFFHAND_DATE = "2026-08-04"
+
+          def replace_once(text, old, new, label):
+              if old in text:
+                  return text.replace(old, new, 1)
+              if new in text:
+                  return text
+              raise SystemExit(f"missing patch anchor: {label}")
+
+          def write(path, text):
+              Path(path).write_text(text, encoding="utf-8")
+
+          # 1) Bounded live source manifest.
+          manifest_path = Path("data/repository-quality-live-profile-enrichment-sources.v1.json")
+          manifest = json.loads(manifest_path.read_text())
+          if not any(str(s.get("repositoryKey", "")).lower() == OFFHAND_KEY for s in manifest["sources"]):
+              ftb_index = next(i for i, s in enumerate(manifest["sources"]) if str(s.get("repositoryKey", "")).lower() == "nekomario28/ftbpublicclaims")
+              manifest["sources"].insert(ftb_index + 1, {
+                  "repositoryKey": "nekomario28/OffHandCombat",
+                  "mode": "fork-local-delta",
+                  "fixture": "fixtures/repository-fork-quality-offhandcombat-calibration.v1.json",
+                  "caseId": "offhandcombat-fork-local-default-master-317c2ec",
+                  "presentationExpected": "available",
+              })
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+          # 2) Live sidecar producer receipt.
+          p = Path("tests/repository-quality-live-sidecar-candidate.test.mjs")
+          s = p.read_text()
+          s = s.replace("resolves eight evidence sources and seven portfolio Quality presentations", "resolves nine evidence sources and eight portfolio Quality presentations")
+          s = s.replace("assert.equal(result.enrichments.length, 8);", "assert.equal(result.enrichments.length, 9);")
+          s = s.replace("assert.equal(result.expectedPresentationAvailable, 7);", "assert.equal(result.expectedPresentationAvailable, 8);")
+          s = replace_once(s, '    "nekomario28/interactive-project-map",\n', '    "nekomario28/interactive-project-map",\n    "nekomario28/offhandcombat",\n', "live-sidecar identity list")
+          s = replace_once(s,
+              '  const freetoken = result.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  assert.equal(freetoken.qualityAttributionScope, "local-delta");\n  assert.equal(freetoken.presentationExpected, "available");\n  assert.equal(freetoken.fixtureSnapshotDate, "2026-08-24");\n  assert.equal(freetoken.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");\n',
+              '  const freetoken = result.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  assert.equal(freetoken.qualityAttributionScope, "local-delta");\n  assert.equal(freetoken.presentationExpected, "available");\n  assert.equal(freetoken.fixtureSnapshotDate, "2026-08-24");\n  assert.equal(freetoken.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");\n  const offhand = result.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.presentationExpected, "available");\n  assert.equal(offhand.fixtureSnapshotDate, "2026-08-04");\n  assert.equal(offhand.calibratedRevision, "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1");\n', "live-sidecar source diagnostics")
+          s = s.replace("bounded Quality yields 7 available and 8 unavailable", "bounded Quality yields 8 available and 7 unavailable")
+          s = s.replace("assert.equal(result.presentation.diagnostics.available, 7);", "assert.equal(result.presentation.diagnostics.available, 8);")
+          s = s.replace("assert.equal(result.presentation.diagnostics.unavailable, 8);", "assert.equal(result.presentation.diagnostics.unavailable, 7);")
+          s = s.replace("assert.equal(result.diagnostics.assessment.quality.applied, 8);", "assert.equal(result.diagnostics.assessment.quality.applied, 9);")
+          s = s.replace("assert.equal(result.diagnostics.expectedPresentationAvailable, 7);", "assert.equal(result.diagnostics.expectedPresentationAvailable, 8);")
+          s = replace_once(s,
+              '  const freetoken = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n',
+              '  const freetoken = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  const offhand = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n', "live-sidecar presentation lookup")
+          s = replace_once(s,
+              '  for (const id of ["maintainability", "security-safety", "stewardship"]) {\n    assert.equal(freetoken.views.detail.segments.find((segment) => segment.id === id).findingState, "unknown", id);\n  }\n',
+              '  for (const id of ["maintainability", "security-safety", "stewardship"]) {\n    assert.equal(freetoken.views.detail.segments.find((segment) => segment.id === id).findingState, "unknown", id);\n  }\n\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.overlayState, "available");\n  assert.equal(offhand.overlay.coverage.targetDimensions, 6);\n  assert.equal(offhand.overlay.coverage.inspectedDimensions, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);\n  assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");\n  const offhandSecurity = offhand.views.detail.segments.find((segment) => segment.id === "security-safety");\n  assert.equal(offhandSecurity.applicability, "optional");\n  assert.equal(offhandSecurity.findingState, "supports");\n', "live-sidecar OffHand semantics")
+          s = s.replace("assert.equal(result.presentation.diagnostics.available, 7);", "assert.equal(result.presentation.diagnostics.available, 8);")
+          s = s.replace("assert.equal(result.presentation.diagnostics.unavailable, 8);", "assert.equal(result.presentation.diagnostics.unavailable, 7);")
+          s = s.replace("assert.equal(presentation.diagnostics.available, 7);", "assert.equal(presentation.diagnostics.available, 8);")
+          s = s.replace("assert.equal(presentation.diagnostics.unavailable, 8);", "assert.equal(presentation.diagnostics.unavailable, 7);")
+          s = s.replace("assert.equal(diagnostics.expectedPresentationAvailable, 7);", "assert.equal(diagnostics.expectedPresentationAvailable, 8);")
+          write(p, s)
+
+          # 3) Freshness provenance.
+          p = Path("tests/repository-quality-evidence-freshness.test.mjs")
+          s = p.read_text()
+          s = s.replace('const mixedDates = ["2026-07-25", "2026-08-24", "2026-08-25"];', 'const mixedDates = ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"];')
+          s = s.replace('freshness("portfolio-quality-presented-sources", 7, mixedDates)', 'freshness("portfolio-quality-presented-sources", 8, mixedDates)')
+          s = s.replace('freshness("all-bounded-assessment-sources", 8, mixedDates)', 'freshness("all-bounded-assessment-sources", 9, mixedDates)')
+          s = s.replace("assert.equal(available.length, 7);", "assert.equal(available.length, 8);")
+          s = s.replace("assert.equal(unavailable.length, 8);", "assert.equal(unavailable.length, 7);")
+          s = replace_once(s,
+              '  const freetokenSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  assert.equal(freetokenSource?.fixtureSnapshotDate, "2026-08-24");\n  assert.equal(freetokenSource?.presentationExpected, "available");\n  assert.equal(freetokenSource?.qualityAttributionScope, "local-delta");\n  assert.equal(freetokenSource?.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");\n',
+              '  const freetokenSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  assert.equal(freetokenSource?.fixtureSnapshotDate, "2026-08-24");\n  assert.equal(freetokenSource?.presentationExpected, "available");\n  assert.equal(freetokenSource?.qualityAttributionScope, "local-delta");\n  assert.equal(freetokenSource?.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");\n\n  const offhand = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/offhandcombat");\n  assert.ok(offhand, "OffHandCombat must receive local-delta frozen presentation freshness");\n  assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");\n  const offhandSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n  assert.equal(offhandSource?.fixtureSnapshotDate, "2026-08-04");\n  assert.equal(offhandSource?.presentationExpected, "available");\n  assert.equal(offhandSource?.qualityAttributionScope, "local-delta");\n  assert.equal(offhandSource?.calibratedRevision, "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1");\n', "freshness OffHand source")
+          s = s.replace('assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-24", "2026-08-25"]);', 'assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"]);')
+          s = s.replace('freshness("all-bounded-assessment-sources", 8, ["2026-07-25", "2026-08-23", "2026-08-24", "2026-08-25"])', 'freshness("all-bounded-assessment-sources", 9, ["2026-07-25", "2026-08-04", "2026-08-23", "2026-08-24", "2026-08-25"])')
+          s = s.replace('freshness("portfolio-quality-presented-sources", 7, ["2026-07-25", "2026-08-24", "2026-08-25"])', 'freshness("portfolio-quality-presented-sources", 8, ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"])')
+          write(p, s)
+
+          # 4) Live assessment candidate.
+          p = Path("tests/repository-assessment-candidate-live-profile.test.mjs")
+          s = p.read_text()
+          s = s.replace("with eight bounded Quality enrichments", "with nine bounded Quality enrichments")
+          for field in ["requested", "applied", "partial", "acquisitionElevated"]:
+              s = s.replace(f"assert.equal(run.diagnostics.quality.{field}, 8);", f"assert.equal(run.diagnostics.quality.{field}, 9);")
+          s = replace_once(s, '    "nekomario28/interactive-project-map",\n', '    "nekomario28/interactive-project-map",\n    "nekomario28/offhandcombat",\n', "assessment identity list")
+          s = replace_once(s,
+              '  const freetoken = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/freetoken");\n',
+              '  const freetoken = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/freetoken");\n  const offhand = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/offhandcombat");\n', "assessment OffHand lookup")
+          s = replace_once(s,
+              '  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.stewardship.findingState, "unknown");\n',
+              '  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.stewardship.findingState, "unknown");\n  assert.equal(offhand.quality.value.contractId, "ipm-repository-fork-quality-v1");\n  assert.equal(offhand.quality.value.localDelta.quality.state, "partial");\n  assert.equal(offhand.quality.value.personalAttribution.qualitySource, "local-delta-only");\n  assert.equal(offhand.quality.value.personalAttribution.upstreamInheritedEvidenceEligible, false);\n  assert.equal(offhand.quality.value.localDelta.quality.value.dimensions.verification.findingState, "supports");\n  assert.equal(offhand.quality.value.localDelta.quality.value.dimensions.maintainability.findingState, "unknown");\n  assert.equal(offhand.quality.value.localDelta.quality.value.dimensions["security-safety"].applicability, "optional");\n  assert.equal(offhand.quality.value.localDelta.quality.value.dimensions["security-safety"].findingState, "supports");\n', "assessment OffHand semantics")
+          s = s.replace("projects to seven attribution-safe available and eight unavailable Quality overlays", "projects to eight attribution-safe available and seven unavailable Quality overlays")
+          s = s.replace('filter((entry) => entry.overlayState === "available").length, 7', 'filter((entry) => entry.overlayState === "available").length, 8')
+          s = s.replace('filter((entry) => entry.overlayState === "unavailable").length, 8', 'filter((entry) => entry.overlayState === "unavailable").length, 7')
+          s = replace_once(s,
+              '  const freetoken = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n',
+              '  const freetoken = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  const offhand = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n', "projection OffHand lookup")
+          s = replace_once(s,
+              '  assert.equal(freetoken.overlay.segments.find((segment) => segment.id === "stewardship").findingState, "unknown");\n',
+              '  assert.equal(freetoken.overlay.segments.find((segment) => segment.id === "stewardship").findingState, "unknown");\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.overlayState, "available");\n  assert.equal(offhand.overlay.coverage.targetDimensions, 6);\n  assert.equal(offhand.overlay.coverage.inspectedDimensions, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);\n  assert.equal(offhand.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");\n  assert.equal(offhand.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");\n  assert.equal(offhand.overlay.segments.find((segment) => segment.id === "security-safety").findingState, "supports");\n', "projection OffHand semantics")
+          write(p, s)
+
+          # 5) Presentation candidate.
+          p = Path("tests/repository-quality-presentation-candidate.test.mjs")
+          s = p.read_text()
+          s = s.replace("15/7/8", "15/8/7")
+          s = s.replace("available: 7,", "available: 8,")
+          s = s.replace("unavailable: 8,", "unavailable: 7,")
+          s = replace_once(s,
+              '  const freetoken = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n',
+              '  const freetoken = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  const offhand = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n', "presentation OffHand lookup")
+          s = replace_once(s,
+              '  for (const id of ["maintainability", "security-safety", "stewardship"]) {\n    assert.equal(freetoken.views.detail.segments.find((segment) => segment.id === id).findingState, "unknown", id);\n  }\n',
+              '  for (const id of ["maintainability", "security-safety", "stewardship"]) {\n    assert.equal(freetoken.views.detail.segments.find((segment) => segment.id === id).findingState, "unknown", id);\n  }\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.overlayState, "available");\n  assert.equal(offhand.overlay.coverage.targetDimensions, 6);\n  assert.equal(offhand.overlay.coverage.inspectedDimensions, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);\n  assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");\n  assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "security-safety").applicability, "optional");\n  assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "security-safety").findingState, "supports");\n', "presentation OffHand semantics")
+          s = s.replace("assert.equal(model.diagnostics.available, 7);", "assert.equal(model.diagnostics.available, 8);")
+          s = s.replace("assert.equal(model.diagnostics.unavailable, 8);", "assert.equal(model.diagnostics.unavailable, 7);")
+          write(p, s)
+
+          # 6) SVG prototype source tests.
+          p = Path("tests/repository-quality-presentation-prototype-svg.test.mjs")
+          s = p.read_text()
+          s = s.replace("attribution-safe 7/8 availability", "attribution-safe 8/7 availability")
+          s = s.replace("7 available · 8 unavailable", "8 available · 7 unavailable")
+          s = s.replace('length, 7);', 'length, 8);')
+          s = s.replace('length, 8);', 'length, 7);')
+          # Undo cascading ambiguity with explicit semantic markers.
+          s = s.replace('(svg.match(/data-quality-state="available"/g) ?? []).length, 7', '(svg.match(/data-quality-state="available"/g) ?? []).length, 8')
+          s = s.replace('(svg.match(/data-quality-state="unavailable"/g) ?? []).length, 8', '(svg.match(/data-quality-state="unavailable"/g) ?? []).length, 7')
+          s = s.replace('(svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 8', '(svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 7')
+          s = s.replace("only for seven attribution-safe repositories", "only for eight attribution-safe repositories")
+          s = s.replace('(svg.match(/class="qseg qdetail /g) ?? []).length, 56', '(svg.match(/class="qseg qdetail /g) ?? []).length, 64')
+          s = s.replace('(svg.match(/data-dimension="/g) ?? []).length, 56', '(svg.match(/data-dimension="/g) ?? []).length, 64')
+          s = replace_once(s,
+              '  assert.match(svg, /data-repository-key="nekomario28\\/ftbpublicclaims" data-quality-state="available"/);\n',
+              '  assert.match(svg, /data-repository-key="nekomario28\\/ftbpublicclaims" data-quality-state="available"/);\n  assert.match(svg, /data-repository-key="nekomario28\\/offhandcombat" data-quality-state="available"/);\n', "prototype OffHand card")
+          s = replace_once(s,
+              '  const freetoken = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n',
+              '  const freetoken = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  const offhand = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n', "prototype OffHand lookup")
+          s = replace_once(s,
+              '  assert.equal(freetoken.overlay.targetFindingCounts.unknown, 3);\n',
+              '  assert.equal(freetoken.overlay.targetFindingCounts.unknown, 3);\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.overlayState, "available");\n  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);\n', "prototype OffHand semantics")
+          s = replace_once(s, '  assert.match(svg, /FreeToken/);\n', '  assert.match(svg, /FreeToken/);\n  assert.match(svg, /OffHandCombat/);\n', "prototype OffHand label")
+          write(p, s)
+
+          # 7) Browser prototype evidence.
+          p = Path("tests/e2e/repository-quality-presentation-prototype.spec.mjs")
+          s = p.read_text()
+          s = s.replace("toHaveCount(7);", "toHaveCount(8);")
+          s = s.replace("toHaveCount(8);", "toHaveCount(7);")
+          s = s.replace("7 available · 8 unavailable", "8 available · 7 unavailable")
+          s = s.replace("await expectCompleteLayout(page, 56);", "await expectCompleteLayout(page, 64);")
+          s = replace_once(s,
+              '  await expect(page.locator(\'[data-repository-key="nekomario28/ftbpublicclaims"][data-quality-state="available"]\')).toHaveCount(1);\n',
+              '  await expect(page.locator(\'[data-repository-key="nekomario28/ftbpublicclaims"][data-quality-state="available"]\')).toHaveCount(1);\n  await expect(page.locator(\'[data-repository-key="nekomario28/offhandcombat"][data-quality-state="available"]\')).toHaveCount(1);\n', "e2e OffHand card")
+          # Reassert exact count lines after broad replacements.
+          s = s.replace('await expect(page.locator(\'[data-quality-state="available"]\')).toHaveCount(7);', 'await expect(page.locator(\'[data-quality-state="available"]\')).toHaveCount(8);')
+          s = s.replace('await expect(page.locator(\'[data-quality-state="unavailable"]\')).toHaveCount(8);', 'await expect(page.locator(\'[data-quality-state="unavailable"]\')).toHaveCount(7);')
+          s = s.replace('await expect(page.locator(".quality-unavailable-ring")).toHaveCount(8);', 'await expect(page.locator(".quality-unavailable-ring")).toHaveCount(7);')
+          s = s.replace('await expect(page.locator(\'[data-pattern="supports-solid"]\')).toHaveCount(7);', 'await expect(page.locator(\'[data-pattern="supports-solid"]\')).toHaveCount(8);')
+          s = s.replace('await expect(page.locator(\'[data-pattern="unavailable-sparse-dash"]\')).toHaveCount(8);', 'await expect(page.locator(\'[data-pattern="unavailable-sparse-dash"]\')).toHaveCount(7);')
+          s = replace_once(s,
+              '  await expect(page.locator(\'[data-repository-key="nekomario28/freetoken"] [data-dimension="stewardship"].quality-unknown[data-pattern="unknown-sparse-dot"]\')).toHaveCount(1);\n',
+              '  await expect(page.locator(\'[data-repository-key="nekomario28/freetoken"] [data-dimension="stewardship"].quality-unknown[data-pattern="unknown-sparse-dot"]\')).toHaveCount(1);\n  await expect(page.locator(\'[data-repository-key="nekomario28/offhandcombat"] [data-dimension="maintainability"].quality-unknown[data-pattern="unknown-sparse-dot"]\')).toHaveCount(1);\n  await expect(page.locator(\'[data-repository-key="nekomario28/offhandcombat"] [data-dimension="security-safety"].quality-optional\')).toHaveCount(1);\n', "e2e OffHand detail")
+          write(p, s)
+
+          # 8) Live-profile receipt.
+          p = Path("tests/repository-quality-live-profile-receipt.test.mjs")
+          s = p.read_text()
+          s = s.replace("while eight assessment sources yield seven portfolio overlays", "while nine assessment sources yield eight portfolio overlays")
+          s = s.replace("assert.equal(result.diagnostics.assessment.quality.requested, 8);", "assert.equal(result.diagnostics.assessment.quality.requested, 9);")
+          s = s.replace("assert.equal(result.diagnostics.assessment.quality.applied, 8);", "assert.equal(result.diagnostics.assessment.quality.applied, 9);")
+          s = s.replace("assert.equal(result.diagnostics.assessment.quality.partial, 8);", "assert.equal(result.diagnostics.assessment.quality.partial, 9);")
+          s = s.replace('filter((entry) => entry.overlayState === "available").length, 7', 'filter((entry) => entry.overlayState === "available").length, 8')
+          s = s.replace('filter((entry) => entry.overlayState === "unavailable").length, 8', 'filter((entry) => entry.overlayState === "unavailable").length, 7')
+          s = s.replace("assert.equal(result.diagnostics.expectedPresentationAvailable, 7);", "assert.equal(result.diagnostics.expectedPresentationAvailable, 8);")
+          s = s.replace("admit FreeToken with bounded local-delta evidence", "admit FreeToken and OffHandCombat with bounded local-delta evidence")
+          s = replace_once(s,
+              '  const freetoken = byKey.get("nekomario28/freetoken");\n',
+              '  const freetoken = byKey.get("nekomario28/freetoken");\n  const offhand = byKey.get("nekomario28/offhandcombat");\n', "receipt OffHand lookup")
+          s = replace_once(s,
+              '  assert.equal(freetoken.evidenceFreshness.snapshotDate, "2026-08-24");\n',
+              '  assert.equal(freetoken.evidenceFreshness.snapshotDate, "2026-08-24");\n\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.overlayState, "available");\n  assert.equal(offhand.overlay.coverage.targetDimensions, 6);\n  assert.equal(offhand.overlay.coverage.inspectedDimensions, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);\n  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);\n  assert.equal(offhand.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");\n  const offhandSecurity = offhand.overlay.segments.find((segment) => segment.id === "security-safety");\n  assert.equal(offhandSecurity.applicability, "optional");\n  assert.equal(offhandSecurity.findingState, "supports");\n  assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");\n', "receipt OffHand semantics")
+          s = replace_once(s,
+              '    "nekomario28/freetoken",\n',
+              '    "nekomario28/freetoken",\n    "nekomario28/offhandcombat",\n', "receipt fork relation list")
+          write(p, s)
+
+          # 9) Revalidation receipt.
+          p = Path("tests/repository-quality-evidence-revalidation-candidate.test.mjs")
+          s = p.read_text()
+          s = replace_once(s,
+              '  const freetokenSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n',
+              '  const freetokenSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/freetoken");\n  const offhandSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n', "revalidation OffHand source")
+          s = replace_once(s,
+              '  assert.equal(freetokenSource.qualityAttributionScope, "local-delta");\n',
+              '  assert.equal(freetokenSource.qualityAttributionScope, "local-delta");\n  assert.equal(offhandSource.calibratedRevision, "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1");\n  assert.equal(offhandSource.fixtureSnapshotDate, "2026-08-04");\n  assert.equal(offhandSource.presentationExpected, "available");\n  assert.equal(offhandSource.qualityAttributionScope, "local-delta");\n', "revalidation OffHand source semantics")
+          s = s.replace('["2026-07-25", "2026-08-24", "2026-08-25"]', '["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"]')
+          s = s.replace("assert.equal(revalidated.presentation.diagnostics.available, 7);", "assert.equal(revalidated.presentation.diagnostics.available, 8);")
+          s = s.replace("assert.equal(revalidated.presentation.diagnostics.unavailable, 8);", "assert.equal(revalidated.presentation.diagnostics.unavailable, 7);")
+          s = replace_once(s,
+              '  assert.equal(freetoken.evidenceFreshness.observedRevision, undefined);\n',
+              '  assert.equal(freetoken.evidenceFreshness.observedRevision, undefined);\n\n  const offhand = revalidated.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");\n  assert.equal(offhand.overlayState, "available");\n  assert.equal(offhand.qualityAttributionScope, "local-delta");\n  assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");\n  assert.equal(offhand.evidenceFreshness.revalidatedAt, undefined);\n  assert.equal(offhand.evidenceFreshness.observedRevision, undefined);\n', "revalidation OffHand presentation")
+          write(p, s)
+
+          # Fail closed on accidental stale cardinality in these nine admission files.
+          targets = [
+              "data/repository-quality-live-profile-enrichment-sources.v1.json",
+              "tests/repository-quality-live-sidecar-candidate.test.mjs",
+              "tests/repository-quality-evidence-freshness.test.mjs",
+              "tests/repository-assessment-candidate-live-profile.test.mjs",
+              "tests/repository-quality-presentation-candidate.test.mjs",
+              "tests/repository-quality-presentation-prototype-svg.test.mjs",
+              "tests/e2e/repository-quality-presentation-prototype.spec.mjs",
+              "tests/repository-quality-live-profile-receipt.test.mjs",
+              "tests/repository-quality-evidence-revalidation-candidate.test.mjs",
+          ]
+          for target in targets:
+              text = Path(target).read_text()
+              if target != targets[0] and "nekomario28/offhandcombat" not in text.lower():
+                  raise SystemExit(f"OffHandCombat assertion missing from {target}")
+
+          PY
+
+          node --test \
+            tests/repository-fork-quality-offhandcombat.test.mjs \
+            tests/repository-quality-live-sidecar-candidate.test.mjs \
+            tests/repository-quality-evidence-freshness.test.mjs \
+            tests/repository-assessment-candidate-live-profile.test.mjs \
+            tests/repository-quality-presentation-candidate.test.mjs \
+            tests/repository-quality-presentation-prototype-svg.test.mjs \
+            tests/repository-quality-live-profile-receipt.test.mjs \
+            tests/repository-quality-evidence-revalidation-candidate.test.mjs
+          git diff --check
+
+          if git diff --quiet; then
+            echo "OffHandCombat live admission patch already applied."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            data/repository-quality-live-profile-enrichment-sources.v1.json \
+            tests/e2e/repository-quality-presentation-prototype.spec.mjs \
+            tests/repository-assessment-candidate-live-profile.test.mjs \
+            tests/repository-quality-evidence-freshness.test.mjs \
+            tests/repository-quality-evidence-revalidation-candidate.test.mjs \
+            tests/repository-quality-live-profile-receipt.test.mjs \
+            tests/repository-quality-live-sidecar-candidate.test.mjs \
+            tests/repository-quality-presentation-candidate.test.mjs \
+            tests/repository-quality-presentation-prototype-svg.test.mjs
+          git commit -m 'Admit OffHandCombat local-delta Quality'
+          git push origin "HEAD:${HEAD_BRANCH}"
