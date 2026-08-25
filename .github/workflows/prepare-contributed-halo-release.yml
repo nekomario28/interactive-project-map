@@ -1,0 +1,91 @@
+name: Prepare Contributed halo release pin
+
+on:
+  push:
+    branches: [release/contributed-halo-v1-20260825]
+    paths:
+      - ".github/workflows/prepare-contributed-halo-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: release/contributed-halo-v1-20260825
+          fetch-depth: 0
+
+      - name: Pin reviewed Action implementation and release mirrors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          old = "c871a6e5e47b11dad5cd82ec940ca2d6efa7199e"
+          new = "37500d3e3b231452b7281a78374f32d04c6445ea"
+          paths = [
+              Path('.github/workflows/generate-project-map.yml'),
+              Path('scripts/postprocess-public-pages.mjs'),
+              Path('src/action-ref.ts'),
+              Path('tests/interaction-polish.test.mjs'),
+          ]
+          total = 0
+          for path in paths:
+              text = path.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one old Action pin, found {count}")
+              path.write_text(text.replace(old, new))
+              total += count
+          if total != 4:
+              raise SystemExit(f"expected four active pin mirrors, found {total}")
+
+          workflow = paths[0]
+          text = workflow.read_text()
+          old_block = '''# Native pre-profile-import IPM release: stable v1 R 36828be099e1cd160476b1be4ba32a2b9601911c
+          # resolves Action F 37500d3e3b231452b7281a78374f32d04c6445ea. F passed Verify #874;
+          # release-chain Verify #881 passed full verify, 12 presets, Chromium and iPhone WebKit;
+          # direct-profile proofs #190/#192 and production commit e16164c5 confirmed native background + external rail.'''
+          new_block = '''# Contributed world-coherence release candidate: Action F 37500d3e3b231452b7281a78374f32d04c6445ea.
+          # F passed Verify #968: full verify, twelve-preset rendering, Chromium and iPhone WebKit.
+          # Exact real-profile Action proof #199 passed with shared external halo and no fake owned membership.
+          # Move stable v1 only after this reusable-workflow release commit passes exact caller proof.'''
+          if old_block not in text:
+              raise SystemExit('reusable-workflow release receipt block did not match expected baseline')
+          workflow.write_text(text.replace(old_block, new_block))
+
+          post = paths[1]
+          text = post.read_text()
+          old_comment = '''// Keep generated consumer workflows on the reviewed immutable Action release.
+          // Pre-profile-import native IPM visuals passed Verify #874 and direct profile proof #190.'''
+          new_comment = '''// Keep generated consumer workflows on the reviewed immutable Action release.
+          // Contributed world-coherence F passed Verify #968 and exact real-profile Action proof #199.'''
+          if old_comment not in text:
+              raise SystemExit('Pages release receipt comment did not match expected baseline')
+          post.write_text(text.replace(old_comment, new_comment))
+
+          action_ref = paths[2]
+          text = action_ref.read_text()
+          old_comment = '''// Reviewed immutable Action commit used by generated installation workflows.
+          // Stable v1 R 36828be099e1cd160476b1be4ba32a2b9601911c resolves this exact Action.
+          // F passed Verify #874/#881 and direct real-profile proofs #190/#192 before promotion.'''
+          new_comment = '''// Reviewed immutable Action commit used by generated installation workflows.
+          // Contributed world-coherence F passed Verify #968 and exact real-profile Action proof #199.
+          // Stable v1 moves only after the reusable-workflow release commit passes exact caller proof.'''
+          if old_comment not in text:
+              raise SystemExit('worker release receipt comment did not match expected baseline')
+          action_ref.write_text(text.replace(old_comment, new_comment))
+          PY
+
+          git diff --check
+          git diff --exit-code -- .github/workflows/prepare-contributed-halo-release.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- .github/workflows/generate-project-map.yml scripts/postprocess-public-pages.mjs src/action-ref.ts tests/interaction-polish.test.mjs
+          git commit -m "Pin Contributed halo implementation for v1 release"
+          git push origin HEAD:release/contributed-halo-v1-20260825
