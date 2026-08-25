@@ -89,8 +89,8 @@
     }
 
     const ratio = current.zoom / previous.zoom;
-    const deltaX = current.originX - ratio * previous.originX;
-    const deltaY = current.originY - ratio * previous.originY;
+    const deltaX = current.originX - ratio * previous.originX + (ratio - 1) * current.width / 2;
+    const deltaY = current.originY - ratio * previous.originY + (ratio - 1) * current.height / 2;
     const cameraChanged = Math.abs(ratio - 1) > 1e-12 || Math.abs(deltaX) > 1e-9 || Math.abs(deltaY) > 1e-9;
     if (!cameraChanged) return;
 
