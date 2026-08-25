@@ -22,6 +22,11 @@
     envelopeGraph: null,
     envelopeStyle: "",
     envelopeWorldRadius: 0,
+    cameraGraph: null,
+    cameraStyle: "",
+    cameraViewport: "",
+    cameraTransform: null,
+    depthTransforms: new Map(),
   };
 
   function unit(seed) {
@@ -48,23 +53,92 @@
     return motionReduced() ? 0 : depth;
   }
 
-  function cameraDepthTransform(depth) {
+  function foregroundCameraTransform(size = canvasSize()) {
+    const scale = clamp(Number(state.zoom) || 1, 0.04, 6);
+    return {
+      scale,
+      translateX: size.width * 0.5 * (1 - scale) + state.pan.x,
+      translateY: size.height * 0.5 * (1 - scale) + state.pan.y,
+    };
+  }
+
+  function affinePower(transform, depth) {
     const effective = effectiveDepth(depth);
-    if (effective === 0) {
-      return { depth: 0, scale: 1, translationFactor: 0, translateX: 0, translateY: 0 };
-    }
-    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);
-    const scale = Math.pow(zoom, effective);
-    const translationFactor = Math.abs(zoom - 1) < 1e-6
+    if (effective === 0) return { depth: 0, scale: 1, translateX: 0, translateY: 0 };
+    const scale = Math.pow(transform.scale, effective);
+    const translationFactor = Math.abs(transform.scale - 1) < 1e-6
       ? effective
-      : (scale - 1) / (zoom - 1);
+      : (scale - 1) / (transform.scale - 1);
     return {
       depth: effective,
       scale,
-      translationFactor,
-      translateX: state.pan.x * translationFactor,
-      translateY: state.pan.y * translationFactor,
+      translateX: transform.translateX * translationFactor,
+      translateY: transform.translateY * translationFactor,
     };
+  }
+
+  function composeAffine(outer, inner) {
+    return {
+      scale: outer.scale * inner.scale,
+      translateX: outer.scale * inner.translateX + outer.translateX,
+      translateY: outer.scale * inner.translateY + outer.translateY,
+    };
+  }
+
+  function cameraDelta(before, after) {
+    const scale = after.scale / before.scale;
+    return {
+      scale,
+      translateX: after.translateX - scale * before.translateX,
+      translateY: after.translateY - scale * before.translateY,
+    };
+  }
+
+  function resetDepthTransforms(size, camera) {
+    runtime.cameraGraph = state.graph;
+    runtime.cameraStyle = String(state.style || "");
+    runtime.cameraViewport = `${size.width}x${size.height}`;
+    runtime.cameraTransform = camera;
+    runtime.depthTransforms.clear();
+    for (const depth of [...LAYERS.map((layer) => layer.depth), HAZE_DEPTH]) {
+      runtime.depthTransforms.set(depth, affinePower(camera, depth));
+    }
+  }
+
+  function syncDepthTransforms(size = canvasSize()) {
+    const camera = foregroundCameraTransform(size);
+    const style = String(state.style || "");
+    const viewport = `${size.width}x${size.height}`;
+    if (motionReduced()) {
+      runtime.cameraGraph = state.graph;
+      runtime.cameraStyle = style;
+      runtime.cameraViewport = viewport;
+      runtime.cameraTransform = camera;
+      runtime.depthTransforms.clear();
+      return;
+    }
+    if (runtime.cameraGraph !== state.graph || runtime.cameraStyle !== style || runtime.cameraViewport !== viewport || !runtime.cameraTransform) {
+      resetDepthTransforms(size, camera);
+      return;
+    }
+    const previous = runtime.cameraTransform;
+    const changed = Math.abs(camera.scale - previous.scale) >= 1e-12
+      || Math.abs(camera.translateX - previous.translateX) >= 1e-9
+      || Math.abs(camera.translateY - previous.translateY) >= 1e-9;
+    if (!changed) return;
+    const delta = cameraDelta(previous, camera);
+    for (const depth of [...LAYERS.map((layer) => layer.depth), HAZE_DEPTH]) {
+      const prior = runtime.depthTransforms.get(depth) || affinePower(previous, depth);
+      runtime.depthTransforms.set(depth, composeAffine(affinePower(delta, depth), prior));
+    }
+    runtime.cameraTransform = camera;
+  }
+
+  function cameraDepthTransform(depth, size = canvasSize()) {
+    const effective = effectiveDepth(depth);
+    if (effective === 0) return { depth: 0, scale: 1, translateX: 0, translateY: 0 };
+    syncDepthTransforms(size);
+    return runtime.depthTransforms.get(depth) || affinePower(foregroundCameraTransform(size), depth);
   }
 
   function layerTile(layer) {
@@ -83,8 +157,8 @@
     const baseX = unit(xSeed) * TILE.width;
     const baseY = unit(ySeed) * TILE.height;
     return {
-      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + tile.transform.translateX, tile.width),
-      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + tile.transform.translateY, tile.height),
+      x: wrap(baseX * tile.scale + tile.transform.translateX, tile.width),
+      y: wrap(baseY * tile.scale + tile.transform.translateY, tile.height),
       radius: range(hash(`${username}:cosmic:${layer.id}:r:${index}`), layer.radius[0], layer.radius[1]) * Math.sqrt(tile.scale),
       opacity: range(hash(`${username}:cosmic:${layer.id}:o:${index}`), layer.opacity[0], layer.opacity[1]),
       tile,
@@ -145,8 +219,8 @@
     const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width;
     const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height;
     return {
-      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + transform.translateX, tile.width),
-      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + transform.translateY, tile.height),
+      x: wrap(baseX * tile.scale + transform.translateX, tile.width),
+      y: wrap(baseY * tile.scale + transform.translateY, tile.height),
     };
   }
 
@@ -418,7 +492,7 @@
           parallax: transform.depth,
           zoomParallax: layer.depth,
           zoomScale: transform.scale,
-          translationFactor: transform.translationFactor,
+          translationFactor: effectiveDepth(layer.depth),
         };
       }),
       cameraFixedPoint: cameraFixedPoint(size),

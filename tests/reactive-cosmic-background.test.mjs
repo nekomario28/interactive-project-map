@@ -31,11 +31,12 @@ test("reactive cosmic background keeps pan-linked depth, zoom parallax, stable d
   assert.match(source, /depth: 0\.08/);
   assert.match(source, /depth: 0\.18/);
   assert.match(source, /depth: 0\.32/);
-  assert.match(source, /function cameraDepthTransform\(depth\)/);
-  assert.match(source, /\(scale - 1\) \/ \(zoom - 1\)/);
-  assert.match(source, /state\.pan\.x \* translationFactor/);
-  assert.match(source, /state\.pan\.y \* translationFactor/);
-  assert.match(source, /Math\.pow\(zoom, effective\)/);
+  assert.match(source, /function cameraDepthTransform\(depth, size = canvasSize\(\)\)/);
+  assert.match(source, /function affinePower\(transform, depth\)/);
+  assert.match(source, /function cameraDelta\(before, after\)/);
+  assert.match(source, /function composeAffine\(outer, inner\)/);
+  assert.match(source, /runtime\.depthTransforms/);
+  assert.match(source, /Math\.pow\(transform\.scale, effective\)/);
   assert.match(source, /function cameraFixedPoint/);
   assert.match(source, /function drawGalaxyEnvelope\(width, height\)/);
   assert.match(source, /worldToScreen\(0, 0\)/);

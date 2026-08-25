@@ -25,10 +25,10 @@ This follows the earlier profile Project Map design principle that stellar decor
 - Background layers use deterministic username-seeded coordinates so redraws do not shimmer or regenerate stars.
 - Stars remain wrapped across a common repeating tile. A star must not abruptly disappear simply because the camera crossed a screen boundary.
 - Each star plane has one depth coefficient: far `0.08`, mid `0.18`, near `0.32`. The same depth weakens both pan and zoom instead of composing two unrelated camera responses.
-- Cosmic planes use a fractional form of the foreground affine camera transform. Layer scale is `zoom ^ depth`; its pan translation factor is `depth` at unit zoom and `(layerScale - 1) / (zoom - 1)` otherwise. This preserves the foreground camera's fixed screen point while making distant planes move and scale less.
-- Pointer-anchored zoom therefore keeps the same focal point across repositories and cosmic depth layers rather than letting stars/haze shear around the viewport center while foreground geometry stays under the cursor.
+- Cosmic planes keep one persistent affine transform per depth. The initial camera is fractionalized once; every later foreground camera delta is fractionalized and composed onto the existing layer transform. Layer scale still resolves to `zoom ^ depth`, while translation follows the actual gesture sequence rather than being reconstructed from one absolute pan/zoom pair.
+- Pointer-anchored zoom therefore keeps the active focal point across repositories and cosmic depth layers even after previous pans or zooms changed the camera fixed point. A later zoom anchor must not inherit drift from an earlier anchor.
 - Star radius grows only with the square root of each depth scale so zoom does not turn the background into visual noise.
-- The subtle infinite haze uses the same fractional-camera formulation at depth `0.035`, remaining slower than the star planes.
+- The subtle infinite haze uses the same sequential fractional-camera composition at depth `0.035`, remaining slower than the star planes.
 - A low-contrast world-anchored galaxy envelope is centered at `worldToScreen(0, 0)`. Its world radius is captured once per graph/style scene so live force/orbit motion cannot make the background breathe or pulse.
 - The galaxy body uses diffuse gradients plus a small deterministic field of low-opacity dust points. It intentionally avoids a literal elliptical ring/arc, which read as decorative geometry rather than spatial depth in rendered browser evidence.
 - The envelope creates a visual transition from galaxy body to surrounding deep space without encoding repository/category semantics.
@@ -44,7 +44,7 @@ This follows the earlier profile Project Map design principle that stellar decor
 The upgrade is gated at three levels:
 
 - source tests assert wheel normalization, shared wheel/pinch/keyboard bounds, scene-aware zoom limits, scene-aware pan limits, elastic overscroll plus hard settle, the fractional camera-depth transform, stable world-anchored envelope behavior, diffuse dust rather than an explicit arc, script ordering, and reduced-motion support;
-- browser tests prove pointer-anchored zoom, a visible depth star remaining fixed when used as an off-center zoom anchor, elastic pan resistance and post-interaction containment, far < mid < near depth response, world-center envelope alignment, wrapped pan continuity, actual canvas brightness for the diffuse galaxy body, stable envelope radius under live node movement, meteor rendering, and reduced-motion freezing;
+- browser tests prove pointer-anchored zoom, a visible depth star remaining fixed when used as an off-center zoom anchor, the same star remaining fixed under a second anchor after an intervening pan, elastic pan resistance and post-interaction containment, far < mid < near depth response, world-center envelope alignment, wrapped pan continuity, actual canvas brightness for the diffuse galaxy body, stable envelope radius under live node movement, meteor rendering, and reduced-motion freezing;
 - the existing full Pages Verify, twelve-preset comparison, Chromium, and iPhone WebKit gates remain required before promotion.
 
 The reusable static Action and stable `v1` do not need promotion for this feature because their output contract does not change.

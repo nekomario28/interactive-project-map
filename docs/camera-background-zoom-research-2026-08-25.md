@@ -96,3 +96,36 @@ The transform is deterministic from current camera state and does not require st
 ## Verification target
 
 In addition to existing pan/brightness/wrapping checks, browser evidence should perform an off-center zoom using a visible near-layer star itself as the zoom anchor. With the fractional camera transform, that star remains at the same screen point (modulo sub-pixel tolerance) while other layers scale by their weaker depth. This directly tests the failure mode that motivated the change rather than only asserting `far < mid < near` scale ratios.
+
+## Phase 5 — Sequential gesture composition
+
+A second browser discriminator exposed a limitation in the first absolute fractional-camera formulation. Exact PR #253 evidence performed `zoom -> pan -> zoom at the moved near-layer star`. The second zoom displaced that star by `3.361777501284678 px` on Chromium, identically on retry, while the other 98 browser tests passed. This is deterministic composition drift rather than timing noise.
+
+The reason is algebraic: taking a fractional power of the final affine camera transform preserves one fixed point, but `T -> T^depth` is not generally a homomorphism when successive pan/zoom transforms have different fixed points. Reconstructing a depth plane from one absolute camera state therefore loses gesture-order information.
+
+The corrected model keeps the layer affine transform as state and processes the camera incrementally:
+
+```text
+D = T_next * inverse(T_previous)
+L_next = D^depth * L_previous
+```
+
+For `D(x) = s*x + t`, the fractional delta is:
+
+```text
+s_d = s^depth
+t_d = t * depth                         when s ~= 1
+    = t * (s_d - 1) / (s - 1)          otherwise
+```
+
+A pure pan therefore still moves a plane by `pan * depth`. A zoom delta around any screen anchor has that same fixed point after fractionalization, so applying it to the existing layer transform preserves the new anchor regardless of earlier gestures. Scale remains path-independent (`zoom ^ depth`); only the translation correctly retains camera history.
+
+This follows the transform-composition model used by zoomable interfaces rather than treating pan and scale as independent decoration. D3 stores current zoom state on the zoomed element and derives `scaleBy` / `translateBy` from that current transform; CSS `transform-origin` is likewise defined as translations around the transform rather than a detached center parameter. Godot's parallax guidance reinforces that depth is camera-relative movement, with lower scroll scale representing farther layers.
+
+Sources:
+
+- D3 zoom current-transform and scale/translate operations: https://d3js.org/d3-zoom
+- MDN `transform-origin` transform composition: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/transform-origin
+- Godot 2D Parallax camera-relative `scroll_scale`: https://docs.godotengine.org/en/stable/tutorials/2d/2d_parallax.html
+
+Implementation boundary remains shared `/u/` only. The world-anchored galaxy envelope continues to use the foreground camera directly; reduced-motion keeps non-essential star/haze depth transforms at identity.
