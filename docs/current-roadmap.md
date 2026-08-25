@@ -8,8 +8,8 @@ This is the short canonical list of work that is still worth doing. Historical r
 
 The current production state is healthy:
 
-- Pages `main` is **`1aef658c62ea7d3f6617e4ef92e61c4183089ab0`** (`Document scene-aware pan containment`). Main-push **Verify #1001 / `32837286203`** passed full Verify, twelve-preset comparison, Chromium, and iPhone WebKit. Main-push **Pages #179 / `32837286129`** completed build and deploy successfully.
-- Stable reusable **`v1` is `452a197889cf83cdddf779a70102188056bc5f36`**. It is intentionally independent from Pages `main`. Its reusable workflow pins immutable inner Action **F `37500d3e3b231452b7281a78374f32d04c6445ea`**; advancing interactive Pages-only work must not move `v1`.
+- The last product/runtime Pages baseline is **`1aef658c62ea7d3f6617e4ef92e61c4183089ab0`** (`Document scene-aware pan containment`). Main may advance beyond that baseline for documentation-only maintenance without changing the runtime claim. Baseline main-push **Verify #1001 / `32837286203`** passed full Verify, twelve-preset comparison, Chromium, and iPhone WebKit. Baseline main-push **Pages #179 / `32837286129`** completed build and deploy successfully.
+- Stable reusable **`v1` is `452a197889cf83cdddf779a70102188056bc5f36`**. It is intentionally independent from Pages `main`. Its reusable workflow pins immutable inner Action **F `37500d3e3b231452b7281a78374f32d04c6445ea`**; advancing interactive Pages-only or documentation-only work must not move `v1`.
 - The stable `v1` tree carries the reviewed Contributed world-coherence release candidate lineage from **`889cb85d8280d91067bc83865e9ee5d86481edaf`** while joining the prior stable lineage by a force-free merge/fast-forward-compatible release commit. The release candidate's main Verify **#974 / `32828134385`** and Pages **#175 / `32828134299`** were GREEN before the stable ref advanced.
 
 ### Frozen product boundaries
@@ -54,4 +54,4 @@ Source/build success alone does not prove visible browser behavior. Conversely, 
 
 There is no active static-SVG, interactive Contributed, stable-release, public-setup, Category-navigator, camera-coherence, cosmic-background, pan-containment, or one-click production acceptance blocker.
 
-Treat **`main = 1aef658c62ea7d3f6617e4ef92e61c4183089ab0`** and **`v1 = 452a197889cf83cdddf779a70102188056bc5f36`** as distinct reviewed baselines. Keep the proven semantic/rendering contract frozen until new evidence identifies a concrete product, maintenance, performance, or release gap.
+Treat **runtime baseline `1aef658c62ea7d3f6617e4ef92e61c4183089ab0`** and **stable reusable `v1 = 452a197889cf83cdddf779a70102188056bc5f36`** as distinct reviewed baselines. Documentation-only main commits may advance independently. Keep the proven semantic/rendering contract frozen until new evidence identifies a concrete product, maintenance, performance, or release gap.
