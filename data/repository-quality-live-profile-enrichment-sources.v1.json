@@ -38,6 +38,13 @@
       "presentationExpected": "available"
     },
     {
+      "repositoryKey": "nekomario28/OffHandCombat",
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-offhandcombat-calibration.v1.json",
+      "caseId": "offhandcombat-fork-local-default-master-317c2ec",
+      "presentationExpected": "available"
+    },
+    {
       "repositoryKey": "nekomario28/gz-sim",
       "mode": "fork-local-delta",
       "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",

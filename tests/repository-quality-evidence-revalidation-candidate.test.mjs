@@ -193,6 +193,7 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   const ftbSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   const buyclaimSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   const freetokenSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
+  const offhandSource = loaded.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
   assert.equal(antiSource.calibratedRevision, "154bd1a1085412ca7a5abe797abf253a43dd29a8");
   assert.equal(ipmSource.calibratedRevision, null);
   assert.equal(ftbSource.calibratedRevision, "8caaab65266a94e7bdedc6ad2f66030c7e394edf");
@@ -204,6 +205,10 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(freetokenSource.fixtureSnapshotDate, "2026-08-24");
   assert.equal(freetokenSource.presentationExpected, "available");
   assert.equal(freetokenSource.qualityAttributionScope, "local-delta");
+  assert.equal(offhandSource.calibratedRevision, "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1");
+  assert.equal(offhandSource.fixtureSnapshotDate, "2026-08-04");
+  assert.equal(offhandSource.presentationExpected, "available");
+  assert.equal(offhandSource.qualityAttributionScope, "local-delta");
 
   const candidate = applyBoundedEvidenceRevalidation(loaded.sourceDiagnostics, antifullbrightObservation);
   assert.equal(candidate.target.disposition, "revalidated-unchanged-exact-revision");
@@ -211,8 +216,8 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(candidate.target.effectiveSnapshotDate, "2026-08-25");
   assert.equal(candidate.assessmentFreshnessChanged, false);
   assert.equal(candidate.presentationFreshnessChanged, false);
-  assert.deepEqual(candidate.evidenceFreshness.assessment.snapshotDates, ["2026-07-25", "2026-08-24", "2026-08-25"]);
-  assert.deepEqual(candidate.evidenceFreshness.portfolioPresentation.snapshotDates, ["2026-07-25", "2026-08-24", "2026-08-25"]);
+  assert.deepEqual(candidate.evidenceFreshness.assessment.snapshotDates, ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"]);
+  assert.deepEqual(candidate.evidenceFreshness.portfolioPresentation.snapshotDates, ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"]);
 
   const baseline = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision });
   const revalidated = buildLiveQualitySidecarCandidates(live.graph, {
@@ -221,8 +226,8 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   });
 
   assert.deepEqual(revalidated.assessment, baseline.assessment);
-  assert.equal(revalidated.presentation.diagnostics.available, 7);
-  assert.equal(revalidated.presentation.diagnostics.unavailable, 8);
+  assert.equal(revalidated.presentation.diagnostics.available, 8);
+  assert.equal(revalidated.presentation.diagnostics.unavailable, 7);
   assert.equal(revalidated.diagnostics.revalidation.target.disposition, "revalidated-unchanged-exact-revision");
   assert.equal(revalidated.diagnostics.invariants.automaticEvidenceRefreshPerformed, false);
   assert.equal(revalidated.diagnostics.invariants.explicitBoundedRevalidationPerformed, true);
@@ -259,6 +264,13 @@ test("real AntiFullbright re-observation matches the frozen exact revision witho
   assert.equal(freetoken.evidenceFreshness.snapshotDate, "2026-08-24");
   assert.equal(freetoken.evidenceFreshness.revalidatedAt, undefined);
   assert.equal(freetoken.evidenceFreshness.observedRevision, undefined);
+
+  const offhand = revalidated.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
+  assert.equal(offhand.overlayState, "available");
+  assert.equal(offhand.qualityAttributionScope, "local-delta");
+  assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");
+  assert.equal(offhand.evidenceFreshness.revalidatedAt, undefined);
+  assert.equal(offhand.evidenceFreshness.observedRevision, undefined);
 
   const otherAvailable = revalidated.presentation.repositories.filter(
     (entry) => entry.overlayState === "available" && entry.repositoryKey !== "nekomario28/antifullbright",

@@ -27,10 +27,10 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-test("bounded source manifest resolves eight evidence sources and seven portfolio Quality presentations", () => {
+test("bounded source manifest resolves nine evidence sources and eight portfolio Quality presentations", () => {
   const result = loadBoundedQualityEnrichments(manifest, { manifestPath });
-  assert.equal(result.enrichments.length, 8);
-  assert.equal(result.expectedPresentationAvailable, 7);
+  assert.equal(result.enrichments.length, 9);
+  assert.equal(result.expectedPresentationAvailable, 8);
   assert.deepEqual(result.enrichments.map((entry) => entry.repositoryKey).sort(), [
     "nekomario28/antifullbright",
     "nekomario28/buyclaimchunks",
@@ -38,6 +38,7 @@ test("bounded source manifest resolves eight evidence sources and seven portfoli
     "nekomario28/ftbpublicclaims",
     "nekomario28/gz-sim",
     "nekomario28/interactive-project-map",
+    "nekomario28/offhandcombat",
     "nekomario28/projexd_group10",
     "nekomario28/turing-smart-screen-python-owl",
   ]);
@@ -61,9 +62,14 @@ test("bounded source manifest resolves eight evidence sources and seven portfoli
   assert.equal(freetoken.presentationExpected, "available");
   assert.equal(freetoken.fixtureSnapshotDate, "2026-08-24");
   assert.equal(freetoken.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");
+  const offhand = result.sourceDiagnostics.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
+  assert.equal(offhand.qualityAttributionScope, "local-delta");
+  assert.equal(offhand.presentationExpected, "available");
+  assert.equal(offhand.fixtureSnapshotDate, "2026-08-04");
+  assert.equal(offhand.calibratedRevision, "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1");
 });
 
-test("live sidecar keeps all 15 repositories while bounded Quality yields 7 available and 8 unavailable", () => {
+test("live sidecar keeps all 15 repositories while bounded Quality yields 8 available and 7 unavailable", () => {
   const result = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision: revision });
 
   assert.equal(result.assessment.repositories.length, 15);
@@ -71,13 +77,13 @@ test("live sidecar keeps all 15 repositories while bounded Quality yields 7 avai
   assert.equal(result.presentation.diagnostics.graphRepositories, 15);
   assert.equal(result.presentation.diagnostics.assessmentRepositories, 15);
   assert.equal(result.presentation.diagnostics.joinedRepositories, 15);
-  assert.equal(result.presentation.diagnostics.available, 7);
-  assert.equal(result.presentation.diagnostics.unavailable, 8);
+  assert.equal(result.presentation.diagnostics.available, 8);
+  assert.equal(result.presentation.diagnostics.unavailable, 7);
   assert.equal(result.presentation.diagnostics.strictJoin, true);
   assert.equal(result.diagnostics.sourceGraph.ownedRepositoryCount, 14);
   assert.equal(result.diagnostics.sourceGraph.repositoryNodeCount, 15);
-  assert.equal(result.diagnostics.assessment.quality.applied, 8);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 7);
+  assert.equal(result.diagnostics.assessment.quality.applied, 9);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 8);
   assert.equal(result.diagnostics.invariants.forkQualityUsesProvenanceAwareBundle, true);
   assert.equal(result.diagnostics.invariants.forkPortfolioQualityUsesLocalDeltaOnly, true);
 
@@ -88,6 +94,7 @@ test("live sidecar keeps all 15 repositories while bounded Quality yields 7 avai
   const ipm = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/interactive-project-map");
   const buyclaim = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   const freetoken = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
+  const offhand = result.presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
 
   assert.equal(antifullbright.qualityAttributionScope, "repository-snapshot");
   assert.equal(antifullbright.overlayState, "available");
@@ -136,6 +143,17 @@ test("live sidecar keeps all 15 repositories while bounded Quality yields 7 avai
   for (const id of ["maintainability", "security-safety", "stewardship"]) {
     assert.equal(freetoken.views.detail.segments.find((segment) => segment.id === id).findingState, "unknown", id);
   }
+
+  assert.equal(offhand.qualityAttributionScope, "local-delta");
+  assert.equal(offhand.overlayState, "available");
+  assert.equal(offhand.overlay.coverage.targetDimensions, 6);
+  assert.equal(offhand.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);
+  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  const offhandSecurity = offhand.views.detail.segments.find((segment) => segment.id === "security-safety");
+  assert.equal(offhandSecurity.applicability, "optional");
+  assert.equal(offhandSecurity.findingState, "supports");
 });
 
 test("live sidecar builder binds presentation identity to a newer live graph generatedAt instead of frozen fixture timestamps", () => {
@@ -146,8 +164,8 @@ test("live sidecar builder binds presentation identity to a newer live graph gen
   assert.equal(result.assessment.generatedAt, graph.generatedAt);
   assert.equal(result.presentation.source.graphGeneratedAt, graph.generatedAt);
   assert.equal(result.diagnostics.sourceGraph.generatedAt, graph.generatedAt);
-  assert.equal(result.presentation.diagnostics.available, 7);
-  assert.equal(result.presentation.diagnostics.unavailable, 8);
+  assert.equal(result.presentation.diagnostics.available, 8);
+  assert.equal(result.presentation.diagnostics.unavailable, 7);
 });
 
 test("live sidecar builder fails closed when a bounded enrichment repository disappears from the live graph", () => {
@@ -202,10 +220,10 @@ test("CLI writes assessment, presentation and diagnostics beside a live graph wi
     const diagnostics = JSON.parse(fs.readFileSync(path.join(outDir, "quality-sidecar-diagnostics.json"), "utf8"));
     assert.equal(assessment.generatedAt, "2026-08-25T04:31:00.000Z");
     assert.equal(presentation.source.graphGeneratedAt, live.graph.generatedAt);
-    assert.equal(presentation.diagnostics.available, 7);
-    assert.equal(presentation.diagnostics.unavailable, 8);
+    assert.equal(presentation.diagnostics.available, 8);
+    assert.equal(presentation.diagnostics.unavailable, 7);
     assert.equal(diagnostics.sourceGraph.repositoryNodeCount, 15);
-    assert.equal(diagnostics.expectedPresentationAvailable, 7);
+    assert.equal(diagnostics.expectedPresentationAvailable, 8);
     assert.equal(diagnostics.invariants.publicationPerformed, false);
     assert.equal(result.presentation.presentationId, "ipm-repository-quality-presentation-v1");
   } finally {

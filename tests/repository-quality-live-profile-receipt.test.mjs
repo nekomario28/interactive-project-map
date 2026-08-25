@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while eight assessment sources yield seven portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while nine assessment sources yield eight portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 8);
-  assert.equal(result.diagnostics.assessment.quality.applied, 8);
-  assert.equal(result.diagnostics.assessment.quality.partial, 8);
+  assert.equal(result.diagnostics.assessment.quality.requested, 9);
+  assert.equal(result.diagnostics.assessment.quality.applied, 9);
+  assert.equal(result.diagnostics.assessment.quality.partial, 9);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 7);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 8);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 7);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 8);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 7);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 8);
 });
 
-test("current-profile Quality overlay summaries keep fork attribution safe and admit FreeToken with bounded local-delta evidence", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit FreeToken and OffHandCombat with bounded local-delta evidence", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -137,6 +137,7 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
   assert.equal(buyclaim.evidenceFreshness.snapshotDate, "2026-07-25");
 
   const freetoken = byKey.get("nekomario28/freetoken");
+  const offhand = byKey.get("nekomario28/offhandcombat");
   assert.equal(freetoken.qualityAttributionScope, "local-delta");
   assert.equal(freetoken.overlayState, "available");
   assert.equal(freetoken.overlay.coverage.targetDimensions, 6);
@@ -150,6 +151,18 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
     assert.equal(freetoken.overlay.segments.find((segment) => segment.id === id).findingState, "unknown", id);
   }
   assert.equal(freetoken.evidenceFreshness.snapshotDate, "2026-08-24");
+
+  assert.equal(offhand.qualityAttributionScope, "local-delta");
+  assert.equal(offhand.overlayState, "available");
+  assert.equal(offhand.overlay.coverage.targetDimensions, 6);
+  assert.equal(offhand.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(offhand.overlay.targetFindingCounts.supports, 5);
+  assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(offhand.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  const offhandSecurity = offhand.overlay.segments.find((segment) => segment.id === "security-safety");
+  assert.equal(offhandSecurity.applicability, "optional");
+  assert.equal(offhandSecurity.findingState, "supports");
+  assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");
 });
 
 test("Quality enrichment does not smuggle L1 relation knowledge into the live L0 sidecar", () => {
@@ -176,6 +189,7 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
     "nekomario28/turing-smart-screen-python-owl",
     "nekomario28/buyclaimchunks",
     "nekomario28/freetoken",
+    "nekomario28/offhandcombat",
   ]) {
     assert.deepEqual(byKey.get(key).context.relation, {
       ownership: "owned",
