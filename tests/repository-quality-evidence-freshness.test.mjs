@@ -35,15 +35,15 @@ function freshness(scope, sourceCount, snapshotDates) {
 
 test("live presentation exposes presentation-eligible frozen freshness without laundering older evidence dates", () => {
   const result = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision: revision });
-  const mixedDates = ["2026-07-25", "2026-08-24", "2026-08-25"];
+  const mixedDates = ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"];
 
   assert.deepEqual(
     result.presentation.evidenceFreshness,
-    freshness("portfolio-quality-presented-sources", 7, mixedDates),
+    freshness("portfolio-quality-presented-sources", 8, mixedDates),
   );
   assert.deepEqual(
     result.diagnostics.evidenceFreshness.assessment,
-    freshness("all-bounded-assessment-sources", 8, mixedDates),
+    freshness("all-bounded-assessment-sources", 9, mixedDates),
   );
   assert.deepEqual(result.diagnostics.evidenceFreshness.portfolioPresentation, result.presentation.evidenceFreshness);
   assert.equal(result.diagnostics.invariants.frozenEvidenceFreshnessIsPublished, true);
@@ -52,8 +52,8 @@ test("live presentation exposes presentation-eligible frozen freshness without l
 
   const available = result.presentation.repositories.filter((entry) => entry.overlayState === "available");
   const unavailable = result.presentation.repositories.filter((entry) => entry.overlayState !== "available");
-  assert.equal(available.length, 7);
-  assert.equal(unavailable.length, 8);
+  assert.equal(available.length, 8);
+  assert.equal(unavailable.length, 7);
   assert.ok(available.every((entry) => entry.evidenceFreshness?.state === "frozen-snapshot"));
   assert.ok(available.every((entry) => entry.evidenceFreshness?.automaticRefresh === false));
   assert.ok(unavailable.every((entry) => entry.evidenceFreshness == null));
@@ -76,6 +76,15 @@ test("live presentation exposes presentation-eligible frozen freshness without l
   assert.equal(freetokenSource?.presentationExpected, "available");
   assert.equal(freetokenSource?.qualityAttributionScope, "local-delta");
   assert.equal(freetokenSource?.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");
+
+  const offhand = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/offhandcombat");
+  assert.ok(offhand, "OffHandCombat must receive local-delta frozen presentation freshness");
+  assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");
+  const offhandSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
+  assert.equal(offhandSource?.fixtureSnapshotDate, "2026-08-04");
+  assert.equal(offhandSource?.presentationExpected, "available");
+  assert.equal(offhandSource?.qualityAttributionScope, "local-delta");
+  assert.equal(offhandSource?.calibratedRevision, "317c2ec2e40325d8dd41f6dc5e730e95c97ae7e1");
 
   for (const key of [
     "nekomario28/interactive-project-map",
@@ -132,7 +141,7 @@ test("freshness provenance follows frozen evidence dates, not graph regeneration
   const result = buildLiveQualitySidecarCandidates(graph, { generatorRevision: revision });
 
   assert.equal(result.presentation.source.graphGeneratedAt, "2030-01-01T00:00:00.000Z");
-  assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-24", "2026-08-25"]);
+  assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"]);
   assert.equal(result.presentation.evidenceFreshness.oldestSnapshotDate, "2026-07-25");
   assert.equal(result.presentation.evidenceFreshness.newestSnapshotDate, "2026-08-25");
   assert.equal(result.diagnostics.evidenceFreshness.assessment.newestSnapshotDate, "2026-08-25");
@@ -159,11 +168,11 @@ test("assessment freshness may include an unavailable older fork source without 
 
     assert.deepEqual(
       result.diagnostics.evidenceFreshness.assessment,
-      freshness("all-bounded-assessment-sources", 8, ["2026-07-25", "2026-08-23", "2026-08-24", "2026-08-25"]),
+      freshness("all-bounded-assessment-sources", 9, ["2026-07-25", "2026-08-04", "2026-08-23", "2026-08-24", "2026-08-25"]),
     );
     assert.deepEqual(
       result.presentation.evidenceFreshness,
-      freshness("portfolio-quality-presented-sources", 7, ["2026-07-25", "2026-08-24", "2026-08-25"]),
+      freshness("portfolio-quality-presented-sources", 8, ["2026-07-25", "2026-08-04", "2026-08-24", "2026-08-25"]),
     );
     const gzSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
     assert.equal(gzSource?.fixtureSnapshotDate, "2026-08-23");
