@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while six assessment sources yield five portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while seven assessment sources yield six portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 6);
-  assert.equal(result.diagnostics.assessment.quality.applied, 6);
-  assert.equal(result.diagnostics.assessment.quality.partial, 6);
+  assert.equal(result.diagnostics.assessment.quality.requested, 7);
+  assert.equal(result.diagnostics.assessment.quality.applied, 7);
+  assert.equal(result.diagnostics.assessment.quality.partial, 7);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 5);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 10);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 5);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 6);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 9);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 6);
 });
 
-test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright plus BuyClaimChunks", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright, BuyClaimChunks, and FTBPublicClaims", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -96,6 +96,20 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
   assert.equal(antifullbright.overlay.targetFindingCounts.unknown, 1);
   assert.equal(antifullbright.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
   assert.equal(antifullbright.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
+
+  const ftb = byKey.get("nekomario28/ftbpublicclaims");
+  assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
+  assert.equal(ftb.overlayState, "available");
+  assert.equal(ftb.overlay.coverage.targetDimensions, 6);
+  assert.equal(ftb.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(ftb.overlay.targetFindingCounts.supports, 5);
+  assert.equal(ftb.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(ftb.overlay.segments.find((segment) => segment.id === "verification").findingState, "unknown");
+  assert.equal(ftb.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "supports");
+  const ftbSecurity = ftb.overlay.segments.find((segment) => segment.id === "security-safety");
+  assert.equal(ftbSecurity.applicability, "optional");
+  assert.equal(ftbSecurity.findingState, "supports");
+  assert.equal(ftb.evidenceFreshness.snapshotDate, "2026-08-25");
 
   const gz = byKey.get("nekomario28/gz-sim");
   assert.equal(gz.qualityAttributionScope, "local-delta");
@@ -128,6 +142,11 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
   const byKey = new Map(result.assessment.repositories.map((entry) => [entry.identity.repositoryKey, entry]));
 
   assert.deepEqual(byKey.get("nekomario28/antifullbright").context.relation, {
+    ownership: "owned",
+    collaboration: "unknown",
+    lineage: "original",
+  });
+  assert.deepEqual(byKey.get("nekomario28/ftbpublicclaims").context.relation, {
     ownership: "owned",
     collaboration: "unknown",
     lineage: "original",
