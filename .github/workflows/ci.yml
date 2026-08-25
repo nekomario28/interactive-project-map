@@ -57,8 +57,23 @@ jobs:
             --max-missing-rate 0 \
             --output .tmp/standard-taxonomy-evaluation.json
 
-      - name: Verify
-        run: npm run verify
+      - name: Verify typecheck
+        run: npm run typecheck
+
+      - name: Verify worker dry-run
+        run: npm run check:worker
+
+      - name: Verify Action syntax
+        run: npm run check:action
+
+      - name: Verify Pages syntax
+        run: npm run check:pages
+
+      - name: Verify node tests
+        run: npm test
+
+      - name: Verify validation
+        run: npm run validate
 
       - name: Render twelve-preset comparison
         run: node scripts/render-preset-comparison.mjs .tmp/project-map/graph.json .tmp/preset-comparison
