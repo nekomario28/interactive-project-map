@@ -65,7 +65,7 @@ function runCandidate(dir, suffix = "") {
   };
 }
 
-test("explicit candidate CLI reproduces the frozen current profile with nine bounded Quality enrichments", () => {
+test("explicit candidate CLI reproduces the frozen current profile with ten bounded Quality enrichments", () => {
   const run = runCandidate(tempDir());
 
   assert.equal(validateRepositoryAssessmentArtifact(run.assessment), true);
@@ -89,10 +89,10 @@ test("explicit candidate CLI reproduces the frozen current profile with nine bou
 
   assert.equal(run.diagnostics.quality.repositoriesBefore, 15);
   assert.equal(run.diagnostics.quality.repositoriesAfter, 15);
-  assert.equal(run.diagnostics.quality.requested, 9);
-  assert.equal(run.diagnostics.quality.applied, 9);
-  assert.equal(run.diagnostics.quality.partial, 9);
-  assert.equal(run.diagnostics.quality.acquisitionElevated, 9);
+  assert.equal(run.diagnostics.quality.requested, 10);
+  assert.equal(run.diagnostics.quality.applied, 10);
+  assert.equal(run.diagnostics.quality.partial, 10);
+  assert.equal(run.diagnostics.quality.acquisitionElevated, 10);
 
   const qualityKeys = run.assessment.repositories
     .filter((entry) => entry.quality.state === "partial")
@@ -107,6 +107,7 @@ test("explicit candidate CLI reproduces the frozen current profile with nine bou
     "nekomario28/interactive-project-map",
     "nekomario28/offhandcombat",
     "nekomario28/projexd_group10",
+    "nekomario28/sable",
     "nekomario28/turing-smart-screen-python-owl",
   ]);
 
@@ -114,6 +115,7 @@ test("explicit candidate CLI reproduces the frozen current profile with nine bou
   const buyclaim = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/buyclaimchunks");
   const freetoken = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/freetoken");
   const offhand = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/offhandcombat");
+  const sable = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/sable");
   const ftb = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/ftbpublicclaims");
   const gz = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/gz-sim");
   const turing = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
@@ -141,6 +143,14 @@ test("explicit candidate CLI reproduces the frozen current profile with nine bou
   assert.equal(offhand.quality.value.localDelta.quality.value.dimensions.maintainability.findingState, "unknown");
   assert.equal(offhand.quality.value.localDelta.quality.value.dimensions["security-safety"].applicability, "optional");
   assert.equal(offhand.quality.value.localDelta.quality.value.dimensions["security-safety"].findingState, "supports");
+  assert.equal(sable.quality.value.contractId, "ipm-repository-fork-quality-v1");
+  assert.equal(sable.quality.value.localDelta.quality.state, "partial");
+  assert.equal(sable.quality.value.personalAttribution.qualitySource, "local-delta-only");
+  assert.equal(sable.quality.value.personalAttribution.upstreamInheritedEvidenceEligible, false);
+  assert.equal(sable.quality.value.localDelta.quality.value.dimensions.verification.findingState, "supports");
+  assert.equal(sable.quality.value.localDelta.quality.value.dimensions.maintainability.findingState, "unknown");
+  assert.equal(sable.quality.value.localDelta.quality.value.dimensions["security-safety"].applicability, "optional");
+  assert.equal(sable.quality.value.localDelta.quality.value.dimensions["security-safety"].findingState, "supports");
   assert.equal(ftb.quality.value.dimensions.verification.findingState, "unknown");
   assert.equal(ftb.quality.value.dimensions.maintainability.findingState, "supports");
   assert.equal(ftb.quality.value.dimensions["security-safety"].applicability, "optional");
@@ -154,18 +164,19 @@ test("explicit candidate CLI reproduces the frozen current profile with nine bou
   assert.equal(fs.readFileSync(run.graphPath, "utf8"), run.graphBefore);
 });
 
-test("candidate output projects to eight attribution-safe available and seven unavailable Quality overlays", () => {
+test("candidate output projects to nine attribution-safe available and six unavailable Quality overlays", () => {
   const run = runCandidate(tempDir());
   const projection = buildRepositoryQualityOverlayProjection(policy, run.assessment);
 
   assert.equal(projection.repositories.length, 15);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 8);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 7);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 9);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 6);
 
   const antifullbright = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
   const buyclaim = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   const freetoken = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
   const offhand = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
+  const sable = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/sable");
   const ftb = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   const gz = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   const turing = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
@@ -197,6 +208,15 @@ test("candidate output projects to eight attribution-safe available and seven un
   assert.equal(offhand.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
   assert.equal(offhand.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
   assert.equal(offhand.overlay.segments.find((segment) => segment.id === "security-safety").findingState, "supports");
+  assert.equal(sable.qualityAttributionScope, "local-delta");
+  assert.equal(sable.overlayState, "available");
+  assert.equal(sable.overlay.coverage.targetDimensions, 6);
+  assert.equal(sable.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(sable.overlay.targetFindingCounts.supports, 5);
+  assert.equal(sable.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(sable.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  assert.equal(sable.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
+  assert.equal(sable.overlay.segments.find((segment) => segment.id === "security-safety").findingState, "supports");
   assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
   assert.equal(ftb.overlayState, "available");
   assert.equal(ftb.overlay.coverage.targetDimensions, 6);
