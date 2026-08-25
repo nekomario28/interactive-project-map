@@ -14,6 +14,8 @@ This stage admits the already-reviewed Sable calibration into the bounded live Q
 - evidence snapshot date: `2026-08-21`
 - open Sable PR #84 remains excluded
 
+The calibration exact head `a7dfbb38885027a1b00356b54bbf49158aaf9975` passed full Verify #1037 / `32855890609`, including the twelve-preset comparison, Chromium, and iPhone WebKit browser gates, before the calibration advanced to `main`.
+
 ## Admitted presentation
 
 - attribution scope: `local-delta`
@@ -30,3 +32,5 @@ This stage admits the already-reviewed Sable calibration into the bounded live Q
 - production ranking: disabled
 
 The live profile remains a strict 15-repository join. This admission changes bounded Quality coverage from 9 assessment sources / 8 available overlays / 7 unavailable overlays to 10 / 9 / 6. It must preserve frozen evidence freshness and all existing fork attribution, visual-authority, no-score, and no-ranking invariants.
+
+Promotion of this admission is separate from calibration: only an exact live-admission head that passes the repository Verify, twelve-preset comparison, Chromium, and iPhone WebKit gates may advance. Stable `v1` remains unchanged.
