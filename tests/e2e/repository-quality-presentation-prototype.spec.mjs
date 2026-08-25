@@ -50,10 +50,11 @@ async function cardLayoutMetrics(page) {
 
 async function expectCompleteLayout(page, expectedDimensions) {
   await expect(page.locator(".quality-card")).toHaveCount(15);
-  await expect(page.locator('[data-quality-state="available"]')).toHaveCount(3);
-  await expect(page.locator('[data-quality-state="unavailable"]')).toHaveCount(12);
-  await expect(page.locator(".quality-unavailable-ring")).toHaveCount(12);
+  await expect(page.locator('[data-quality-state="available"]')).toHaveCount(4);
+  await expect(page.locator('[data-quality-state="unavailable"]')).toHaveCount(11);
+  await expect(page.locator(".quality-unavailable-ring")).toHaveCount(11);
   await expect(page.locator("[data-dimension]")).toHaveCount(expectedDimensions);
+  await expect(page.locator('[data-repository-key="nekomario28/antifullbright"][data-quality-state="available"]')).toHaveCount(1);
 
   const metrics = await cardLayoutMetrics(page);
   for (const metric of metrics) {
@@ -80,8 +81,8 @@ test("compact Quality presentation remains attribution-safe and non-overlapping 
 
   await expect(page.locator('svg[data-theme="dark"]')).toBeVisible();
   await expectCompleteLayout(page, 0);
-  await expect(page.locator('[data-pattern="supports-solid"]')).toHaveCount(3);
-  await expect(page.locator('[data-pattern="unavailable-sparse-dash"]')).toHaveCount(12);
+  await expect(page.locator('[data-pattern="supports-solid"]')).toHaveCount(4);
+  await expect(page.locator('[data-pattern="unavailable-sparse-dash"]')).toHaveCount(11);
 
   await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/dark/repository-quality-compact.png" });
 });
@@ -93,8 +94,8 @@ test("detail Quality presentation keeps dimension identity only on attribution-s
   await mountSvg(page, svg, 900, theme.page);
 
   await expect(page.locator('svg[data-theme="dark"]')).toBeVisible();
-  await expectCompleteLayout(page, 24);
-  await expect(page.getByText("3 available · 12 unavailable · Structure remains default")).toBeVisible();
+  await expectCompleteLayout(page, 32);
+  await expect(page.getByText("4 available · 11 unavailable · Structure remains default")).toBeVisible();
 
   await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/dark/repository-quality-detail.png" });
 });
@@ -107,8 +108,8 @@ test("light compact Quality presentation preserves attribution-safe semantics, p
 
   await expect(page.locator('svg[data-theme="light"]')).toBeVisible();
   await expectCompleteLayout(page, 0);
-  await expect(page.locator('[data-pattern="supports-solid"]')).toHaveCount(3);
-  await expect(page.locator('[data-pattern="unavailable-sparse-dash"]')).toHaveCount(12);
+  await expect(page.locator('[data-pattern="supports-solid"]')).toHaveCount(4);
+  await expect(page.locator('[data-pattern="unavailable-sparse-dash"]')).toHaveCount(11);
 
   await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/light/repository-quality-compact.png" });
 });
@@ -120,8 +121,8 @@ test("light detail Quality presentation preserves fixed dimensions and fork-safe
   await mountSvg(page, svg, 900, theme.page);
 
   await expect(page.locator('svg[data-theme="light"]')).toBeVisible();
-  await expectCompleteLayout(page, 24);
-  await expect(page.getByText("3 available · 12 unavailable · Structure remains default")).toBeVisible();
+  await expectCompleteLayout(page, 32);
+  await expect(page.getByText("4 available · 11 unavailable · Structure remains default")).toBeVisible();
 
   await page.locator("#frame").screenshot({ path: ".tmp/playwright-visual/light/repository-quality-detail.png" });
 });

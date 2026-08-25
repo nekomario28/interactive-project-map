@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while fork attribution yields three portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while five assessment sources yield four portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 4);
-  assert.equal(result.diagnostics.assessment.quality.applied, 4);
-  assert.equal(result.diagnostics.assessment.quality.partial, 4);
+  assert.equal(result.diagnostics.assessment.quality.requested, 5);
+  assert.equal(result.diagnostics.assessment.quality.applied, 5);
+  assert.equal(result.diagnostics.assessment.quality.partial, 5);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 3);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 12);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 3);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 4);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 11);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 4);
 });
 
-test("current-profile Quality overlay summaries use local-delta-only scope for forks", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright snapshot Quality", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -86,6 +86,16 @@ test("current-profile Quality overlay summaries use local-delta-only scope for f
   assert.equal(group10.overlay.targetFindingCounts.supports, 2);
   assert.equal(group10.overlay.targetFindingCounts.weakens, 1);
   assert.equal(group10.overlay.targetFindingCounts.unknown, 3);
+
+  const antifullbright = byKey.get("nekomario28/antifullbright");
+  assert.equal(antifullbright.qualityAttributionScope, "repository-snapshot");
+  assert.equal(antifullbright.overlayState, "available");
+  assert.equal(antifullbright.overlay.coverage.targetDimensions, 6);
+  assert.equal(antifullbright.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(antifullbright.overlay.targetFindingCounts.supports, 5);
+  assert.equal(antifullbright.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(antifullbright.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  assert.equal(antifullbright.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
 
   const gz = byKey.get("nekomario28/gz-sim");
   assert.equal(gz.qualityAttributionScope, "local-delta");
@@ -104,6 +114,11 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
   const result = runLiveProjection();
   const byKey = new Map(result.assessment.repositories.map((entry) => [entry.identity.repositoryKey, entry]));
 
+  assert.deepEqual(byKey.get("nekomario28/antifullbright").context.relation, {
+    ownership: "owned",
+    collaboration: "unknown",
+    lineage: "original",
+  });
   assert.deepEqual(byKey.get("nekomario28/projexd_group10").context.relation, {
     ownership: "owned",
     collaboration: "unknown",
