@@ -141,6 +141,147 @@
         "releaseCount": "Maturity/context only",
         "recentCommitActivity": "Activity/lifecycle context only"
       }
+    },
+    {
+      "id": "ftbpublicclaims-neoforge-active-carrier",
+      "repository": "nekomario28/FTBPublicClaims",
+      "revision": "12c57797637d1903ad7f76174e6d676364a3c339",
+      "context": {
+        "category": "game-modding",
+        "artifacts": ["game-mod"],
+        "relation": {
+          "ownership": "owned",
+          "collaboration": "unknown",
+          "lineage": "original"
+        }
+      },
+      "carrier": {
+        "kind": "pull-request",
+        "number": 1,
+        "state": "open-draft",
+        "base": "public-claim-context",
+        "head": "neoforge-1.21.1-port"
+      },
+      "release": "0.2.0-SNAPSHOT",
+      "evidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The active-carrier README documents the one-realm public-claim model, commands, configuration, personal/public capacity isolation, exact Minecraft/NeoForge/FTB compatibility, automated validation, and the migration boundary for unreleased multi-project development saves."
+          }
+        ],
+        "verification": [
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#195@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact carrier passed clean Java 21 build and distributable-JAR audit, FTB Chunks client ABI inspection, real Xvfb mouse interaction, combined NeoForge GameTests, and second-JVM dedicated-server persistence validation."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Validate-compatible-FTB-stack#20@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "A separate exact-head compatibility run passed compile/test/JAR audit, runtime dependency metadata checks, FTB Chunks 2101.1.21 client-map ABI inspection, and combined NeoForge GameTests."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "build.gradle+gradle.properties@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact carrier records Java 21, Minecraft 1.21.1, NeoForge 21.1.242, Architectury 13.0.8, FTB Chunks 2101.1.21 with minimum 2101.1.20, FTB Teams 2101.1.10, FTB Library 2101.1.34, and the Gradle build contract; the clean CI build and distributable-JAR audit succeeded at this revision."
+          }
+        ],
+        "maintainability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "FTBServerTeamBridge.java+README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "Version-sensitive FTB Teams/Chunks integration is isolated behind a dedicated bridge and the README explicitly identifies the compatibility boundary; this supports the bounded architectural claim without asserting broad long-term maintainability for every component."
+          }
+        ],
+        "interoperability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The carrier documents coexistence with BuyClaimChunks Continued, separate personal/public capacity and ownership domains, exact supported FTB ranges, client/server installation requirements, and the verified private-ABI boundary."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Validate-compatible-FTB-stack#20@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact head passed the compatible FTB stack with FTB Chunks 2101.1.21, validated runtime dependency metadata and client-map ABI, and ran combined NeoForge GameTests with BuyClaimChunks Continued present."
+          }
+        ],
+        "security-safety": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The active carrier documents fail-safe ownership boundaries: public claims do not overwrite personal/party claims, public capacity is isolated, fake-player editing is disabled by default, explosion and mob-grief terrain damage are disabled by default, payload changes are bounded, and legacy multi-team saves are not auto-merged when ownership could conflict."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "LICENSE+gradle.properties+README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The carrier records MIT licensing, explicit 0.2.0-SNAPSHOT identity, exact compatibility and migration boundaries, and a documented validation contract; the snapshot/draft state is preserved as lifecycle context rather than presented as a stable release."
+          }
+        ]
+      },
+      "expected": {
+        "findings": {
+          "understandability": "supports",
+          "verification": "supports",
+          "reproducibility": "supports",
+          "maintainability": "supports",
+          "interoperability": "supports",
+          "security-safety": "supports",
+          "stewardship": "supports"
+        },
+        "applicability": {
+          "security-safety": "optional"
+        },
+        "confidence": {
+          "targetDimensions": 6,
+          "inspectedDimensions": 6,
+          "directionalDimensions": 6
+        },
+        "carrierMerged": false,
+        "stableRelease": false,
+        "collaboration": "unknown",
+        "compositeQualityScore": null,
+        "compositeConfidenceScore": null
+      },
+      "excludedSignals": {
+        "stars": "Impact only",
+        "forks": "Impact only",
+        "releaseCount": "Maturity/context only",
+        "recentCommitActivity": "Activity/lifecycle context only",
+        "draftPullRequestState": "Maturity/context only; does not negate directly observed Quality"
+      }
     }
   ]
 }
