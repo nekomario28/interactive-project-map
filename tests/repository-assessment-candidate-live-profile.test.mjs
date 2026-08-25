@@ -115,8 +115,8 @@ test("explicit candidate CLI reproduces the frozen current profile with six boun
   assert.equal(antifullbright.quality.value.dimensions["security-safety"].applicability, "optional");
   assert.equal(buyclaim.quality.value.contractId, "ipm-repository-fork-quality-v1");
   assert.equal(buyclaim.quality.value.localDelta.quality.state, "partial");
-  assert.equal(buyclaim.quality.value.localDelta.quality.dimensions.maintainability.findingState, "unknown");
-  assert.equal(buyclaim.quality.value.localDelta.quality.dimensions["security-safety"].applicability, "optional");
+  assert.equal(buyclaim.quality.value.personalAttribution.qualitySource, "local-delta-only");
+  assert.equal(buyclaim.quality.value.personalAttribution.upstreamInheritedEvidenceEligible, false);
   assert.equal(gz.quality.value.contractId, "ipm-repository-fork-quality-v1");
   assert.equal(gz.quality.value.localDelta.quality.state, "not-applicable");
   assert.equal(turing.quality.value.contractId, "ipm-repository-fork-quality-v1");
