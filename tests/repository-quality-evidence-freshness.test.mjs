@@ -38,11 +38,11 @@ test("live presentation exposes only presentation-eligible frozen freshness whil
 
   assert.deepEqual(
     result.presentation.evidenceFreshness,
-    freshness("portfolio-quality-presented-sources", 4),
+    freshness("portfolio-quality-presented-sources", 5),
   );
   assert.deepEqual(
     result.diagnostics.evidenceFreshness.assessment,
-    freshness("all-bounded-assessment-sources", 5),
+    freshness("all-bounded-assessment-sources", 6),
   );
   assert.deepEqual(result.diagnostics.evidenceFreshness.portfolioPresentation, result.presentation.evidenceFreshness);
   assert.equal(result.diagnostics.invariants.frozenEvidenceFreshnessIsPublished, true);
@@ -52,8 +52,8 @@ test("live presentation exposes only presentation-eligible frozen freshness whil
 
   const available = result.presentation.repositories.filter((entry) => entry.overlayState === "available");
   const unavailable = result.presentation.repositories.filter((entry) => entry.overlayState !== "available");
-  assert.equal(available.length, 4);
-  assert.equal(unavailable.length, 11);
+  assert.equal(available.length, 5);
+  assert.equal(unavailable.length, 10);
   assert.ok(available.every((entry) => entry.evidenceFreshness?.state === "frozen-snapshot"));
   assert.ok(available.every((entry) => entry.evidenceFreshness?.snapshotDate === "2026-08-25"));
   assert.ok(available.every((entry) => entry.evidenceFreshness?.automaticRefresh === false));
@@ -62,6 +62,10 @@ test("live presentation exposes only presentation-eligible frozen freshness whil
   const antifullbright = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/antifullbright");
   assert.ok(antifullbright, "AntiFullbright must receive frozen presentation freshness with its admitted repository-snapshot Quality");
   assert.equal(antifullbright.evidenceFreshness.snapshotDate, "2026-08-25");
+
+  const ftb = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/ftbpublicclaims");
+  assert.ok(ftb, "FTBPublicClaims default snapshot must receive frozen presentation freshness");
+  assert.equal(ftb.evidenceFreshness.snapshotDate, "2026-08-25");
 
   const projexd = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/projexd_group10");
   assert.ok(projexd, "case-insensitive source/presentation join must preserve ProjExD_Group10 freshness");
@@ -129,11 +133,11 @@ test("assessment freshness may include an unavailable fork source without leakin
 
     assert.deepEqual(
       result.diagnostics.evidenceFreshness.assessment,
-      freshness("all-bounded-assessment-sources", 5, ["2026-08-24", "2026-08-25"]),
+      freshness("all-bounded-assessment-sources", 6, ["2026-08-24", "2026-08-25"]),
     );
     assert.deepEqual(
       result.presentation.evidenceFreshness,
-      freshness("portfolio-quality-presented-sources", 4, ["2026-08-25"]),
+      freshness("portfolio-quality-presented-sources", 5, ["2026-08-25"]),
     );
     const gzSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
     assert.equal(gzSource?.fixtureSnapshotDate, "2026-08-24");
