@@ -57,6 +57,13 @@
       "fixture": "fixtures/repository-fork-quality-buyclaimchunks-calibration.v1.json",
       "caseId": "buyclaimchunks-fork-local-default-main-1.1.1",
       "presentationExpected": "available"
+    },
+    {
+      "repositoryKey": "nekomario28/FreeToken",
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-freetoken-calibration.v1.json",
+      "caseId": "freetoken-fork-local-default-main-moe-telemetry-b2c0f16",
+      "presentationExpected": "available"
     }
   ]
 }

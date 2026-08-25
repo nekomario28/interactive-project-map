@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while seven assessment sources yield six portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while eight assessment sources yield seven portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 7);
-  assert.equal(result.diagnostics.assessment.quality.applied, 7);
-  assert.equal(result.diagnostics.assessment.quality.partial, 7);
+  assert.equal(result.diagnostics.assessment.quality.requested, 8);
+  assert.equal(result.diagnostics.assessment.quality.applied, 8);
+  assert.equal(result.diagnostics.assessment.quality.partial, 8);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 6);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 9);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 6);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 7);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 8);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 7);
 });
 
-test("current-profile Quality overlay summaries keep fork attribution safe and admit AntiFullbright, BuyClaimChunks, and FTBPublicClaims", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit FreeToken with bounded local-delta evidence", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -135,6 +135,21 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
   assert.equal(buyclaimSecurity.applicability, "optional");
   assert.equal(buyclaimSecurity.findingState, "supports");
   assert.equal(buyclaim.evidenceFreshness.snapshotDate, "2026-07-25");
+
+  const freetoken = byKey.get("nekomario28/freetoken");
+  assert.equal(freetoken.qualityAttributionScope, "local-delta");
+  assert.equal(freetoken.overlayState, "available");
+  assert.equal(freetoken.overlay.coverage.targetDimensions, 6);
+  assert.equal(freetoken.overlay.coverage.inspectedDimensions, 3);
+  assert.equal(freetoken.overlay.targetFindingCounts.supports, 3);
+  assert.equal(freetoken.overlay.targetFindingCounts.unknown, 3);
+  for (const id of ["understandability", "verification", "reproducibility"]) {
+    assert.equal(freetoken.overlay.segments.find((segment) => segment.id === id).findingState, "supports", id);
+  }
+  for (const id of ["maintainability", "security-safety", "stewardship"]) {
+    assert.equal(freetoken.overlay.segments.find((segment) => segment.id === id).findingState, "unknown", id);
+  }
+  assert.equal(freetoken.evidenceFreshness.snapshotDate, "2026-08-24");
 });
 
 test("Quality enrichment does not smuggle L1 relation knowledge into the live L0 sidecar", () => {
@@ -156,21 +171,18 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
     collaboration: "unknown",
     lineage: "original",
   });
-  assert.deepEqual(byKey.get("nekomario28/gz-sim").context.relation, {
-    ownership: "owned",
-    collaboration: "unknown",
-    lineage: "fork",
-  });
-  assert.deepEqual(byKey.get("nekomario28/turing-smart-screen-python-owl").context.relation, {
-    ownership: "owned",
-    collaboration: "unknown",
-    lineage: "fork",
-  });
-  assert.deepEqual(byKey.get("nekomario28/buyclaimchunks").context.relation, {
-    ownership: "owned",
-    collaboration: "unknown",
-    lineage: "fork",
-  });
+  for (const key of [
+    "nekomario28/gz-sim",
+    "nekomario28/turing-smart-screen-python-owl",
+    "nekomario28/buyclaimchunks",
+    "nekomario28/freetoken",
+  ]) {
+    assert.deepEqual(byKey.get(key).context.relation, {
+      ownership: "owned",
+      collaboration: "unknown",
+      lineage: "fork",
+    });
+  }
 });
 
 test("current contributed ProjExD_4 remains semantic-context unresolved and cannot be Quality-enriched through the L0 path", () => {

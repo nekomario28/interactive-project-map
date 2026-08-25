@@ -65,7 +65,7 @@ function runCandidate(dir, suffix = "") {
   };
 }
 
-test("explicit candidate CLI reproduces the frozen current profile with seven bounded Quality enrichments", () => {
+test("explicit candidate CLI reproduces the frozen current profile with eight bounded Quality enrichments", () => {
   const run = runCandidate(tempDir());
 
   assert.equal(validateRepositoryAssessmentArtifact(run.assessment), true);
@@ -89,10 +89,10 @@ test("explicit candidate CLI reproduces the frozen current profile with seven bo
 
   assert.equal(run.diagnostics.quality.repositoriesBefore, 15);
   assert.equal(run.diagnostics.quality.repositoriesAfter, 15);
-  assert.equal(run.diagnostics.quality.requested, 7);
-  assert.equal(run.diagnostics.quality.applied, 7);
-  assert.equal(run.diagnostics.quality.partial, 7);
-  assert.equal(run.diagnostics.quality.acquisitionElevated, 7);
+  assert.equal(run.diagnostics.quality.requested, 8);
+  assert.equal(run.diagnostics.quality.applied, 8);
+  assert.equal(run.diagnostics.quality.partial, 8);
+  assert.equal(run.diagnostics.quality.acquisitionElevated, 8);
 
   const qualityKeys = run.assessment.repositories
     .filter((entry) => entry.quality.state === "partial")
@@ -101,6 +101,7 @@ test("explicit candidate CLI reproduces the frozen current profile with seven bo
   assert.deepEqual(qualityKeys, [
     "nekomario28/antifullbright",
     "nekomario28/buyclaimchunks",
+    "nekomario28/freetoken",
     "nekomario28/ftbpublicclaims",
     "nekomario28/gz-sim",
     "nekomario28/interactive-project-map",
@@ -110,6 +111,7 @@ test("explicit candidate CLI reproduces the frozen current profile with seven bo
 
   const antifullbright = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/antifullbright");
   const buyclaim = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/buyclaimchunks");
+  const freetoken = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/freetoken");
   const ftb = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/ftbpublicclaims");
   const gz = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/gz-sim");
   const turing = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
@@ -119,6 +121,16 @@ test("explicit candidate CLI reproduces the frozen current profile with seven bo
   assert.equal(buyclaim.quality.value.localDelta.quality.state, "partial");
   assert.equal(buyclaim.quality.value.personalAttribution.qualitySource, "local-delta-only");
   assert.equal(buyclaim.quality.value.personalAttribution.upstreamInheritedEvidenceEligible, false);
+  assert.equal(freetoken.quality.value.contractId, "ipm-repository-fork-quality-v1");
+  assert.equal(freetoken.quality.value.localDelta.quality.state, "partial");
+  assert.equal(freetoken.quality.value.personalAttribution.qualitySource, "local-delta-only");
+  assert.equal(freetoken.quality.value.personalAttribution.upstreamInheritedEvidenceEligible, false);
+  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.understandability.findingState, "supports");
+  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.verification.findingState, "supports");
+  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.reproducibility.findingState, "supports");
+  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.maintainability.findingState, "unknown");
+  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions["security-safety"].findingState, "unknown");
+  assert.equal(freetoken.quality.value.localDelta.quality.value.dimensions.stewardship.findingState, "unknown");
   assert.equal(ftb.quality.value.dimensions.verification.findingState, "unknown");
   assert.equal(ftb.quality.value.dimensions.maintainability.findingState, "supports");
   assert.equal(ftb.quality.value.dimensions["security-safety"].applicability, "optional");
@@ -132,16 +144,17 @@ test("explicit candidate CLI reproduces the frozen current profile with seven bo
   assert.equal(fs.readFileSync(run.graphPath, "utf8"), run.graphBefore);
 });
 
-test("candidate output projects to six attribution-safe available and nine unavailable Quality overlays", () => {
+test("candidate output projects to seven attribution-safe available and eight unavailable Quality overlays", () => {
   const run = runCandidate(tempDir());
   const projection = buildRepositoryQualityOverlayProjection(policy, run.assessment);
 
   assert.equal(projection.repositories.length, 15);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 6);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 9);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 7);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 8);
 
   const antifullbright = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
   const buyclaim = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
+  const freetoken = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
   const ftb = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   const gz = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   const turing = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
@@ -155,6 +168,15 @@ test("candidate output projects to six attribution-safe available and nine unava
   const buyclaimSecurity = buyclaim.overlay.segments.find((segment) => segment.id === "security-safety");
   assert.equal(buyclaimSecurity.applicability, "optional");
   assert.equal(buyclaimSecurity.findingState, "supports");
+  assert.equal(freetoken.qualityAttributionScope, "local-delta");
+  assert.equal(freetoken.overlayState, "available");
+  assert.equal(freetoken.overlay.coverage.targetDimensions, 6);
+  assert.equal(freetoken.overlay.coverage.inspectedDimensions, 3);
+  assert.equal(freetoken.overlay.targetFindingCounts.supports, 3);
+  assert.equal(freetoken.overlay.targetFindingCounts.unknown, 3);
+  assert.equal(freetoken.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  assert.equal(freetoken.overlay.segments.find((segment) => segment.id === "security-safety").findingState, "unknown");
+  assert.equal(freetoken.overlay.segments.find((segment) => segment.id === "stewardship").findingState, "unknown");
   assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
   assert.equal(ftb.overlayState, "available");
   assert.equal(ftb.overlay.coverage.targetDimensions, 6);

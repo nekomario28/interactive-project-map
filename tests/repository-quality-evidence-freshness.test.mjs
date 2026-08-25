@@ -35,15 +35,15 @@ function freshness(scope, sourceCount, snapshotDates) {
 
 test("live presentation exposes presentation-eligible frozen freshness without laundering older evidence dates", () => {
   const result = buildLiveQualitySidecarCandidates(live.graph, { generatorRevision: revision });
-  const mixedDates = ["2026-07-25", "2026-08-25"];
+  const mixedDates = ["2026-07-25", "2026-08-24", "2026-08-25"];
 
   assert.deepEqual(
     result.presentation.evidenceFreshness,
-    freshness("portfolio-quality-presented-sources", 6, mixedDates),
+    freshness("portfolio-quality-presented-sources", 7, mixedDates),
   );
   assert.deepEqual(
     result.diagnostics.evidenceFreshness.assessment,
-    freshness("all-bounded-assessment-sources", 7, mixedDates),
+    freshness("all-bounded-assessment-sources", 8, mixedDates),
   );
   assert.deepEqual(result.diagnostics.evidenceFreshness.portfolioPresentation, result.presentation.evidenceFreshness);
   assert.equal(result.diagnostics.invariants.frozenEvidenceFreshnessIsPublished, true);
@@ -52,8 +52,8 @@ test("live presentation exposes presentation-eligible frozen freshness without l
 
   const available = result.presentation.repositories.filter((entry) => entry.overlayState === "available");
   const unavailable = result.presentation.repositories.filter((entry) => entry.overlayState !== "available");
-  assert.equal(available.length, 6);
-  assert.equal(unavailable.length, 9);
+  assert.equal(available.length, 7);
+  assert.equal(unavailable.length, 8);
   assert.ok(available.every((entry) => entry.evidenceFreshness?.state === "frozen-snapshot"));
   assert.ok(available.every((entry) => entry.evidenceFreshness?.automaticRefresh === false));
   assert.ok(unavailable.every((entry) => entry.evidenceFreshness == null));
@@ -66,6 +66,16 @@ test("live presentation exposes presentation-eligible frozen freshness without l
   assert.equal(buyclaimSource?.fixtureSnapshotDate, "2026-07-25");
   assert.equal(buyclaimSource?.presentationExpected, "available");
   assert.equal(buyclaimSource?.qualityAttributionScope, "local-delta");
+
+  const freetoken = available.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/freetoken");
+  assert.ok(freetoken, "FreeToken must receive local-delta frozen presentation freshness");
+  assert.equal(freetoken.evidenceFreshness.snapshotDate, "2026-08-24");
+
+  const freetokenSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
+  assert.equal(freetokenSource?.fixtureSnapshotDate, "2026-08-24");
+  assert.equal(freetokenSource?.presentationExpected, "available");
+  assert.equal(freetokenSource?.qualityAttributionScope, "local-delta");
+  assert.equal(freetokenSource?.calibratedRevision, "b2c0f162ae74c22898fb61b7369b4d7a3474bbfa");
 
   for (const key of [
     "nekomario28/interactive-project-map",
@@ -122,7 +132,7 @@ test("freshness provenance follows frozen evidence dates, not graph regeneration
   const result = buildLiveQualitySidecarCandidates(graph, { generatorRevision: revision });
 
   assert.equal(result.presentation.source.graphGeneratedAt, "2030-01-01T00:00:00.000Z");
-  assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-25"]);
+  assert.deepEqual(result.presentation.evidenceFreshness.snapshotDates, ["2026-07-25", "2026-08-24", "2026-08-25"]);
   assert.equal(result.presentation.evidenceFreshness.oldestSnapshotDate, "2026-07-25");
   assert.equal(result.presentation.evidenceFreshness.newestSnapshotDate, "2026-08-25");
   assert.equal(result.diagnostics.evidenceFreshness.assessment.newestSnapshotDate, "2026-08-25");
@@ -133,7 +143,7 @@ test("assessment freshness may include an unavailable older fork source without 
   const dir = tempDir();
   try {
     const forkFixture = JSON.parse(fs.readFileSync(path.join(root, "fixtures/repository-fork-quality-provenance-calibration.v1.json"), "utf8"));
-    forkFixture.snapshotDate = "2026-08-24";
+    forkFixture.snapshotDate = "2026-08-23";
     const fixturePath = path.join(dir, "older-gz-source.json");
     fs.writeFileSync(fixturePath, `${JSON.stringify(forkFixture, null, 2)}\n`, "utf8");
 
@@ -149,14 +159,14 @@ test("assessment freshness may include an unavailable older fork source without 
 
     assert.deepEqual(
       result.diagnostics.evidenceFreshness.assessment,
-      freshness("all-bounded-assessment-sources", 7, ["2026-07-25", "2026-08-24", "2026-08-25"]),
+      freshness("all-bounded-assessment-sources", 8, ["2026-07-25", "2026-08-23", "2026-08-24", "2026-08-25"]),
     );
     assert.deepEqual(
       result.presentation.evidenceFreshness,
-      freshness("portfolio-quality-presented-sources", 6, ["2026-07-25", "2026-08-25"]),
+      freshness("portfolio-quality-presented-sources", 7, ["2026-07-25", "2026-08-24", "2026-08-25"]),
     );
     const gzSource = result.diagnostics.enrichmentSources.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
-    assert.equal(gzSource?.fixtureSnapshotDate, "2026-08-24");
+    assert.equal(gzSource?.fixtureSnapshotDate, "2026-08-23");
     assert.equal(result.presentation.repositories.find((entry) => String(entry.repositoryKey).toLowerCase() === "nekomario28/gz-sim")?.evidenceFreshness, undefined);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
