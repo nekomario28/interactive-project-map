@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Static SVG inherited sans fallback passed exact-head Verify #932 on d405d85a5882bcf196c8b76977bd1d33c3a9ae2a.
-export const PUBLIC_ACTION_REF = "d405d85a5882bcf196c8b76977bd1d33c3a9ae2a";
+// Stable-v1 Contributed halo candidate aa063946a9bd8b3bb7d7d9d3f917cacfaf9d0f39 passed exact-head Verify #976 on the v1 substrate.
+export const PUBLIC_ACTION_REF = "aa063946a9bd8b3bb7d7d9d3f917cacfaf9d0f39";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `

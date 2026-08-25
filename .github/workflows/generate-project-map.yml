@@ -38,10 +38,10 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Static SVG font-inheritance implementation: Action d405d85a5882bcf196c8b76977bd1d33c3a9ae2a passed
-# Verify #932, including local Action smoke, standard taxonomy, twelve-preset comparison,
-# Chromium browser E2E and iPhone WebKit smoke. It preserves the pre-profile-import v1
-# visual/semantic contract while adding only inherited sans-serif font fallback at the SVG root.
+# Stable-v1 Contributed halo candidate: Action aa063946a9bd8b3bb7d7d9d3f917cacfaf9d0f39 passed
+# Verify #976 on the v1 substrate, including local Action smoke, standard taxonomy,
+# twelve-preset comparison, Chromium browser E2E and iPhone WebKit smoke. It preserves
+# inherited sans-serif fallback while restoring shared outward-only Contributed halo semantics.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@d405d85a5882bcf196c8b76977bd1d33c3a9ae2a
+        uses: nekomario28/interactive-project-map@aa063946a9bd8b3bb7d7d9d3f917cacfaf9d0f39
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
