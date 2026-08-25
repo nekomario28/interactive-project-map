@@ -12,7 +12,7 @@ test("Contributed uses a warm, distinct Galaxy palette in both themes", () => {
   assert.notEqual(palette("dark").contributed, palette("dark").group);
 });
 
-test("static Galaxy Contributed nodes rely on the distinct status color without an extra node halo", () => {
+test("static Galaxy Contributed nodes rely on the distinct status color without an extra halo", () => {
   const colors = palette("dark");
   const markup = nodeMarkup({
     id: "repository:outside/project",
@@ -28,7 +28,7 @@ test("static Galaxy Contributed nodes rely on the distinct status color without 
   assert.doesNotMatch(markup, /stroke="#d9847b"/);
 });
 
-test("browser emphasis keeps Contributed in the Galaxy world but outside owned swept space", async () => {
+test("browser emphasis keeps Contributed out of owned swept space without fake membership", async () => {
   const source = await readFile(new URL("../scripts/public-contributed-emphasis.js", import.meta.url), "utf8");
   assert.match(source, /const CONTRIBUTED = "#E69F00"/);
   assert.match(source, /\["galaxy-classic", "galaxy-systems", "galaxy-hybrid"\]/);
@@ -36,13 +36,11 @@ test("browser emphasis keeps Contributed in the Galaxy world but outside owned s
   assert.match(source, /edge\?\.type !== "contribution"/);
   assert.match(source, /function ownedSweepEnvelope\(owner\)/);
   assert.match(source, /groupRadius \+ localRadius/);
-  assert.match(source, /function externalHaloTargets\(external, sweepRadius\)/);
+  assert.match(source, /state\.style === "galaxy-systems" \? "external-rail" : "external-orbit"/);
+  assert.match(source, /railStartX = owner\.x \+ sweepRadius \+ 150/);
   assert.match(source, /baseRadius = Math\.max\(345, sweepRadius \+ 125\)/);
-  assert.match(source, /runtime\.placement = "external-halo-orbit"/);
-  assert.match(source, /target\.phase \+= target\.direction \* TAU/);
+  assert.match(source, /target\.placement !== "external-orbit"/);
   assert.match(source, /ProjectMapContributedEmphasis/);
-  assert.doesNotMatch(source, /external-rail/);
-  assert.doesNotMatch(source, /systemsRailTargets/);
   assert.doesNotMatch(source, /ctx\./);
   assert.doesNotMatch(source, /drawNodesAndLabels/);
   assert.doesNotMatch(source, /setLineDash/);
