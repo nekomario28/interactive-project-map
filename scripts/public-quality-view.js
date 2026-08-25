@@ -44,6 +44,20 @@
     return value;
   }
 
+  function sanitizeFrozenEvidenceFreshness(value, label) {
+    if (value == null) return null;
+    const freshness = object(value, label);
+    const snapshotDate = typeof freshness.snapshotDate === "string" ? freshness.snapshotDate : "";
+    if (freshness.state !== "frozen-snapshot" || freshness.automaticRefresh !== false || !/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate)) {
+      throw new Error(`${label} must describe a non-auto-refreshed frozen snapshot`);
+    }
+    const parsed = new Date(`${snapshotDate}T00:00:00Z`);
+    if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== snapshotDate) {
+      throw new Error(`${label}.snapshotDate is invalid`);
+    }
+    return { state: "frozen-snapshot", snapshotDate, automaticRefresh: false };
+  }
+
   function setState(next, error = null) {
     runtime.state = next;
     runtime.error = error;
@@ -165,6 +179,7 @@
       repositoryKey,
       overlayState: "available",
       unavailableReason: null,
+      evidenceFreshness: sanitizeFrozenEvidenceFreshness(entry.evidenceFreshness, `presentation.repositories[${index}].evidenceFreshness`),
       views: {
         compact: sanitizeCompact(entry.views?.compact),
         detail: sanitizeDetail(entry.views?.detail),
@@ -320,6 +335,9 @@
       return;
     }
     appendDetail("Quality evidence", entry.views.detail.coverage.label);
+    if (entry.evidenceFreshness) {
+      appendDetail("Quality evidence snapshot", `${entry.evidenceFreshness.snapshotDate} · frozen · not automatically refreshed`);
+    }
     appendDetail("Quality findings", findingSummary(entry.views.compact));
     appendDetail("Quality dimensions", dimensionSummary(entry.views.detail));
     detailsMeta.hidden = false;
