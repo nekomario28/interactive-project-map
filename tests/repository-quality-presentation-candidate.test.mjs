@@ -31,7 +31,7 @@ function assessment() {
   }).artifact;
 }
 
-test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/3/12 attribution-safe diagnostics", () => {
+test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/4/11 attribution-safe diagnostics", () => {
   const model = buildRepositoryQualityPresentationCandidate(live.graph, assessment());
   assert.equal(model.presentationId, "ipm-repository-quality-presentation-v1");
   assert.equal(model.status, "experimental-non-default");
@@ -39,8 +39,8 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
     graphRepositories: 15,
     assessmentRepositories: 15,
     joinedRepositories: 15,
-    available: 3,
-    unavailable: 12,
+    available: 4,
+    unavailable: 11,
     missingAssessmentGraphNodeIds: [],
     orphanAssessmentGraphNodeIds: [],
     strictJoin: true,
@@ -53,10 +53,15 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
 
   const gz = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   const turing = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
+  const antifullbright = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
   assert.equal(gz.qualityAttributionScope, "local-delta");
   assert.equal(gz.overlayState, "unavailable");
   assert.equal(turing.qualityAttributionScope, "local-delta");
   assert.equal(turing.overlayState, "available");
+  assert.equal(antifullbright.qualityAttributionScope, "repository-snapshot");
+  assert.equal(antifullbright.overlayState, "available");
+  assert.equal(antifullbright.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  assert.equal(antifullbright.views.detail.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
 });
 
 test("presentation candidate fails closed on membership mismatch", () => {
@@ -88,8 +93,8 @@ test("CLI writes only derived presentation and optional diagnostics while preser
     ]);
 
     assert.equal(model.diagnostics.joinedRepositories, 15);
-    assert.equal(model.diagnostics.available, 3);
-    assert.equal(model.diagnostics.unavailable, 12);
+    assert.equal(model.diagnostics.available, 4);
+    assert.equal(model.diagnostics.unavailable, 11);
     assert.equal(JSON.parse(fs.readFileSync(outPath, "utf8")).presentationId, "ipm-repository-quality-presentation-v1");
     assert.deepEqual(JSON.parse(fs.readFileSync(diagnosticsPath, "utf8")), model.diagnostics);
     assert.equal(fs.readFileSync(graphPath, "utf8"), graphBytes);
