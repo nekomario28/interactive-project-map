@@ -65,7 +65,7 @@ function runCandidate(dir, suffix = "") {
   };
 }
 
-test("explicit candidate CLI reproduces the frozen current profile with five bounded Quality enrichments", () => {
+test("explicit candidate CLI reproduces the frozen current profile with six bounded Quality enrichments", () => {
   const run = runCandidate(tempDir());
 
   assert.equal(validateRepositoryAssessmentArtifact(run.assessment), true);
@@ -89,10 +89,10 @@ test("explicit candidate CLI reproduces the frozen current profile with five bou
 
   assert.equal(run.diagnostics.quality.repositoriesBefore, 15);
   assert.equal(run.diagnostics.quality.repositoriesAfter, 15);
-  assert.equal(run.diagnostics.quality.requested, 5);
-  assert.equal(run.diagnostics.quality.applied, 5);
-  assert.equal(run.diagnostics.quality.partial, 5);
-  assert.equal(run.diagnostics.quality.acquisitionElevated, 5);
+  assert.equal(run.diagnostics.quality.requested, 6);
+  assert.equal(run.diagnostics.quality.applied, 6);
+  assert.equal(run.diagnostics.quality.partial, 6);
+  assert.equal(run.diagnostics.quality.acquisitionElevated, 6);
 
   const qualityKeys = run.assessment.repositories
     .filter((entry) => entry.quality.state === "partial")
@@ -100,6 +100,7 @@ test("explicit candidate CLI reproduces the frozen current profile with five bou
     .sort();
   assert.deepEqual(qualityKeys, [
     "nekomario28/antifullbright",
+    "nekomario28/buyclaimchunks",
     "nekomario28/gz-sim",
     "nekomario28/interactive-project-map",
     "nekomario28/projexd_group10",
@@ -107,10 +108,15 @@ test("explicit candidate CLI reproduces the frozen current profile with five bou
   ]);
 
   const antifullbright = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/antifullbright");
+  const buyclaim = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/buyclaimchunks");
   const gz = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/gz-sim");
   const turing = run.assessment.repositories.find((entry) => entry.identity.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
   assert.equal(antifullbright.quality.value.dimensions.maintainability.findingState, "unknown");
   assert.equal(antifullbright.quality.value.dimensions["security-safety"].applicability, "optional");
+  assert.equal(buyclaim.quality.value.contractId, "ipm-repository-fork-quality-v1");
+  assert.equal(buyclaim.quality.value.localDelta.quality.state, "partial");
+  assert.equal(buyclaim.quality.value.localDelta.quality.dimensions.maintainability.findingState, "unknown");
+  assert.equal(buyclaim.quality.value.localDelta.quality.dimensions["security-safety"].applicability, "optional");
   assert.equal(gz.quality.value.contractId, "ipm-repository-fork-quality-v1");
   assert.equal(gz.quality.value.localDelta.quality.state, "not-applicable");
   assert.equal(turing.quality.value.contractId, "ipm-repository-fork-quality-v1");
@@ -120,19 +126,28 @@ test("explicit candidate CLI reproduces the frozen current profile with five bou
   assert.equal(fs.readFileSync(run.graphPath, "utf8"), run.graphBefore);
 });
 
-test("candidate output projects to four attribution-safe available and eleven unavailable Quality overlays", () => {
+test("candidate output projects to five attribution-safe available and ten unavailable Quality overlays", () => {
   const run = runCandidate(tempDir());
   const projection = buildRepositoryQualityOverlayProjection(policy, run.assessment);
 
   assert.equal(projection.repositories.length, 15);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 4);
-  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 11);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "available").length, 5);
+  assert.equal(projection.repositories.filter((entry) => entry.overlayState === "unavailable").length, 10);
 
   const antifullbright = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
+  const buyclaim = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   const gz = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   const turing = projection.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
   assert.equal(antifullbright.qualityAttributionScope, "repository-snapshot");
   assert.equal(antifullbright.overlayState, "available");
+  assert.equal(buyclaim.qualityAttributionScope, "local-delta");
+  assert.equal(buyclaim.overlayState, "available");
+  assert.equal(buyclaim.overlay.coverage.targetDimensions, 6);
+  assert.equal(buyclaim.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(buyclaim.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  const buyclaimSecurity = buyclaim.overlay.segments.find((segment) => segment.id === "security-safety");
+  assert.equal(buyclaimSecurity.applicability, "optional");
+  assert.equal(buyclaimSecurity.findingState, "supports");
   assert.equal(gz.qualityAttributionScope, "local-delta");
   assert.equal(gz.overlayState, "unavailable");
   assert.equal(turing.qualityAttributionScope, "local-delta");
