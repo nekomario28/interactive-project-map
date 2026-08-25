@@ -5,7 +5,9 @@
   "license": "MIT",
   "description": "Turn a GitHub user's public repositories into an embeddable project map, JSON graph API, and interactive viewer.",
   "type": "module",
-  "engines": { "node": ">=22.18.0" },
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
@@ -24,5 +26,12 @@
     "build:pages": "node scripts/build-public-pages.mjs && node scripts/postprocess-public-pages.mjs && node scripts/apply-contributed-render-sync.mjs && node scripts/apply-dedicated-view-state.mjs && node scripts/apply-dedicated-contributed-render-sync.mjs && node scripts/apply-category-navigator.mjs && node scripts/apply-reactive-cosmic-background.mjs && node scripts/apply-quality-view.mjs",
     "build:pages:catalog": "node scripts/build.mjs"
   },
-  "devDependencies": { "@playwright/test": "1.62.1", "eslint": "10.8.1", "html-validate": "11.8.0", "stylelint": "17.14.1", "typescript": "^7.0.2", "wrangler": "^4.118.0" }
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "eslint": "^10.9.0",
+    "html-validate": "^11.10.0",
+    "stylelint": "17.14.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.125.0"
+  }
 }
