@@ -30,6 +30,14 @@
       "presentationExpected": "available"
     },
     {
+      "repositoryKey": "nekomario28/FTBPublicClaims",
+      "mode": "repository-snapshot",
+      "fixture": "fixtures/repository-quality-game-mod-calibration.v1.json",
+      "caseId": "ftbpublicclaims-game-mod-default-8caaab",
+      "evidenceField": "evidence",
+      "presentationExpected": "available"
+    },
+    {
       "repositoryKey": "nekomario28/gz-sim",
       "mode": "fork-local-delta",
       "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",
