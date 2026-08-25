@@ -99,7 +99,7 @@ test("sable verification does not claim current-default direct Actions execution
   assert.match(sourceIds, /32501210848/);
   assert.match(sourceIds, /d15a5ddccae399ae1e46cceea70c3e80e3111406/);
   assert.match(sourceIds, /d96d98dcf1df8d870d6f33483c92b2c6daa94964/);
-  assert.match(verification, /current default main differs.*only by adding AGENTS\.md/);
+  assert.match(verification, /current default main differs.*only by adding AGENTS\.md/i);
   assert.match(verification, /not a claim that Actions directly executed current commit/);
   assert.equal(entry.claimBoundaries.currentDefaultCommitDirectActionsExecution, "not-observed");
   assert.equal(entry.claimBoundaries.evidenceFreshness, "2026-08-21");
