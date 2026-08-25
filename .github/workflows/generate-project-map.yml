@@ -38,9 +38,10 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Pre-profile-import IPM visual implementation: Action c871a6e5e47b11dad5cd82ec940ca2d6efa7199e passed
-# Verify #874, including twelve-preset comparison, native Galaxy static output,
-# reactive parallax/meteor browser proof, Chromium and iPhone WebKit.
+# Static SVG font-inheritance implementation: Action d405d85a5882bcf196c8b76977bd1d33c3a9ae2a passed
+# Verify #932, including local Action smoke, standard taxonomy, twelve-preset comparison,
+# Chromium browser E2E and iPhone WebKit smoke. It preserves the pre-profile-import v1
+# visual/semantic contract while adding only inherited sans-serif font fallback at the SVG root.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -51,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@c871a6e5e47b11dad5cd82ec940ca2d6efa7199e
+        uses: nekomario28/interactive-project-map@d405d85a5882bcf196c8b76977bd1d33c3a9ae2a
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
