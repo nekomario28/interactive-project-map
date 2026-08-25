@@ -12,10 +12,13 @@ This follows the earlier profile Project Map design principle that stellar decor
 
 - Scope remains the shared interactive `/u/` surface only. Static SVG generation and the eight dedicated viewers remain intentionally unchanged.
 - Wheel input is normalized across pixel, line, and page delta modes, then capped before applying exponential zoom. This reduces device-specific jumps without adding inertial animation.
-- Wheel zoom preserves the world point under the pointer.
+- Wheel zoom preserves the world point under the pointer unless the scene guard would otherwise allow the graph to become effectively lost off-screen.
 - The interactive zoom-out floor is derived from the current scene's approximate fit zoom. The user can still explore outside the graph, but cannot shrink a normal scene into a tiny island surrounded by effectively unbounded empty space.
+- The interactive pan guard is derived from the current scene bounds and viewport. Base viewer pan ownership remains unchanged; while dragging empty space beyond the guard the camera applies bounded elastic resistance, then settles to the hard guard when the pointer interaction ends.
+- The pan guard keeps part of the graph scene inside a central viewport band instead of allowing an unbounded drift into empty background. It is a camera usability boundary only and does not alter node positions, graph semantics, Fit, Reset, or repository drag behavior.
+- Wheel, keyboard zoom, and pinch post-bounding also settle pan inside the same scene guard so zooming a previously displaced view cannot strand the graph outside the usable viewport.
 - The camera runtime is installed directly after `viewer.js`. It owns wheel and `+ / −` keyboard zoom through capture listeners and post-bounds the base viewer's pinch transform around the pinch midpoint, so all three zoom paths share the same scene-aware limits.
-- Fit, Reset, node drag, and ordinary pan remain owned by the base viewer.
+- Fit, Reset, node drag, and the primary ordinary-pan transform remain owned by the base viewer.
 
 ## Cosmic depth contract
 
@@ -40,8 +43,8 @@ This follows the earlier profile Project Map design principle that stellar decor
 
 The upgrade is gated at three levels:
 
-- source tests assert wheel normalization, shared wheel/pinch/keyboard bounds, scene-aware zoom limits, depth exponents, stable world-anchored envelope behavior, diffuse dust rather than an explicit arc, script ordering, and reduced-motion support;
-- browser tests prove pointer-anchored zoom, far < mid < near depth response, world-center envelope alignment, wrapped pan continuity, actual canvas brightness for the diffuse galaxy body, stable envelope radius under live node movement, meteor rendering, and reduced-motion freezing;
+- source tests assert wheel normalization, shared wheel/pinch/keyboard bounds, scene-aware zoom limits, scene-aware pan limits, elastic overscroll plus hard settle, depth exponents, stable world-anchored envelope behavior, diffuse dust rather than an explicit arc, script ordering, and reduced-motion support;
+- browser tests prove pointer-anchored zoom, elastic pan resistance and post-interaction containment, far < mid < near depth response, world-center envelope alignment, wrapped pan continuity, actual canvas brightness for the diffuse galaxy body, stable envelope radius under live node movement, meteor rendering, and reduced-motion freezing;
 - the existing full Pages Verify, twelve-preset comparison, Chromium, and iPhone WebKit gates remain required before promotion.
 
 The reusable static Action and stable `v1` do not need promotion for this feature because their output contract does not change.
