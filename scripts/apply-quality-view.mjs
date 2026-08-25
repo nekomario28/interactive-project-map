@@ -6,6 +6,32 @@ const MARKER = "/* IPM_QUERY_GATED_QUALITY_PRESENTATION_V1 */";
 const BOOTSTRAP = `${MARKER}
 (() => {
   const requested = new URL(location.href).searchParams.get("quality") === "1";
+
+  function installExperimentalControl() {
+    if (document.getElementById("qualityToggle")) return;
+    const host = document.querySelector(".control-cluster.view-options") || document.querySelector(".controls");
+    if (!host) return;
+    const button = document.createElement("button");
+    button.id = "qualityToggle";
+    button.type = "button";
+    button.dataset.qualityDiscoverability = "experimental";
+    button.setAttribute("aria-pressed", String(requested));
+    button.textContent = requested ? "Quality On (experimental)" : "Quality (experimental)";
+    button.title = requested
+      ? "Disable the experimental Quality overlay and return to Structure. Quality evidence may be a frozen snapshot."
+      : "Opt in to the experimental Quality overlay. Structure remains the default; Quality evidence may be a frozen snapshot.";
+    button.addEventListener("click", () => {
+      const url = new URL(location.href);
+      if (requested) url.searchParams.delete("quality");
+      else url.searchParams.set("quality", "1");
+      location.assign(url.toString());
+    });
+    host.append(button);
+  }
+
+  if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", installExperimentalControl, { once: true });
+  else installExperimentalControl();
+
   if (!requested) {
     document.body.dataset.qualityMode = "disabled";
     window.ProjectMapQualityView = Object.freeze({
