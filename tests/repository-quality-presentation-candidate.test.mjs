@@ -31,7 +31,7 @@ function assessment() {
   }).artifact;
 }
 
-test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/4/11 attribution-safe diagnostics", () => {
+test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/5/10 attribution-safe diagnostics", () => {
   const model = buildRepositoryQualityPresentationCandidate(live.graph, assessment());
   assert.equal(model.presentationId, "ipm-repository-quality-presentation-v1");
   assert.equal(model.status, "experimental-non-default");
@@ -39,8 +39,8 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
     graphRepositories: 15,
     assessmentRepositories: 15,
     joinedRepositories: 15,
-    available: 4,
-    unavailable: 11,
+    available: 5,
+    unavailable: 10,
     missingAssessmentGraphNodeIds: [],
     orphanAssessmentGraphNodeIds: [],
     strictJoin: true,
@@ -52,10 +52,16 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
   assert.equal(model.modePolicy.forkPortfolioQualityUses, "local-delta-only");
 
   const antifullbright = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/antifullbright");
+  const ftb = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/ftbpublicclaims");
   const gz = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/gz-sim");
   const turing = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/turing-smart-screen-python-owl");
   assert.equal(antifullbright.qualityAttributionScope, "repository-snapshot");
   assert.equal(antifullbright.overlayState, "available");
+  assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
+  assert.equal(ftb.overlayState, "available");
+  assert.equal(ftb.views.detail.segments.find((segment) => segment.id === "verification").findingState, "unknown");
+  assert.equal(ftb.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "supports");
+  assert.equal(ftb.views.detail.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
   assert.equal(gz.qualityAttributionScope, "local-delta");
   assert.equal(gz.overlayState, "unavailable");
   assert.equal(turing.qualityAttributionScope, "local-delta");
@@ -91,8 +97,8 @@ test("CLI writes only derived presentation and optional diagnostics while preser
     ]);
 
     assert.equal(model.diagnostics.joinedRepositories, 15);
-    assert.equal(model.diagnostics.available, 4);
-    assert.equal(model.diagnostics.unavailable, 11);
+    assert.equal(model.diagnostics.available, 5);
+    assert.equal(model.diagnostics.unavailable, 10);
     assert.equal(JSON.parse(fs.readFileSync(outPath, "utf8")).presentationId, "ipm-repository-quality-presentation-v1");
     assert.deepEqual(JSON.parse(fs.readFileSync(diagnosticsPath, "utf8")), model.diagnostics);
     assert.equal(fs.readFileSync(graphPath, "utf8"), graphBytes);
@@ -107,8 +113,8 @@ test("CLI refuses to overwrite graph, assessment, or diagnostics paths", () => {
   try {
     const graphPath = path.join(temp, "graph.json");
     const assessmentPath = path.join(temp, "assessment.json");
-    fs.writeFileSync(graphPath, `${JSON.stringify(live.graph)}\n`);
-    fs.writeFileSync(assessmentPath, `${JSON.stringify(assessment())}\n`);
+    fs.writeFileSync(graphPath, `${JSON.stringify(live.graph)}\n`, "utf8");
+    fs.writeFileSync(assessmentPath, `${JSON.stringify(assessment())}\n`, "utf8");
 
     assert.throws(
       () => runRepositoryQualityPresentationCandidateCli(["--graph", graphPath, "--assessment", assessmentPath, "--out", graphPath]),
