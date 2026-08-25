@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Pre-profile-import native IPM visuals passed Verify #874 and direct profile proof #190.
-export const PUBLIC_ACTION_REF = "c871a6e5e47b11dad5cd82ec940ca2d6efa7199e";
+// Static SVG inherited sans fallback passed exact-head Verify #932 on d405d85a5882bcf196c8b76977bd1d33c3a9ae2a.
+export const PUBLIC_ACTION_REF = "d405d85a5882bcf196c8b76977bd1d33c3a9ae2a";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `
