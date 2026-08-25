@@ -64,6 +64,13 @@
       "fixture": "fixtures/repository-fork-quality-freetoken-calibration.v1.json",
       "caseId": "freetoken-fork-local-default-main-moe-telemetry-b2c0f16",
       "presentationExpected": "available"
+    },
+    {
+      "repositoryKey": "nekomario28/OffHandCombat",
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-offhandcombat-calibration.v1.json",
+      "caseId": "offhandcombat-fork-local-default-master-317c2ec",
+      "presentationExpected": "available"
     }
   ]
 }
