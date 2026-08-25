@@ -34,7 +34,8 @@ test("reactive cosmic background composes camera deltas across depth while prese
   assert.match(source, /depthTransforms: new Map\(\)/);
   assert.match(source, /function syncDepthTransforms\(size = canvasSize\(\)\)/);
   assert.match(source, /const ratio = current\.zoom \/ previous\.zoom/);
-  assert.match(source, /const deltaX = current\.originX - ratio \* previous\.originX/);
+  assert.match(source, /const deltaX = current\.originX - ratio \* previous\.originX \+ \(ratio - 1\) \* current\.width \/ 2/);
+  assert.match(source, /const deltaY = current\.originY - ratio \* previous\.originY \+ \(ratio - 1\) \* current\.height \/ 2/);
   assert.match(source, /Math\.pow\(ratio, depth\)/);
   assert.match(source, /\(depthScale - 1\) \/ \(ratio - 1\)/);
   assert.match(source, /scale: depthScale \* old\.scale/);
