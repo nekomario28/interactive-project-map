@@ -55,23 +55,23 @@ test("frozen current profile projection reproduces full L0 diagnostics", () => {
   });
 });
 
-test("bounded Quality enrichment keeps live membership 15 -> 15 while nine assessment sources yield eight portfolio overlays", () => {
+test("bounded Quality enrichment keeps live membership 15 -> 15 while ten assessment sources yield nine portfolio overlays", () => {
   const result = runLiveProjection();
 
   assert.equal(result.assessment.repositories.length, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesBefore, 15);
   assert.equal(result.diagnostics.assessment.quality.repositoriesAfter, 15);
-  assert.equal(result.diagnostics.assessment.quality.requested, 9);
-  assert.equal(result.diagnostics.assessment.quality.applied, 9);
-  assert.equal(result.diagnostics.assessment.quality.partial, 9);
+  assert.equal(result.diagnostics.assessment.quality.requested, 10);
+  assert.equal(result.diagnostics.assessment.quality.applied, 10);
+  assert.equal(result.diagnostics.assessment.quality.partial, 10);
 
   assert.equal(result.presentation.repositories.length, 15);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 8);
-  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 7);
-  assert.equal(result.diagnostics.expectedPresentationAvailable, 8);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "available").length, 9);
+  assert.equal(result.presentation.repositories.filter((entry) => entry.overlayState === "unavailable").length, 6);
+  assert.equal(result.diagnostics.expectedPresentationAvailable, 9);
 });
 
-test("current-profile Quality overlay summaries keep fork attribution safe and admit FreeToken and OffHandCombat with bounded local-delta evidence", () => {
+test("current-profile Quality overlay summaries keep fork attribution safe and admit FreeToken, OffHandCombat, and Sable with bounded local-delta evidence", () => {
   const result = runLiveProjection();
   const byKey = new Map(result.presentation.repositories.map((entry) => [entry.repositoryKey, entry]));
 
@@ -138,6 +138,7 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
 
   const freetoken = byKey.get("nekomario28/freetoken");
   const offhand = byKey.get("nekomario28/offhandcombat");
+  const sable = byKey.get("nekomario28/sable");
   assert.equal(freetoken.qualityAttributionScope, "local-delta");
   assert.equal(freetoken.overlayState, "available");
   assert.equal(freetoken.overlay.coverage.targetDimensions, 6);
@@ -163,6 +164,18 @@ test("current-profile Quality overlay summaries keep fork attribution safe and a
   assert.equal(offhandSecurity.applicability, "optional");
   assert.equal(offhandSecurity.findingState, "supports");
   assert.equal(offhand.evidenceFreshness.snapshotDate, "2026-08-04");
+
+  assert.equal(sable.qualityAttributionScope, "local-delta");
+  assert.equal(sable.overlayState, "available");
+  assert.equal(sable.overlay.coverage.targetDimensions, 6);
+  assert.equal(sable.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(sable.overlay.targetFindingCounts.supports, 5);
+  assert.equal(sable.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(sable.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  const sableSecurity = sable.overlay.segments.find((segment) => segment.id === "security-safety");
+  assert.equal(sableSecurity.applicability, "optional");
+  assert.equal(sableSecurity.findingState, "supports");
+  assert.equal(sable.evidenceFreshness.snapshotDate, "2026-08-21");
 });
 
 test("Quality enrichment does not smuggle L1 relation knowledge into the live L0 sidecar", () => {
@@ -190,6 +203,7 @@ test("Quality enrichment does not smuggle L1 relation knowledge into the live L0
     "nekomario28/buyclaimchunks",
     "nekomario28/freetoken",
     "nekomario28/offhandcombat",
+    "nekomario28/sable",
   ]) {
     assert.deepEqual(byKey.get(key).context.relation, {
       ownership: "owned",

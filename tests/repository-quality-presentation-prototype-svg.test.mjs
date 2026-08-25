@@ -39,24 +39,25 @@ function contrastRatio(left, right) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 8/7 availability", () => {
+test("compact current-profile Quality prototype renders all fifteen repositories with attribution-safe 9/6 availability", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "compact", columns: 3 });
 
   assert.match(svg, /^<svg /);
   assert.match(svg, /data-theme="dark"/);
-  assert.match(svg, /8 available · 7 unavailable · Structure remains default/);
+  assert.match(svg, /9 available · 6 unavailable · Structure remains default/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
   assert.equal((svg.match(/class="repository-core"/g) ?? []).length, 15);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 8);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 7);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 7);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 9);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 6);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 6);
   assert.equal(svg.includes("data-dimension="), false);
   assert.match(svg, /data-repository-key="nekomario28\/antifullbright" data-quality-state="available"/);
   assert.match(svg, /data-repository-key="nekomario28\/buyclaimchunks" data-quality-state="available"/);
   assert.match(svg, /data-repository-key="nekomario28\/freetoken" data-quality-state="available"/);
   assert.match(svg, /data-repository-key="nekomario28\/ftbpublicclaims" data-quality-state="available"/);
   assert.match(svg, /data-repository-key="nekomario28\/offhandcombat" data-quality-state="available"/);
+  assert.match(svg, /data-repository-key="nekomario28\/sable" data-quality-state="available"/);
   assert.match(svg, /3\/6 interpreted/);
   assert.match(svg, /5\/6 interpreted/);
   assert.match(svg, /data-finding="supports"/);
@@ -64,13 +65,13 @@ test("compact current-profile Quality prototype renders all fifteen repositories
   assert.match(svg, /data-pattern="unavailable-sparse-dash"/);
 });
 
-test("detail current-profile Quality prototype preserves dimension identity only for eight attribution-safe repositories", () => {
+test("detail current-profile Quality prototype preserves dimension identity only for nine attribution-safe repositories", () => {
   const svg = renderRepositoryQualityPresentationPrototypeSvg(model(), { view: "detail", columns: 3 });
 
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 8);
-  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 64);
-  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 64);
-  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 7);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 9);
+  assert.equal((svg.match(/class="qseg qdetail /g) ?? []).length, 72);
+  assert.equal((svg.match(/data-dimension="/g) ?? []).length, 72);
+  assert.equal((svg.match(/class="quality-unavailable-ring"/g) ?? []).length, 6);
   assert.match(svg, /3\/6 interpreted/);
   assert.match(svg, /4\/6 interpreted/);
   assert.match(svg, /5\/6 interpreted/);
@@ -106,8 +107,8 @@ test("light theme preserves the same current-profile semantics without changing 
   assert.match(svg, /data-theme="light"/);
   assert.match(svg, /color-scheme: light/);
   assert.equal((svg.match(/class="quality-card"/g) ?? []).length, 15);
-  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 8);
-  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 7);
+  assert.equal((svg.match(/data-quality-state="available"/g) ?? []).length, 9);
+  assert.equal((svg.match(/data-quality-state="unavailable"/g) ?? []).length, 6);
   assert.equal((svg.match(/r="14"/g) ?? []).length, 15);
   assert.equal(svg.includes("data-score="), false);
   assert.equal(svg.includes("prominence"), false);
@@ -121,6 +122,7 @@ test("prototype keeps fork snapshot context separate from attribution-safe ring 
   const buyclaim = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   const freetoken = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
   const offhand = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
+  const sable = presentation.repositories.find((entry) => entry.repositoryKey === "nekomario28/sable");
   assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
   assert.equal(ftb.overlayState, "available");
   assert.equal(gz.qualityAttributionScope, "local-delta");
@@ -137,6 +139,12 @@ test("prototype keeps fork snapshot context separate from attribution-safe ring 
   assert.equal(offhand.overlayState, "available");
   assert.equal(offhand.overlay.targetFindingCounts.supports, 5);
   assert.equal(offhand.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(sable.qualityAttributionScope, "local-delta");
+  assert.equal(sable.overlayState, "available");
+  assert.equal(sable.overlay.targetFindingCounts.supports, 5);
+  assert.equal(sable.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(sable.overlay.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  assert.equal(sable.overlay.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
 
   const svg = renderRepositoryQualityPresentationPrototypeSvg(presentation, { view: "compact", columns: 5 });
   assert.match(svg, /antifullbright/);
@@ -147,6 +155,7 @@ test("prototype keeps fork snapshot context separate from attribution-safe ring 
   assert.match(svg, /BuyClaimChunks/i);
   assert.match(svg, /FreeToken/);
   assert.match(svg, /OffHandCombat/);
+  assert.match(svg, /sable/);
   assert.equal(svg.includes("data-score="), false);
   assert.equal(svg.includes("stargazers"), false);
   assert.equal(svg.includes("forks_count"), false);

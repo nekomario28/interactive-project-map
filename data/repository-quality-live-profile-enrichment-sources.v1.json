@@ -45,6 +45,13 @@
       "presentationExpected": "available"
     },
     {
+      "repositoryKey": "nekomario28/sable",
+      "mode": "fork-local-delta",
+      "fixture": "fixtures/repository-fork-quality-sable-calibration.v1.json",
+      "caseId": "sable-fork-local-default-main-1439786",
+      "presentationExpected": "available"
+    },
+    {
       "repositoryKey": "nekomario28/gz-sim",
       "mode": "fork-local-delta",
       "fixture": "fixtures/repository-fork-quality-provenance-calibration.v1.json",

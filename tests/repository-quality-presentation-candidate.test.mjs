@@ -31,7 +31,7 @@ function assessment() {
   }).artifact;
 }
 
-test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/8/7 attribution-safe diagnostics", () => {
+test("presentation candidate is strict, renderer-neutral, and reproduces current-profile 15/9/6 attribution-safe diagnostics", () => {
   const model = buildRepositoryQualityPresentationCandidate(live.graph, assessment());
   assert.equal(model.presentationId, "ipm-repository-quality-presentation-v1");
   assert.equal(model.status, "experimental-non-default");
@@ -39,8 +39,8 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
     graphRepositories: 15,
     assessmentRepositories: 15,
     joinedRepositories: 15,
-    available: 8,
-    unavailable: 7,
+    available: 9,
+    unavailable: 6,
     missingAssessmentGraphNodeIds: [],
     orphanAssessmentGraphNodeIds: [],
     strictJoin: true,
@@ -58,6 +58,7 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
   const buyclaim = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/buyclaimchunks");
   const freetoken = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/freetoken");
   const offhand = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/offhandcombat");
+  const sable = model.repositories.find((entry) => entry.repositoryKey === "nekomario28/sable");
   assert.equal(antifullbright.qualityAttributionScope, "repository-snapshot");
   assert.equal(antifullbright.overlayState, "available");
   assert.equal(ftb.qualityAttributionScope, "repository-snapshot");
@@ -98,6 +99,15 @@ test("presentation candidate is strict, renderer-neutral, and reproduces current
   assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
   assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
   assert.equal(offhand.views.detail.segments.find((segment) => segment.id === "security-safety").findingState, "supports");
+  assert.equal(sable.qualityAttributionScope, "local-delta");
+  assert.equal(sable.overlayState, "available");
+  assert.equal(sable.overlay.coverage.targetDimensions, 6);
+  assert.equal(sable.overlay.coverage.inspectedDimensions, 5);
+  assert.equal(sable.overlay.targetFindingCounts.supports, 5);
+  assert.equal(sable.overlay.targetFindingCounts.unknown, 1);
+  assert.equal(sable.views.detail.segments.find((segment) => segment.id === "maintainability").findingState, "unknown");
+  assert.equal(sable.views.detail.segments.find((segment) => segment.id === "security-safety").applicability, "optional");
+  assert.equal(sable.views.detail.segments.find((segment) => segment.id === "security-safety").findingState, "supports");
 });
 
 test("presentation candidate fails closed on membership mismatch", () => {
@@ -129,8 +139,8 @@ test("CLI writes only derived presentation and optional diagnostics while preser
     ]);
 
     assert.equal(model.diagnostics.joinedRepositories, 15);
-    assert.equal(model.diagnostics.available, 8);
-    assert.equal(model.diagnostics.unavailable, 7);
+    assert.equal(model.diagnostics.available, 9);
+    assert.equal(model.diagnostics.unavailable, 6);
     assert.equal(JSON.parse(fs.readFileSync(outPath, "utf8")).presentationId, "ipm-repository-quality-presentation-v1");
     assert.deepEqual(JSON.parse(fs.readFileSync(diagnosticsPath, "utf8")), model.diagnostics);
     assert.equal(fs.readFileSync(graphPath, "utf8"), graphBytes);
