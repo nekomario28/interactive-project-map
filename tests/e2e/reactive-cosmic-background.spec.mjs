@@ -90,7 +90,7 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   expect(before).not.toBeNull();
   expect(before.brightest).toBeGreaterThan(60);
   expect(before.snap.layers.map((layer) => layer.parallax)).toEqual([0.08, 0.18, 0.32]);
-  expect(before.snap.layers.map((layer) => layer.zoomParallax)).toEqual([0.05, 0.12, 0.22]);
+  expect(before.snap.layers.map((layer) => layer.zoomParallax)).toEqual([0.08, 0.18, 0.32]);
   const nearLayer = before.snap.layers.find((layer) => layer.id === "near");
 
   await page.evaluate(() => {
@@ -102,8 +102,8 @@ test("shared cosmic background moves continuously with camera pan and paints wra
   expect(after).not.toBeNull();
   expect(after.brightest).toBeGreaterThan(60);
   expect(after.snap.nearStar.index).toBe(before.snap.nearStar.index);
-  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * 0.32 * nearLayer.zoomScale, 3);
-  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * 0.32 * nearLayer.zoomScale, 3);
+  expect(modularDelta(after.snap.nearStar.x, before.snap.nearStar.x, before.snap.nearStar.tile.width)).toBeCloseTo(120 * nearLayer.translationFactor, 3);
+  expect(modularDelta(after.snap.nearStar.y, before.snap.nearStar.y, before.snap.nearStar.tile.height)).toBeCloseTo(-75 * nearLayer.translationFactor, 3);
 
   await context.close();
 });
@@ -147,6 +147,39 @@ test("zoom keeps its screen anchor while star depth and the galaxy envelope resp
   expect(result.after.envelope.screenRadius).toBeGreaterThan(result.before.envelope.screenRadius);
   expect(result.after.envelope.center.x).toBeCloseTo(result.originScreen.x, 5);
   expect(result.after.envelope.center.y).toBeCloseTo(result.originScreen.y, 5);
+
+  await context.close();
+});
+
+test("off-center zoom keeps a depth star on the same camera fixed point", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1400, height: 980 } });
+  const page = await context.newPage();
+  await installFixture(page);
+  await page.goto("/u/?username=example&style=galaxy-systems");
+  await expect(page.locator("#status")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => Boolean(window.ProjectMapCameraCoherence && window.ProjectMapCosmicBackground))).toBe(true);
+
+  const result = await page.evaluate(() => {
+    state.zoom = 1;
+    state.pan.x = 0;
+    state.pan.y = 0;
+    draw();
+    const before = window.ProjectMapCosmicBackground.snapshot();
+    const anchor = { x: before.nearStar.x, y: before.nearStar.y };
+    const world = screenToWorld(anchor.x, anchor.y);
+    window.ProjectMapCameraCoherence.zoomAt(anchor.x, anchor.y, 1.35);
+    const after = window.ProjectMapCosmicBackground.snapshot();
+    return { anchor, anchoredWorld: worldToScreen(world.x, world.y), before, after };
+  });
+
+  expect(result.after.zoom).toBeGreaterThan(result.before.zoom);
+  expect(result.after.nearStar.index).toBe(result.before.nearStar.index);
+  expect(Math.abs(result.anchoredWorld.x - result.anchor.x)).toBeLessThan(0.75);
+  expect(Math.abs(result.anchoredWorld.y - result.anchor.y)).toBeLessThan(0.75);
+  expect(result.after.cameraFixedPoint.x).toBeCloseTo(result.anchor.x, 5);
+  expect(result.after.cameraFixedPoint.y).toBeCloseTo(result.anchor.y, 5);
+  expect(Math.abs(result.after.nearStar.x - result.before.nearStar.x)).toBeLessThan(0.75);
+  expect(Math.abs(result.after.nearStar.y - result.before.nearStar.y)).toBeLessThan(0.75);
 
   await context.close();
 });

@@ -4,11 +4,12 @@
 (() => {
   const TILE = { width: 960, height: 720 };
   const HAZE_TILE = { width: 1680, height: 1180 };
+  const HAZE_DEPTH = 0.035;
   const GALAXY_DUST_COUNT = 64;
   const LAYERS = Object.freeze([
-    { id: "far", count: 46, parallax: 0.08, zoomParallax: 0.05, radius: [0.38, 0.72], opacity: [0.10, 0.22] },
-    { id: "mid", count: 36, parallax: 0.18, zoomParallax: 0.12, radius: [0.52, 1.02], opacity: [0.12, 0.28] },
-    { id: "near", count: 24, parallax: 0.32, zoomParallax: 0.22, radius: [0.72, 1.42], opacity: [0.15, 0.34] },
+    { id: "far", count: 46, depth: 0.08, radius: [0.38, 0.72], opacity: [0.10, 0.22] },
+    { id: "mid", count: 36, depth: 0.18, radius: [0.52, 1.02], opacity: [0.12, 0.28] },
+    { id: "near", count: 24, depth: 0.32, radius: [0.72, 1.42], opacity: [0.15, 0.34] },
   ]);
   const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
   const METEOR_MIN_DELAY = 22_000;
@@ -43,18 +44,32 @@
     return Boolean(window.matchMedia?.(REDUCED_MOTION_QUERY).matches);
   }
 
-  function effectiveParallax(layer) {
-    return motionReduced() ? 0 : layer.parallax;
+  function effectiveDepth(depth) {
+    return motionReduced() ? 0 : depth;
   }
 
-  function effectiveZoomScale(layer) {
-    if (motionReduced()) return 1;
-    return Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), layer.zoomParallax);
+  function cameraDepthTransform(depth) {
+    const effective = effectiveDepth(depth);
+    if (effective === 0) {
+      return { depth: 0, scale: 1, translationFactor: 0, translateX: 0, translateY: 0 };
+    }
+    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);
+    const scale = Math.pow(zoom, effective);
+    const translationFactor = Math.abs(zoom - 1) < 1e-6
+      ? effective
+      : (scale - 1) / (zoom - 1);
+    return {
+      depth: effective,
+      scale,
+      translationFactor,
+      translateX: state.pan.x * translationFactor,
+      translateY: state.pan.y * translationFactor,
+    };
   }
 
   function layerTile(layer) {
-    const scale = effectiveZoomScale(layer);
-    return { width: TILE.width * scale, height: TILE.height * scale, scale };
+    const transform = cameraDepthTransform(layer.depth);
+    return { width: TILE.width * transform.scale, height: TILE.height * transform.scale, scale: transform.scale, transform };
   }
 
   function scaleAroundViewport(value, center, scale) {
@@ -62,15 +77,14 @@
   }
 
   function starPoint(layer, index, width, height) {
-    const parallax = effectiveParallax(layer);
     const tile = layerTile(layer);
     const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);
     const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);
-    const baseX = unit(xSeed) * TILE.width + state.pan.x * parallax;
-    const baseY = unit(ySeed) * TILE.height + state.pan.y * parallax;
+    const baseX = unit(xSeed) * TILE.width;
+    const baseY = unit(ySeed) * TILE.height;
     return {
-      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale), tile.width),
-      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale), tile.height),
+      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + tile.transform.translateX, tile.width),
+      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + tile.transform.translateY, tile.height),
       radius: range(hash(`${username}:cosmic:${layer.id}:r:${index}`), layer.radius[0], layer.radius[1]) * Math.sqrt(tile.scale),
       opacity: range(hash(`${username}:cosmic:${layer.id}:o:${index}`), layer.opacity[0], layer.opacity[1]),
       tile,
@@ -124,15 +138,15 @@
   }
 
   function hazeScale() {
-    return motionReduced() ? 1 : Math.pow(clamp(Number(state.zoom) || 1, 0.04, 6), 0.035);
+    return cameraDepthTransform(HAZE_DEPTH).scale;
   }
 
-  function hazePoint(index, parallax, tile, width, height) {
-    const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width + state.pan.x * parallax;
-    const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height + state.pan.y * parallax;
+  function hazePoint(index, transform, tile, width, height) {
+    const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width;
+    const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height;
     return {
-      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale), tile.width),
-      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale), tile.height),
+      x: wrap(scaleAroundViewport(baseX, width / 2, tile.scale) + transform.translateX, tile.width),
+      y: wrap(scaleAroundViewport(baseY, height / 2, tile.scale) + transform.translateY, tile.height),
     };
   }
 
@@ -140,15 +154,15 @@
     const obsidian = state.style === "obsidian";
     const tint = obsidian ? [124, 110, 246] : [82, 126, 216];
     const alpha = obsidian ? 0.050 : 0.032;
+    const transform = cameraDepthTransform(HAZE_DEPTH);
     const scale = hazeScale();
     const tile = { width: HAZE_TILE.width * scale, height: HAZE_TILE.height * scale, scale };
     const radius = Math.max(340, Math.min(560, Math.max(width, height) * 0.48)) * Math.sqrt(scale);
-    const parallax = motionReduced() ? 0 : 0.035;
     const copiesX = Math.ceil(width / tile.width) + 1;
     const copiesY = Math.ceil(height / tile.height) + 1;
 
     for (let index = 0; index < 2; index += 1) {
-      const base = hazePoint(index, parallax, tile, width, height);
+      const base = hazePoint(index, transform, tile, width, height);
       for (let tileX = -1; tileX <= copiesX; tileX += 1) {
         const x = base.x + tileX * tile.width;
         if (x < -radius || x > width + radius) continue;
@@ -378,6 +392,15 @@
     ctx.lineCap = "butt";
   };
 
+  function cameraFixedPoint(size = canvasSize()) {
+    const zoom = clamp(Number(state.zoom) || 1, 0.04, 6);
+    if (Math.abs(zoom - 1) < 1e-6) return null;
+    return {
+      x: size.width / 2 - state.pan.x / (zoom - 1),
+      y: size.height / 2 - state.pan.y / (zoom - 1),
+    };
+  }
+
   function snapshot() {
     const size = canvasSize();
     const meteor = meteorStateAt(performance.now());
@@ -387,12 +410,18 @@
       pan: { x: state.pan.x, y: state.pan.y },
       zoom: state.zoom,
       tile: { ...TILE },
-      layers: LAYERS.map((layer) => ({
-        id: layer.id,
-        parallax: effectiveParallax(layer),
-        zoomParallax: layer.zoomParallax,
-        zoomScale: effectiveZoomScale(layer),
-      })),
+      layers: LAYERS.map((layer) => {
+        const transform = cameraDepthTransform(layer.depth);
+        return {
+          id: layer.id,
+          depth: layer.depth,
+          parallax: transform.depth,
+          zoomParallax: layer.depth,
+          zoomScale: transform.scale,
+          translationFactor: transform.translationFactor,
+        };
+      }),
+      cameraFixedPoint: cameraFixedPoint(size),
       nearStar: firstVisibleStar(LAYERS[2], size.width, size.height),
       envelope,
       meteor: meteor ? { active: true, ...meteor } : { active: false },

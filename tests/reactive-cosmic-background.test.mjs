@@ -28,12 +28,15 @@ test("camera coherence normalizes input and derives shared scene-aware zoom boun
 
 test("reactive cosmic background keeps pan-linked depth, zoom parallax, stable diffuse galaxy body, and sparse meteors", async () => {
   const source = await readFile(cosmicSourceUrl, "utf8");
-  assert.match(source, /parallax: 0\.08, zoomParallax: 0\.05/);
-  assert.match(source, /parallax: 0\.18, zoomParallax: 0\.12/);
-  assert.match(source, /parallax: 0\.32, zoomParallax: 0\.22/);
-  assert.match(source, /state\.pan\.x \* parallax/);
-  assert.match(source, /state\.pan\.y \* parallax/);
-  assert.match(source, /Math\.pow\(clamp\(Number\(state\.zoom\)/);
+  assert.match(source, /depth: 0\.08/);
+  assert.match(source, /depth: 0\.18/);
+  assert.match(source, /depth: 0\.32/);
+  assert.match(source, /function cameraDepthTransform\(depth\)/);
+  assert.match(source, /\(scale - 1\) \/ \(zoom - 1\)/);
+  assert.match(source, /state\.pan\.x \* translationFactor/);
+  assert.match(source, /state\.pan\.y \* translationFactor/);
+  assert.match(source, /Math\.pow\(zoom, effective\)/);
+  assert.match(source, /function cameraFixedPoint/);
   assert.match(source, /function drawGalaxyEnvelope\(width, height\)/);
   assert.match(source, /worldToScreen\(0, 0\)/);
   assert.match(source, /function measuredSceneWorldRadius\(\)/);
