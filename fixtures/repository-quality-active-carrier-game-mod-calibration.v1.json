@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "evidenceSnapshotDate": "2026-08-04",
+  "calibrationObservedAt": "2026-08-25",
+  "policyId": "ipm-repository-assessment-v1",
+  "status": "frozen-active-carrier-calibration-non-admitted",
+  "claimBoundary": "This fixture calibrates exact-revision Quality evidence from an active development carrier. It is not a live-profile source and does not authorize production admission while the verified carrier remains distinct from the repository default-branch authority presented by the portfolio graph.",
+  "cases": [
+    {
+      "id": "ftbpublicclaims-neoforge-active-carrier-12c57797",
+      "repository": "nekomario28/FTBPublicClaims",
+      "revision": "12c57797637d1903ad7f76174e6d676364a3c339",
+      "context": {
+        "category": "game-modding",
+        "artifacts": ["game-mod"],
+        "relation": {
+          "ownership": "owned",
+          "collaboration": "unknown",
+          "lineage": "original"
+        }
+      },
+      "carrier": {
+        "authorityScope": "active-development-carrier",
+        "branch": "neoforge-1.21.1-port",
+        "pullRequest": 1,
+        "pullRequestState": "open-draft",
+        "version": "0.2.0-SNAPSHOT",
+        "defaultBranch": "public-claim-context",
+        "observedDefaultBranchRevision": "8caaab65266a94e7bdedc6ad2f66030c7e394edf",
+        "authorityMatch": false,
+        "productionAdmissionEligible": false,
+        "admissionBlockReason": "The strongest current runtime evidence is attached to an unmerged draft carrier, while the live portfolio repository identity implies the default branch. Keep the calibration inert until the verified runtime authority and consumer-presented authority are aligned or the presentation explicitly models carrier scope."
+      },
+      "evidence": {
+        "understandability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The active-carrier README documents the Minecraft 1.21.1/NeoForge runtime, one-realm ownership model, participant permissions, commands and configuration, BuyClaimChunks capacity isolation, exact compatibility range, validation scope, and legacy-save migration boundary."
+          }
+        ],
+        "verification": [
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#194:30899049281@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact-head push Build #194 checked out 12c57797637d1903ad7f76174e6d676364a3c339 and passed clean Java 21 build plus distributable-JAR audit, FTB Chunks client ABI inspection, a real NeoForge client/server Xvfb mouse-input path with public claim/unclaim confirmed by RCON claims=0→1→0, all 9 required combined GameTests, and save/stop/second-JVM persistence verification."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Validate-compatible-FTB-stack#19:30899049040@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact-head push compatible-stack run #19 passed compile/test/JAR audit, runtime dependency-policy checks against BuyClaimChunks Continued, FTB Chunks 2101.1.21 map ABI verification, and combined NeoForge GameTests on the verified 2101.x stack."
+          }
+        ],
+        "reproducibility": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "build.gradle+gradle.properties@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The carrier records Java 21, Minecraft 1.21.1, NeoForge 21.1.242, the 2101.x FTB compatibility policy, Gradle build tasks, GameTest source configuration, JAR audit, and runtime validation entry points."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#194:30899049281@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "A clean checkout of the exact carrier revision reproduced the build and bounded runtime validation workflow on GitHub-hosted Ubuntu. This supports a repeatable validation recipe, not byte-for-byte deterministic artifact reproduction."
+          }
+        ],
+        "interoperability": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The active carrier documents Minecraft/NeoForge and FTB Chunks compatibility boundaries and explicitly separates BuyClaimChunks personal capacity from FTB Public Claims public capacity and ownership."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Validate-compatible-FTB-stack#19:30899049040@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact-head compatible-stack run exercised FTB Chunks 2101.1.21, FTB Teams 2101.1.10, FTB Library 2101.1.34, Architectury 13.0.8, NeoForge 21.1.242, and BuyClaimChunks Continued 1.1.1 together, including metadata-policy and client-ABI checks."
+          }
+        ],
+        "security-safety": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The carrier documents public-versus-personal ownership separation, non-overwrite behavior, public interaction policy, PvP/explosion/mob-grief/fake-player defaults, and a migration boundary that deliberately avoids auto-merging legacy claims when ownership could conflict."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#194:30899049281@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "Exact-head runtime validation exercised public claim/unclaim and interaction behavior together with BuyClaimChunks Continued and verified durable public state across a second JVM; this evidence is bounded to the tested ownership/protection/runtime contract and is not a general security audit."
+          }
+        ],
+        "stewardship": [
+          {
+            "authority": "repository-native",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "C",
+            "sourceId": "README.md@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The active carrier records its supported runtime range, exact verified dependency stack, compatibility-sensitive integration boundary, validation expectations, and conservative legacy-save migration policy."
+          },
+          {
+            "authority": "project-owned",
+            "state": "observed",
+            "finding": "supports",
+            "evidenceClass": "B",
+            "sourceId": "github-actions:Build#194:30899049281@12c57797637d1903ad7f76174e6d676364a3c339",
+            "claim": "The exact-head build includes a fail-closed distributable-JAR audit and runtime evidence spanning dependency ABI, client interaction, GameTests, and persistence. This supports bounded stewardship of the active carrier without claiming that the draft is a stable release."
+          }
+        ]
+      },
+      "expected": {
+        "findings": {
+          "understandability": "supports",
+          "verification": "supports",
+          "reproducibility": "supports",
+          "maintainability": "unknown",
+          "interoperability": "supports",
+          "security-safety": "supports",
+          "stewardship": "supports"
+        },
+        "applicability": {
+          "security-safety": "optional"
+        },
+        "confidence": {
+          "targetDimensions": 6,
+          "inspectedDimensions": 5,
+          "directionalDimensions": 5
+        },
+        "deterministicArtifactReproduction": "not-verified",
+        "stableRelease": "not-claimed",
+        "collaboration": "unknown",
+        "productionAdmissionEligible": false,
+        "compositeQualityScore": null,
+        "compositeConfidenceScore": null
+      },
+      "excludedSignals": {
+        "stars": "Impact only",
+        "forks": "Impact only",
+        "releaseCount": "Maturity/context only",
+        "recentCommitActivity": "Activity/lifecycle context only",
+        "draftCarrierStatus": "Authority/provenance boundary only; not a negative Quality score"
+      }
+    }
+  ]
+}
