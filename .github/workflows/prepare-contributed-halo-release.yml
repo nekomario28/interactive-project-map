@@ -28,24 +28,24 @@ jobs:
 
           old = "c871a6e5e47b11dad5cd82ec940ca2d6efa7199e"
           new = "37500d3e3b231452b7281a78374f32d04c6445ea"
-          paths = [
-              Path('.github/workflows/generate-project-map.yml'),
-              Path('scripts/postprocess-public-pages.mjs'),
-              Path('src/action-ref.ts'),
-              Path('tests/interaction-polish.test.mjs'),
-          ]
+          expected = {
+              Path('.github/workflows/generate-project-map.yml'): 2,
+              Path('scripts/postprocess-public-pages.mjs'): 1,
+              Path('src/action-ref.ts'): 1,
+              Path('tests/interaction-polish.test.mjs'): 1,
+          }
           total = 0
-          for path in paths:
+          for path, expected_count in expected.items():
               text = path.read_text()
               count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{path}: expected exactly one old Action pin, found {count}")
+              if count != expected_count:
+                  raise SystemExit(f"{path}: expected {expected_count} old Action pin occurrence(s), found {count}")
               path.write_text(text.replace(old, new))
               total += count
-          if total != 4:
-              raise SystemExit(f"expected four active pin mirrors, found {total}")
+          if total != 5:
+              raise SystemExit(f"expected five exact old-SHA occurrences across four active mirrors, found {total}")
 
-          workflow = paths[0]
+          workflow = Path('.github/workflows/generate-project-map.yml')
           text = workflow.read_text()
           old_block = '''# Native pre-profile-import IPM release: stable v1 R 36828be099e1cd160476b1be4ba32a2b9601911c
           # resolves Action F 37500d3e3b231452b7281a78374f32d04c6445ea. F passed Verify #874;
@@ -59,7 +59,7 @@ jobs:
               raise SystemExit('reusable-workflow release receipt block did not match expected baseline')
           workflow.write_text(text.replace(old_block, new_block))
 
-          post = paths[1]
+          post = Path('scripts/postprocess-public-pages.mjs')
           text = post.read_text()
           old_comment = '''// Keep generated consumer workflows on the reviewed immutable Action release.
           // Pre-profile-import native IPM visuals passed Verify #874 and direct profile proof #190.'''
@@ -69,7 +69,7 @@ jobs:
               raise SystemExit('Pages release receipt comment did not match expected baseline')
           post.write_text(text.replace(old_comment, new_comment))
 
-          action_ref = paths[2]
+          action_ref = Path('src/action-ref.ts')
           text = action_ref.read_text()
           old_comment = '''// Reviewed immutable Action commit used by generated installation workflows.
           // Stable v1 R 36828be099e1cd160476b1be4ba32a2b9601911c resolves this exact Action.
