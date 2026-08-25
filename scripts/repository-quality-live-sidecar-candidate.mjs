@@ -38,6 +38,18 @@ function normalizedRepositoryKey(value) {
   return key;
 }
 
+function frozenSnapshotDate(value, label) {
+  const date = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(`${label}.snapshotDate must be an explicit YYYY-MM-DD frozen evidence date`);
+  }
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== date) {
+    throw new Error(`${label}.snapshotDate must be an explicit YYYY-MM-DD frozen evidence date`);
+  }
+  return date;
+}
+
 function resolveManifestFixture(manifestPath, fixturePath) {
   if (typeof fixturePath !== "string" || !fixturePath) throw new Error("enrichment source fixture is required");
   if (path.isAbsolute(fixturePath)) return fixturePath;
@@ -55,6 +67,10 @@ function loadFixture(fixtureCache, manifestPath, source) {
     if (fixture.policyId !== policy.policyId) throw new Error(`${source.fixture} policy mismatch`);
     if (typeof fixture.status !== "string" || !fixture.status.startsWith("frozen-")) throw new Error(`${source.fixture} must remain a frozen evidence source`);
     if (!Array.isArray(fixture.cases)) throw new Error(`${source.fixture} cases must be an array`);
+    fixture = {
+      ...fixture,
+      snapshotDate: frozenSnapshotDate(fixture.snapshotDate, source.fixture),
+    };
     fixtureCache.set(fixturePath, fixture);
   }
   return fixture;
@@ -138,7 +154,7 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
       mode,
       fixture: source.fixture,
       fixtureStatus: fixture.status,
-      fixtureSnapshotDate: fixture.snapshotDate ?? null,
+      fixtureSnapshotDate: fixture.snapshotDate,
       caseId: source.caseId,
       evidenceField: built.evidenceField,
       qualityAttributionScope: built.qualityAttributionScope,
@@ -149,6 +165,41 @@ export function loadBoundedQualityEnrichments(manifestValue, options = {}) {
   });
 
   return { enrichments, sourceDiagnostics, expectedPresentationAvailable };
+}
+
+function summarizeFrozenEvidenceFreshness(sources, scope) {
+  if (!sources.length) throw new Error(`bounded Quality evidence freshness dates are unavailable for ${scope}`);
+  const snapshotDates = [...new Set(sources.map((source) => source.fixtureSnapshotDate))].sort();
+  return {
+    mode: "bounded-frozen-snapshots",
+    scope,
+    automaticRefresh: false,
+    sourceCount: sources.length,
+    snapshotDates,
+    oldestSnapshotDate: snapshotDates[0],
+    newestSnapshotDate: snapshotDates.at(-1),
+  };
+}
+
+function attachFrozenEvidenceFreshness(presentation, sourceDiagnostics) {
+  const presentationSources = sourceDiagnostics.filter((source) => source.presentationExpected === "available");
+  const byRepository = new Map(presentationSources.map((source) => [source.repositoryKey, source]));
+  const assessment = summarizeFrozenEvidenceFreshness(sourceDiagnostics, "all-bounded-assessment-sources");
+  const portfolioPresentation = summarizeFrozenEvidenceFreshness(presentationSources, "portfolio-quality-presented-sources");
+  presentation.evidenceFreshness = portfolioPresentation;
+
+  for (const entry of presentation.repositories) {
+    if (entry.overlayState !== "available") continue;
+    const source = byRepository.get(normalizedRepositoryKey(entry.repositoryKey));
+    if (!source) throw new Error(`Quality-available repository has no presentation-eligible frozen freshness source: ${entry.repositoryKey}`);
+    entry.evidenceFreshness = {
+      state: "frozen-snapshot",
+      snapshotDate: source.fixtureSnapshotDate,
+      automaticRefresh: false,
+    };
+  }
+
+  return { assessment, portfolioPresentation };
 }
 
 export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
@@ -168,6 +219,7 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
   });
   const assessment = assessmentResult.artifact;
   const presentation = buildRepositoryQualityPresentationCandidate(graph, assessment);
+  const evidenceFreshness = attachFrozenEvidenceFreshness(presentation, sourceDiagnostics);
 
   if (presentation.source.graphGeneratedAt !== graph.generatedAt) {
     throw new Error("generated Quality presentation is not bound to the source graph.generatedAt");
@@ -201,13 +253,17 @@ export function buildLiveQualitySidecarCandidates(graphValue, options = {}) {
       },
       presentation: presentation.diagnostics,
       expectedPresentationAvailable,
+      evidenceFreshness,
       enrichmentSources: sourceDiagnostics,
       invariants: {
         sourceGraphGeneratedAtCopiedExactly: true,
         repositoryMembershipComesOnlyFromGraph: true,
         frozenEvidenceSourcesAreExplicit: true,
+        frozenEvidenceFreshnessIsPublished: true,
+        automaticEvidenceRefreshPerformed: false,
         forkQualityUsesProvenanceAwareBundle: true,
         forkPortfolioQualityUsesLocalDeltaOnly: true,
+        presentationFreshnessUsesPresentationEligibleSourcesOnly: true,
         publicationPerformed: false,
         defaultActionChanged: false,
       },
