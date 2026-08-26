@@ -6,8 +6,8 @@ const SCRIPT_TAG = '<script src="../view-dimension-toggle.js" defer></script>';
 const STYLE_TAG = '<link rel="stylesheet" href="../view-dimension-toggle.css" />';
 const TWO_D_DIRS = ["u", "radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
-const TWO_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="View dimension"><span class="control-cluster-label">View</span><span class="view-mode-option is-active" aria-current="page">2D</span><a id="view3D" class="view-mode-option is-experimental" href="../three/" title="Open the experimental Three.js view">3D <small>Lab</small></a></span>';
-const THREE_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="View dimension"><span class="control-cluster-label">View</span><a id="twoDLink" class="view-mode-option" href="../u/">2D</a><span class="view-mode-option is-active is-experimental" aria-current="page">3D <small>Lab</small></span></span><label class="field view-style-field"><span>Style</span><select id="threeStyle" aria-label="3D style"><option value="cosmic">Cosmic</option></select></label>';
+const TWO_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="Rendering dimension"><span class="control-cluster-label">View</span><span class="view-mode-option is-active" aria-current="page">2D</span><a id="view3D" class="view-mode-option is-experimental" href="../three/" title="Open the experimental Three.js view">3D <small>Lab</small></a></span>';
+const THREE_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="Rendering dimension"><span class="control-cluster-label">View</span><a id="twoDLink" class="view-mode-option" href="../u/">2D</a><span class="view-mode-option is-active is-experimental" aria-current="page">3D <small>Lab</small></span></span><label class="field view-style-field"><span>Style</span><select id="threeStyle" aria-label="3D style"><option value="cosmic">Cosmic</option></select></label>';
 
 function attachAssets(html) {
   let next = html;
