@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { buildThreejsLab } from "./build-threejs-lab.mjs";
 
 const MARKER = "/* IPM_QUERY_GATED_QUALITY_PRESENTATION_V1 */";
 const BOOTSTRAP = `${MARKER}
@@ -75,7 +76,9 @@ export async function applyQualityView({ siteDir = join(process.cwd(), "site"), 
 
 async function main() {
   const result = await applyQualityView();
+  const threejs = await buildThreejsLab();
   console.log(`Applied query-gated Quality presentation bootstrap to ${result.viewStatePath}`);
+  console.log(`Built isolated Three.js cosmic lab into ${threejs.threeDir}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
