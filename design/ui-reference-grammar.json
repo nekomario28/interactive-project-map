@@ -1,9 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "status": "measured-reference-detection-only",
   "surfaces": {
     "shared_2d": {
-      "file": "scripts/public-viewer.css",
+      "files": [
+        "scripts/public-viewer.css"
+      ],
       "root_roles": {
         "--bg": "#050811",
         "--panel": "#0b111d",
@@ -57,7 +59,10 @@
       "observed_unconsumed_roles": []
     },
     "threejs_cosmic": {
-      "file": "scripts/public-threejs-viewer.css",
+      "files": [
+        "scripts/public-threejs-viewer.css",
+        "scripts/public-threejs-repository-labels.css"
+      ],
       "root_roles": {
         "--three-panel": "rgba(7, 11, 24, 0.78)",
         "--three-panel-strong": "rgba(8, 13, 29, 0.93)",
