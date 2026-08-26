@@ -22,8 +22,8 @@ test("Three.js lab is isolated from the existing viewer and uses a pinned engine
     assert.match(html, /<script type="module" src="\.\.\/threejs-viewer\.js"><\/script>/);
     assert.match(html, /href="\.\.\/viewer\.css"/);
     assert.match(runtime, /three@0\.185\.1\/build\/three\.module\.min\.js/);
-    assert.match(runtime, /canonicalGraphMutation: false/);
-    assert.match(runtime, /relation === "contributed"/);
+    assert.match(runtime, /canonicalGraphMutation\s*:\s*false/);
+    assert.match(runtime, /relation\s*===\s*"contributed"/);
     assert.match(runtime, /raw\.githubusercontent\.com/);
     assert.doesNotMatch(runtime, /api\.github\.com/);
     assert.match(css, /perspective: 1200px/);
