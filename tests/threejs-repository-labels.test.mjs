@@ -45,9 +45,15 @@ test("bounded Three.js repository labels attach after Category Navigator and rem
     assert.match(style, /\.three-label-repository\.is-selected/);
     assert.match(style, /\.three-label-repository\.is-search-match/);
 
-    // Repository labels are not created in the graph construction loop. They are only created by syncRepositoryLabels.
+    // Repository labels are not created in the graph construction loop. They are only created on demand.
     const construction = runtime.slice(runtime.indexOf("for(const node of graph.nodes)"), runtime.indexOf("let edgeLines=null"));
     assert.doesNotMatch(construction, /three-label-repository/);
+
+    // The established owner/category projection remains intact; repository labels are appended as a separate pass.
+    assert.match(runtime, /x< -70\|\|x>rect\.width\+70\|\|y< -30\|\|y>rect\.height\+30/);
+    assert.match(runtime, /clamp\(1\.18-temp\.z\*\.55,\.28,1\)/);
+    assert.match(runtime, /function projectRepositoryLabels\(rect,temp\)/);
+    assert.match(runtime, /x< -90\|\|x>rect\.width\+90\|\|y< -50\|\|y>rect\.height\+50/);
 
     const syntax = spawnSync(process.execPath, ["--check", join(root, "threejs-viewer.js")], { encoding: "utf8" });
     assert.equal(syntax.status, 0, syntax.stderr);
