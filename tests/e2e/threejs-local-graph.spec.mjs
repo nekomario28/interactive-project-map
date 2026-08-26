@@ -34,23 +34,15 @@ async function installFixture(page) {
   });
 }
 
-function canonicalProjection(projected) {
-  return {
-    nodeIds: projected.nodes.map((node) => node.id).sort(),
-    edgeIds: [...projected.edges, ...projected.semanticEdges]
-      .map((edge) => `${edge.type || "edge"}:${edge.source}->${edge.target}`)
-      .sort(),
-  };
-}
-
 test("2D and Three.js consume identical Local Graph node/edge projection IDs", async ({ page }) => {
   await installFixture(page);
-  const state = "username=example&status=original,fork,archived&focus=repository:alpha&depth=2";
-  await page.goto(`/three/?${state}`);
+  const transferable = "username=example&status=original,fork,archived&focus=repository:alpha&depth=2";
+  await page.goto(`/three/?${transferable}`);
   await expect(page.locator("#status")).toHaveClass(/ready/);
   await expect(page.locator("#focusControls")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.ProjectMapThreejsLocalGraph?.snapshot?.() || null)).not.toBeNull();
+  const three = await page.evaluate(() => window.ProjectMapThreejsLocalGraph.snapshot());
 
-  const three = await expect.poll(async () => page.evaluate(() => window.ProjectMapThreejsLocalGraph?.snapshot?.() || null)).not.toBeNull().then(async () => page.evaluate(() => window.ProjectMapThreejsLocalGraph.snapshot()));
   expect(three.focusRoot).toBe("repository:alpha");
   expect(three.depth).toBe(2);
   expect(three.nodeIds).toEqual([
@@ -62,7 +54,7 @@ test("2D and Three.js consume identical Local Graph node/edge projection IDs", a
   ]);
   await expect(page.locator("#resultCount")).toHaveText("3 / 4 projects");
 
-  await page.goto(`/u/?${state}&style=obsidian`);
+  await page.goto(`/u/?${transferable}&style=obsidian`);
   await expect(page.locator("#status")).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.ProjectMapViewState?.snapshot?.().focusRoot || null)).toBe("repository:alpha");
   const two = await page.evaluate(() => {
