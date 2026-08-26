@@ -3,13 +3,17 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const SCRIPT_TAG = '<script src="../view-dimension-toggle.js" defer></script>';
+const STYLE_TAG = '<link rel="stylesheet" href="../view-dimension-toggle.css" />';
 const TWO_D_DIRS = ["u", "radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
 const TWO_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="View dimension"><span class="control-cluster-label">View</span><span class="view-mode-option is-active" aria-current="page">2D</span><a id="view3D" class="view-mode-option is-experimental" href="../three/" title="Open the experimental Three.js view">3D <small>Lab</small></a></span>';
 const THREE_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="View dimension"><span class="control-cluster-label">View</span><a id="twoDLink" class="view-mode-option" href="../u/">2D</a><span class="view-mode-option is-active is-experimental" aria-current="page">3D <small>Lab</small></span></span><label class="field view-style-field"><span>Style</span><select id="threeStyle" aria-label="3D style"><option value="cosmic">Cosmic</option></select></label>';
 
-function attachScript(html) {
-  return html.includes(SCRIPT_TAG) ? html : html.replace("</body>", `${SCRIPT_TAG}\n</body>`);
+function attachAssets(html) {
+  let next = html;
+  if (!next.includes(STYLE_TAG)) next = next.replace("</head>", `${STYLE_TAG}\n</head>`);
+  if (!next.includes(SCRIPT_TAG)) next = next.replace("</body>", `${SCRIPT_TAG}\n</body>`);
+  return next;
 }
 
 export function patchTwoDViewDimension(html) {
@@ -23,7 +27,7 @@ export function patchTwoDViewDimension(html) {
     if (!next.includes(styleField)) throw new Error("Could not locate 2D Style control");
     next = next.replace(styleField, `${TWO_D_TOGGLE}${styleField}`);
   }
-  return attachScript(next);
+  return attachAssets(next);
 }
 
 export function patchThreeDViewDimension(html) {
@@ -37,7 +41,7 @@ export function patchThreeDViewDimension(html) {
     if (!next.includes(oldLink)) throw new Error("Could not locate Three.js 2D fallback link");
     next = next.replace(oldLink, THREE_D_TOGGLE);
   }
-  return attachScript(next);
+  return attachAssets(next);
 }
 
 export async function applyViewDimensionToggle({
@@ -64,8 +68,12 @@ export async function applyViewDimensionToggle({
   }
 
   const runtimePath = join(siteDir, "view-dimension-toggle.js");
-  await copyFile(join(sourceDir, "public-view-dimension-toggle.js"), runtimePath);
-  return { changed, runtimePath };
+  const stylePath = join(siteDir, "view-dimension-toggle.css");
+  await Promise.all([
+    copyFile(join(sourceDir, "public-view-dimension-toggle.js"), runtimePath),
+    copyFile(join(sourceDir, "public-view-dimension-toggle.css"), stylePath),
+  ]);
+  return { changed, runtimePath, stylePath };
 }
 
 async function main() {
