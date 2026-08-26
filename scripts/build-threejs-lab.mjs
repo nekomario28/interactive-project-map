@@ -2,7 +2,22 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { projectMapViewModelRuntimeSource } from "./project-map-view-model-runtime.mjs";
+
 const THREE_CDN_ORIGIN = "https://cdn.jsdelivr.net";
+
+const THREE_BOOT_SANITIZER = "const graph=sanitizeGraph(await response.json(),username);";
+const SHARED_BOOT_SANITIZER = "const graph=window.ProjectMapViewModel?.sanitizeGraph(await response.json(),username);";
+const THREE_VISIBILITY = 'function applyVisibility(){let visibleRepositories=0;const visibleGroupIds=new Set(),visibleGroupLabels=new Set();for(const node of graph.nodes){const mesh=nodeMeshes.get(node.id);if(!mesh||node.type!=="repository")continue;const status=repositoryStatus(node),matchesFilter=filters.get(status)!==false,matchesSearch=!searchQuery||searchableText(node).includes(searchQuery);mesh.visible=matchesFilter&&matchesSearch;if(mesh.visible){visibleRepositories+=1;if(node.groupId)visibleGroupIds.add(node.groupId);if(node.groupLabel)visibleGroupLabels.add(node.groupLabel);}}for(const node of graph.nodes){if(node.type!=="group")continue;const mesh=nodeMeshes.get(node.id);if(!mesh)continue;mesh.visible=!searchQuery||visibleGroupIds.has(node.id)||visibleGroupIds.has(node.id.replace(/^group:/,""))||visibleGroupLabels.has(node.label)||node.label.toLowerCase().includes(searchQuery);}rebuildEdges();const totalRepositories=graph.nodes.filter((node)=>node.type==="repository").length;ui.resultCount.textContent=`${visibleRepositories} / ${totalRepositories} ${totalRepositories===1?"project":"projects"}`;if(selectedMesh&&!selectedMesh.visible)clearSelection();}';
+const SHARED_VISIBILITY = 'function applyVisibility(){const activeStatuses=[...filters].filter(([,enabled])=>enabled).map(([status])=>status),projected=window.ProjectMapViewModel?.projectByStatuses(graph,activeStatuses),statusVisibleIds=new Set((projected?.nodes||[]).map((node)=>node.id));let visibleRepositories=0;const visibleGroupIds=new Set(),visibleGroupLabels=new Set();for(const node of graph.nodes){const mesh=nodeMeshes.get(node.id);if(!mesh||node.type!=="repository")continue;const matchesStatus=statusVisibleIds.has(node.id),matchesSearch=!searchQuery||searchableText(node).includes(searchQuery);mesh.visible=matchesStatus&&matchesSearch;if(mesh.visible){visibleRepositories+=1;if(node.groupId)visibleGroupIds.add(node.groupId);if(node.groupLabel)visibleGroupLabels.add(node.groupLabel);}}for(const node of graph.nodes){if(node.type!=="group")continue;const mesh=nodeMeshes.get(node.id);if(!mesh)continue;const matchesStatus=statusVisibleIds.has(node.id);mesh.visible=matchesStatus&&(!searchQuery||visibleGroupIds.has(node.id)||visibleGroupIds.has(node.id.replace(/^group:/,""))||visibleGroupLabels.has(node.label)||node.label.toLowerCase().includes(searchQuery));}rebuildEdges();const totalRepositories=graph.nodes.filter((node)=>node.type==="repository").length;ui.resultCount.textContent=`${visibleRepositories} / ${totalRepositories} ${totalRepositories===1?"project":"projects"}`;if(selectedMesh&&!selectedMesh.visible)clearSelection();}';
+
+export function patchThreejsViewModelRuntime(source) {
+  if (!source.includes(THREE_BOOT_SANITIZER) && !source.includes(SHARED_BOOT_SANITIZER)) throw new Error("Could not locate Three.js graph admission boundary");
+  if (!source.includes(THREE_VISIBILITY) && !source.includes(SHARED_VISIBILITY)) throw new Error("Could not locate Three.js status projection boundary");
+  return source
+    .replace(THREE_BOOT_SANITIZER, SHARED_BOOT_SANITIZER)
+    .replace(THREE_VISIBILITY, SHARED_VISIBILITY);
+}
 
 export function renderThreejsLabPage() {
   return `<!doctype html>
@@ -65,6 +80,7 @@ export function renderThreejsLabPage() {
   </section>
   <footer><span>Experimental renderer · canonical graph remains unchanged</span><span class="shortcuts"><kbd>drag</kbd> Orbit · <kbd>wheel</kbd> Dolly · <kbd>0</kbd> Fit · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span></footer>
 </main>
+<script src="../project-map-view-model.js"></script>
 <script type="module" src="../threejs-viewer.js"></script>
 </body>
 </html>`;
@@ -73,16 +89,24 @@ export function renderThreejsLabPage() {
 export async function buildThreejsLab({ siteDir = join(process.cwd(), "site"), sourceDir = join(process.cwd(), "scripts") } = {}) {
   const threeDir = join(siteDir, "three");
   await mkdir(threeDir, { recursive: true });
-  const [runtime, css] = await Promise.all([
+  const [sourceRuntime, css] = await Promise.all([
     readFile(join(sourceDir, "public-threejs-viewer.js"), "utf8"),
     readFile(join(sourceDir, "public-threejs-viewer.css"), "utf8"),
   ]);
+  const runtime = patchThreejsViewModelRuntime(sourceRuntime);
+  const viewModelRuntime = projectMapViewModelRuntimeSource();
   await Promise.all([
+    writeFile(join(siteDir, "project-map-view-model.js"), viewModelRuntime),
     writeFile(join(siteDir, "threejs-viewer.js"), runtime),
     writeFile(join(siteDir, "threejs-viewer.css"), css),
     writeFile(join(threeDir, "index.html"), renderThreejsLabPage()),
   ]);
-  return { threeDir, runtimePath: join(siteDir, "threejs-viewer.js"), cssPath: join(siteDir, "threejs-viewer.css") };
+  return {
+    threeDir,
+    viewModelRuntimePath: join(siteDir, "project-map-view-model.js"),
+    runtimePath: join(siteDir, "threejs-viewer.js"),
+    cssPath: join(siteDir, "threejs-viewer.css"),
+  };
 }
 
 async function main() {

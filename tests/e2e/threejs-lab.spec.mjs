@@ -6,7 +6,7 @@ const graph = {
   generatedAt: "2026-08-26T00:00:00Z",
   nodes: [
     { id: "user:example", label: "example", type: "owner", url: "https://github.com/example" },
-    { id: "group:robotics", label: "Robotics", type: "group", repositoryCount: 2 },
+    { id: "group:robotics", label: "Robotics", type: "group", repositoryCount: 1 },
     {
       id: "repository:alpha",
       label: "alpha",
@@ -23,6 +23,8 @@ const graph = {
       groupId: "robotics",
       groupLabel: "Robotics",
       topics: ["visualization"],
+      taxonomyAssignment: { secondaryTags: ["rendering"] },
+      updatedAt: "2026-08-25T00:00:00Z",
     },
     {
       id: "repository:outside/beta",
@@ -39,6 +41,14 @@ const graph = {
       repositoryOwner: "outside",
       repositoryName: "beta",
       topics: ["robotics"],
+      updatedAt: "2026-08-24T00:00:00Z",
+      contribution: {
+        commits: 4,
+        pullRequests: 2,
+        mergedPullRequests: 1,
+        commitsTruncated: false,
+        pullRequestsTruncated: false,
+      },
     },
   ],
   edges: [
@@ -46,7 +56,21 @@ const graph = {
     { source: "group:robotics", target: "repository:alpha", type: "membership" },
     { source: "user:example", target: "repository:outside/beta", type: "contribution" },
   ],
+  externalContributions: {
+    window: { from: "2026-07-01T00:00:00Z", to: "2026-08-26T00:00:00Z" },
+    cap: 12,
+    candidateRepositories: 1,
+    includedRepositories: 1,
+    omittedRepositories: 0,
+    truncatedRepositories: 0,
+  },
 };
+
+async function installGraph(page, value = graph) {
+  await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
+  });
+}
 
 test("isolated Three.js lab route fails closed without a username", async ({ page }) => {
   await page.goto("/three/");
@@ -72,9 +96,7 @@ test("isolated Three.js lab keeps the 2D fallback usable when the pinned engine 
 test("Three.js lab renders the happy-path scene and emits Chromium evidence", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "GPU render evidence is collected once in Chromium; WebKit keeps the fallback smoke above.");
   await mkdir(".tmp/playwright-visual", { recursive: true });
-  await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
-  });
+  await installGraph(page);
 
   await page.goto("/three/?username=example");
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
@@ -98,6 +120,29 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-chromium.png", fullPage: true });
 });
 
+test("Three.js status filtering uses structural projection and prunes an empty owned category", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Real Three.js state projection is exercised in Chromium.");
+  await installGraph(page);
+  await page.goto("/three/?username=example");
+  await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+
+  const roboticsLabel = page.locator("#threeLabels .three-label", { hasText: "Robotics" });
+  await expect(roboticsLabel).toBeVisible();
+  await page.getByRole("button", { name: "Original" }).click();
+  await expect(page.locator("#resultCount")).toHaveText("1 / 2 projects");
+  await expect(roboticsLabel).toBeHidden();
+});
+
+test("Three.js shared admission fails closed on incomplete Contributed provenance", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Shared graph admission is exercised once in Chromium.");
+  const malformed = structuredClone(graph);
+  delete malformed.externalContributions;
+  await installGraph(page, malformed);
+  await page.goto("/three/?username=example");
+  await expect(page.locator("#error")).toHaveClass(/visible/, { timeout: 20_000 });
+  await expect(page.locator("#errorText")).toContainText("static project graph is missing or did not pass validation");
+});
+
 test.describe("mobile Three.js happy-path evidence", () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -109,9 +154,7 @@ test.describe("mobile Three.js happy-path evidence", () => {
   test("Three.js lab renders at a phone viewport with bounded backing-store density", async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "Mobile GPU evidence is kept deterministic in Chromium; WebKit remains fallback-only in CI.");
     await mkdir(".tmp/playwright-visual", { recursive: true });
-    await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
-    });
+    await installGraph(page);
 
     await page.goto("/three/?username=example");
     await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
