@@ -152,7 +152,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
 test("Three.js restores transferable state and keeps renderer-local density out of the 2D link", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js state transfer is exercised in Chromium.");
   await installGraph(page);
-  await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aalpha&depth=2&quality=1&render=low");
+  await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aoutside%2Fbeta&depth=2&quality=1&render=low");
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
 
   await expect(page.locator("#search")).toHaveValue("rust");
@@ -171,7 +171,7 @@ test("Three.js restores transferable state and keeps renderer-local density out 
   expect(querySnapshot(state.current)).toEqual({
     activity: "1",
     depth: "2",
-    focus: "repository:alpha",
+    focus: "repository:outside/beta",
     motion: "off",
     q: "rust",
     quality: "1",
@@ -182,7 +182,7 @@ test("Three.js restores transferable state and keeps renderer-local density out 
   expect(querySnapshot(state.twoD)).toEqual({
     activity: "1",
     depth: "2",
-    focus: "repository:alpha",
+    focus: "repository:outside/beta",
     motion: "off",
     q: "rust",
     quality: "1",

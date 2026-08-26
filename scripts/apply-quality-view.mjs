@@ -2,11 +2,14 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { buildThreejsLab } from "./build-threejs-lab.mjs";
+import { projectMapViewModelRuntimeSource } from "./project-map-view-model-runtime.mjs";
 import { projectMapViewStateRuntimeSource } from "./project-map-view-state-runtime.mjs";
 
 const MARKER = "/* IPM_QUERY_GATED_QUALITY_PRESENTATION_V1 */";
 const TRANSFER_MARKER = "/* IPM_RENDERER_NEUTRAL_TRANSFERABLE_STATE_V1 */";
+const LOCAL_GRAPH_MARKER = "/* IPM_SHARED_LOCAL_GRAPH_P2 */";
 const TRANSFER_SCRIPT = '<script src="../project-map-view-state.js" defer></script>';
+const VIEW_MODEL_SCRIPT = '<script src="../project-map-view-model.js" defer></script>';
 const BOOTSTRAP = `${MARKER}
 (() => {
   const requested = window.ProjectMapTransferableState?.parse(location.href).quality
@@ -121,17 +124,43 @@ export function patchSharedTransferableViewState(source) {
   return next;
 }
 
+export function patchSharedLocalGraph(source) {
+  if (source.includes(LOCAL_GRAPH_MARKER)) return source;
+  const localGraphPattern = /    function relationEdges\(graph\) \{[\s\S]*?(?=    function syncUrl\(\) \{)/;
+  if (!localGraphPattern.test(source)) throw new Error("Could not locate shared 2D Local Graph implementation");
+  return source.replace(localGraphPattern, `    ${LOCAL_GRAPH_MARKER}
+    function focusedGraph(graph) {
+      if (!focusRoot || !graph) return graph;
+      const api = window.ProjectMapViewModel;
+      if (typeof api?.projectLocalGraph !== "function") return graph;
+      const projected = api.projectLocalGraph(
+        graph,
+        focusRoot,
+        focusDepth,
+        STATUS_VALUES.filter((value) => statuses.has(value)),
+      );
+      if (projected) return projected;
+      focusRoot = "";
+      return graph;
+    }
+
+`);
+}
+
 export function attachTransferableStateScript(html) {
-  if (html.includes(TRANSFER_SCRIPT)) return html;
   const viewStateScript = '<script src="../view-state.js" defer></script>';
   if (!html.includes(viewStateScript)) throw new Error("Could not locate shared 2D view-state script tag");
-  return html.replace(viewStateScript, `${TRANSFER_SCRIPT}\n${viewStateScript}`);
+  let next = html;
+  if (!next.includes(TRANSFER_SCRIPT)) next = next.replace(viewStateScript, `${TRANSFER_SCRIPT}\n${viewStateScript}`);
+  if (!next.includes(VIEW_MODEL_SCRIPT)) next = next.replace(viewStateScript, `${VIEW_MODEL_SCRIPT}\n${viewStateScript}`);
+  return next;
 }
 
 export async function applyQualityView({ siteDir = join(process.cwd(), "site"), sourceDir = join(process.cwd(), "scripts") } = {}) {
   const sourcePath = join(sourceDir, "public-quality-view.js");
   const outputScriptPath = join(siteDir, "quality-view.js");
   const transferableRuntimePath = join(siteDir, "project-map-view-state.js");
+  const viewModelRuntimePath = join(siteDir, "project-map-view-model.js");
   const viewStatePath = join(siteDir, "view-state.js");
   const viewerHtmlPath = join(siteDir, "u", "index.html");
   const [runtime, originalViewState, originalViewerHtml] = await Promise.all([
@@ -141,14 +170,16 @@ export async function applyQualityView({ siteDir = join(process.cwd(), "site"), 
   ]);
 
   const withTransferableState = patchSharedTransferableViewState(originalViewState);
-  const viewState = withTransferableState.includes(MARKER)
-    ? withTransferableState
-    : `${withTransferableState.trimEnd()}\n\n${BOOTSTRAP}\n`;
+  const withLocalGraph = patchSharedLocalGraph(withTransferableState);
+  const viewState = withLocalGraph.includes(MARKER)
+    ? withLocalGraph
+    : `${withLocalGraph.trimEnd()}\n\n${BOOTSTRAP}\n`;
   const viewerHtml = attachTransferableStateScript(originalViewerHtml);
 
   await Promise.all([
     writeFile(outputScriptPath, runtime),
     writeFile(transferableRuntimePath, projectMapViewStateRuntimeSource()),
+    writeFile(viewModelRuntimePath, projectMapViewModelRuntimeSource()),
   ]);
   if (viewState !== originalViewState) await writeFile(viewStatePath, viewState);
   if (viewerHtml !== originalViewerHtml) await writeFile(viewerHtmlPath, viewerHtml);
@@ -156,6 +187,7 @@ export async function applyQualityView({ siteDir = join(process.cwd(), "site"), 
     viewStatePath,
     outputScriptPath,
     transferableRuntimePath,
+    viewModelRuntimePath,
     viewerHtmlPath,
     injected: viewState !== originalViewState || viewerHtml !== originalViewerHtml,
   };
@@ -165,7 +197,7 @@ async function main() {
   const result = await applyQualityView();
   const threejs = await buildThreejsLab();
   console.log(`Applied query-gated Quality presentation bootstrap to ${result.viewStatePath}`);
-  console.log(`Attached renderer-neutral transferable state to ${result.viewerHtmlPath}`);
+  console.log(`Attached renderer-neutral transferable state and Local Graph model to ${result.viewerHtmlPath}`);
   console.log(`Built isolated Three.js cosmic lab into ${threejs.threeDir}`);
 }
 
