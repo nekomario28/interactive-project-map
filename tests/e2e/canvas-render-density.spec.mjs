@@ -1,4 +1,7 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+
+const EVIDENCE_DIR = ".tmp/playwright-visual/canvas-render-density";
 
 const graph = {
   owner: "example",
@@ -38,6 +41,11 @@ async function canvasMetrics(page) {
   });
 }
 
+async function saveEvidence(name, value) {
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+  await writeFile(`${EVIDENCE_DIR}/${name}.json`, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
 test.describe("DPR3 Canvas render density evidence", () => {
   test.use({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 3 });
 
@@ -48,22 +56,32 @@ test.describe("DPR3 Canvas render density evidence", () => {
     await page.goto("/u/?username=example&style=galaxy-hybrid");
     await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
     const native = await canvasMetrics(page);
+
+    await page.goto("/u/?username=example&style=galaxy-hybrid&render=auto");
+    await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
+    const auto = await canvasMetrics(page);
+    const nativeArea = native.backingWidth * native.backingHeight;
+    const autoArea = auto.backingWidth * auto.backingHeight;
+    const backingAreaRatio = autoArea / Math.max(1, nativeArea);
+    await saveEvidence("shared-desktop-dpr3", {
+      native,
+      auto,
+      backingAreaRatio,
+      backingAreaReduction: 1 - backingAreaRatio,
+    });
+
     expect(native.devicePixelRatio).toBe(3);
     expect(native.policy.mode).toBe("native");
     expect(native.policy.pixelRatio).toBe(3);
     expect(native.ratioX).toBeGreaterThan(2.9);
     expect(native.ratioY).toBeGreaterThan(2.9);
-
-    await page.goto("/u/?username=example&style=galaxy-hybrid&render=auto");
-    await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
-    const auto = await canvasMetrics(page);
     expect(auto.policy.mode).toBe("auto");
     expect(auto.policy.pixelRatio).toBe(1.45);
     expect(auto.ratioX).toBeLessThanOrEqual(1.46);
     expect(auto.ratioY).toBeLessThanOrEqual(1.46);
     expect(Math.abs(auto.cssWidth - native.cssWidth)).toBeLessThanOrEqual(1);
     expect(Math.abs(auto.cssHeight - native.cssHeight)).toBeLessThanOrEqual(1);
-    expect(auto.backingWidth * auto.backingHeight).toBeLessThan(native.backingWidth * native.backingHeight * 0.25);
+    expect(autoArea).toBeLessThan(nativeArea * 0.25);
   });
 
   test("dedicated Radial consumes the same opt-in Canvas policy", async ({ page, browserName }) => {
@@ -72,6 +90,7 @@ test.describe("DPR3 Canvas render density evidence", () => {
     await page.goto("/radial/?username=example&style=radial&render=auto");
     await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
     const metrics = await canvasMetrics(page);
+    await saveEvidence("radial-desktop-dpr3", metrics);
     expect(metrics.devicePixelRatio).toBe(3);
     expect(metrics.policy.mode).toBe("auto");
     expect(metrics.ratioX).toBeLessThanOrEqual(1.46);
@@ -85,12 +104,13 @@ test.describe("DPR3 Canvas render density evidence", () => {
     await page.goto("/u/?username=example&style=galaxy-hybrid&render=auto");
     await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
     const metrics = await canvasMetrics(page);
+    const width = await page.evaluate(() => ({ viewport: innerWidth, scroll: document.documentElement.scrollWidth }));
+    await saveEvidence("shared-mobile-dpr3", { metrics, width });
     expect(metrics.devicePixelRatio).toBe(3);
     expect(metrics.policy.mode).toBe("auto");
     expect(metrics.policy.pixelRatio).toBe(1);
     expect(metrics.ratioX).toBeLessThanOrEqual(1.01);
     expect(metrics.ratioY).toBeLessThanOrEqual(1.01);
-    const width = await page.evaluate(() => ({ viewport: innerWidth, scroll: document.documentElement.scrollWidth }));
     expect(width.scroll).toBeLessThanOrEqual(width.viewport);
   });
 });
