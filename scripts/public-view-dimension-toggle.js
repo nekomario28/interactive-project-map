@@ -60,9 +60,15 @@
 
   function syncLinks() {
     const three = document.getElementById("view3D");
-    if (three) three.href = threeUrl().toString();
+    if (three) {
+      const href = threeUrl().toString();
+      if (three.href !== href) three.href = href;
+    }
     const two = document.getElementById("twoDLink");
-    if (two) two.href = twoDUrl().toString();
+    if (two) {
+      const href = twoDUrl().toString();
+      if (two.href !== href) two.href = href;
+    }
   }
 
   function init() {
@@ -74,6 +80,11 @@
     document.addEventListener("input", () => setTimeout(syncLinks, 0), true);
     document.addEventListener("change", () => setTimeout(syncLinks, 0), true);
     window.addEventListener("popstate", syncLinks);
+
+    const twoDLink = document.getElementById("twoDLink");
+    if (twoDLink && typeof MutationObserver === "function") {
+      new MutationObserver(syncLinks).observe(twoDLink, { attributes: true, attributeFilter: ["href"] });
+    }
 
     window.ProjectMapViewDimension = Object.freeze({
       version: 1,
