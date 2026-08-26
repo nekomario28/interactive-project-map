@@ -35,7 +35,7 @@ test("Three.js lab consumes shared semantic and transferable state runtimes", as
     assert.match(runtime, /window\.ProjectMapViewModel\?\.projectByStatuses/);
     assert.match(runtime, /window\.ProjectMapTransferableState/);
     assert.match(runtime, /statusCounts\(graph\)/);
-    assert.match(runtime, /data\.renderDensity/);
+    assert.match(runtime, /dataset\.renderDensity/);
     assert.match(runtime, /searchParams\.set\("render",next\)/);
     assert.match(runtime, /fallback\.searchParams\.delete\("render"\)/);
     assert.match(runtime, /canonicalGraphMutation\s*:\s*false/);
