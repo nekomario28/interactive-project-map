@@ -23,7 +23,7 @@ export function patchThreejsCategoryNavigatorRuntime(source) {
   next = replaceRequired(
     next,
     searchMarker,
-    `${searchMarker}\n  ${MARKER}\n  function emitThreejsNavigatorChange(){window.dispatchEvent(new CustomEvent("projectmap:threejs-navigator-change"));}`,
+    `${searchMarker}\n  ${MARKER}\n  function emitThreejsNavigatorChange(){window.dispatchEvent(new window.CustomEvent("projectmap:threejs-navigator-change"));}`,
     "Three.js shared-search marker",
   );
 
@@ -52,7 +52,7 @@ export function patchThreejsCategoryNavigatorRuntime(source) {
   );
 
   const localGraphSnapshot = 'window.ProjectMapThreejsLocalGraph=Object.freeze({version:1,snapshot:()=>({focusRoot,depth:focusDepth,nodeIds:(lastLocalProjection?.nodes||[]).map((node)=>node.id).sort(),edgeIds:[...(lastLocalProjection?.edges||[]),...(lastLocalProjection?.semanticEdges||[])].map((edge)=>`${edge.type||"edge"}:${edge.source}->${edge.target}`).sort()})});';
-  const adapter = `const navigatorNodeById=(id)=>graph.nodes.find((node)=>node.id===id)||null,navigatorClearSelection=()=>{clearSelection();ui.canvas.focus({preventScroll:true});return true;},navigatorSelectNode=(id)=>{const mesh=nodeMeshes.get(id);if(!mesh?.visible)return false;if(selectedMesh===mesh)return navigatorClearSelection();selectMesh(mesh);ui.canvas.focus({preventScroll:true});return true;};window.ProjectMapThreejsNavigatorAdapter=Object.freeze({version:1,graph:()=>graph,node:(id)=>navigatorNodeById(id),isVisible:(id)=>Boolean(nodeMeshes.get(id)?.visible),selectedId:()=>selectedMesh?.userData.node?.id||"",selectNode:navigatorSelectNode,clearSelection:navigatorClearSelection,focusCanvas:()=>ui.canvas.focus({preventScroll:true}),snapshot:()=>({selectedId:selectedMesh?.userData.node?.id||"",visibleNodeIds:graph.nodes.filter((node)=>nodeMeshes.get(node.id)?.visible).map((node)=>node.id).sort(),scopeNodeIds:(lastLocalProjection?.nodes||[]).map((node)=>node.id).sort(),search:lastSearchProjection?.snapshot?.()||null})});window.dispatchEvent(new CustomEvent("projectmap:threejs-navigator-ready"));${localGraphSnapshot}`;
+  const adapter = `const navigatorNodeById=(id)=>graph.nodes.find((node)=>node.id===id)||null,navigatorClearSelection=()=>{clearSelection();ui.canvas.focus({preventScroll:true});return true;},navigatorSelectNode=(id)=>{const mesh=nodeMeshes.get(id);if(!mesh?.visible)return false;if(selectedMesh===mesh)return navigatorClearSelection();selectMesh(mesh);ui.canvas.focus({preventScroll:true});return true;};window.ProjectMapThreejsNavigatorAdapter=Object.freeze({version:1,graph:()=>graph,node:(id)=>navigatorNodeById(id),isVisible:(id)=>Boolean(nodeMeshes.get(id)?.visible),selectedId:()=>selectedMesh?.userData.node?.id||"",selectNode:navigatorSelectNode,clearSelection:navigatorClearSelection,focusCanvas:()=>ui.canvas.focus({preventScroll:true}),snapshot:()=>({selectedId:selectedMesh?.userData.node?.id||"",visibleNodeIds:graph.nodes.filter((node)=>nodeMeshes.get(node.id)?.visible).map((node)=>node.id).sort(),scopeNodeIds:(lastLocalProjection?.nodes||[]).map((node)=>node.id).sort(),search:lastSearchProjection?.snapshot?.()||null})});window.dispatchEvent(new window.CustomEvent("projectmap:threejs-navigator-ready"));${localGraphSnapshot}`;
   next = replaceRequired(next, localGraphSnapshot, adapter, "Three.js navigator adapter export");
   return next;
 }
