@@ -208,7 +208,19 @@ body[data-map-style="threejs-cosmic"] {
   backdrop-filter: blur(10px);
 }
 
-.three-status.ready { color: #9dc7da; }
+.three-status.ready {
+  left: 50%;
+  top: auto;
+  bottom: 14px;
+  width: auto;
+  max-width: calc(100% - 32px);
+  padding: 7px 11px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(5, 9, 19, 0.82);
+  color: #9dc7da;
+  pointer-events: none;
+}
 
 .three-error {
   border-color: rgba(255, 151, 151, 0.28);
