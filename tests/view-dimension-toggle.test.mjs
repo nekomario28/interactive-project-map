@@ -10,7 +10,7 @@ const threeD = '<!doctype html><html><head><title>x</title></head><body data-map
 test("2D viewer gets a separate View dimension control without adding 3D to Style", () => {
   const html = patchTwoDViewDimension(twoD);
   assert.match(html, /data-view-dimension="2d"/);
-  assert.match(html, /aria-label="View dimension"/);
+  assert.match(html, /aria-label="Rendering dimension"/);
   assert.match(html, /aria-current="page">2D</);
   assert.match(html, /id="view3D"[^>]*>3D <small>Lab<\/small>/);
   assert.match(html, /<select id="style"><option value="galaxy-systems">/);
@@ -23,6 +23,7 @@ test("2D viewer gets a separate View dimension control without adding 3D to Styl
 test("Three.js viewer exposes the same View axis and a renderer-local Cosmic style", () => {
   const html = patchThreeDViewDimension(threeD);
   assert.match(html, /data-view-dimension="3d"/);
+  assert.match(html, /aria-label="Rendering dimension"/);
   assert.match(html, /id="twoDLink"[^>]*>2D<\/a>/);
   assert.match(html, /aria-current="page">3D <small>Lab<\/small>/);
   assert.match(html, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option>/);
@@ -36,9 +37,10 @@ test("view dimension runtime keeps renderer navigation separate from Style state
   assert.match(source, /const TWO_D_STYLES = new Set/);
   assert.match(source, /url\.searchParams\.delete\("style"\)/);
   assert.match(source, /url\.searchParams\.set\("style2d", current2DStyle\(\)\)/);
-  assert.match(source, /url\.searchParams\.set\("style", style\)/);
+  assert.match(source, /if \(style\) url\.searchParams\.set\("style", style\)/);
   assert.match(source, /url\.searchParams\.delete\("style2d"\)/);
   assert.match(source, /url\.searchParams\.delete\("render"\)/);
+  assert.match(source, /valid2DStyle\(source\.searchParams\.get\("style2d"\)\)/);
   assert.match(source, /ProjectMapTransferableState/);
   assert.match(source, /ProjectMapViewDimension/);
 });
