@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { applyQualityView } from "../scripts/apply-quality-view.mjs";
 
-test("Quality postprocess attaches transferable state and appends the query bootstrap exactly once", async () => {
+test("Quality postprocess attaches transferable state, shared Local Graph and the query bootstrap exactly once", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-quality-presentation-view-"));
   const siteDir = join(root, "site");
   const sourceDir = join(root, "scripts");
@@ -26,25 +26,35 @@ test("Quality postprocess attaches transferable state and appends the query boot
     assert.match(transferable, /window\.ProjectMapTransferableState/);
     assert.doesNotMatch(transferable, /searchParams\.set\("render"/);
 
+    const viewModel = await readFile(join(siteDir, "project-map-view-model.js"), "utf8");
+    assert.match(viewModel, /window\.ProjectMapViewModel/);
+    assert.match(viewModel, /projectLocalGraph: localGraph\.project/);
+
     const once = await readFile(join(siteDir, "view-state.js"), "utf8");
     assert.equal((once.match(/IPM_QUERY_GATED_QUALITY_PRESENTATION_V1/g) || []).length, 1);
     assert.equal((once.match(/IPM_RENDERER_NEUTRAL_TRANSFERABLE_STATE_V1/g) || []).length, 1);
+    assert.equal((once.match(/IPM_SHARED_LOCAL_GRAPH_P2/g) || []).length, 1);
     assert.match(once, /window\.ProjectMapTransferableState/);
+    assert.match(once, /window\.ProjectMapViewModel/);
+    assert.match(once, /api\.projectLocalGraph/);
+    assert.doesNotMatch(once, /function relationEdges\(graph\)/);
     assert.match(once, /api\.applyToUrl/);
     assert.match(once, /searchParams\.get\("quality"\) === "1"/);
     assert.match(once, /script\.src = "\.\.\/quality-view\.js"/);
     assert.match(once, /state: "disabled"/);
 
     const htmlOnce = await readFile(join(siteDir, "u", "index.html"), "utf8");
-    assert.match(htmlOnce, /project-map-view-state\.js" defer><\/script>\s*<script src="\.\.\/view-state\.js" defer>/);
+    assert.match(htmlOnce, /project-map-view-state\.js" defer><\/script>\s*<script src="\.\.\/project-map-view-model\.js" defer><\/script>\s*<script src="\.\.\/view-state\.js" defer>/);
 
     const second = await applyQualityView({ siteDir, sourceDir });
     assert.equal(second.injected, false);
     const twice = await readFile(join(siteDir, "view-state.js"), "utf8");
     assert.equal((twice.match(/IPM_QUERY_GATED_QUALITY_PRESENTATION_V1/g) || []).length, 1);
     assert.equal((twice.match(/IPM_RENDERER_NEUTRAL_TRANSFERABLE_STATE_V1/g) || []).length, 1);
+    assert.equal((twice.match(/IPM_SHARED_LOCAL_GRAPH_P2/g) || []).length, 1);
     const htmlTwice = await readFile(join(siteDir, "u", "index.html"), "utf8");
     assert.equal((htmlTwice.match(/project-map-view-state\.js/g) || []).length, 1);
+    assert.equal((htmlTwice.match(/project-map-view-model\.js/g) || []).length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
