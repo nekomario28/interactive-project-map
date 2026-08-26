@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TOP_LEVEL_KEYS = ["cross_surface_policy", "status", "surfaces", "version"];
-const SURFACE_KEYS = ["file", "observed_consumed_roles", "observed_unconsumed_roles", "root_roles", "theme_overrides"];
+const SURFACE_KEYS = ["files", "observed_consumed_roles", "observed_unconsumed_roles", "root_roles", "theme_overrides"];
 const CROSS_POLICY_KEYS = ["raw_color_literals", "reduced_motion_required", "role_usage_change_requires_review", "shared_semantic_role_names_required", "value_equality_required"];
 const SURFACE_NAMES = ["shared_2d", "threejs_cosmic"];
 
@@ -80,14 +80,20 @@ function assertRoleUsage(surfaceName, surface, css) {
 
 function validateGrammarShape(grammar) {
   assertClosedKeys(grammar, TOP_LEVEL_KEYS, "grammar");
-  if (grammar.version !== 1) throw new Error(`grammar.version must be 1`);
-  if (grammar.status !== "measured-reference-detection-only") throw new Error(`grammar.status must remain measured-reference-detection-only`);
+  if (grammar.version !== 2) throw new Error("grammar.version must be 2");
+  if (grammar.status !== "measured-reference-detection-only") throw new Error("grammar.status must remain measured-reference-detection-only");
   assertClosedKeys(grammar.surfaces, SURFACE_NAMES, "grammar.surfaces");
   for (const name of SURFACE_NAMES) {
     const surface = grammar.surfaces[name];
     const expectedKeys = name === "shared_2d" ? SURFACE_KEYS : SURFACE_KEYS.filter((key) => key !== "theme_overrides");
     assertClosedKeys(surface, expectedKeys, `grammar.surfaces.${name}`);
-    if (typeof surface.file !== "string" || !surface.file.endsWith(".css")) throw new Error(`${name}: file must be a CSS path`);
+    if (!Array.isArray(surface.files) || surface.files.length === 0) throw new Error(`${name}: files must be a non-empty array`);
+    if (new Set(surface.files).size !== surface.files.length) throw new Error(`${name}: files must not contain duplicates`);
+    for (const file of surface.files) {
+      if (typeof file !== "string" || !/^scripts\/(?!.*\.\.)[a-z0-9._/-]+\.css$/i.test(file)) {
+        throw new Error(`${name}: each file must be a bounded scripts/*.css path`);
+      }
+    }
     if (!surface.root_roles || typeof surface.root_roles !== "object" || Array.isArray(surface.root_roles)) throw new Error(`${name}: root_roles must be an object`);
     if (!Array.isArray(surface.observed_consumed_roles) || !Array.isArray(surface.observed_unconsumed_roles)) throw new Error(`${name}: role usage observations must be arrays`);
   }
@@ -100,13 +106,25 @@ function validateGrammarShape(grammar) {
   if (policy.reduced_motion_required !== true) throw new Error("reduced-motion must remain required");
 }
 
+export function assertExactSurfaceFileSet(label, declared, discovered) {
+  const expected = sorted(declared);
+  const actual = sorted(discovered);
+  if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+    throw new Error(`${label}: source file set drift; expected ${expected.join(", ")}; got ${actual.join(", ")}`);
+  }
+}
+
 export function validateCssAgainstGrammar(grammar, cssBySurface) {
   validateGrammarShape(grammar);
   const report = { surfaces: {} };
   for (const name of SURFACE_NAMES) {
     const surface = grammar.surfaces[name];
-    const css = cssBySurface[name];
-    if (typeof css !== "string") throw new Error(`${name}: CSS source is missing`);
+    const sources = cssBySurface[name];
+    if (!Array.isArray(sources) || sources.length !== surface.files.length) {
+      throw new Error(`${name}: CSS source count must match grammar files (${surface.files.length})`);
+    }
+    if (sources.some((css) => typeof css !== "string")) throw new Error(`${name}: CSS sources must be strings`);
+    const css = sources.join("\n");
     const rootRoles = extractCustomProperties(extractBlock(css, ":root", name));
     assertStringMap(rootRoles, surface.root_roles, `${name} :root`);
     if (name === "shared_2d") {
@@ -117,13 +135,14 @@ export function validateCssAgainstGrammar(grammar, cssBySurface) {
     }
     const usage = assertRoleUsage(name, surface, css);
     report.surfaces[name] = {
+      source_files: sources.length,
       roles: Object.keys(surface.root_roles).length,
       consumed_roles: usage.consumed,
       unconsumed_roles: usage.unconsumed,
       raw_color_literals: rawColorLiteralCount(css)
     };
   }
-  const threeCss = cssBySurface.threejs_cosmic;
+  const threeCss = cssBySurface.threejs_cosmic.join("\n");
   if (!/@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(threeCss)) throw new Error("threejs_cosmic: missing prefers-reduced-motion boundary");
   if (!/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.three-label\s*\{[\s\S]*?will-change:\s*auto\s*;[\s\S]*?\}/.test(threeCss)) {
     throw new Error("threejs_cosmic: reduced-motion boundary must disable .three-label will-change");
@@ -135,8 +154,20 @@ export function validateCssAgainstGrammar(grammar, cssBySurface) {
 export async function validateDesignSystem(rootDir = process.cwd()) {
   const grammarPath = resolve(rootDir, "design", "ui-reference-grammar.json");
   const grammar = JSON.parse(await readFile(grammarPath, "utf8"));
+  validateGrammarShape(grammar);
+
+  const scriptsDir = resolve(rootDir, "scripts");
+  const discoveredThreeCss = (await readdir(scriptsDir))
+    .filter((name) => /^public-threejs-.*\.css$/.test(name))
+    .map((name) => `scripts/${name}`);
+  assertExactSurfaceFileSet("threejs_cosmic", grammar.surfaces.threejs_cosmic.files, discoveredThreeCss);
+
   const cssBySurface = {};
-  for (const name of SURFACE_NAMES) cssBySurface[name] = await readFile(resolve(rootDir, grammar.surfaces[name].file), "utf8");
+  for (const name of SURFACE_NAMES) {
+    cssBySurface[name] = await Promise.all(
+      grammar.surfaces[name].files.map((file) => readFile(resolve(rootDir, file), "utf8"))
+    );
+  }
   return validateCssAgainstGrammar(grammar, cssBySurface);
 }
 
@@ -145,5 +176,5 @@ if (invokedPath === fileURLToPath(import.meta.url)) {
   const report = await validateDesignSystem();
   const shared = report.surfaces.shared_2d;
   const three = report.surfaces.threejs_cosmic;
-  console.log(`PROJECT_MAP_DESIGN_LINT_PASS shared_roles=${shared.roles} three_roles=${three.roles} three_consumed=${three.consumed_roles} three_unconsumed=${three.unconsumed_roles} shared_raw_colors=${shared.raw_color_literals} three_raw_colors=${three.raw_color_literals} fingerprint=${report.fingerprint}`);
+  console.log(`PROJECT_MAP_DESIGN_LINT_PASS shared_sources=${shared.source_files} three_sources=${three.source_files} shared_roles=${shared.roles} three_roles=${three.roles} three_consumed=${three.consumed_roles} three_unconsumed=${three.unconsumed_roles} shared_raw_colors=${shared.raw_color_literals} three_raw_colors=${three.raw_color_literals} fingerprint=${report.fingerprint}`);
 }
