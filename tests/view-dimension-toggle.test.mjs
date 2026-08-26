@@ -44,3 +44,11 @@ test("view dimension runtime keeps renderer navigation separate from Style state
   assert.match(source, /ProjectMapTransferableState/);
   assert.match(source, /ProjectMapViewDimension/);
 });
+
+test("render density stays renderer-local in both 2D to 3D and 3D to 2D navigation", async () => {
+  const source = await readFile(new URL("../scripts/public-view-dimension-toggle.js", import.meta.url), "utf8");
+  const transferable = source.match(/const TRANSFERABLE_KEYS = \[([^\]]+)\]/)?.[1] || "";
+  assert.ok(transferable, "TRANSFERABLE_KEYS should remain explicit and inspectable");
+  assert.doesNotMatch(transferable, /["']render["']/);
+  assert.match(source, /url\.searchParams\.delete\("render"\)/);
+});
