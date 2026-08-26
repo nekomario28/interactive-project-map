@@ -3,5 +3,5 @@ import { createProjectMapLocalGraphApi } from "../packages/project-map-view-mode
 import { normalizeWeightedEdges } from "../packages/spatial-core/src/relations.js";
 
 export function projectMapViewModelRuntimeSource() {
-  return `"use strict";\n/* global window */\n(() => {\n  const normalizeWeightedEdges = ${normalizeWeightedEdges.toString()};\n  const base = (${createProjectMapViewModelApi.toString()})({ normalizeWeightedEdges });\n  const localGraph = (${createProjectMapLocalGraphApi.toString()})({ projectByStatuses: base.projectByStatuses });\n  window.ProjectMapViewModel = Object.freeze({ ...base, projectLocalGraph: localGraph.project });\n})();\n`;
+  return `"use strict";\n(() => {\n  const normalizeWeightedEdges = ${normalizeWeightedEdges.toString()};\n  const base = (${createProjectMapViewModelApi.toString()})({ normalizeWeightedEdges });\n  const localGraph = (${createProjectMapLocalGraphApi.toString()})({ projectByStatuses: base.projectByStatuses });\n  window.ProjectMapViewModel = Object.freeze({ ...base, projectLocalGraph: localGraph.project });\n})();\n`;
 }
