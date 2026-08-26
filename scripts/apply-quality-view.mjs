@@ -9,7 +9,8 @@ const TRANSFER_MARKER = "/* IPM_RENDERER_NEUTRAL_TRANSFERABLE_STATE_V1 */";
 const TRANSFER_SCRIPT = '<script src="../project-map-view-state.js" defer></script>';
 const BOOTSTRAP = `${MARKER}
 (() => {
-  const requested = new URL(location.href).searchParams.get("quality") === "1";
+  const requested = window.ProjectMapTransferableState?.parse(location.href).quality
+    ?? new URL(location.href).searchParams.get("quality") === "1";
 
   function installExperimentalControl() {
     if (document.getElementById("qualityToggle")) return;
@@ -64,13 +65,18 @@ const BOOTSTRAP = `${MARKER}
 
 export function patchSharedTransferableViewState(source) {
   if (source.includes(TRANSFER_MARKER)) return source;
+  const initialPattern = '  const initialParams = new URL(location.href).searchParams;\n  let userMotionOff = initialParams.get("motion") === "off";';
+  if (!source.includes(initialPattern)) throw new Error("Could not locate shared 2D initial URL state");
+  let next = source.replace(initialPattern, `  const initialParams = new URL(location.href).searchParams;
+  const initialTransferableState = window.ProjectMapTransferableState?.parse(location.href) || null;
+  let userMotionOff = initialTransferableState?.motionOff ?? initialParams.get("motion") === "off";`);
+
   const parsePattern = /    function parseStatuses\(value\) \{[\s\S]*?\n    \}\n\n    const statuses = parseStatuses\(initialParams\.get\("status"\)\);/;
-  if (!parsePattern.test(source)) throw new Error("Could not locate shared 2D status URL parser");
-  let next = source.replace(parsePattern, `    ${TRANSFER_MARKER}
+  if (!parsePattern.test(next)) throw new Error("Could not locate shared 2D status URL parser");
+  next = next.replace(parsePattern, `    ${TRANSFER_MARKER}
     function parseStatuses(value) {
-      const shared = window.ProjectMapTransferableState?.parse(location.href);
-      if (Array.isArray(shared?.statuses)) {
-        const parsed = shared.statuses.filter((item) => STATUS_VALUES.includes(item));
+      if (Array.isArray(initialTransferableState?.statuses)) {
+        const parsed = initialTransferableState.statuses.filter((item) => STATUS_VALUES.includes(item));
         if (parsed.length) return new Set(parsed);
       }
       if (!value) return new Set(STATUS_VALUES);
@@ -83,6 +89,13 @@ export function patchSharedTransferableViewState(source) {
     }
 
     const statuses = parseStatuses(initialParams.get("status"));`);
+
+  const localStatePattern = '    let activity = initialParams.get("activity") === "1";\n    let focusRoot = String(initialParams.get("focus") || "").slice(0, 180);\n    let focusDepth = Math.max(1, Math.min(3, Math.round(Number(initialParams.get("depth")) || 1)));\n    const initialSearch = String(initialParams.get("q") || "").slice(0, 160);';
+  if (!next.includes(localStatePattern)) throw new Error("Could not locate shared 2D transferable local state");
+  next = next.replace(localStatePattern, `    let activity = initialTransferableState?.activity ?? initialParams.get("activity") === "1";
+    let focusRoot = String(initialTransferableState?.focus ?? initialParams.get("focus") ?? "").slice(0, 180);
+    let focusDepth = initialTransferableState?.depth ?? Math.max(1, Math.min(3, Math.round(Number(initialParams.get("depth")) || 1)));
+    const initialSearch = String(initialTransferableState?.q ?? initialParams.get("q") ?? "").slice(0, 160);`);
 
   const syncPattern = /    function syncUrl\(\) \{[\s\S]*?\n    \}\n\n    function visibleRepositories\(\) \{/;
   if (!syncPattern.test(next)) throw new Error("Could not locate shared 2D URL serializer");
