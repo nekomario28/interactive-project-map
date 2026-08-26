@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "status": "measured-reference-detection-only",
+  "surfaces": {
+    "shared_2d": {
+      "file": "scripts/public-viewer.css",
+      "root_roles": {
+        "--bg": "#050811",
+        "--panel": "#0b111d",
+        "--panel-elevated": "#101827",
+        "--text": "#eaf0ff",
+        "--muted": "#97a6bc",
+        "--border": "#26344d",
+        "--accent": "#64d2ff",
+        "--owner": "#64d2ff",
+        "--group": "#6aa7ff",
+        "--original": "#57d17a",
+        "--fork": "#b59aff",
+        "--archived": "#d9847b",
+        "--relation": "#f4b65f",
+        "--shadow": "rgba(0, 0, 0, 0.34)"
+      },
+      "theme_overrides": {
+        "body[data-map-style=\"obsidian\"]": {
+          "--bg": "#1e1e1e",
+          "--panel": "#252525",
+          "--panel-elevated": "#2b2b2b",
+          "--text": "#dcddde",
+          "--muted": "#9a9a9f",
+          "--border": "#3c3c3f",
+          "--accent": "#a89df7",
+          "--owner": "#c4b5fd",
+          "--group": "#8b7cf6",
+          "--original": "#a89df7",
+          "--fork": "#67b7a7",
+          "--archived": "#b97a7a",
+          "--relation": "#d7a75b",
+          "--shadow": "rgba(0, 0, 0, 0.26)"
+        }
+      },
+      "observed_consumed_roles": [
+        "--accent",
+        "--archived",
+        "--bg",
+        "--border",
+        "--fork",
+        "--group",
+        "--muted",
+        "--original",
+        "--owner",
+        "--panel",
+        "--panel-elevated",
+        "--relation",
+        "--shadow",
+        "--text"
+      ],
+      "observed_unconsumed_roles": []
+    },
+    "threejs_cosmic": {
+      "file": "scripts/public-threejs-viewer.css",
+      "root_roles": {
+        "--three-panel": "rgba(7, 11, 24, 0.78)",
+        "--three-panel-strong": "rgba(8, 13, 29, 0.93)",
+        "--three-line": "rgba(133, 166, 232, 0.22)",
+        "--three-text": "#edf4ff",
+        "--three-muted": "#91a4c3",
+        "--three-cyan": "#8edbff",
+        "--three-violet": "#b39bff",
+        "--three-warm": "#ffb86b"
+      },
+      "observed_consumed_roles": [
+        "--three-cyan"
+      ],
+      "observed_unconsumed_roles": [
+        "--three-line",
+        "--three-muted",
+        "--three-panel",
+        "--three-panel-strong",
+        "--three-text",
+        "--three-violet",
+        "--three-warm"
+      ]
+    }
+  },
+  "cross_surface_policy": {
+    "value_equality_required": false,
+    "shared_semantic_role_names_required": false,
+    "raw_color_literals": "census-only-not-authority",
+    "role_usage_change_requires_review": true,
+    "reduced_motion_required": true
+  }
+}
