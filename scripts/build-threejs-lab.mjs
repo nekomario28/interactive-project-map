@@ -26,7 +26,7 @@ export function renderThreejsLabPage() {
     </div>
     <div class="controls three-controls">
       <label class="field three-search"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off" /></label>
-      <div class="control-cluster status-cluster" aria-label="Repository status filters">
+      <div class="control-cluster status-cluster" role="group" aria-label="Repository status filters">
         <button type="button" data-status-filter="original" aria-pressed="true">Original</button>
         <button type="button" data-status-filter="fork" aria-pressed="true">Fork</button>
         <button type="button" data-status-filter="archived" aria-pressed="true">Archived</button>
