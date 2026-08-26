@@ -13,12 +13,16 @@ export function createProjectMapTransferableStateApi() {
     }
   }
 
-  function normalizeStatuses(value) {
+  function normalizedStatusList(value, defaultAll = true) {
     const source = Array.isArray(value) ? value : String(value || "").split(",");
     const statuses = source
       .map((item) => STATUS_ALIASES[item] || item)
       .filter((item) => STATUS_VALUES.includes(item));
-    return [...new Set(statuses.length ? statuses : STATUS_VALUES)];
+    return [...new Set(statuses.length || !defaultAll ? statuses : STATUS_VALUES)];
+  }
+
+  function normalizeStatuses(value) {
+    return normalizedStatusList(value, true);
   }
 
   function parse(value) {
@@ -39,7 +43,9 @@ export function createProjectMapTransferableStateApi() {
 
   function applyToUrl(urlValue, state = {}, options = {}) {
     const url = urlValue instanceof URL ? new URL(urlValue.toString()) : new URL(String(urlValue));
-    const availableStatuses = normalizeStatuses(options.availableStatuses || STATUS_VALUES);
+    const availableStatuses = Object.hasOwn(options, "availableStatuses")
+      ? normalizedStatusList(options.availableStatuses, false)
+      : [...STATUS_VALUES];
     const statuses = normalizeStatuses(state.statuses || STATUS_VALUES).filter((value) => availableStatuses.includes(value));
     const effectiveStatuses = statuses.length ? statuses : availableStatuses;
     const defaults = effectiveStatuses.length === availableStatuses.length
@@ -53,7 +59,7 @@ export function createProjectMapTransferableStateApi() {
     if (q) url.searchParams.set("q", q);
     else url.searchParams.delete("q");
 
-    if (defaults) url.searchParams.delete("status");
+    if (!availableStatuses.length || defaults) url.searchParams.delete("status");
     else url.searchParams.set("status", STATUS_VALUES.filter((value) => effectiveStatuses.includes(value)).join(","));
 
     if (state.motionOff === true) url.searchParams.set("motion", "off");
