@@ -23,7 +23,7 @@
 
   function current2DStyle() {
     const params = new URL(location.href).searchParams;
-    return safe2DStyle(params.get("style") || document.body.dataset.mapStyle);
+    return safe2DStyle(params.get("style") || params.get("style2d") || document.body.dataset.mapStyle);
   }
 
   function copyTransferableFallback(source, target) {
@@ -50,7 +50,7 @@
 
   function twoDUrl() {
     const source = new URL(location.href);
-    const style = safe2DStyle(source.searchParams.get("style2d"));
+    const style = safe2DStyle(source.searchParams.get("style2d") || source.searchParams.get("style"));
     const url = transferTo(new URL("../u/", location.href));
     url.searchParams.set("style", style);
     url.searchParams.delete("style2d");
