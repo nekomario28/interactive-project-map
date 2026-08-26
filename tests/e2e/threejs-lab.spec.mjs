@@ -97,3 +97,57 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
 
   await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-chromium.png", fullPage: true });
 });
+
+test.describe("mobile Three.js happy-path evidence", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test("Three.js lab renders at a phone viewport with bounded backing-store density", async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "Mobile GPU evidence is kept deterministic in Chromium; WebKit remains fallback-only in CI.");
+    await mkdir(".tmp/playwright-visual", { recursive: true });
+    await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
+    });
+
+    await page.goto("/three/?username=example");
+    await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+    await expect(page.locator("#galaxy3d")).toBeVisible();
+
+    const metrics = await page.locator("#galaxy3d").evaluate((canvas) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        cssWidth: rect.width,
+        cssHeight: rect.height,
+        backingWidth: canvas.width,
+        backingHeight: canvas.height,
+        devicePixelRatio: window.devicePixelRatio,
+        viewportWidth: window.innerWidth,
+        pageScrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(metrics.devicePixelRatio).toBe(3);
+    expect(metrics.viewportWidth).toBe(390);
+    expect(metrics.cssWidth).toBeGreaterThan(0);
+    expect(metrics.cssHeight).toBeGreaterThan(0);
+    expect(metrics.backingWidth).toBeGreaterThan(0);
+    expect(metrics.backingHeight).toBeGreaterThan(0);
+    expect(metrics.backingWidth).toBeLessThanOrEqual(Math.ceil(metrics.cssWidth * 1.05));
+    expect(metrics.backingHeight).toBeLessThanOrEqual(Math.ceil(metrics.cssHeight * 1.05));
+    expect(metrics.pageScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+
+    const [statusBox, canvasBox] = await Promise.all([
+      page.locator("#status").boundingBox(),
+      page.locator("#galaxy3d").boundingBox(),
+    ]);
+    expect(statusBox).not.toBeNull();
+    expect(canvasBox).not.toBeNull();
+    expect(statusBox.y).toBeGreaterThan(canvasBox.y + canvasBox.height * 0.7);
+
+    await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-mobile-chromium.png", fullPage: true });
+  });
+});
