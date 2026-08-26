@@ -78,6 +78,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
 
   await page.goto("/three/?username=example");
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+  await expect(page.locator("#subtitle")).toContainText("2 projects · 1 category · depth-aware experimental renderer");
   await expect(page.locator("#galaxy3d")).toBeVisible();
 
   const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
@@ -85,6 +86,14 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   const backingStore = await page.locator("#galaxy3d").evaluate((canvas) => ({ width: canvas.width, height: canvas.height }));
   expect(backingStore.width).toBeGreaterThan(0);
   expect(backingStore.height).toBeGreaterThan(0);
+
+  const [statusBox, canvasBox] = await Promise.all([
+    page.locator("#status").boundingBox(),
+    page.locator("#galaxy3d").boundingBox(),
+  ]);
+  expect(statusBox).not.toBeNull();
+  expect(canvasBox).not.toBeNull();
+  expect(statusBox.y).toBeGreaterThan(canvasBox.y + canvasBox.height * 0.7);
 
   await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-chromium.png", fullPage: true });
 });
