@@ -1,0 +1,108 @@
+import { expect, test } from "@playwright/test";
+
+const graph = {
+  owner: "example",
+  generatedAt: "2026-08-26T00:00:00Z",
+  repositoryCount: 1,
+  groupCount: 1,
+  nodes: [
+    { id: "user:example", label: "example", type: "owner", url: "https://github.com/example" },
+    { id: "group:apps", label: "Apps", type: "group", repositoryCount: 1 },
+    {
+      id: "repository:alpha",
+      label: "alpha",
+      repositoryName: "alpha",
+      type: "repository",
+      url: "https://github.com/example/alpha",
+      description: "Alpha app",
+      language: "JavaScript",
+      topics: ["demo"],
+      stars: 1,
+      forks: 0,
+      fork: false,
+      archived: false,
+      relation: "owned",
+      groupId: "apps",
+      groupLabel: "Apps",
+      updatedAt: "2026-08-25T00:00:00Z",
+    },
+  ],
+  edges: [
+    { source: "user:example", target: "group:apps", type: "ownership" },
+    { source: "group:apps", target: "repository:alpha", type: "membership" },
+  ],
+};
+
+async function installGraph(page) {
+  await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
+  });
+}
+
+test("View is a separate 2D/3D axis and restores the previous 2D style", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Real Three.js renderer switching is exercised once in Chromium.");
+  await installGraph(page);
+
+  await page.goto("/u/?username=example&style=galaxy-hybrid&q=alpha&status=original&motion=off");
+  await expect(page.locator("#status")).toBeHidden();
+  await expect(page.locator('body[data-view-dimension="2d"]')).toHaveCount(1);
+  await expect(page.locator('.view-mode-option[aria-current="page"]')).toHaveText("2D");
+  await expect(page.locator("#style option")).toHaveCount(12);
+  expect(await page.locator("#style").evaluate((select) => [...select.options].map((option) => option.value))).not.toContain("threejs");
+
+  const threeTarget = await page.evaluate(() => {
+    const link = new URL(document.getElementById("view3D").href);
+    return {
+      pathname: link.pathname,
+      style: link.searchParams.get("style"),
+      style2d: link.searchParams.get("style2d"),
+      state: window.ProjectMapTransferableState.parse(link),
+    };
+  });
+  expect(threeTarget.pathname).toMatch(/\/three\/$/);
+  expect(threeTarget.style).toBeNull();
+  expect(threeTarget.style2d).toBe("galaxy-hybrid");
+  expect(threeTarget.state.username).toBe("example");
+  expect(threeTarget.state.q).toBe("alpha");
+  expect(threeTarget.state.motionOff).toBe(true);
+  expect(threeTarget.state.statuses).toContain("original");
+
+  await page.goto(await page.locator("#view3D").getAttribute("href"));
+  await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+  await expect(page.locator('body[data-view-dimension="3d"]')).toHaveCount(1);
+  await expect(page.locator('.view-mode-option[aria-current="page"]')).toContainText("3D");
+  await expect(page.locator("#threeStyle option")).toHaveCount(1);
+  await expect(page.locator("#threeStyle")).toHaveValue("cosmic");
+
+  const twoTarget = await page.evaluate(() => {
+    const link = new URL(document.getElementById("twoDLink").href);
+    return {
+      pathname: link.pathname,
+      style: link.searchParams.get("style"),
+      style2d: link.searchParams.get("style2d"),
+      render: link.searchParams.get("render"),
+      state: window.ProjectMapTransferableState.parse(link),
+      snapshot: window.ProjectMapViewDimension.snapshot(),
+    };
+  });
+  expect(twoTarget.pathname).toMatch(/\/u\/$/);
+  expect(twoTarget.style).toBe("galaxy-hybrid");
+  expect(twoTarget.style2d).toBeNull();
+  expect(twoTarget.render).toBeNull();
+  expect(twoTarget.state.username).toBe("example");
+  expect(twoTarget.state.q).toBe("alpha");
+  expect(twoTarget.state.motionOff).toBe(true);
+  expect(twoTarget.snapshot.dimension).toBe("3d");
+  expect(twoTarget.snapshot.twoDStyle).toBe("galaxy-hybrid");
+});
+
+test("dedicated 2D routes also expose 3D without treating it as a Style option", async ({ page }) => {
+  await installGraph(page);
+  await page.goto("/radial/?username=example");
+  await expect(page.locator("#status")).toBeHidden();
+  await expect(page.locator('body[data-view-dimension="2d"]')).toHaveCount(1);
+  await expect(page.locator("#style option")).toHaveCount(12);
+  const url = new URL(await page.locator("#view3D").getAttribute("href"));
+  expect(url.pathname).toMatch(/\/three\/$/);
+  expect(url.searchParams.get("style2d")).toBe("radial");
+});
