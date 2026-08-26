@@ -72,6 +72,11 @@ async function installGraph(page, value = graph) {
   });
 }
 
+function querySnapshot(href) {
+  const url = new URL(href);
+  return Object.fromEntries([...url.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
 test("isolated Three.js lab route fails closed without a username", async ({ page }) => {
   await page.goto("/three/");
 
@@ -81,16 +86,34 @@ test("isolated Three.js lab route fails closed without a username", async ({ pag
   await expect(page.locator("#fallbackLink")).toHaveAttribute("href", "../u/");
   await expect(page.locator("#twoDLink")).toHaveAttribute("href", "../u/");
   await expect(page.locator("[data-status-filter]")).toHaveCount(4);
+  await expect(page.locator("#renderDensityToggle")).toHaveText("Render Auto");
+  await expect(page.locator("#qualityToggle")).toHaveCount(0);
 });
 
-test("isolated Three.js lab keeps the 2D fallback usable when the pinned engine is unavailable", async ({ page }) => {
+test("engine failure preserves transferable state in the 2D fallback but drops render density", async ({ page }) => {
   await page.route("https://cdn.jsdelivr.net/**", async (route) => route.abort());
-  await page.goto("/three/?username=example");
+  await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aalpha&depth=2&quality=1&render=high");
 
   await expect(page.locator("#error")).toHaveClass(/visible/);
   await expect(page.locator("#errorText")).toContainText("pinned Three.js module could not be loaded");
-  await expect(page.locator("#twoDLink")).toHaveAttribute("href", /\/u\/\?username=example$/);
-  await expect(page.locator("#fallbackLink")).toHaveAttribute("href", /\/u\/\?username=example$/);
+  const hrefs = await page.evaluate(() => ({
+    twoD: document.getElementById("twoDLink").href,
+    fallback: document.getElementById("fallbackLink").href,
+  }));
+  const expected = {
+    activity: "1",
+    depth: "2",
+    focus: "repository:alpha",
+    motion: "off",
+    q: "rust",
+    quality: "1",
+    status: "contributed",
+    username: "example",
+  };
+  expect(querySnapshot(hrefs.twoD)).toEqual(expected);
+  expect(querySnapshot(hrefs.fallback)).toEqual(expected);
+  expect(hrefs.twoD).not.toContain("render=");
+  expect(hrefs.fallback).not.toContain("render=");
 });
 
 test("Three.js lab renders the happy-path scene and emits Chromium evidence", async ({ page, browserName }) => {
@@ -102,6 +125,12 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
   await expect(page.locator("#subtitle")).toContainText("2 projects · 1 category · depth-aware experimental renderer");
   await expect(page.locator("#galaxy3d")).toBeVisible();
+  await expect(page.locator('[data-status-filter="original"]')).toHaveText("Original 1");
+  await expect(page.locator('[data-status-filter="contributed"]')).toHaveText("Contributed 1");
+  await expect(page.locator('[data-status-filter="fork"]')).toHaveText("Fork 0");
+  await expect(page.locator('[data-status-filter="fork"]')).toBeDisabled();
+  await expect(page.locator('[data-status-filter="archived"]')).toHaveText("Archived 0");
+  await expect(page.locator('[data-status-filter="archived"]')).toBeDisabled();
 
   const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
   expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-cosmic", experimental: true });
@@ -120,6 +149,48 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-chromium.png", fullPage: true });
 });
 
+test("Three.js restores transferable state and keeps renderer-local density out of the 2D link", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Real Three.js state transfer is exercised in Chromium.");
+  await installGraph(page);
+  await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aalpha&depth=2&quality=1&render=low");
+  await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+
+  await expect(page.locator("#search")).toHaveValue("rust");
+  await expect(page.locator('[data-status-filter="original"]')).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator('[data-status-filter="contributed"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-status-filter="fork"]')).toBeDisabled();
+  await expect(page.locator('[data-status-filter="archived"]')).toBeDisabled();
+  await expect(page.locator("#motionToggle")).toHaveText("Motion Off");
+  await expect(page.locator("#renderDensityToggle")).toHaveText("Render Low");
+  await expect(page.locator("#resultCount")).toHaveText("1 / 2 projects");
+
+  const state = await page.evaluate(() => ({
+    current: location.href,
+    twoD: document.getElementById("twoDLink").href,
+  }));
+  expect(querySnapshot(state.current)).toEqual({
+    activity: "1",
+    depth: "2",
+    focus: "repository:alpha",
+    motion: "off",
+    q: "rust",
+    quality: "1",
+    render: "low",
+    status: "contributed",
+    username: "example",
+  });
+  expect(querySnapshot(state.twoD)).toEqual({
+    activity: "1",
+    depth: "2",
+    focus: "repository:alpha",
+    motion: "off",
+    q: "rust",
+    quality: "1",
+    status: "contributed",
+    username: "example",
+  });
+});
+
 test("Three.js status filtering uses structural projection and prunes an empty owned category", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js state projection is exercised in Chromium.");
   await installGraph(page);
@@ -128,9 +199,11 @@ test("Three.js status filtering uses structural projection and prunes an empty o
 
   const roboticsLabel = page.locator("#threeLabels .three-label", { hasText: "Robotics" });
   await expect(roboticsLabel).toBeVisible();
-  await page.getByRole("button", { name: "Original" }).click();
+  await page.locator('[data-status-filter="original"]').click();
   await expect(page.locator("#resultCount")).toHaveText("1 / 2 projects");
   await expect(roboticsLabel).toBeHidden();
+  const current = new URL(page.url());
+  expect(current.searchParams.get("status")).toBe("contributed");
 });
 
 test("Three.js shared admission fails closed on incomplete Contributed provenance", async ({ page, browserName }) => {

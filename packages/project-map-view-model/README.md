@@ -14,6 +14,7 @@ Project Map View Model
   - Contributed provenance contract
   - safe search/taxonomy metadata
   - status/focus projections
+  - transferable URL state
         |
         +------------------+
         |                  |
@@ -31,6 +32,7 @@ Spatial Core primitives where geometry/relation math is generic
 - Strict external-Contributed provenance/diagnostic admission.
 - Renderer-safe repository metadata such as timestamps, topics and taxonomy search facets.
 - Pure graph projections whose output can be compared across renderers.
+- The transferable URL subset: `username`, `q`, `status`, `motion`, `activity`, `focus`, `depth`, and repository-quality `quality=1`.
 
 ## Does not own
 
@@ -38,10 +40,13 @@ Spatial Core primitives where geometry/relation math is generic
 - 2D pan/zoom or 3D orbit/dolly camera behavior.
 - Labels, raycasting/hit testing, hover effects or details DOM.
 - Three.js loading/disposal.
+- Renderer-local camera or backing-store state. In particular, Three.js `render=auto|high|low` is intentionally outside the transferable contract.
 - Generic force math or weighted relation normalization; those remain Spatial Core responsibilities.
 
-## P0 integration
+## Integration
 
-The experimental Three.js Lab is the first direct browser consumer. Its generated runtime uses this model for graph admission and repository-status projection, while retaining its existing renderer-specific search, camera and scene implementation.
+P0 made the experimental Three.js Lab the first direct semantic-model consumer for graph admission and structural repository-status projection.
 
-The 2D family remains behaviorally unchanged in P0. Cross-renderer migration should move semantics into this package only when existing 2D regression gates prove parity.
+P1 adds a small pure transferable-state API generated into the browser from the same source. The shared `/u/` viewer and the Three.js Lab parse/serialize the same cross-renderer URL contract, while renderer-local state stays with its adapter. The Three.js backing-store control is named **Render** rather than **Quality**, preserving `quality=1` exclusively for repository Quality evidence.
+
+Canvas/WebGL drawing, cameras and scene implementations remain intentionally separate.
