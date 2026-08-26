@@ -17,13 +17,16 @@
   ]);
   const TRANSFERABLE_KEYS = ["username", "q", "status", "motion", "activity", "focus", "depth", "quality"];
 
-  function safe2DStyle(value) {
-    return TWO_D_STYLES.has(value) ? value : "galaxy-systems";
+  function valid2DStyle(value) {
+    return TWO_D_STYLES.has(value) ? value : null;
   }
 
   function current2DStyle() {
     const params = new URL(location.href).searchParams;
-    return safe2DStyle(params.get("style") || params.get("style2d") || document.body.dataset.mapStyle);
+    return valid2DStyle(params.get("style"))
+      || valid2DStyle(params.get("style2d"))
+      || valid2DStyle(document.body.dataset.mapStyle)
+      || "galaxy-systems";
   }
 
   function copyTransferableFallback(source, target) {
@@ -50,9 +53,10 @@
 
   function twoDUrl() {
     const source = new URL(location.href);
-    const style = safe2DStyle(source.searchParams.get("style2d") || source.searchParams.get("style"));
+    const style = valid2DStyle(source.searchParams.get("style2d")) || valid2DStyle(source.searchParams.get("style"));
     const url = transferTo(new URL("../u/", location.href));
-    url.searchParams.set("style", style);
+    if (style) url.searchParams.set("style", style);
+    else url.searchParams.delete("style");
     url.searchParams.delete("style2d");
     url.searchParams.delete("render");
     return url;
@@ -64,8 +68,10 @@
       const href = threeUrl().toString();
       if (three.href !== href) three.href = href;
     }
+
+    const source = new URL(location.href);
     const two = document.getElementById("twoDLink");
-    if (two) {
+    if (two && valid2DStyle(source.searchParams.get("style2d"))) {
       const href = twoDUrl().toString();
       if (two.href !== href) two.href = href;
     }
@@ -81,8 +87,9 @@
     document.addEventListener("change", () => setTimeout(syncLinks, 0), true);
     window.addEventListener("popstate", syncLinks);
 
+    const source = new URL(location.href);
     const twoDLink = document.getElementById("twoDLink");
-    if (twoDLink && typeof MutationObserver === "function") {
+    if (twoDLink && valid2DStyle(source.searchParams.get("style2d")) && typeof MutationObserver === "function") {
       new MutationObserver(syncLinks).observe(twoDLink, { attributes: true, attributeFilter: ["href"] });
     }
 
