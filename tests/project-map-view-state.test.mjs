@@ -61,9 +61,18 @@ test("cross-renderer transfer excludes Three.js render density while preserving 
   assert.equal(target.searchParams.has("render"), false);
 });
 
+test("empty available status sets serialize without inventing repository states", () => {
+  const target = ProjectMapTransferableState.applyToUrl(
+    "https://example.test/u/?status=original",
+    { username: "example", statuses: ["original"] },
+    { availableStatuses: [] },
+  );
+  assert.equal(target.searchParams.has("status"), false);
+});
+
 test("browser runtime is generated from the same pure state factory", () => {
   const runtime = projectMapViewStateRuntimeSource();
   assert.match(runtime, /window\.ProjectMapTransferableState/);
-  assert.match(runtime, /render/);
+  assert.match(runtime, /quality/);
   assert.doesNotMatch(runtime, /searchParams\.set\("render"/);
 });
