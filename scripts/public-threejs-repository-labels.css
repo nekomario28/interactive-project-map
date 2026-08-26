@@ -1,0 +1,32 @@
+.three-label-repository {
+  z-index: 2;
+  max-width: min(240px, 42vw);
+  overflow: hidden;
+  border-color: rgba(142, 219, 255, 0.24);
+  background: rgba(4, 9, 21, 0.8);
+  color: #d9e9ff;
+  text-overflow: ellipsis;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.three-label-repository.is-search-match {
+  border-color: rgba(179, 155, 255, 0.38);
+  color: #e7ddff;
+  background: rgba(23, 17, 50, 0.8);
+}
+
+.three-label-repository.is-selected {
+  border-color: rgba(142, 219, 255, 0.62);
+  background: rgba(12, 33, 55, 0.91);
+  color: #ffffff;
+  font-weight: 760;
+  box-shadow: 0 0 24px rgba(80, 165, 255, 0.18), 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 620px) {
+  .three-label-repository {
+    max-width: 54vw;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+}
