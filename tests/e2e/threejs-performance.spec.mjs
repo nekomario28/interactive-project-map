@@ -141,13 +141,13 @@ async function measureScenario(page, repositoryCount) {
   await page.mouse.up();
   await page.mouse.wheel(0, -420);
 
-  const originalFilter = page.locator('[data-status-filter="original"]');
-  await originalFilter.click();
+  const search = page.locator("#search");
+  await search.fill("__renderer_evidence_no_match__");
   await expect(page.locator("#resultCount")).toContainText(`0 / ${repositoryCount} projects`);
   const filteredRenderer = await rendererSnapshot(page);
   expect(filteredRenderer.semantic.repositories).toBe(0);
   expect(filteredRenderer.semantic.groups).toBe(0);
-  await originalFilter.click();
+  await search.fill("");
   await expect(page.locator("#resultCount")).toContainText(`${repositoryCount} / ${repositoryCount} projects`);
 
   const interactionFrames = summarizeFrameIntervals(await sampleFramesForDuration(page, samplingWindowMs), samplingWindowMs);
