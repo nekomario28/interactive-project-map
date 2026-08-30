@@ -71,8 +71,22 @@ test("View is a separate 2D/3D axis and restores the previous 2D style", async (
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
   await expect(page.locator('body[data-view-dimension="3d"]')).toHaveCount(1);
   await expect(page.locator('.view-mode-option[aria-current="page"]')).toContainText("3D");
+  await expect(page.locator(".view-style-field")).toBeVisible();
+  await expect(page.locator(".view-style-field > span")).toHaveText("Style");
+  await expect(page.locator("#threeStyle")).toBeVisible();
   await expect(page.locator("#threeStyle option")).toHaveCount(1);
   await expect(page.locator("#threeStyle")).toHaveValue("cosmic");
+
+  const controlOrder = await page.evaluate(() => {
+    const view = document.querySelector(".view-mode-cluster");
+    const style = document.querySelector(".view-style-field");
+    return {
+      view: Number.parseInt(getComputedStyle(view).order, 10),
+      style: Number.parseInt(getComputedStyle(style).order, 10),
+    };
+  });
+  expect(controlOrder.view).toBeLessThan(controlOrder.style);
+  expect(controlOrder.style).toBeLessThan(0);
 
   const twoTarget = await page.evaluate(() => {
     const link = new URL(document.getElementById("twoDLink").href);
