@@ -8,7 +8,7 @@ export const THREE_SOURCE_URL = `https://raw.githubusercontent.com/mrdoob/three.
 export const THREE_CORE_SOURCE_URL = `https://raw.githubusercontent.com/mrdoob/three.js/${THREE_SOURCE_COMMIT}/build/three.core.min.js`;
 export const THREE_LOCAL_FILENAME = `three-${THREE_VERSION}.module.min.js`;
 export const THREE_CORE_LOCAL_FILENAME = "three.core.min.js";
-export const THREE_LOCAL_SPECIFIER = `../vendor/${THREE_LOCAL_FILENAME}`;
+export const THREE_LOCAL_SPECIFIER = `./vendor/${THREE_LOCAL_FILENAME}`;
 
 const THREE_CDN_SPECIFIER = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.min.js`;
 const THREE_CDN_ORIGIN = "https://cdn.jsdelivr.net";

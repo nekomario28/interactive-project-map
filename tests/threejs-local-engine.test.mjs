@@ -39,6 +39,12 @@ test("runtime and CSP patches remove the runtime jsDelivr dependency", () => {
   assert.doesNotMatch(patchedHtml, /cdn\.jsdelivr\.net/);
 });
 
+test("local Three.js module stays inside a GitHub Pages project subpath", () => {
+  const runtimeUrl = new URL("https://example.github.io/interactive-project-map/threejs-viewer.js");
+  const engineUrl = new URL(THREE_LOCAL_SPECIFIER, runtimeUrl);
+  assert.equal(engineUrl.pathname, "/interactive-project-map/vendor/three-0.185.1.module.min.js");
+});
+
 test("build localization writes the pinned Three.js module and its core dependency", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-local-"));
   try {
@@ -71,7 +77,8 @@ test("build localization writes the pinned Three.js module and its core dependen
     assert.equal(result.sourceCommit, THREE_SOURCE_COMMIT);
     assert.equal(vendor, fakeEngine);
     assert.equal(coreVendor, fakeCore);
-    assert.match(runtime, /\.\.\/vendor\/three-0\.185\.1\.module\.min\.js/);
+    assert.match(runtime, /\.\/vendor\/three-0\.185\.1\.module\.min\.js/);
+    assert.doesNotMatch(runtime, /\.\.\/vendor\/three-0\.185\.1\.module\.min\.js/);
     assert.doesNotMatch(runtime, /cdn\.jsdelivr\.net/);
     assert.doesNotMatch(html, /cdn\.jsdelivr\.net/);
   } finally {
