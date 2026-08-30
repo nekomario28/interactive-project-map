@@ -25,9 +25,10 @@ async function policyFor({ render = "", width = 1280, dpr = 3 } = {}) {
   return window.ProjectMapRenderDensity;
 }
 
-test("Canvas render density keeps native DPR as the compatibility default", async () => {
+test("Canvas render density stays native", async () => {
   const policy = await policyFor({ dpr: 3 });
   assert.equal(policy.mode, "native");
+  assert.equal(policy.version, 2);
   assert.equal(policy.pixelRatio({ width: 1280, devicePixelRatio: 3 }), 3);
   assert.deepEqual(
     JSON.parse(JSON.stringify(policy.snapshot({ width: 1280, devicePixelRatio: 3 }))),
@@ -35,37 +36,26 @@ test("Canvas render density keeps native DPR as the compatibility default", asyn
   );
 });
 
-test("Canvas render density mirrors the bounded Three.js donor modes when explicitly requested", async () => {
-  const auto = await policyFor({ render: "auto", dpr: 3 });
-  assert.equal(auto.pixelRatio({ width: 1280, devicePixelRatio: 3 }), 1.45);
-  assert.equal(auto.pixelRatio({ width: 390, devicePixelRatio: 3 }), 1);
-
-  const high = await policyFor({ render: "high", dpr: 3 });
-  assert.equal(high.pixelRatio({ width: 1280, devicePixelRatio: 3 }), 1.8);
-  assert.equal(high.pixelRatio({ width: 390, devicePixelRatio: 3 }), 1.25);
-
-  const low = await policyFor({ render: "low", dpr: 3 });
-  assert.equal(low.pixelRatio({ width: 1280, devicePixelRatio: 3 }), 0.85);
-  assert.equal(low.pixelRatio({ width: 390, devicePixelRatio: 0.75 }), 0.75);
+test("legacy Auto High Low render values no longer change Canvas density", async () => {
+  for (const render of ["auto", "high", "low", "ultra"]) {
+    const policy = await policyFor({ render, dpr: 3 });
+    assert.equal(policy.mode, "native", render);
+    assert.equal(policy.pixelRatio({ width: 1280, devicePixelRatio: 3 }), 3, render);
+    assert.equal(policy.pixelRatio({ width: 390, devicePixelRatio: 3 }), 3, render);
+  }
 });
 
-test("unknown render-density values fail open to current native Canvas behavior", async () => {
-  const policy = await policyFor({ render: "ultra", dpr: 2.5 });
-  assert.equal(policy.mode, "native");
-  assert.equal(policy.pixelRatio({ width: 390, devicePixelRatio: 2.5 }), 2.5);
-});
-
-test("all eight Canvas runtimes consume one generated render-density policy hook", async () => {
+test("all eight Canvas runtimes consume one compatibility policy hook", async () => {
   for (const fileName of SOURCE_FILES) {
     const source = await readFile(new URL(`../scripts/${fileName}`, import.meta.url), "utf8");
     const next = patchCanvasRuntime(source, fileName);
-    assert.notEqual(next, source, `${fileName} should receive the policy hook`);
+    assert.notEqual(next, source, `${fileName} should receive the compatibility hook`);
     assert.equal((next.match(/ProjectMapRenderDensity\?\.pixelRatio/g) || []).length, 1, fileName);
     assert.equal(patchCanvasRuntime(next, fileName), next, `${fileName} patch should be idempotent`);
   }
 });
 
-test("Canvas render-density page bootstrap is early, local and idempotent", () => {
+test("Canvas render-density compatibility bootstrap is early, local and idempotent", () => {
   const html = "<!doctype html><html><head><title>x</title></head><body><script src=\"../viewer.js\"></script></body></html>";
   const once = patchCanvasViewerPage(html, "u");
   assert.match(once, /<script src="\.\.\/render-density\.js"><\/script>/);
