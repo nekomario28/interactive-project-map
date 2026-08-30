@@ -3,11 +3,26 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const STYLE_HELPERS = `const THREE_STYLE_IDS=new Set(["cosmic","aurora","wireframe"]);const THREE_STYLE_THEMES={cosmic:{background:0x02040b,fog:0x030610,fogDensity:.00225,hemiSky:0x91aaff,hemiGround:0x080510,hemiIntensity:1.35,center:0x8fb8ff,centerIntensity:680,centerDistance:520,centerDecay:1.7,rim:0xb36cff,rimIntensity:340,rimDistance:480,rimDecay:2,nebulaHues:[218,258,302,188],nebulaOpacityScale:1},aurora:{background:0x00100f,fog:0x04211f,fogDensity:.0021,hemiSky:0x80ffd9,hemiGround:0x03120f,hemiIntensity:1.5,center:0x59ffd0,centerIntensity:720,centerDistance:540,centerDecay:1.6,rim:0x9b7bff,rimIntensity:380,rimDistance:500,rimDecay:1.9,nebulaHues:[164,188,272,128],nebulaOpacityScale:.9},wireframe:{background:0x050608,fog:0x090a0d,fogDensity:.00155,hemiSky:0xe9f5ff,hemiGround:0x050607,hemiIntensity:.72,center:0xbfeeff,centerIntensity:430,centerDistance:480,centerDecay:1.8,rim:0x68dfff,rimIntensity:220,rimDistance:430,rimDecay:2,nebulaHues:[198,218,248,178],nebulaOpacityScale:.16}};function currentThreeStyle(){const value=new URL(location.href).searchParams.get("style3d");return THREE_STYLE_IDS.has(value)?value:"cosmic";}function threeStyleLabel(value){return value==="aurora"?"Aurora":value==="wireframe"?"Wireframe":"Cosmic";}`;
+const RENDER_CONTROL = '<button id="renderDensityToggle" type="button" data-render-density="auto" title="Adjust WebGL backing-store density without changing repository Quality evidence.">Render Auto</button>\n      ';
+const RENDER_SELECTOR = 'quality: document.getElementById("renderDensityToggle"),\n  ';
+const RENDER_STATE = 'selectedMesh=null,quality=(["auto","high","low"].includes(new URL(location.href).searchParams.get("render"))?new URL(location.href).searchParams.get("render"):"auto"),motionEnabled=';
+const FIXED_RENDER_STATE = 'selectedMesh=null,motionEnabled=';
+const RENDER_RESIZE = 'function resize(){const rect=ui.canvas.getBoundingClientRect(),width=Math.max(1,rect.width),height=Math.max(1,rect.height);camera.aspect=width/height;camera.updateProjectionMatrix();const mobile=width<720,autoRatio=mobile?1:Math.min(devicePixelRatio||1,1.45),ratio=quality==="high"?Math.min(devicePixelRatio||1,mobile?1.25:1.8):quality==="low"?.85:autoRatio;renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);}';
+const FIXED_RENDER_RESIZE = 'function resize(){const rect=ui.canvas.getBoundingClientRect(),width=Math.max(1,rect.width),height=Math.max(1,rect.height);camera.aspect=width/height;camera.updateProjectionMatrix();const mobile=width<720,ratio=mobile?1:Math.min(devicePixelRatio||1,1.45);renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);}';
+const RENDER_SETTER = 'function setQuality(next){quality=next;ui.quality.dataset.renderDensity=next;ui.quality.textContent=`Render ${next[0].toUpperCase()}${next.slice(1)}`;const url=new URL(location.href);if(next==="auto")url.searchParams.delete("render");else url.searchParams.set("render",next);history.replaceState(null,"",url);resize();}';
+const RENDER_LISTENER = 'ui.quality.addEventListener("click",()=>setQuality(quality==="auto"?"high":quality==="high"?"low":"auto"));';
+const INITIAL_RENDER = 'rebuildEdges();applyVisibility();fitScene(true);setQuality(quality);ui.motion.setAttribute("aria-pressed",String(motionEnabled));';
+const FIXED_INITIAL_RENDER = 'rebuildEdges();applyVisibility();fitScene(true);resize();ui.motion.setAttribute("aria-pressed",String(motionEnabled));';
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return source;
   if (!source.includes(from)) throw new Error(`Could not locate ${label}`);
   return source.replace(from, to);
+}
+
+function removeRequired(source, fragment, label) {
+  if (!source.includes(fragment)) return source;
+  return source.replace(fragment, "");
 }
 
 export function patchThreejsStyleRuntime(source) {
@@ -19,7 +34,7 @@ export function patchThreejsStyleRuntime(source) {
   next = replaceRequired(
     next,
     "function createSceneRuntime(THREE,graph,username){",
-    "function createSceneRuntime(THREE,graph,username){const threeStyle=currentThreeStyle(),threeTheme=THREE_STYLE_THEMES[threeStyle];document.body.dataset.mapStyle=`threejs-${threeStyle}`;",
+    "function createSceneRuntime(THREE,graph,username){const threeStyle=currentThreeStyle(),threeTheme=THREE_STYLE_THEMES[threeStyle];document.body.dataset.mapStyle=`threejs-${threeStyle}`;const canonicalUrl=new URL(location.href);if(canonicalUrl.searchParams.has(\"render\")){canonicalUrl.searchParams.delete(\"render\");history.replaceState(null,\"\",canonicalUrl);}",
     "Three.js scene style initialization",
   );
   next = replaceRequired(
@@ -64,15 +79,31 @@ export function patchThreejsStyleRuntime(source) {
     "document.title=`${username} · Three.js ${threeStyleLabel(currentThreeStyle())} Lab`;",
     "Three.js style-aware document title",
   );
+
+  next = removeRequired(next, RENDER_SELECTOR, "Three.js render-density selector");
+  next = replaceRequired(next, RENDER_STATE, FIXED_RENDER_STATE, "Three.js render-density URL state");
+  next = replaceRequired(next, RENDER_RESIZE, FIXED_RENDER_RESIZE, "Three.js automatic render-density policy");
+  next = removeRequired(next, RENDER_SETTER, "Three.js render-density setter");
+  next = removeRequired(next, RENDER_LISTENER, "Three.js render-density listener");
+  next = replaceRequired(next, INITIAL_RENDER, FIXED_INITIAL_RENDER, "Three.js fixed render-density initialization");
   return next;
+}
+
+export function patchThreejsStylePage(html) {
+  return html.includes(RENDER_CONTROL) ? html.replace(RENDER_CONTROL, "") : html;
 }
 
 export async function applyThreejsStylePresets({ siteDir = join(process.cwd(), "site") } = {}) {
   const runtimePath = join(siteDir, "threejs-viewer.js");
-  const source = await readFile(runtimePath, "utf8");
+  const pagePath = join(siteDir, "three", "index.html");
+  const [source, html] = await Promise.all([readFile(runtimePath, "utf8"), readFile(pagePath, "utf8")]);
   const next = patchThreejsStyleRuntime(source);
-  if (next !== source) await writeFile(runtimePath, next);
-  return { runtimePath, changed: next !== source };
+  const nextHtml = patchThreejsStylePage(html);
+  await Promise.all([
+    next !== source ? writeFile(runtimePath, next) : Promise.resolve(),
+    nextHtml !== html ? writeFile(pagePath, nextHtml) : Promise.resolve(),
+  ]);
+  return { runtimePath, pagePath, changed: next !== source || nextHtml !== html };
 }
 
 async function main() {
