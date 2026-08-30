@@ -61,7 +61,7 @@ export function patchThreejsLargePortfolioLodRuntime(source) {
   next = replaceRequired(
     next,
     snapshotAnchor,
-    `${snapshotAnchor}window.ProjectMapThreejsLargePortfolioLod=Object.freeze({version:1,snapshot:()=>({repositoryHaloLod:largePortfolioRepositoryHaloLod,threshold:${REPOSITORY_HALO_LOD_THRESHOLD}})});`,
+    `${snapshotAnchor}window.ProjectMapThreejsLargePortfolioLod=Object.freeze({version:1,snapshot:()=>({repositoryHaloLod:largePortfolioRepositoryHaloLod,threshold:${REPOSITORY_HALO_LOD_THRESHOLD},ambientRepositoryHalos:graph.nodes.filter((node)=>node.type==="repository"&&nodeMeshes.get(node.id)?.userData?.halo?.userData?.ambientVisible!==false).length})});`,
     "Three.js large-portfolio LOD evidence snapshot",
   );
 
@@ -81,7 +81,7 @@ async function main() {
   console.log(`Applied Three.js large-portfolio halo LOD${result.injected ? "" : " (already present)"}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv1]).href) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
