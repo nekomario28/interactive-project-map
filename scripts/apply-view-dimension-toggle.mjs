@@ -8,7 +8,7 @@ const TWO_D_DIRS = ["u", "radial", "tree", "treemap", "timeline", "cluster", "su
 
 const TWO_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="Rendering dimension"><span class="control-cluster-label">View</span><span class="view-mode-option is-active" aria-current="page">2D</span><a id="view3D" class="view-mode-option is-experimental" href="../three/" title="Open the experimental Three.js view">3D <small>Lab</small></a></span>';
 const THREE_D_TOGGLE = '<span class="control-cluster view-mode-cluster" role="group" aria-label="Rendering dimension"><span class="control-cluster-label">View</span><a id="twoDLink" class="view-mode-option" href="../u/">2D</a><span class="view-mode-option is-active is-experimental" aria-current="page">3D <small>Lab</small></span></span>';
-const THREE_D_STYLE = '<label class="field view-style-field"><span>Style</span><select id="threeStyle" aria-label="3D style"><option value="cosmic">Cosmic</option></select></label>';
+const THREE_D_STYLE = '<label class="field view-style-field"><span>Style</span><select id="threeStyle" aria-label="3D style"><option value="cosmic">Cosmic</option><option value="aurora">Aurora</option><option value="wireframe">Wireframe</option></select></label>';
 
 function attachAssets(html) {
   let next = html;

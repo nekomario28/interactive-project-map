@@ -119,6 +119,7 @@ async function measureScenario(page, repositoryCount) {
     repositories: repositoryCount,
     groups: 8,
     renderer: "threejs-cosmic",
+    style: "cosmic",
     experimental: true,
   });
 

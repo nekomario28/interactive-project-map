@@ -20,13 +20,13 @@ test("2D viewer gets a separate View dimension control without adding 3D to Styl
   assert.equal(patchTwoDViewDimension(html), html);
 });
 
-test("Three.js viewer exposes the same View axis and a renderer-local Cosmic style", () => {
+test("Three.js viewer exposes three renderer-local styles", () => {
   const html = patchThreeDViewDimension(threeD);
   assert.match(html, /data-view-dimension="3d"/);
   assert.match(html, /aria-label="Rendering dimension"/);
   assert.match(html, /id="twoDLink"[^>]*>2D<\/a>/);
   assert.match(html, /aria-current="page">3D <small>Lab<\/small>/);
-  assert.match(html, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option>/);
+  assert.match(html, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option><option value="aurora">Aurora<\/option><option value="wireframe">Wireframe<\/option>/);
   assert.match(html, /view-dimension-toggle\.css/);
   assert.match(html, /view-dimension-toggle\.js/);
   assert.equal(patchThreeDViewDimension(html), html);
@@ -40,19 +40,25 @@ test("Three.js Style control is restored even when the View control already exis
 
   const repaired = patchThreeDViewDimension(partial);
   assert.match(repaired, /class="field view-style-field"/);
-  assert.match(repaired, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option>/);
+  assert.match(repaired, /<option value="cosmic">Cosmic<\/option>/);
+  assert.match(repaired, /<option value="aurora">Aurora<\/option>/);
+  assert.match(repaired, /<option value="wireframe">Wireframe<\/option>/);
   assert.equal(patchThreeDViewDimension(repaired), repaired);
 });
 
-test("view dimension runtime keeps renderer navigation separate from Style state", async () => {
+test("view dimension runtime keeps 2D and 3D Style state separate", async () => {
   const source = await readFile(new URL("../scripts/public-view-dimension-toggle.js", import.meta.url), "utf8");
   assert.match(source, /const TWO_D_STYLES = new Set/);
+  assert.match(source, /const THREE_D_STYLES = new Set\(\["cosmic", "aurora", "wireframe"\]\)/);
   assert.match(source, /url\.searchParams\.delete\("style"\)/);
   assert.match(source, /url\.searchParams\.set\("style2d", current2DStyle\(\)\)/);
+  assert.match(source, /url\.searchParams\.set\("style3d", style\)/);
+  assert.match(source, /url\.searchParams\.delete\("style3d"\)/);
   assert.match(source, /if \(style\) url\.searchParams\.set\("style", style\)/);
   assert.match(source, /url\.searchParams\.delete\("style2d"\)/);
   assert.match(source, /url\.searchParams\.delete\("render"\)/);
   assert.match(source, /valid2DStyle\(source\.searchParams\.get\("style2d"\)\)/);
+  assert.match(source, /current3DStyle/);
   assert.match(source, /ProjectMapTransferableState/);
   assert.match(source, /ProjectMapViewDimension/);
 });
@@ -70,5 +76,6 @@ test("render density stays renderer-local in both 2D to 3D and 3D to 2D navigati
   const transferable = source.match(/const TRANSFERABLE_KEYS = \[([^\]]+)\]/)?.[1] || "";
   assert.ok(transferable, "TRANSFERABLE_KEYS should remain explicit and inspectable");
   assert.doesNotMatch(transferable, /["']render["']/);
+  assert.doesNotMatch(transferable, /["']style3d["']/);
   assert.match(source, /url\.searchParams\.delete\("render"\)/);
 });
