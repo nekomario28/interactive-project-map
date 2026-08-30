@@ -15,10 +15,15 @@
     "matrix",
     "sankey",
   ]);
+  const THREE_D_STYLES = new Set(["cosmic", "aurora", "wireframe"]);
   const TRANSFERABLE_KEYS = ["username", "q", "status", "motion", "activity", "focus", "depth", "quality"];
 
   function valid2DStyle(value) {
     return TWO_D_STYLES.has(value) ? value : null;
+  }
+
+  function valid3DStyle(value) {
+    return THREE_D_STYLES.has(value) ? value : null;
   }
 
   function current2DStyle() {
@@ -27,6 +32,12 @@
       || valid2DStyle(params.get("style2d"))
       || valid2DStyle(document.body.dataset.mapStyle)
       || "galaxy-systems";
+  }
+
+  function current3DStyle() {
+    const params = new URL(location.href).searchParams;
+    const datasetStyle = String(document.body.dataset.mapStyle || "").replace(/^threejs-/, "");
+    return valid3DStyle(params.get("style3d")) || valid3DStyle(datasetStyle) || "cosmic";
   }
 
   function copyTransferableFallback(source, target) {
@@ -58,6 +69,7 @@
     if (style) url.searchParams.set("style", style);
     else url.searchParams.delete("style");
     url.searchParams.delete("style2d");
+    url.searchParams.delete("style3d");
     url.searchParams.delete("render");
     return url;
   }
@@ -77,8 +89,22 @@
     }
   }
 
+  function initThreeStyle() {
+    const select = document.getElementById("threeStyle");
+    if (!select) return;
+    select.value = current3DStyle();
+    select.addEventListener("change", () => {
+      const style = valid3DStyle(select.value) || "cosmic";
+      const url = new URL(location.href);
+      if (style === "cosmic") url.searchParams.delete("style3d");
+      else url.searchParams.set("style3d", style);
+      location.assign(url.toString());
+    });
+  }
+
   function init() {
     syncLinks();
+    initThreeStyle();
     document.addEventListener("click", (event) => {
       if (event.target.closest?.("#view3D, #twoDLink")) syncLinks();
       else setTimeout(syncLinks, 0);
@@ -94,15 +120,17 @@
     }
 
     window.ProjectMapViewDimension = Object.freeze({
-      version: 1,
+      version: 2,
       current: () => document.body.dataset.viewDimension || null,
       current2DStyle,
+      current3DStyle,
       threeUrl: () => threeUrl().toString(),
       twoDUrl: () => twoDUrl().toString(),
       snapshot() {
         return {
           dimension: document.body.dataset.viewDimension || null,
           twoDStyle: current2DStyle(),
+          threeDStyle: current3DStyle(),
           twoDUrl: twoDUrl().toString(),
           threeDUrl: threeUrl().toString(),
         };
