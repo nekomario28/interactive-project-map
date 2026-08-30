@@ -2,6 +2,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { patchThreejsLargePortfolioLodRuntime } from "./apply-threejs-large-portfolio-lod.mjs";
+
 const TWO_D_MARKER = "/* IPM_COMMON_RENDERER_SNAPSHOT_2D_V1 */";
 const THREE_D_MARKER = "/* IPM_COMMON_RENDERER_SNAPSHOT_3D_V1 */";
 
@@ -66,7 +68,8 @@ export async function applyRendererSnapshot({ siteDir = join(process.cwd(), "sit
   const threeDPath = join(siteDir, "threejs-viewer.js");
   const [twoDSource, threeDSource] = await Promise.all([readFile(twoDPath, "utf8"), readFile(threeDPath, "utf8")]);
   const twoDNext = patchTwoDRendererSnapshot(twoDSource);
-  const threeDNext = patchThreeDRendererSnapshot(threeDSource);
+  const threeDWithSnapshot = patchThreeDRendererSnapshot(threeDSource);
+  const threeDNext = patchThreejsLargePortfolioLodRuntime(threeDWithSnapshot);
   await Promise.all([
     twoDNext !== twoDSource ? writeFile(twoDPath, twoDNext) : Promise.resolve(),
     threeDNext !== threeDSource ? writeFile(threeDPath, threeDNext) : Promise.resolve(),
@@ -76,7 +79,7 @@ export async function applyRendererSnapshot({ siteDir = join(process.cwd(), "sit
 
 async function main() {
   const result = await applyRendererSnapshot();
-  console.log(`Applied common renderer snapshot contract${result.changed ? "" : " (already present)"}`);
+  console.log(`Applied common renderer snapshot contract and bounded Three.js large-portfolio LOD${result.changed ? "" : " (already present)"}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
