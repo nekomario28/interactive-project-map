@@ -1,19 +1,19 @@
-function finiteDimension(value) {
-  const number = Number(value);
-  return Number.isFinite(number) && number >= 0 ? Math.round(number * 1000) / 1000 : 0;
-}
-
-function nonNegativeInteger(value) {
-  const number = Number(value);
-  return Number.isFinite(number) && number >= 0 ? Math.floor(number) : 0;
-}
-
-function cleanId(value, max = 160) {
-  const text = typeof value === "string" ? value.trim().slice(0, max) : "";
-  return text || null;
-}
-
 export function createRendererSnapshot(input = {}) {
+  function finiteDimension(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? Math.round(number * 1000) / 1000 : 0;
+  }
+
+  function nonNegativeInteger(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? Math.floor(number) : 0;
+  }
+
+  function cleanId(value, max = 160) {
+    const text = typeof value === "string" ? value.trim().slice(0, max) : "";
+    return text || null;
+  }
+
   const rendererId = cleanId(input.rendererId);
   if (!rendererId) throw new TypeError("rendererId is required");
 
