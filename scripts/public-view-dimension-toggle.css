@@ -46,8 +46,27 @@
   min-width: 96px;
 }
 
+body[data-view-dimension="3d"] .view-mode-cluster {
+  order: -2;
+}
+
+body[data-view-dimension="3d"] .view-style-field {
+  order: -1;
+  flex: 0 0 auto;
+  visibility: visible;
+  opacity: 1;
+}
+
 @media (max-width: 720px) {
   .view-mode-cluster {
+    order: -1;
+  }
+
+  body[data-view-dimension="3d"] .view-mode-cluster {
+    order: -2;
+  }
+
+  body[data-view-dimension="3d"] .view-style-field {
     order: -1;
   }
 }

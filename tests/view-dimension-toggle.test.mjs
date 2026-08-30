@@ -32,6 +32,18 @@ test("Three.js viewer exposes the same View axis and a renderer-local Cosmic sty
   assert.equal(patchThreeDViewDimension(html), html);
 });
 
+test("Three.js Style control is restored even when the View control already exists", () => {
+  const complete = patchThreeDViewDimension(threeD);
+  const partial = complete.replace(/<label class="field view-style-field">[\s\S]*?<\/label>/, "");
+  assert.match(partial, /class="control-cluster view-mode-cluster"/);
+  assert.doesNotMatch(partial, /id="threeStyle"/);
+
+  const repaired = patchThreeDViewDimension(partial);
+  assert.match(repaired, /class="field view-style-field"/);
+  assert.match(repaired, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option>/);
+  assert.equal(patchThreeDViewDimension(repaired), repaired);
+});
+
 test("view dimension runtime keeps renderer navigation separate from Style state", async () => {
   const source = await readFile(new URL("../scripts/public-view-dimension-toggle.js", import.meta.url), "utf8");
   assert.match(source, /const TWO_D_STYLES = new Set/);
@@ -43,6 +55,14 @@ test("view dimension runtime keeps renderer navigation separate from Style state
   assert.match(source, /valid2DStyle\(source\.searchParams\.get\("style2d"\)\)/);
   assert.match(source, /ProjectMapTransferableState/);
   assert.match(source, /ProjectMapViewDimension/);
+});
+
+test("Three.js View and Style controls stay ahead of the remaining toolbar controls", async () => {
+  const source = await readFile(new URL("../scripts/public-view-dimension-toggle.css", import.meta.url), "utf8");
+  assert.match(source, /body\[data-view-dimension="3d"\] \.view-mode-cluster \{[\s\S]*?order: -2;/);
+  assert.match(source, /body\[data-view-dimension="3d"\] \.view-style-field \{[\s\S]*?order: -1;/);
+  assert.match(source, /visibility: visible;/);
+  assert.match(source, /opacity: 1;/);
 });
 
 test("render density stays renderer-local in both 2D to 3D and 3D to 2D navigation", async () => {
