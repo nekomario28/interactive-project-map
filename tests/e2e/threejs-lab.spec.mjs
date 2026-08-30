@@ -133,7 +133,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await expect(page.locator('[data-status-filter="archived"]')).toBeDisabled();
 
   const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
-  expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-cosmic", experimental: true });
+  expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-cosmic", style: "cosmic", experimental: true });
   const backingStore = await page.locator("#galaxy3d").evaluate((canvas) => ({ width: canvas.width, height: canvas.height }));
   expect(backingStore.width).toBeGreaterThan(0);
   expect(backingStore.height).toBeGreaterThan(0);
