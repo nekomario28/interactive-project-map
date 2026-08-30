@@ -77,7 +77,7 @@ function querySnapshot(href) {
   return Object.fromEntries([...url.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
 
-test("isolated Three.js lab route fails closed without a username", async ({ page }) => {
+test("isolated Three.js lab route fails closed without a username and exposes no quality switch", async ({ page }) => {
   await page.goto("/three/");
 
   await expect(page.locator("body")).toHaveAttribute("data-map-style", "threejs-cosmic");
@@ -86,13 +86,13 @@ test("isolated Three.js lab route fails closed without a username", async ({ pag
   await expect(page.locator("#fallbackLink")).toHaveAttribute("href", "../u/");
   await expect(page.locator("#twoDLink")).toHaveAttribute("href", "../u/");
   await expect(page.locator("[data-status-filter]")).toHaveCount(4);
-  await expect(page.locator("#renderDensityToggle")).toHaveText("Render Auto");
+  await expect(page.locator("#renderDensityToggle")).toHaveCount(0);
   await expect(page.locator("#qualityToggle")).toHaveCount(0);
 });
 
-test("engine failure preserves transferable state in the 2D fallback but drops render density", async ({ page }) => {
+test("engine failure preserves transferable state in the 2D fallback", async ({ page }) => {
   await page.route("**/vendor/three-0.185.1.module.min.js", async (route) => route.abort());
-  await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aalpha&depth=2&quality=1&render=high");
+  await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aalpha&depth=2&quality=1");
 
   await expect(page.locator("#error")).toHaveClass(/visible/);
   await expect(page.locator("#errorText")).toContainText("pinned Three.js module could not be loaded");
@@ -112,8 +112,6 @@ test("engine failure preserves transferable state in the 2D fallback but drops r
   };
   expect(querySnapshot(hrefs.twoD)).toEqual(expected);
   expect(querySnapshot(hrefs.fallback)).toEqual(expected);
-  expect(hrefs.twoD).not.toContain("render=");
-  expect(hrefs.fallback).not.toContain("render=");
 });
 
 test("Three.js lab renders the happy-path scene and emits Chromium evidence", async ({ page, browserName }) => {
@@ -125,6 +123,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
   await expect(page.locator("#subtitle")).toContainText("2 projects · 1 category · depth-aware experimental renderer");
   await expect(page.locator("#galaxy3d")).toBeVisible();
+  await expect(page.locator("#renderDensityToggle")).toHaveCount(0);
   await expect(page.locator('[data-status-filter="original"]')).toHaveText("Original 1");
   await expect(page.locator('[data-status-filter="contributed"]')).toHaveText("Contributed 1");
   await expect(page.locator('[data-status-filter="fork"]')).toHaveText("Fork 0");
@@ -134,9 +133,16 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
 
   const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
   expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-cosmic", style: "cosmic", experimental: true });
-  const backingStore = await page.locator("#galaxy3d").evaluate((canvas) => ({ width: canvas.width, height: canvas.height }));
+  const backingStore = await page.locator("#galaxy3d").evaluate((canvas) => ({
+    width: canvas.width,
+    height: canvas.height,
+    cssWidth: canvas.getBoundingClientRect().width,
+    cssHeight: canvas.getBoundingClientRect().height,
+  }));
   expect(backingStore.width).toBeGreaterThan(0);
   expect(backingStore.height).toBeGreaterThan(0);
+  expect(backingStore.width).toBeLessThanOrEqual(Math.ceil(backingStore.cssWidth * 1.46));
+  expect(backingStore.height).toBeLessThanOrEqual(Math.ceil(backingStore.cssHeight * 1.46));
 
   const [statusBox, canvasBox] = await Promise.all([
     page.locator("#status").boundingBox(),
@@ -149,7 +155,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-chromium.png", fullPage: true });
 });
 
-test("Three.js restores transferable state and keeps renderer-local density out of the 2D link", async ({ page, browserName }) => {
+test("legacy render query is discarded and transferable state remains intact", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js state transfer is exercised in Chromium.");
   await installGraph(page);
   await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aoutside%2Fbeta&depth=2&quality=1&render=low");
@@ -161,7 +167,7 @@ test("Three.js restores transferable state and keeps renderer-local density out 
   await expect(page.locator('[data-status-filter="fork"]')).toBeDisabled();
   await expect(page.locator('[data-status-filter="archived"]')).toBeDisabled();
   await expect(page.locator("#motionToggle")).toHaveText("Motion Off");
-  await expect(page.locator("#renderDensityToggle")).toHaveText("Render Low");
+  await expect(page.locator("#renderDensityToggle")).toHaveCount(0);
   await expect(page.locator("#resultCount")).toHaveText("1 / 2 projects");
 
   const state = await page.evaluate(() => ({
@@ -175,7 +181,6 @@ test("Three.js restores transferable state and keeps renderer-local density out 
     motion: "off",
     q: "rust",
     quality: "1",
-    render: "low",
     status: "contributed",
     username: "example",
   });
@@ -192,7 +197,7 @@ test("Three.js restores transferable state and keeps renderer-local density out 
 });
 
 test("Three.js status filtering uses structural projection and prunes an empty owned category", async ({ page, browserName }) => {
-  test.skip(browserName !== "chromium", "Real Three.js state projection is exercised in Chromium.");
+  test.skip(browserName !== "chromium", "Real Three.js state projection is exercised once in Chromium.");
   await installGraph(page);
   await page.goto("/three/?username=example");
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
@@ -224,7 +229,7 @@ test.describe("mobile Three.js happy-path evidence", () => {
     hasTouch: true,
   });
 
-  test("Three.js lab renders at a phone viewport with bounded backing-store density", async ({ page, browserName }) => {
+  test("Three.js lab automatically bounds backing-store density at a phone viewport", async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "Mobile GPU evidence is kept deterministic in Chromium; WebKit remains fallback-only in CI.");
     await mkdir(".tmp/playwright-visual", { recursive: true });
     await installGraph(page);
@@ -232,6 +237,7 @@ test.describe("mobile Three.js happy-path evidence", () => {
     await page.goto("/three/?username=example");
     await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
     await expect(page.locator("#galaxy3d")).toBeVisible();
+    await expect(page.locator("#renderDensityToggle")).toHaveCount(0);
 
     const metrics = await page.locator("#galaxy3d").evaluate((canvas) => {
       const rect = canvas.getBoundingClientRect();
