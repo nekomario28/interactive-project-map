@@ -31,7 +31,7 @@ function buildGraph(repositoryCount, groupCount = 8) {
 
   return {
     owner: "example",
-    generatedAt: "2026-08-26T00:00:00Z",
+    generatedAt: "2026-08-30T00:00:00Z",
     nodes: [
       { id: "user:example", label: "example", type: "owner", url: "https://github.com/example" },
       ...groups,
@@ -102,6 +102,11 @@ async function readHeap(page) {
   });
 }
 
+async function rendererSnapshot(page) {
+  await expect.poll(() => page.evaluate(() => typeof window.ProjectMapRenderer?.snapshot === "function")).toBe(true);
+  return page.evaluate(() => window.ProjectMapRenderer.snapshot());
+}
+
 async function measureScenario(page, repositoryCount) {
   const fixture = buildGraph(repositoryCount);
   await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
@@ -113,15 +118,15 @@ async function measureScenario(page, repositoryCount) {
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
   const readyMs = performance.now() - readyStartedAt;
 
-  const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
-  expect(snapshot).toEqual({
-    username: "example",
-    repositories: repositoryCount,
-    groups: 8,
-    renderer: "threejs-cosmic",
-    style: "cosmic",
-    experimental: true,
-  });
+  const initialRenderer = await rendererSnapshot(page);
+  expect(initialRenderer.rendererId).toBe("threejs");
+  expect(initialRenderer.styleId).toBe("cosmic");
+  expect(initialRenderer.experimental).toBe(true);
+  expect(initialRenderer.semantic).toEqual({ repositories: repositoryCount, groups: 8 });
+  expect(initialRenderer.selectedId).toBeNull();
+  expect(initialRenderer.capabilities.qualityEvidence).toBe(false);
+  expect(initialRenderer.backingStore.pixelRatio).toBeGreaterThan(0);
+  expect(initialRenderer.backingStore.pixelRatio).toBeLessThanOrEqual(1.45);
 
   const samplingWindowMs = 5_000;
   const baselineHeap = await readHeap(page);
@@ -136,14 +141,19 @@ async function measureScenario(page, repositoryCount) {
   await page.mouse.up();
   await page.mouse.wheel(0, -420);
 
-  const originalFilter = page.locator('[data-status-filter="original"]');
-  await originalFilter.click();
+  const search = page.locator("#search");
+  await search.fill("__renderer_evidence_no_match__");
   await expect(page.locator("#resultCount")).toContainText(`0 / ${repositoryCount} projects`);
-  await originalFilter.click();
+  const filteredRenderer = await rendererSnapshot(page);
+  expect(filteredRenderer.semantic.repositories).toBe(0);
+  expect(filteredRenderer.semantic.groups).toBe(0);
+  await search.fill("");
   await expect(page.locator("#resultCount")).toContainText(`${repositoryCount} / ${repositoryCount} projects`);
 
   const interactionFrames = summarizeFrameIntervals(await sampleFramesForDuration(page, samplingWindowMs), samplingWindowMs);
   const finalHeap = await readHeap(page);
+  const finalRenderer = await rendererSnapshot(page);
+  expect(finalRenderer.semantic).toEqual(initialRenderer.semantic);
   const labels = await page.locator(".three-label").evaluateAll((items) => ({
     total: items.length,
     visible: items.filter((item) => {
@@ -151,12 +161,6 @@ async function measureScenario(page, repositoryCount) {
       const opacity = Number.parseFloat(getComputedStyle(item).opacity || "0");
       return opacity > 0.05 && rect.width > 0 && rect.height > 0;
     }).length,
-  }));
-  const backingStore = await canvas.evaluate((element) => ({
-    width: element.width,
-    height: element.height,
-    cssWidth: element.getBoundingClientRect().width,
-    cssHeight: element.getBoundingClientRect().height,
   }));
 
   expect(readyMs).toBeGreaterThan(0);
@@ -167,8 +171,6 @@ async function measureScenario(page, repositoryCount) {
   expect(labels.total).toBe(9);
   expect(labels.visible).toBeGreaterThan(0);
   expect(labels.visible).toBeLessThanOrEqual(labels.total);
-  expect(backingStore.width).toBeGreaterThan(0);
-  expect(backingStore.height).toBeGreaterThan(0);
   await expect(page.locator("#status")).toHaveClass(/ready/);
 
   return {
@@ -176,11 +178,15 @@ async function measureScenario(page, repositoryCount) {
     totalNodes: fixture.nodes.length,
     totalEdges: fixture.edges.length,
     readyMs,
+    renderer: {
+      initial: initialRenderer,
+      filtered: filteredRenderer,
+      final: finalRenderer,
+    },
     baselineFrames,
     interactionFrames,
     heap: { before: baselineHeap, after: finalHeap },
     labels,
-    backingStore,
   };
 }
 
