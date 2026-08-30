@@ -6,7 +6,7 @@ const fixture = `function createSceneRuntime(THREE,graph,username){const threeSt
 mesh.position.copy(position);if(node.type==="repository")x();
   }
   let edgeLines=null;
-rebuildEdges();const totalRepositories=graph.nodes.filter((node)=>node.type==="repository").length;
+rebuildEdges();const totalRepositories=graph.nodes.filter((node)=>node.type=="repository").length;
 showDetails(node);}
 desiredTarget.set(0,0,0);}
 const pulse=motionEnabled?1+Math.sin(pulseTime*.8+mesh.userData.phase)*(node.type==="repository"?.025:.018):1;
