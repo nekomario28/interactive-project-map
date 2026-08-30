@@ -19,9 +19,51 @@ const graph = {
   ],
 };
 
-async function installGraph(page) {
+const readabilityGraph = (() => {
+  const groups = ["Robotics Systems", "AI Research", "Developer Tools", "Visualization"];
+  const nodes = [{ id: "user:example", label: "example", type: "owner", url: "https://github.com/example" }];
+  const edges = [];
+  for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+    const groupId = `group:g${groupIndex}`;
+    const groupLabel = groups[groupIndex];
+    nodes.push({ id: groupId, label: groupLabel, type: "group", repositoryCount: 8 });
+    edges.push({ source: "user:example", target: groupId, type: "ownership" });
+    for (let repositoryIndex = 0; repositoryIndex < 8; repositoryIndex += 1) {
+      const ordinal = groupIndex * 8 + repositoryIndex + 1;
+      const id = `repository:readability-project-${String(ordinal).padStart(2, "0")}`;
+      nodes.push({
+        id,
+        label: `readability-project-${String(ordinal).padStart(2, "0")}`,
+        repositoryName: `readability-project-${String(ordinal).padStart(2, "0")}`,
+        type: "repository",
+        url: `https://github.com/example/readability-project-${String(ordinal).padStart(2, "0")}`,
+        description: `Dense text readability fixture ${ordinal}`,
+        language: repositoryIndex % 2 ? "TypeScript" : "JavaScript",
+        topics: ["readability", "rendering"],
+        stars: ordinal,
+        forks: repositoryIndex,
+        fork: false,
+        archived: false,
+        updatedAt: "2026-08-25T00:00:00Z",
+        groupId: `g${groupIndex}`,
+        groupLabel,
+      });
+      edges.push({ source: groupId, target: id, type: "membership" });
+    }
+  }
+  return {
+    owner: "example",
+    generatedAt: "2026-08-26T00:00:00Z",
+    repositoryCount: 32,
+    groupCount: groups.length,
+    nodes,
+    edges,
+  };
+})();
+
+async function installGraph(page, value = graph) {
   await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
   });
 }
 
@@ -44,6 +86,11 @@ async function canvasMetrics(page) {
 async function saveEvidence(name, value) {
   await mkdir(EVIDENCE_DIR, { recursive: true });
   await writeFile(`${EVIDENCE_DIR}/${name}.json`, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+async function captureCanvas(page, name) {
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+  await page.locator("#galaxy").screenshot({ path: `${EVIDENCE_DIR}/${name}.png` });
 }
 
 test.describe("DPR3 Canvas render density evidence", () => {
@@ -82,6 +129,29 @@ test.describe("DPR3 Canvas render density evidence", () => {
     expect(Math.abs(auto.cssWidth - native.cssWidth)).toBeLessThanOrEqual(1);
     expect(Math.abs(auto.cssHeight - native.cssHeight)).toBeLessThanOrEqual(1);
     expect(autoArea).toBeLessThan(nativeArea * 0.25);
+  });
+
+  test("dense Radial captures native and Auto text-readability evidence without changing geometry", async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "Rendered readability evidence is collected once in Chromium.");
+    await installGraph(page, readabilityGraph);
+
+    await page.goto("/radial/?username=example&style=radial");
+    await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
+    const native = await canvasMetrics(page);
+    await captureCanvas(page, "radial-readability-native-dpr3");
+
+    await page.goto("/radial/?username=example&style=radial&render=auto");
+    await expect(page.locator("#status")).toBeHidden({ timeout: 20_000 });
+    const auto = await canvasMetrics(page);
+    await captureCanvas(page, "radial-readability-auto-dpr3");
+
+    await saveEvidence("radial-readability-dpr3", { native, auto, repositories: 32, groups: 4 });
+    expect(native.devicePixelRatio).toBe(3);
+    expect(native.policy.mode).toBe("native");
+    expect(auto.policy.mode).toBe("auto");
+    expect(auto.policy.pixelRatio).toBe(1.45);
+    expect(Math.abs(auto.cssWidth - native.cssWidth)).toBeLessThanOrEqual(1);
+    expect(Math.abs(auto.cssHeight - native.cssHeight)).toBeLessThanOrEqual(1);
   });
 
   test("dedicated Radial consumes the same opt-in Canvas policy", async ({ page, browserName }) => {
