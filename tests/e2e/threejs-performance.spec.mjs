@@ -135,20 +135,28 @@ async function measureScenario(page, repositoryCount) {
   const canvasBox = await canvas.boundingBox();
   expect(canvasBox).not.toBeNull();
 
-  await page.mouse.move(canvasBox.x + canvasBox.width * 0.45, canvasBox.y + canvasBox.height * 0.45);
-  await page.mouse.down();
-  await page.mouse.move(canvasBox.x + canvasBox.width * 0.62, canvasBox.y + canvasBox.height * 0.38, { steps: 8 });
-  await page.mouse.up();
-  await page.mouse.wheel(0, -420);
-
   const search = page.locator("#search");
   await search.fill("__renderer_evidence_no_match__");
   await expect(page.locator("#resultCount")).toContainText(`0 / ${repositoryCount} projects`);
   const filteredRenderer = await rendererSnapshot(page);
   expect(filteredRenderer.semantic.repositories).toBe(0);
   expect(filteredRenderer.semantic.groups).toBe(0);
+  const emptyFrames = summarizeFrameIntervals(await sampleFramesForDuration(page, samplingWindowMs), samplingWindowMs);
   await search.fill("");
   await expect(page.locator("#resultCount")).toContainText(`${repositoryCount} / ${repositoryCount} projects`);
+
+  const motionButton = page.locator("#motionToggle");
+  await motionButton.click();
+  await expect(motionButton).toHaveAttribute("aria-pressed", "false");
+  const motionOffFrames = summarizeFrameIntervals(await sampleFramesForDuration(page, samplingWindowMs), samplingWindowMs);
+  await motionButton.click();
+  await expect(motionButton).toHaveAttribute("aria-pressed", "true");
+
+  await page.mouse.move(canvasBox.x + canvasBox.width * 0.45, canvasBox.y + canvasBox.height * 0.45);
+  await page.mouse.down();
+  await page.mouse.move(canvasBox.x + canvasBox.width * 0.62, canvasBox.y + canvasBox.height * 0.38, { steps: 8 });
+  await page.mouse.up();
+  await page.mouse.wheel(0, -420);
 
   const interactionFrames = summarizeFrameIntervals(await sampleFramesForDuration(page, samplingWindowMs), samplingWindowMs);
   const finalHeap = await readHeap(page);
@@ -164,10 +172,10 @@ async function measureScenario(page, repositoryCount) {
   }));
 
   expect(readyMs).toBeGreaterThan(0);
-  expect(baselineFrames.count).toBeGreaterThan(0);
-  expect(interactionFrames.count).toBeGreaterThan(0);
-  expect(Number.isFinite(baselineFrames.p95Ms)).toBe(true);
-  expect(Number.isFinite(interactionFrames.p95Ms)).toBe(true);
+  for (const frameEvidence of [baselineFrames, emptyFrames, motionOffFrames, interactionFrames]) {
+    expect(frameEvidence.count).toBeGreaterThan(0);
+    expect(Number.isFinite(frameEvidence.p95Ms)).toBe(true);
+  }
   expect(labels.total).toBe(9);
   expect(labels.visible).toBeGreaterThan(0);
   expect(labels.visible).toBeLessThanOrEqual(labels.total);
@@ -184,6 +192,8 @@ async function measureScenario(page, repositoryCount) {
       final: finalRenderer,
     },
     baselineFrames,
+    emptyFrames,
+    motionOffFrames,
     interactionFrames,
     heap: { before: baselineHeap, after: finalHeap },
     labels,
