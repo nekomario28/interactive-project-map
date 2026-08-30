@@ -91,7 +91,7 @@ test("isolated Three.js lab route fails closed without a username", async ({ pag
 });
 
 test("engine failure preserves transferable state in the 2D fallback but drops render density", async ({ page }) => {
-  await page.route("https://cdn.jsdelivr.net/**", async (route) => route.abort());
+  await page.route("**/vendor/three-0.185.1.module.min.js", async (route) => route.abort());
   await page.goto("/three/?username=example&q=rust&status=c&motion=off&activity=1&focus=repository%3Aalpha&depth=2&quality=1&render=high");
 
   await expect(page.locator("#error")).toHaveClass(/visible/);
