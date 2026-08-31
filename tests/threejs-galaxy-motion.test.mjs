@@ -24,7 +24,7 @@ test("Galaxy motion patch uses matching dust arms, co-rotation, radial slowdown,
   assert.match(patched, /const arm=index%armCount/);
   assert.match(patched, /angle=arm\*TAU\/armCount\+t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
-  assert.match(patched, /threeStyle==="galaxy"\?\.28:2\.1/);
+  assert.match(patched, /threeStyle==="galaxy"\?3\.2:2\.1/);
   assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating"/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
   assert.match(patched, /period:480\+ring\*220/);
