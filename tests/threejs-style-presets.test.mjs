@@ -21,6 +21,7 @@ const positions=layoutGraph(THREE,graph),nodeMeshes=new Map();
 const material=new THREE.MeshStandardMaterial({metalness:node.type==="repository"?.12:.28,transparent:node.archived===true});
 function resize(){const rect=ui.canvas.getBoundingClientRect(),width=Math.max(1,rect.width),height=Math.max(1,rect.height);camera.aspect=width/height;camera.updateProjectionMatrix();const mobile=width<720,autoRatio=mobile?1:Math.min(devicePixelRatio||1,1.45),ratio=quality==="high"?Math.min(devicePixelRatio||1,mobile?1.25:1.8):quality==="low"?.85:autoRatio;renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);}
 function fitScene(immediate=false){desiredTarget.set(0,0,0);desiredDistance=graph.nodes.some((node)=>node.relation==="contributed")?330:255;if(innerWidth<720)desiredDistance*=1.18;}
+function resetView(){yaw=.68;pitch=.34;fitScene(false);clearSelection();}
 function setQuality(next){quality=next;ui.quality.dataset.renderDensity=next;ui.quality.textContent=\`Render ${"${next[0].toUpperCase()}"}${"${next.slice(1)}"}\`;const url=new URL(location.href);if(next==="auto")url.searchParams.delete("render");else url.searchParams.set("render",next);history.replaceState(null,"",url);resize();}
 ui.quality.addEventListener("click",()=>setQuality(quality==="auto"?"high":quality==="high"?"low":"auto"));
 rebuildEdges();applyVisibility();fitScene(true);setQuality(quality);ui.motion.setAttribute("aria-pressed",String(motionEnabled));
@@ -41,6 +42,7 @@ test("Three.js style patch keeps four scene themes, adds Galaxy layout, and remo
   assert.match(patched, /threeStyle==="galaxy"\?layoutGalaxyGraph\(THREE,graph\):layoutGraph\(THREE,graph\)/);
   assert.match(patched, /threeStyle==="galaxy"\?\(graph\.nodes\.some/);
   assert.match(patched, /pitch=threeStyle==="galaxy"\?\.66:\.34/);
+  assert.match(patched, /function resetView\(\)\{yaw=\.68;pitch=threeStyle==="galaxy"\?\.66:\.34;fitScene\(false\);clearSelection\(\);\}/);
   assert.match(patched, /dust\.scale\.setScalar\(1\.08\)/);
   assert.match(patched, /const threeStyle=currentThreeStyle\(\),threeTheme=THREE_STYLE_THEMES\[threeStyle\]/);
   assert.match(patched, /canonicalUrl\.searchParams\.delete\("render"\)/);
