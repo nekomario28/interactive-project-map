@@ -13,7 +13,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete branches whose PRs are all closed
+      - name: Delete closed-PR and fully merged no-PR branches
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -36,29 +36,39 @@ jobs:
             if (!r.ok) throw new Error(`${init.method || 'GET'} ${path}: ${r.status} ${await r.text()}`);
             return r.status === 204 ? null : r.json();
           }
-          const refPath = name => `/repos/${repo}/git/refs/heads/${name.split('/').map(encodeURIComponent).join('/')}`;
+          const esc = s => s.split('/').map(encodeURIComponent).join('/');
+          const refPath = name => `/repos/${repo}/git/refs/heads/${esc(name)}`;
+          const compare = (base, head) => api(`/repos/${repo}/compare/${esc(base)}...${esc(head)}`);
           const branches = [];
           for (let page = 1; ; page++) {
             const batch = await api(`/repos/${repo}/branches?per_page=100&page=${page}`);
             branches.push(...batch);
             if (batch.length < 100) break;
           }
-          const out = {deleted: [], skippedOpen: [], skippedNoPr: [], skippedProtected: []};
+          const out = {deletedClosedPr: [], deletedMergedNoPr: [], keptUnmergedNoPr: [], skippedOpen: [], skippedProtected: []};
           for (const {name} of branches) {
             if (protectedBranches.has(name)) { out.skippedProtected.push(name); continue; }
-            if (name === 'maintenance/closed-pr-branch-cleanup-20260831') {
-              await api(refPath(name), {method: 'DELETE'});
-              out.deleted.push(name);
-              console.log(`DELETED ${name}`);
-              continue;
-            }
             const q = new URLSearchParams({state: 'all', head: `${owner}:${name}`, per_page: '100'});
             const prs = await api(`/repos/${repo}/pulls?${q}`);
-            if (!prs.length) { out.skippedNoPr.push(name); continue; }
             if (prs.some(pr => pr.state === 'open')) { out.skippedOpen.push(name); continue; }
-            await api(refPath(name), {method: 'DELETE'});
-            out.deleted.push(name);
-            console.log(`DELETED ${name}`);
+            if (prs.length) {
+              await api(refPath(name), {method: 'DELETE'});
+              out.deletedClosedPr.push(name);
+              console.log(`DELETED_CLOSED_PR ${name}`);
+              continue;
+            }
+            let merged = false;
+            for (const target of ['main', 'v1']) {
+              const c = await compare(name, target);
+              if (c.ahead_by === 0) { merged = true; break; }
+            }
+            if (merged) {
+              await api(refPath(name), {method: 'DELETE'});
+              out.deletedMergedNoPr.push(name);
+              console.log(`DELETED_MERGED_NO_PR ${name}`);
+            } else {
+              out.keptUnmergedNoPr.push(name);
+            }
           }
-          console.log(`CLEANUP_RESULT ${JSON.stringify({...out, deletedCount: out.deleted.length})}`);
+          console.log(`CLEANUP_RESULT ${JSON.stringify({...out, deletedCount: out.deletedClosedPr.length + out.deletedMergedNoPr.length})}`);
           NODE
