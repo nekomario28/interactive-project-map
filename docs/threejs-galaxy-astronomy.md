@@ -13,16 +13,17 @@ The visual/motion model follows these broad spiral-galaxy properties:
 - disc material is predominantly co-rotating rather than arbitrarily alternating orbital direction;
 - observed spiral-galaxy rotation curves are much flatter than a luminous-matter-only Kepler-like falloff. The renderer therefore keeps visual tangential speed broadly comparable across most of the semantic disc. With `v ≈ constant`, `T = 2πr / v`, so the visual galactocentric period grows approximately in proportion to radius and outer systems have lower angular speed;
 - spiral arms are treated as density/presentation patterns rather than rigid material arms, so the dust/arm pattern has a separate slower pattern speed while semantic systems can move through it;
-- the disc has finite vertical thickness, but IPM exaggerates that thickness slightly so overlapping repositories remain readable in an interactive 3D view.
+- the disc has finite vertical thickness. IPM still exaggerates it for readability, but the Galaxy-specific layout is kept substantially flatter than the generic 3D layout;
+- the style uses a 2–4 arm visual grammar rather than a one-arm minimum. This is still a semantic visualization, not a literal Milky Way reconstruction, but it better matches the common multi-arm morphology of disk galaxies and current Gaia-informed Milky Way depictions.
 
 Reference background:
 
 - NASA, *Types of Galaxies*: https://science.nasa.gov/universe/galaxies/types/
-- NASA, *Dark Matter 101: Looking for the Missing Mass*: https://science.nasa.gov/universe/stories/quick-reads/dark-matter-101-looking-for-the-missing-mass/
-- NASA/Hubble, *Dark Matter*: https://science.nasa.gov/mission/hubble/science/science-behind-the-discoveries/hubble-dark-matter/
+- NASA, *Barred Spiral Galaxy NGC 1300*: https://science.nasa.gov/asset/hubble/barred-spiral-galaxy-ngc-1300/
 - ESA, *Guide to our galaxy*: https://www.esa.int/Science_Exploration/Space_Science/Gaia/Guide_to_our_galaxy
-- ESA/Hubble, *Face to face with a spiral’s arms*: https://www.esa.int/ESA_Multimedia/Images/2025/05/Face_to_face_with_a_spiral_s_arms
-- ESA/Hubble, *Seeing things sideways*: https://www.esa.int/ESA_Multimedia/Images/2017/03/Seeing_things_sideways
+- ESA/Gaia, *Milky Way*: https://www.cosmos.esa.int/web/gaia/milky-way
+- ESA, *Anatomy of the Milky Way*: https://www.esa.int/ESA_Multimedia/Images/2016/09/Anatomy_of_the_Milky_Way
+- Shen & Zheng, *The Bar and Spiral Arms in the Milky Way: Structure and Kinematics*: https://arxiv.org/abs/2012.10130
 
 ## Product-semantic metaphors kept intentionally
 
@@ -33,7 +34,8 @@ These are **not** astrophysical claims:
 - repositories orbiting a category are a 3D continuation of the 2D Galaxy Hybrid interaction metaphor, not a claim that galactic stars orbit spiral-arm labels;
 - therefore repository-to-category local orbits intentionally do **not** claim Keplerian gravity. Their slow 2D-like periods preserve category membership and make the map feel alive without inventing a physical mass model for semantic nodes;
 - Contributed repositories remain on clearly external outer lanes because authority/ownership semantics require separation; this is not intended as a literal stellar halo model;
-- repository/category size, color and luminosity encode project metadata and interaction state, not stellar mass, age or spectrum.
+- repository/category size, color and luminosity encode project metadata and interaction state, not stellar mass, age or spectrum;
+- the style does not force a central stellar bar or Milky-Way-specific warp, because `Galaxy` is a generic semantic spiral style rather than an asserted scale model of our own galaxy.
 
 ## Motion contract
 
@@ -43,7 +45,7 @@ When `style3d=galaxy` and Motion is enabled:
 2. their visual orbital period increases with galactocentric radius using the bounded flat-curve-inspired rule;
 3. repositories keep their category membership while following deliberately slow local category orbits, on the same several-minute scale as the 2D Galaxy Hybrid metaphor;
 4. Contributed repositories co-rotate on external lanes with the same radial period rule;
-5. spiral dust rotates as a separate slower pattern;
+5. spiral dust rotates as a separate, slower visual pattern so systems are not glued rigidly to an arm;
 6. group/repository labels, selection targets and edge endpoints follow the moving meshes;
 7. Motion Off freezes these semantic node orbits;
 8. the existing reduced-motion-derived default remains respected.
@@ -52,13 +54,13 @@ The model is deliberately slow. It should read as a living galaxy over seconds a
 
 ## Arm-count contract
 
-The Galaxy semantic layout uses:
+The Galaxy semantic layout and its spiral dust use the same bounded arm family:
 
-- 1 arm for 1–3 categories;
-- 2 arms for 4–8 categories;
-- 3 arms above 8 categories.
+- 2 arms for 1–4 categories;
+- 3 arms for 5–8 categories;
+- 4 arms above 8 categories.
 
-Galaxy spiral dust must use the same arm count. Other Three.js styles keep their existing generic four-arm dust treatment.
+The dust field uses a more open winding than the generic Cosmic field. This is a visual morphology choice, not a fit to an exact observed pitch angle. Other Three.js styles keep their existing generic four-arm dust treatment.
 
 ## Non-goals
 
@@ -66,5 +68,6 @@ Galaxy spiral dust must use the same arm count. Other Three.js styles keep their
 - physically scaled galactic time;
 - claiming category-local repository motion obeys stellar or planetary gravity;
 - claiming repository metadata maps to astrophysical observables;
-- sacrificing category/ownership readability for strict Milky-Way scale ratios;
+- claiming the style is a literal Milky Way reconstruction;
+- sacrificing category/ownership readability for strict galactic scale ratios;
 - adding large autonomous camera motion.
