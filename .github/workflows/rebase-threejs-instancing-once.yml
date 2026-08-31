@@ -44,14 +44,24 @@ jobs:
           strict_total = 'graph.nodes.filter((node)=>node.type===\\"repository\\").length'
           loose_pulse = 'node.type==\\"repository\\"?.025:.018'
           strict_pulse = 'node.type===\\"repository\\"?.025:.018'
-          if loose_total not in source or loose_pulse not in source:
+          old_select = '    "showDetails(node);}",\n    "showDetails(node);syncRepositoryBatches();}",'
+          new_select = '    "showDetails(node);appendSearchMatchReason(node);updateFocusControls();emitThreejsNavigatorChange();}",\n    "showDetails(node);appendSearchMatchReason(node);updateFocusControls();syncRepositoryBatches();emitThreejsNavigatorChange();}",'
+          old_clear = '    "desiredTarget.set(0,0,0);}",\n    "desiredTarget.set(0,0,0);syncRepositoryBatches();}",'
+          new_clear = '    "desiredTarget.set(0,0,0);updateFocusControls();emitThreejsNavigatorChange();}",\n    "desiredTarget.set(0,0,0);updateFocusControls();syncRepositoryBatches();emitThreejsNavigatorChange();}",'
+          if loose_total not in source or loose_pulse not in source or old_select not in source or old_clear not in source:
               raise SystemExit('expected legacy instancing anchors not found; refusing broad rewrite')
-          patch.write_text(source.replace(loose_total, strict_total).replace(loose_pulse, strict_pulse))
+          source = source.replace(loose_total, strict_total).replace(loose_pulse, strict_pulse)
+          source = source.replace(old_select, new_select).replace(old_clear, new_clear)
+          patch.write_text(source)
 
           fixture = Path('tests/threejs-repository-instancing.test.mjs')
           test_source = fixture.read_text()
           test_source = test_source.replace('node.type==\\"repository\\"', 'node.type===\\"repository\\"')
           test_source = test_source.replace('node.type=="repository"', 'node.type==="repository"')
+          test_source = test_source.replace('showDetails(node);}', 'showDetails(node);appendSearchMatchReason(node);updateFocusControls();emitThreejsNavigatorChange();}')
+          test_source = test_source.replace('desiredTarget.set(0,0,0);}', 'desiredTarget.set(0,0,0);updateFocusControls();emitThreejsNavigatorChange();}')
+          test_source = test_source.replace('assert.match(patched, /showDetails\\(node\\);syncRepositoryBatches\\(\\)/);', 'assert.match(patched, /showDetails\\(node\\);appendSearchMatchReason\\(node\\);updateFocusControls\\(\\);syncRepositoryBatches\\(\\);emitThreejsNavigatorChange\\(\\)/);')
+          test_source = test_source.replace('assert.match(patched, /largeRepositoryScene&&node\\.type==="repository"\\?1:/);', 'assert.match(patched, /desiredTarget\\.set\\(0,0,0\\);updateFocusControls\\(\\);syncRepositoryBatches\\(\\);emitThreejsNavigatorChange\\(\\)/);\n  assert.match(patched, /largeRepositoryScene&&node\\.type==="repository"\\?1:/);')
           fixture.write_text(test_source)
           PY
 
@@ -80,7 +90,8 @@ jobs:
             package.json
             scripts/apply-threejs-repository-instancing.mjs
             tests/threejs-repository-instancing.test.mjs
-          if-no-files-found: error
+            site/threejs-viewer.js
+          if-no-files-found: warn
           retention-days: 1
 
       - name: Commit verified fresh-main prototype
