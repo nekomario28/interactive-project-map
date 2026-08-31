@@ -11,7 +11,7 @@ const DUST_ARM_DYNAMIC = "const arm=index%armCount,";
 const DUST_ANGLE = "angle=arm*TAU/4+t*TAU*2.1+jitter*.008;";
 const DUST_ANGLE_DYNAMIC = "angle=arm*TAU/armCount+t*TAU*winding+jitter*.008;";
 const DUST_CALL = "dust=createSpiralDust(THREE,username);";
-const DUST_CALL_GALAXY = "dust=createSpiralDust(THREE,username,threeStyle===\"galaxy\"?galaxyArmCount(graph):4,threeStyle===\"galaxy\"?.28:2.1);";
+const DUST_CALL_GALAXY = "dust=createSpiralDust(THREE,username,threeStyle===\"galaxy\"?galaxyArmCount(graph):4,threeStyle===\"galaxy\"?3.2:2.1);";
 const MOTION_INIT_ANCHOR = "let edgeLines=null;const edgeMaterial=";
 const MOTION_INIT = "const galaxyMotion=threeStyle===\"galaxy\"?createGalaxyMotionModel(THREE,graph,positions,nodeMeshes):null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>galaxyMotion.snapshot()});let edgeLines=null;const edgeMaterial=";
 const EDGE_END = "edgeLines.renderOrder=-1;root.add(edgeLines);}";
