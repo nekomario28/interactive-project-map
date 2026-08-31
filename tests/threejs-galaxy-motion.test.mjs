@@ -11,13 +11,13 @@ function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy";
 const positions=layoutGalaxyGraph(THREE,graph),nodeMeshes=new Map();
 dust=createSpiralDust(THREE,username);
-let edgeLines=null;const edgeMaterial=new THREE.LineBasicMaterial();
+let edgeLines=null;const edgeMaterial=new THREE.LineBasicMaterial({color:0x607399,transparent:true,opacity:.25,blending:THREE.AdditiveBlending});
 function rebuildEdges(){if(edgeLines){root.remove(edgeLines);edgeLines.geometry.dispose();}const values=[];for(const edge of graph.edges){const source=nodeMeshes.get(edge.source),targetMesh=nodeMeshes.get(edge.target);if(!source||!targetMesh||!source.visible||!targetMesh.visible)continue;values.push(source.position.x,source.position.y,source.position.z,targetMesh.position.x,targetMesh.position.y,targetMesh.position.z);}const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.Float32BufferAttribute(values,3));edgeLines=new THREE.LineSegments(geometry,edgeMaterial);edgeLines.renderOrder=-1;root.add(edgeLines);}
 function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=delta*.002;midStars.rotation.y-=delta*.004;nearStars.rotation.y+=delta*.006;dust.rotation.y+=delta*.0035;nebulae.forEach((sprite,index)=>{sprite.material.rotation+=delta*(index%2?-.004:.003);});}renderer.render(scene,camera);}
 }
 `;
 
-test("Galaxy motion patch uses a flatter 2-4 arm disc, co-rotation, radial slowdown, and dynamic edge sync", () => {
+test("Galaxy motion patch uses a flatter 2-4 arm disc, co-rotation, radial slowdown, and structural-only dynamic edges", () => {
   const patched = patchThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /function galaxyArmCount\(graph\)/);
   assert.match(patched, /count<=4\?2:count<=8\?3:4/);
@@ -31,11 +31,13 @@ test("Galaxy motion patch uses a flatter 2-4 arm disc, co-rotation, radial slowd
   assert.match(patched, /angle=arm\*TAU\/armCount\+t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
   assert.match(patched, /threeStyle==="galaxy"\?1\.35:2\.1/);
-  assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating"/);
+  assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),edgePolicy:"structural-only"/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
   assert.match(patched, /period:480\+ring\*220/);
   assert.match(patched, /verticalAmplitude:Math\.min\(1\.4,localRadius\*\.06\)/);
   assert.match(patched, /ProjectMapThreejsGalaxyMotion/);
+  assert.match(patched, /opacity:threeStyle==="galaxy"\?\.11:\.25/);
+  assert.equal((patched.match(/edge\.type==="contribution"/g) || []).length, 2);
   assert.match(patched, /function syncDynamicEdges\(\)/);
   assert.match(patched, /attribute\.needsUpdate=true/);
   assert.match(patched, /dust\.rotation\.y\+=delta\*\(threeStyle==="galaxy"\?\.0011:\.0035\)/);
