@@ -15,7 +15,7 @@
     "matrix",
     "sankey",
   ]);
-  const THREE_D_STYLES = new Set(["cosmic", "aurora", "wireframe"]);
+  const THREE_D_STYLES = new Set(["cosmic", "galaxy", "aurora", "wireframe"]);
   const TRANSFERABLE_KEYS = ["username", "q", "status", "motion", "activity", "focus", "depth", "quality"];
 
   function valid2DStyle(value) {

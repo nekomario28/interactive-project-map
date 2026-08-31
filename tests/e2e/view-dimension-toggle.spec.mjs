@@ -78,11 +78,25 @@ test("View is a separate 2D/3D axis, exposes real 3D styles, and restores the pr
   await expect(page.locator(".view-style-field")).toBeVisible();
   await expect(page.locator(".view-style-field > span")).toHaveText("Style");
   await expect(page.locator("#threeStyle")).toBeVisible();
-  await expect(page.locator("#threeStyle option")).toHaveCount(3);
-  expect(await page.locator("#threeStyle").evaluate((select) => [...select.options].map((option) => option.value))).toEqual(["cosmic", "aurora", "wireframe"]);
+  await expect(page.locator("#threeStyle option")).toHaveCount(4);
+  expect(await page.locator("#threeStyle").evaluate((select) => [...select.options].map((option) => option.value))).toEqual(["cosmic", "galaxy", "aurora", "wireframe"]);
   await expect(page.locator("#threeStyle")).toHaveValue("cosmic");
   await expect(page.locator('body[data-map-style="threejs-cosmic"]')).toHaveCount(1);
   const cosmicCanvas = await page.locator("#galaxy3d").screenshot();
+
+  await Promise.all([
+    page.waitForURL(/style3d=galaxy/),
+    page.locator("#threeStyle").selectOption("galaxy"),
+  ]);
+  await waitForThreeReady(page);
+  await expect(page.locator("#threeStyle")).toHaveValue("galaxy");
+  await expect(page.locator('body[data-map-style="threejs-galaxy"]')).toHaveCount(1);
+  await expect(page).toHaveTitle(/Three\.js Galaxy Lab/);
+  const galaxySnapshot = await page.evaluate(() => window.ProjectMapThreejsLab.snapshot());
+  expect(galaxySnapshot.style).toBe("galaxy");
+  expect(galaxySnapshot.renderer).toBe("threejs-galaxy");
+  const galaxyCanvas = await page.locator("#galaxy3d").screenshot();
+  expect(Buffer.compare(cosmicCanvas, galaxyCanvas)).not.toBe(0);
 
   await Promise.all([
     page.waitForURL(/style3d=aurora/),

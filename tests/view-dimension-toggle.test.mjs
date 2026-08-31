@@ -20,13 +20,13 @@ test("2D viewer gets a separate View dimension control without adding 3D to Styl
   assert.equal(patchTwoDViewDimension(html), html);
 });
 
-test("Three.js viewer exposes three renderer-local styles", () => {
+test("Three.js viewer exposes four renderer-local styles", () => {
   const html = patchThreeDViewDimension(threeD);
   assert.match(html, /data-view-dimension="3d"/);
   assert.match(html, /aria-label="Rendering dimension"/);
   assert.match(html, /id="twoDLink"[^>]*>2D<\/a>/);
   assert.match(html, /aria-current="page">3D <small>Lab<\/small>/);
-  assert.match(html, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option><option value="aurora">Aurora<\/option><option value="wireframe">Wireframe<\/option>/);
+  assert.match(html, /id="threeStyle"[^>]*><option value="cosmic">Cosmic<\/option><option value="galaxy">Galaxy<\/option><option value="aurora">Aurora<\/option><option value="wireframe">Wireframe<\/option>/);
   assert.match(html, /view-dimension-toggle\.css/);
   assert.match(html, /view-dimension-toggle\.js/);
   assert.equal(patchThreeDViewDimension(html), html);
@@ -41,6 +41,7 @@ test("Three.js Style control is restored even when the View control already exis
   const repaired = patchThreeDViewDimension(partial);
   assert.match(repaired, /class="field view-style-field"/);
   assert.match(repaired, /<option value="cosmic">Cosmic<\/option>/);
+  assert.match(repaired, /<option value="galaxy">Galaxy<\/option>/);
   assert.match(repaired, /<option value="aurora">Aurora<\/option>/);
   assert.match(repaired, /<option value="wireframe">Wireframe<\/option>/);
   assert.equal(patchThreeDViewDimension(repaired), repaired);
@@ -49,7 +50,7 @@ test("Three.js Style control is restored even when the View control already exis
 test("view dimension runtime keeps 2D and 3D Style state separate", async () => {
   const source = await readFile(new URL("../scripts/public-view-dimension-toggle.js", import.meta.url), "utf8");
   assert.match(source, /const TWO_D_STYLES = new Set/);
-  assert.match(source, /const THREE_D_STYLES = new Set\(\["cosmic", "aurora", "wireframe"\]\)/);
+  assert.match(source, /const THREE_D_STYLES = new Set\(\["cosmic", "galaxy", "aurora", "wireframe"\]\)/);
   assert.match(source, /url\.searchParams\.delete\("style"\)/);
   assert.match(source, /url\.searchParams\.set\("style2d", current2DStyle\(\)\)/);
   assert.match(source, /url\.searchParams\.set\("style3d", style\)/);
