@@ -12,6 +12,7 @@ const ui = {
 };
 function createSceneRuntime(THREE,graph,username){
 let hoveredMesh=null,selectedMesh=null,quality=(["auto","high","low"].includes(new URL(location.href).searchParams.get("render"))?new URL(location.href).searchParams.get("render"):"auto"),motionEnabled=true;
+let yaw=.68,pitch=.34,distance=250,desiredDistance=distance,dragging=false;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x02040b);scene.fog=new THREE.FogExp2(0x030610,.00225);
 const root=new THREE.Group();scene.add(root);scene.add(new THREE.HemisphereLight(0x91aaff,0x080510,1.35));const centerLight=new THREE.PointLight(0x8fb8ff,680,520,1.7);centerLight.position.set(0,18,0);scene.add(centerLight);const rimLight=new THREE.PointLight(0xb36cff,340,480,2);rimLight.position.set(-120,80,120);scene.add(rimLight);
 scene.add(farStars,midStars,nearStars,dust);
@@ -39,6 +40,7 @@ test("Three.js style patch keeps four scene themes, adds Galaxy layout, and remo
   assert.match(patched, /externalBase=Math\.max\(210,outerOwnedRadius\+64\)/);
   assert.match(patched, /threeStyle==="galaxy"\?layoutGalaxyGraph\(THREE,graph\):layoutGraph\(THREE,graph\)/);
   assert.match(patched, /threeStyle==="galaxy"\?\(graph\.nodes\.some/);
+  assert.match(patched, /pitch=threeStyle==="galaxy"\?\.66:\.34/);
   assert.match(patched, /dust\.scale\.setScalar\(1\.08\)/);
   assert.match(patched, /const threeStyle=currentThreeStyle\(\),threeTheme=THREE_STYLE_THEMES\[threeStyle\]/);
   assert.match(patched, /canonicalUrl\.searchParams\.delete\("render"\)/);
