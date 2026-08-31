@@ -2,7 +2,7 @@ const GALAXY_MOTION_HELPERS = `function createGalaxyMotionModel(graph,positions)
 
 const POSITION_STATE = 'const positions=threeStyle==="galaxy"?layoutGalaxyGraph(THREE,graph):layoutGraph(THREE,graph),nodeMeshes=new Map(),';
 const POSITION_STATE_WITH_MOTION = 'const positions=threeStyle==="galaxy"?layoutGalaxyGraph(THREE,graph):layoutGraph(THREE,graph),galaxyMotion=threeStyle==="galaxy"?createGalaxyMotionModel(graph,positions):null,nodeMeshes=new Map(),';
-const FILTER_ANCHOR = 'const filters=new Map(ui.statusButtons.map((button)=>[button.dataset.statusFilter,true]));let searchQuery="";';
+const RUNTIME_INSERT_ANCHOR = 'function resize(){';
 const GALAXY_RUNTIME_MOTION = `function syncEdgePositions(){if(!edgeLines)return;const attribute=edgeLines.geometry.getAttribute("position");if(!attribute)return;let cursor=0;for(const edge of graph.edges){const source=nodeMeshes.get(edge.source),targetMesh=nodeMeshes.get(edge.target);if(!source||!targetMesh||!source.visible||!targetMesh.visible)continue;if(cursor+1>=attribute.count)break;attribute.setXYZ(cursor++,source.position.x,source.position.y,source.position.z);attribute.setXYZ(cursor++,targetMesh.position.x,targetMesh.position.y,targetMesh.position.z);}attribute.needsUpdate=true;}function advanceGalaxyMotion(delta){if(!galaxyMotion||delta<=0)return;galaxyMotion.time+=delta;for(const orbit of galaxyMotion.groups){const mesh=nodeMeshes.get(orbit.nodeId);if(!mesh)continue;const angle=orbit.phase+galaxyMotion.time*orbit.omega;mesh.position.set(Math.cos(angle)*orbit.radius,orbit.y,Math.sin(angle)*orbit.radius);}for(const orbit of galaxyMotion.repositories){const mesh=nodeMeshes.get(orbit.nodeId);if(!mesh)continue;const angle=orbit.phase+galaxyMotion.time*orbit.omega;if(orbit.kind==="local"){const center=nodeMeshes.get(orbit.groupId);if(!center)continue;mesh.position.set(center.position.x+Math.cos(angle)*orbit.radius,center.position.y+orbit.yOffset,center.position.z+Math.sin(angle)*orbit.radius);}else{mesh.position.set(Math.cos(angle)*orbit.radius,orbit.y,Math.sin(angle)*orbit.radius);}}}`;
 const ANIMATE_ANCHOR = 'previousTime=now;setCameraFromOrbit(false);if(motionEnabled){farStars.rotation.y+=delta*.002;';
 const ANIMATE_WITH_GALAXY = 'previousTime=now;setCameraFromOrbit(false);if(motionEnabled&&galaxyMotion){advanceGalaxyMotion(delta);syncEdgePositions();}if(motionEnabled){farStars.rotation.y+=delta*.002;';
@@ -26,7 +26,7 @@ export function patchThreejsGalaxyOrbits(source) {
   }
   next = replaceRequired(next, POSITION_STATE, POSITION_STATE_WITH_MOTION, "Galaxy motion state");
   if (!next.includes("function advanceGalaxyMotion(delta)")) {
-    next = replaceRequired(next, FILTER_ANCHOR, `${GALAXY_RUNTIME_MOTION}${FILTER_ANCHOR}`, "Galaxy runtime motion insertion point");
+    next = replaceRequired(next, RUNTIME_INSERT_ANCHOR, `${GALAXY_RUNTIME_MOTION}${RUNTIME_INSERT_ANCHOR}`, "Galaxy runtime motion insertion point");
   }
   next = replaceRequired(next, ANIMATE_ANCHOR, ANIMATE_WITH_GALAXY, "Galaxy animation hook");
   return next;
