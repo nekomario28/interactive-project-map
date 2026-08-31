@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { patchThreejsGalaxyMotionRuntime } from "../scripts/apply-threejs-galaxy-motion.mjs";
 
 const fixture = `
+function layoutGalaxyGraph(THREE,graph){const count=2,armCount=count<=3?1:count<=8?2:3,y=(hashUnit(group.id+":galaxy-y")-.5)*14,thickness=(hashUnit(repo.id+":galaxy-thickness")-.5)*(10+ring*2.6);positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-loose-y")-.5)*24,0));positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-external-y")-.5)*34,0));}
 function createSpiralDust(THREE,seed){const count=1800,positions=new Float32Array(count*3),colors=new Float32Array(count*3),blue=new THREE.Color(0x6387ff),violet=new THREE.Color(0xa86cff);for(let index=0;index<count;index+=1){const arm=index%4,t=hashUnit(\`${"${seed}"}:dust:t:${"${index}"}\`),radius=42+t*230,jitter=(hashUnit(\`${"${seed}"}:dust:j:${"${index}"}\`)-.5)*30,angle=arm*TAU/4+t*TAU*2.1+jitter*.008;positions[index*3]=Math.cos(angle)*(radius+jitter);}return new THREE.Points();}
 function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy";
@@ -16,22 +17,28 @@ function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=de
 }
 `;
 
-test("Galaxy motion patch uses matching dust arms, co-rotation, radial slowdown, and dynamic edge sync", () => {
+test("Galaxy motion patch uses a flatter 2-4 arm disc, co-rotation, radial slowdown, and dynamic edge sync", () => {
   const patched = patchThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /function galaxyArmCount\(graph\)/);
-  assert.match(patched, /count<=3\?1:count<=8\?2:3/);
+  assert.match(patched, /count<=4\?2:count<=8\?3:4/);
+  assert.match(patched, /armCount=count<=4\?2:count<=8\?3:4/);
+  assert.match(patched, /galaxy-y"\)-\.5\)\*6/);
+  assert.match(patched, /galaxy-thickness"\)-\.5\)\*\(5\+ring\*1\.4\)/);
+  assert.match(patched, /galaxy-loose-y"\)-\.5\)\*10/);
+  assert.match(patched, /galaxy-external-y"\)-\.5\)\*14/);
   assert.match(patched, /function createSpiralDust\(THREE,seed,armCount=4,winding=2\.1\)/);
   assert.match(patched, /const arm=index%armCount/);
   assert.match(patched, /angle=arm\*TAU\/armCount\+t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
-  assert.match(patched, /threeStyle==="galaxy"\?3\.2:2\.1/);
+  assert.match(patched, /threeStyle==="galaxy"\?1\.35:2\.1/);
   assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating"/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
   assert.match(patched, /period:480\+ring\*220/);
+  assert.match(patched, /verticalAmplitude:Math\.min\(1\.4,localRadius\*\.06\)/);
   assert.match(patched, /ProjectMapThreejsGalaxyMotion/);
   assert.match(patched, /function syncDynamicEdges\(\)/);
   assert.match(patched, /attribute\.needsUpdate=true/);
-  assert.match(patched, /dust\.rotation\.y\+=delta\*\(threeStyle==="galaxy"\?\.0021:\.0035\)/);
+  assert.match(patched, /dust\.rotation\.y\+=delta\*\(threeStyle==="galaxy"\?\.0011:\.0035\)/);
   assert.match(patched, /if\(galaxyMotion&&galaxyMotion\.step\(delta\)\)/);
   assert.match(patched, /if\(selectedMesh\)desiredTarget\.copy\(selectedMesh\.position\)/);
   assert.equal(patchThreejsGalaxyMotionRuntime(patched), patched);
