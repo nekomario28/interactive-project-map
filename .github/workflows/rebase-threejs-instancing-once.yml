@@ -27,15 +27,31 @@ jobs:
           git show FETCH_HEAD:tests/threejs-repository-instancing.test.mjs > tests/threejs-repository-instancing.test.mjs
           python - <<'PY'
           from pathlib import Path
-          path = Path('package.json')
-          text = path.read_text()
+
+          package = Path('package.json')
+          text = package.read_text()
           old_check = 'node --check scripts/apply-threejs-style-presets.mjs && node --check scripts/apply-threejs-local-engine.mjs'
           new_check = 'node --check scripts/apply-threejs-style-presets.mjs && node --check scripts/apply-threejs-repository-instancing.mjs && node --check scripts/apply-threejs-local-engine.mjs'
           old_build = 'node scripts/apply-threejs-style-presets.mjs && node scripts/apply-threejs-local-engine.mjs'
           new_build = 'node scripts/apply-threejs-style-presets.mjs && node scripts/apply-threejs-repository-instancing.mjs && node scripts/apply-threejs-local-engine.mjs'
           if old_check not in text or old_build not in text:
               raise SystemExit('package.json Three.js build boundary changed; refusing to patch')
-          path.write_text(text.replace(old_check, new_check, 1).replace(old_build, new_build, 1))
+          package.write_text(text.replace(old_check, new_check, 1).replace(old_build, new_build, 1))
+
+          patch = Path('scripts/apply-threejs-repository-instancing.mjs')
+          source = patch.read_text()
+          loose_total = 'graph.nodes.filter((node)=>node.type==\\"repository\\").length'
+          strict_total = 'graph.nodes.filter((node)=>node.type===\\"repository\\").length'
+          loose_pulse = 'node.type==\\"repository\\"?.025:.018'
+          strict_pulse = 'node.type===\\"repository\\"?.025:.018'
+          if loose_total not in source or loose_pulse not in source:
+              raise SystemExit('expected legacy instancing anchors not found; refusing broad rewrite')
+          patch.write_text(source.replace(loose_total, strict_total).replace(loose_pulse, strict_pulse))
+
+          fixture = Path('tests/threejs-repository-instancing.test.mjs')
+          test_source = fixture.read_text()
+          test_source = test_source.replace('node.type==\\"repository\\"', 'node.type===\\"repository\\"')
+          fixture.write_text(test_source)
           PY
 
       - name: Install dependencies
