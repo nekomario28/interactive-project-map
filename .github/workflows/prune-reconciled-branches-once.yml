@@ -26,14 +26,16 @@ jobs:
           const owner = process.env.OWNER;
           const workflowPath = '.github/workflows/prune-reconciled-branches-once.yml';
           const selfBranch = 'maintenance/prune-reconciled-branches-20260831';
+          const prototypeSha = '73735bb2ba0e079da28cff6c848f90eef84e9b97';
+          const noPrDuplicate = 'perf/threejs-repository-instancing-rebase';
           const expected = new Map([
             ['docs/all-research-reconcile-20260831', '626abe50935fbd187c822c9447f98ce62630a3e0'],
             ['docs/bootstrap-order-invariant', 'cfcd7310ada5c7b78ebeb9f0f7de28a063c281cc'],
             ['docs/research-reopen-gate', '0d44e0d90f14dcd0d03b26c9ce37d6e8047cc70d'],
             ['fix/2d-runtime-bootstrap-race', '2b55b2727207081c897d33b5f1efffb853fa6215'],
             ['test/search-context-semantic-settle', 'bc636aacc8ed630f85689da762695a3799d06796'],
-            ['perf/threejs-repository-instancing', '73735bb2ba0e079da28cff6c848f90eef84e9b97'],
-            ['perf/threejs-repository-instancing-rebase', '73735bb2ba0e079da28cff6c848f90eef84e9b97'],
+            ['perf/threejs-repository-instancing', prototypeSha],
+            [noPrDuplicate, prototypeSha],
           ]);
 
           const headers = {
@@ -54,10 +56,19 @@ jobs:
           }
           const encodeBranchPath = (name) => name.split('/').map(encodeURIComponent).join('/');
           const encodeContentPath = (name) => name.split('/').map(encodeURIComponent).join('/');
-          async function requireClosedPr(name) {
+          async function requireClosedPr(name, sha) {
             const query = new URLSearchParams({state: 'all', head: `${owner}:${name}`, per_page: '100'});
             const prs = await api(`/repos/${repo}/pulls?${query}`);
-            if (!prs.length) throw new Error(`Refusing to delete ${name}: no PR history found`);
+            if (!prs.length) {
+              if (name === noPrDuplicate && sha === prototypeSha) {
+                const prototypePr = await api(`/repos/${repo}/pulls/310`);
+                if (prototypePr.state !== 'closed' || prototypePr.merged_at || prototypePr.head?.sha !== prototypeSha) {
+                  throw new Error(`Refusing duplicate cleanup for ${name}: #310 no longer proves closed unmerged prototype ${prototypeSha}`);
+                }
+                return;
+              }
+              throw new Error(`Refusing to delete ${name}: no PR history found`);
+            }
             if (prs.some((pr) => pr.state === 'open')) throw new Error(`Refusing to delete ${name}: open PR exists`);
           }
           async function deleteExpectedBranch(name, sha) {
@@ -67,7 +78,7 @@ jobs:
             if (ref.object?.sha !== sha) {
               throw new Error(`Refusing to delete ${name}: expected ${sha}, found ${ref.object?.sha || 'unknown'}`);
             }
-            await requireClosedPr(name);
+            await requireClosedPr(name, sha);
             await api(`/repos/${repo}/git/refs/heads/${encoded}`, {method: 'DELETE'});
             return {name, result: 'deleted'};
           }
@@ -75,16 +86,14 @@ jobs:
           const results = [];
           for (const [name, sha] of expected) results.push(await deleteExpectedBranch(name, sha));
 
-          // The workflow's own source branch is safe to delete only after its PR is closed by the merge that triggered this run.
           const selfEncoded = encodeBranchPath(selfBranch);
           const selfRef = await api(`/repos/${repo}/git/ref/heads/${selfEncoded}`, {}, true);
           if (selfRef) {
-            await requireClosedPr(selfBranch);
+            await requireClosedPr(selfBranch, selfRef.object?.sha);
             await api(`/repos/${repo}/git/refs/heads/${selfEncoded}`, {method: 'DELETE'});
             results.push({name: selfBranch, result: 'deleted'});
           }
 
-          // Remove the one-shot workflow from main so no permanent cleanup machinery remains.
           const workflow = await api(`/repos/${repo}/contents/${encodeContentPath(workflowPath)}?ref=main`);
           await api(`/repos/${repo}/contents/${encodeContentPath(workflowPath)}`, {
             method: 'DELETE',
