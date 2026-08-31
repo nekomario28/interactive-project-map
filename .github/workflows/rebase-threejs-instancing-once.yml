@@ -1,0 +1,57 @@
+name: Rebase Three.js instancing once
+
+on:
+  push:
+    branches:
+      - perf/threejs-repository-instancing-rebase
+
+permissions:
+  contents: write
+
+jobs:
+  rebase-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fresh main-based experiment branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Reapply the evidence-gated prototype
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin perf/threejs-repository-instancing
+          git show FETCH_HEAD:scripts/apply-threejs-repository-instancing.mjs > scripts/apply-threejs-repository-instancing.mjs
+          git show FETCH_HEAD:tests/threejs-repository-instancing.test.mjs > tests/threejs-repository-instancing.test.mjs
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('package.json')
+          text = path.read_text()
+          old_check = 'node --check scripts/apply-threejs-style-presets.mjs && node --check scripts/apply-threejs-local-engine.mjs'
+          new_check = 'node --check scripts/apply-threejs-style-presets.mjs && node --check scripts/apply-threejs-repository-instancing.mjs && node --check scripts/apply-threejs-local-engine.mjs'
+          old_build = 'node scripts/apply-threejs-style-presets.mjs && node scripts/apply-threejs-local-engine.mjs'
+          new_build = 'node scripts/apply-threejs-style-presets.mjs && node scripts/apply-threejs-repository-instancing.mjs && node scripts/apply-threejs-local-engine.mjs'
+          if old_check not in text or old_build not in text:
+              raise SystemExit('package.json Three.js build boundary changed; refusing to patch')
+          text = text.replace(old_check, new_check, 1).replace(old_build, new_build, 1)
+          path.write_text(text)
+          PY
+          rm .github/workflows/rebase-threejs-instancing-once.yml
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Full verification before preserving prototype
+        run: npm run verify
+
+      - name: Commit verified fresh-main prototype
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json scripts/apply-threejs-repository-instancing.mjs tests/threejs-repository-instancing.test.mjs .github/workflows/rebase-threejs-instancing-once.yml
+          git commit -m 'perf: rebase Three.js repository instancing on current main'
+          git push origin HEAD:perf/threejs-repository-instancing-rebase
