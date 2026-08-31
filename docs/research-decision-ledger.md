@@ -68,6 +68,25 @@ The historical issue checklist is not a live backlog. P0/P1/P2 materialized thro
 
 **Reopen condition:** a concrete cross-renderer semantic parity regression that cannot be corrected through the existing view-model/adapters.
 
+### 2D graph-bootstrap ordering — ADOPTED
+
+A strengthened 2D/Three.js Search Context parity test first exposed an intermittent mismatch. The initial assumption that this was only a test-settling race was superseded when main failed again after the test had been strengthened.
+
+The production cause was script ordering:
+
+1. the base 2D viewer could start `graph.json` fetch immediately;
+2. later ordered/deferred scripts installed the canonical view-model/search/sanitizer patches;
+3. a sufficiently fast graph response could therefore be sanitized by the legacy base sanitizer before those patches existed;
+4. taxonomy aliases/facets/semantic metadata were then permanently absent from `state.graph`, producing a correct query string with empty derived Search Context IDs/reasons.
+
+PR #313 introduced `scripts/apply-2d-runtime-bootstrap-gate.mjs`. All nine 2D viewer runtimes now start graph loading from a one-shot `DOMContentLoaded` listener, after the ordered deferred patch set has run. The regression proof checks that canonical `ProjectMapViewModel.projectSearchContext` and `ProjectMapSearchContext` already exist when graph fetch begins, then validates alias and facet search.
+
+The deployed Pages artifact at main `82ddd9466a390da3dc7dc016b7d472415ae26eb8` was inspected directly and contains exactly one bootstrap gate in each of `viewer.js`, `radial-viewer.js`, `tree-viewer.js`, `treemap-viewer.js`, `timeline-viewer.js`, `cluster-viewer.js`, `sunburst-viewer.js`, `matrix-viewer.js`, and `sankey-viewer.js`.
+
+**Current rule:** do not start 2D graph fetch before the shared runtime patch layer has installed. Do not introduce a second early graph-fetch path. Search semantic readiness is the full renderer-neutral projection, not merely a normalized query string.
+
+**Reopen condition:** a concrete startup/load regression showing that the `DOMContentLoaded` gate itself causes user-visible harm, together with an alternative ordering mechanism that still proves all required shared patches are installed before graph sanitization.
+
 ## 3. View and Style architecture
 
 ### Separate View axis — ADOPTED
@@ -182,9 +201,9 @@ Current real-environment use has no observed Three.js heaviness. There is theref
 
 Do not remove or suppress normal visual treatment based only on synthetic CI cost.
 
-### InstancedMesh batching #306 / prototype #307 — REJECTED / NOT_PLANNED
+### InstancedMesh batching #306 / prototypes #307 and #310 — REJECTED / NOT_PLANNED
 
-The prototype is preserved in GitHub history, but remains unmerged. Do not create a second large-scene rendering path while real use is healthy.
+The prototypes are preserved in GitHub history but remain unmerged. PR #310 demonstrated why a fresh-main rebuild or green synthetic gate is not, by itself, authority to reopen a NOT_PLANNED lane. Do not create a second large-scene rendering path while real use is healthy.
 
 **Reopen condition for any Three.js optimization:** reproducible real-device/user evidence such as noticeable interaction latency, startup delay, memory failure, thermal/power cost, or realistic portfolio scale failure. When reopened, use the existing synthetic harness as a discriminator, not as the sole acceptance authority.
 
@@ -218,9 +237,11 @@ Historical docs, closed PRs and old issue bodies remain evidence carriers. They 
 - Three.js-as-13th-2D-style;
 - style-count expansion without a product purpose.
 
+Fresh main, a cleaner implementation, CI GREEN, or stronger synthetic evidence does not override a documented NOT_PLANNED/REJECTED reopen condition.
+
 ## 11. Current work queue
 
-At this reconcile cut there are **zero open issues and zero open pull requests**. This is intentional, not an absence of direction.
+At this reconcile cut there is **no pre-approved implementation backlog**. This is intentional, not an absence of direction.
 
 New work should be created only from one of these evidence classes, in order:
 
