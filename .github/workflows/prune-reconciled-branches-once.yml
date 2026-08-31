@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   prune:
-    if: github.event.head_commit.message == 'maintenance: run reconciled branch cleanup'
+    if: "${{ github.event.head_commit.message == 'maintenance: run reconciled branch cleanup' }}"
     runs-on: ubuntu-latest
     steps:
       - name: Delete only reconciled branch refs and remove this workflow
