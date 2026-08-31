@@ -4,6 +4,7 @@ import { patchThreejsGalaxyOrbits } from "../scripts/threejs-galaxy-orbits.mjs";
 
 const source = `
 const TAU=Math.PI*2;
+function layoutGalaxyGraph(THREE,graph){return new Map();}
 function createSceneRuntime(THREE,graph,username){
 const positions=threeStyle==="galaxy"?layoutGalaxyGraph(THREE,graph):layoutGraph(THREE,graph),nodeMeshes=new Map(),pickable=[];
 let edgeLines=null;
@@ -33,8 +34,9 @@ test("Galaxy orbit patch moves nodes only while motion is enabled and keeps edge
   assert.match(patched, /if\(motionEnabled&&galaxyMotion\)\{advanceGalaxyMotion\(delta\);syncEdgePositions\(\);\}/);
 });
 
-test("Galaxy orbit patch is idempotent", () => {
+test("Galaxy orbit patch is idempotent and ignores pre-Galaxy runtimes", () => {
   const once = patchThreejsGalaxyOrbits(source);
   const twice = patchThreejsGalaxyOrbits(once);
   assert.equal(twice, once);
+  assert.equal(patchThreejsGalaxyOrbits('const THREE_URL="x";'), 'const THREE_URL="x";');
 });
