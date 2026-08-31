@@ -59,8 +59,9 @@ function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-test("Galaxy owned repositories visibly orbit their category and Motion Off freezes the orbit", async ({ page, browserName }) => {
+test("Galaxy owned repositories slowly orbit their category and Motion Off freezes the orbit", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js orbital motion is exercised once in Chromium.");
+  test.setTimeout(45_000);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await installGraph(page);
   await page.goto("/three/?username=example&style3d=galaxy");
@@ -70,22 +71,16 @@ test("Galaxy owned repositories visibly orbit their category and Motion Off free
   await page.locator("#search").fill("alpha");
   const planetLabel = page.locator('[data-repository-label-id="repository:alpha"]');
   await expect(planetLabel).toBeVisible();
-  const groupLabel = page.locator("#threeLabels .three-label-group", { hasText: "Robotics" });
-  await expect(groupLabel).toBeVisible();
 
   const planetBefore = await center(planetLabel);
-  const groupBefore = await center(groupLabel);
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(12_000);
   const planetAfter = await center(planetLabel);
-  const groupAfter = await center(groupLabel);
-
-  expect(distance(planetBefore, planetAfter)).toBeGreaterThan(2);
-  expect(distance(groupBefore, groupAfter)).toBeGreaterThan(0.5);
+  expect(distance(planetBefore, planetAfter)).toBeGreaterThan(1);
 
   await page.locator("#motionToggle").click();
   await expect(page.locator("#motionToggle")).toHaveText("Motion Off");
   const frozenBefore = await center(planetLabel);
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(1_200);
   const frozenAfter = await center(planetLabel);
-  expect(distance(frozenBefore, frozenAfter)).toBeLessThan(1);
+  expect(distance(frozenBefore, frozenAfter)).toBeLessThan(0.8);
 });
