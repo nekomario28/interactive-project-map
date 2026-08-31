@@ -6,13 +6,13 @@ This is the canonical list of work that is still worth doing. `docs/research-dec
 
 ## Current production/release state
 
-- Interactive Pages `main` baseline at this reconcile cut: **`9e8f536a0aa1a7fbd4b0a22f760528e42a454ccf`**.
+- Interactive Pages `main` baseline at this reconcile cut: **`82ddd9466a390da3dc7dc016b7d472415ae26eb8`**.
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - The reviewed immutable inner Action pin remains an independent release/authority layer. Moving Pages `main`, reusable `v1`, the outer reusable workflow, and the inner Action pin are separate decisions and require evidence appropriate to each layer.
 - The published GitHub-only setup path has one production source of truth: `scripts/public-home.js` emits the reusable workflow caller. The legacy public direct composite-action caller must not return.
 - The optional Cloudflare/GitHub App one-click installer remains **DORMANT / NOT_PRODUCTION_EXPOSED**. Do not advertise, credential-test, expand or reactivate it without concrete onboarding evidence or an explicit reviewed product decision.
 
-There is currently **no open GitHub issue or pull request** after the 2026-08-31 research reconcile. New work should start from a concrete product, correctness, accessibility, maintenance or release gap rather than from an old unchecked research item.
+There is currently **no pre-approved feature backlog** after the 2026-08-31 research reconcile. New work should start from a concrete product, correctness, accessibility, maintenance or release gap rather than from an old unchecked research item.
 
 ## Frozen product architecture
 
@@ -39,6 +39,18 @@ The #276 convergence program is **completed**, not an active tracker. Current ba
 - common read-only `window.ProjectMapRenderer.snapshot()` evidence/capability contract across 2D and 3D.
 
 Do not reopen these as architecture TODOs unless a concrete parity regression is demonstrated.
+
+### 2D runtime bootstrap ordering — adopted invariant
+
+PR #313 closed a real production initialization race discovered by the strengthened 2D/3D Search Context parity gate.
+
+- All nine 2D viewer runtimes must install their ordered shared/deferred patches **before** starting the asynchronous `graph.json` fetch.
+- `scripts/apply-2d-runtime-bootstrap-gate.mjs` gates the graph-load bootstrap until `DOMContentLoaded`, after the ordered deferred scripts have executed.
+- At graph-fetch start, the canonical Project Map view-model and Search Context runtime must already be available.
+- Do not move graph loading back into immediate base-viewer execution or create a second early fetch path.
+- A correct query string alone is not semantic readiness; alias/facet/category-derived IDs and reasons must match the renderer-neutral pure model.
+
+The deployed Pages artifact for `82ddd9466a390da3dc7dc016b7d472415ae26eb8` was inspected directly: `viewer.js` plus radial/tree/treemap/timeline/cluster/sunburst/matrix/sankey viewer runtimes each contain exactly one bootstrap gate and one `DOMContentLoaded` listener.
 
 ### Contributed — frozen semantics and motion
 
@@ -72,13 +84,13 @@ Current real-environment use has no observed Three.js heaviness. Therefore:
 - preserve the existing straightforward per-node renderer while it is usable in real environments;
 - reopen optimization only from reproducible real-device/user evidence such as interaction latency, startup delay, thermal/power cost, memory failure or scale failure.
 
-#302 and #306 are closed `not_planned`; prototype PR #307 is closed unmerged. #298 is closed `completed` as research.
+#302 and #306 are closed `not_planned`; prototype PRs #307 and #310 are closed unmerged. #298 is closed `completed` as research.
 
 ## Work that is still worth doing
 
 There is no pre-approved feature backlog. Priorities are evidence-driven:
 
-1. **Production regressions first.** Fix visible/correctness regressions such as broken Contributed motion, View/Style controls, project-subpath asset loading, setup generation, accessibility or state transfer before research work.
+1. **Production regressions first.** Fix visible/correctness regressions such as broken Contributed motion, View/Style controls, project-subpath asset loading, bootstrap ordering, setup generation, accessibility or state transfer before research work.
 2. **Release/setup integrity.** Keep the GitHub-only setup source of truth, immutable pins and stable-v1 separation mechanically tested. Advance release pins only with exact caller/output evidence.
 3. **Small UX/accessibility improvements with rendered evidence.** Mobile layout, camera/selection/search feedback, label readability or keyboard/accessibility work is valid when a real problem is demonstrated.
 4. **Renderer-neutral maintenance only when it removes real duplication/drift.** Do not commonize Canvas and WebGL internals for symmetry.
@@ -98,6 +110,6 @@ There is no pre-approved feature backlog. Priorities are evidence-driven:
 
 For future changes:
 
-`refresh latest main -> read this roadmap + research decision ledger -> identify one concrete gap -> reuse the existing semantic boundary -> smallest delta -> focused validation -> rendered Chromium/WebKit evidence where behavior changes -> Pages proof where deployment changes -> release proof only if release pins move`
+`refresh latest main -> read this roadmap + research decision ledger -> identify one concrete gap -> reuse the existing semantic boundary -> preserve 2D bootstrap ordering -> smallest delta -> focused validation -> rendered Chromium/WebKit evidence where behavior changes -> Pages proof where deployment changes -> release proof only if release pins move`
 
 Source/build success alone does not prove visible behavior. Synthetic performance evidence alone does not justify renderer complexity when real-device behavior is healthy. User-facing controls require a meaningful visible outcome and plausible use case; otherwise keep the policy internal or remove it.
