@@ -14,13 +14,14 @@ function animate(now){if(disposed)return;const delta=Math.min(.05,Math.max(0,(no
 }
 `;
 
-test("Galaxy orbit patch adds differential galactic rotation and Kepler-like local planet periods", () => {
+test("Galaxy orbit patch adds slow differential galactic rotation and Kepler-like local planet periods", () => {
   const patched = patchThreejsGalaxyOrbits(source);
   assert.match(patched, /function createGalaxyMotionModel\(graph,positions\)/);
-  assert.match(patched, /period=clamp\(150\+radius\*\.58,180,280\)/);
-  assert.match(patched, /18\*Math\.pow\(Math\.max\(radius,8\)\/12,1\.5\)/);
+  assert.match(patched, /period=clamp\(radius\*20,1800,4200\)/);
+  assert.match(patched, /480\*Math\.pow\(Math\.max\(radius,8\)\/12,1\.5\)/);
+  assert.match(patched, /360,1440/);
   assert.match(patched, /repo\.relation==="contributed"/);
-  assert.match(patched, /period=clamp\(210\+radius\*\.52,300,430\)/);
+  assert.match(patched, /period=clamp\(radius\*18,3000,5400\)/);
   assert.match(patched, /galaxyMotion=threeStyle==="galaxy"\?createGalaxyMotionModel\(graph,positions\):null/);
 });
 
