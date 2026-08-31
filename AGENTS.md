@@ -1,14 +1,27 @@
 # Interactive Project Map agent entrypoint
 
-This is the provider-neutral entrypoint for Project Map work. `docs/current-roadmap.md`, current main/live PR state, accepted release/evidence records, and the affected source/tests are authoritative. Historical research documents and experiment carriers are not active TODOs merely because they still exist.
+This is the provider-neutral entrypoint for Project Map work. `docs/current-roadmap.md`, `docs/research-decision-ledger.md`, current main/live PR state, accepted release/evidence records, and the affected source/tests are authoritative. Historical research documents and experiment carriers are not active TODOs merely because they still exist.
 
 ## Read first
 
 1. `README.md` for product/trust/setup architecture.
 2. `docs/current-roadmap.md` for the short canonical active-work list.
-3. `CONTRIBUTING.md` and `SECURITY.md` when contribution, permissions, secrets, GitHub App, or public setup behavior is affected.
-4. The exact current PR/head plus affected packages/viewer/action/workflow files and their validation gates.
-5. Relevant historical docs only when they explain an accepted decision or rejected alternative.
+3. `docs/research-decision-ledger.md` for ADOPTED / COMPLETED / REJECTED / NOT_PLANNED / DORMANT decisions and their explicit reopen conditions.
+4. `CONTRIBUTING.md` and `SECURITY.md` when contribution, permissions, secrets, GitHub App, or public setup behavior is affected.
+5. The exact current `main`, open issue/PR state, plus affected packages/viewer/action/workflow files and their validation gates.
+6. Relevant historical docs only when they explain an accepted decision or rejected alternative.
+
+## Research reopen gate
+
+Before creating a new issue/PR, rebuilding a closed prototype, or reviving an older research branch, reconcile the proposal against both `docs/current-roadmap.md` and `docs/research-decision-ledger.md`.
+
+- **ADOPTED** decisions are the current baseline; change them only with new evidence that justifies changing the product/authority boundary.
+- **COMPLETED** research remains evidence, not an automatic next phase.
+- **REJECTED / NOT_PLANNED** work must not be revived unless its recorded **REOPEN CONDITION** is concretely satisfied.
+- **DORMANT** ideas are not queued work; they require the trigger recorded in the ledger or a new explicit reviewed product decision.
+- A fresher `main`, a cleaner reimplementation, passing CI, or stronger synthetic evidence does **not by itself** satisfy a reopen condition that requires real user/device/product evidence.
+- When parallel work conflicts with a newer canonical decision, reconcile/close/supersede the conflicting lane rather than preserving two active authorities.
+- Do not promote negative, superseded, UNKNOWN, HOLD, dormant, or unmerged prototype evidence merely because the implementation can be made to pass current tests.
 
 ## Product and release boundaries
 
@@ -21,7 +34,7 @@ This is the provider-neutral entrypoint for Project Map work. `docs/current-road
 
 ## Development loop
 
-`refresh live truth -> read current-roadmap -> identify one product gap -> inspect existing shared adapter/projection before adding renderer-specific logic -> research/reuse when a new mechanism is genuinely needed -> implement the smallest delta -> focused unit/static validation -> twelve-preset comparison where affected -> Chromium/WebKit rendered interaction proof where affected -> exact release proof when release pins move`
+`refresh live truth -> read current-roadmap + research-decision-ledger -> reconcile open issue/PR state -> identify one concrete product gap or satisfied reopen condition -> inspect existing shared adapter/projection before adding renderer-specific logic -> research/reuse when a new mechanism is genuinely needed -> implement the smallest delta -> focused unit/static validation -> twelve-preset comparison where affected -> Chromium/WebKit rendered interaction proof where affected -> exact release proof when release pins move`
 
 Prefer one shared projection/adapter over copying behavior into multiple viewers. Reuse `spatial-core` and existing browser/view-state boundaries before adding another graph model.
 
@@ -33,6 +46,7 @@ Prefer one shared projection/adapter over copying behavior into multiple viewers
 - Large-portfolio stress, new clustering, and new visual styles stay deferred unless new evidence triggers them; do not reopen NO-GO work by default.
 - Experimental AI Director or other `Do not merge` execution lanes are not Project Map product state.
 - `NOT_RUN`, optional-path-unverified, NO-GO, historical, dormant, and production-proven are distinct evidence states.
+- Synthetic CI performance evidence is a discriminator/regression tool, not a substitute for real-device/user evidence when the ledger requires a real-environment trigger.
 
 ## Secrets and permissions
 
