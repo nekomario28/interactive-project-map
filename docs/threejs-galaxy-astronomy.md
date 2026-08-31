@@ -20,6 +20,7 @@ Reference background:
 
 - NASA, *Types of Galaxies*: https://science.nasa.gov/universe/galaxies/types/
 - NASA, *Barred Spiral Galaxy NGC 1300*: https://science.nasa.gov/asset/hubble/barred-spiral-galaxy-ngc-1300/
+- NASA, *Hubble Comes Face-to-Face with Spiral's Arms*: https://science.nasa.gov/missions/hubble/hubble-comes-face-to-face-with-spirals-arms/
 - ESA, *Guide to our galaxy*: https://www.esa.int/Science_Exploration/Space_Science/Gaia/Guide_to_our_galaxy
 - ESA/Gaia, *Milky Way*: https://www.cosmos.esa.int/web/gaia/milky-way
 - ESA, *Anatomy of the Milky Way*: https://www.esa.int/ESA_Multimedia/Images/2016/09/Anatomy_of_the_Milky_Way
@@ -46,11 +47,25 @@ When `style3d=galaxy` and Motion is enabled:
 3. repositories keep their category membership while following deliberately slow local category orbits, on the same several-minute scale as the 2D Galaxy Hybrid metaphor;
 4. Contributed repositories co-rotate on external lanes with the same radial period rule;
 5. spiral dust rotates as a separate, slower visual pattern so systems are not glued rigidly to an arm;
-6. group/repository labels, selection targets and edge endpoints follow the moving meshes;
+6. group/repository labels, selection targets and structural edge endpoints follow the moving meshes;
 7. Motion Off freezes these semantic node orbits;
 8. the existing reduced-motion-derived default remains respected.
 
 The model is deliberately slow. It should read as a living galaxy over seconds and minutes rather than as a fast mechanical solar-system animation.
+
+## Edge / line contract
+
+Visible graph lines are **semantic navigation aids, not astrophysical structures or orbital trails**.
+
+For `Galaxy` specifically:
+
+- owner → category ownership and category → repository membership lines remain as very faint structural scaffolding because spatial proximity alone is not always enough to recover exact project membership from an oblique camera angle;
+- persistent line opacity is reduced well below the other Three.js styles so the stellar-disc / spiral morphology stays primary;
+- long owner → Contributed `contribution` edges are not drawn persistently. Contributed identity is already carried by the external lane, status color/filter and details UI, while a permanent cross-galaxy line can be misread as a physical trajectory and visually cuts across the disc;
+- dynamic structural edge endpoints continue to follow moving nodes;
+- Cosmic / Aurora / Wireframe keep their existing edge policy.
+
+A future contextual relation highlight may temporarily surface a Contributed relation when its repository is selected or focused, but that is separate from the always-on Galaxy structure.
 
 ## Arm-count contract
 
@@ -68,6 +83,7 @@ The dust field uses a more open winding than the generic Cosmic field. This is a
 - physically scaled galactic time;
 - claiming category-local repository motion obeys stellar or planetary gravity;
 - claiming repository metadata maps to astrophysical observables;
+- claiming graph lines are gravitational, magnetic-field, gas-flow or orbital structures;
 - claiming the style is a literal Milky Way reconstruction;
 - sacrificing category/ownership readability for strict galactic scale ratios;
 - adding large autonomous camera motion.
