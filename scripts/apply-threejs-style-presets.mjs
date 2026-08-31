@@ -20,6 +20,8 @@ const BASE_FIT_DISTANCE = 'function fitScene(immediate=false){desiredTarget.set(
 const GALAXY_FIT_DISTANCE = 'function fitScene(immediate=false){desiredTarget.set(0,0,0);desiredDistance=threeStyle==="galaxy"?(graph.nodes.some((node)=>node.relation==="contributed")?400:340):(graph.nodes.some((node)=>node.relation==="contributed")?330:255);';
 const BASE_CAMERA_ORBIT = 'let yaw=.68,pitch=.34,distance=250,desiredDistance=distance,';
 const GALAXY_CAMERA_ORBIT = 'let yaw=.68,pitch=threeStyle==="galaxy"?.66:.34,distance=250,desiredDistance=distance,';
+const BASE_RESET_VIEW = 'function resetView(){yaw=.68;pitch=.34;fitScene(false);clearSelection();}';
+const GALAXY_RESET_VIEW = 'function resetView(){yaw=.68;pitch=threeStyle==="galaxy"?.66:.34;fitScene(false);clearSelection();}';
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return source;
@@ -74,6 +76,7 @@ export function patchThreejsStyleRuntime(source) {
   next = replaceRequired(next, BASE_POSITIONS, GALAXY_POSITIONS, "Three.js Galaxy layout selection");
   next = replaceRequired(next, BASE_FIT_DISTANCE, GALAXY_FIT_DISTANCE, "Three.js Galaxy fit distance");
   next = replaceRequired(next, BASE_CAMERA_ORBIT, GALAXY_CAMERA_ORBIT, "Three.js Galaxy initial camera pitch");
+  next = replaceRequired(next, BASE_RESET_VIEW, GALAXY_RESET_VIEW, "Three.js Galaxy reset camera pitch");
   next = replaceRequired(
     next,
     "metalness:node.type===\"repository\"?.12:.28,transparent:node.archived===true",
