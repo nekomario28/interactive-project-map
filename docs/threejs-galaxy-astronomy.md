@@ -11,13 +11,14 @@ The visual/motion model follows these broad spiral-galaxy properties:
 - a spiral galaxy is dominated by a flattened stellar disc plus a dense central concentration;
 - stars and gas in the disc orbit the galactic centre;
 - disc material is predominantly co-rotating rather than arbitrarily alternating orbital direction;
-- outer disc material has lower angular speed than inner material; the implementation uses a bounded, flat-rotation-curve-inspired visual period that increases with radius;
+- outer disc material has lower angular speed than inner material; the implementation uses a bounded, flat-rotation-curve-inspired visual period that increases with radius while keeping the visual tangential speed broadly comparable across most of the disc;
 - spiral arms are treated as density/presentation patterns rather than rigid material arms, so the dust/arm pattern has a separate slower pattern speed while semantic systems can move through it;
 - the disc has finite vertical thickness, but IPM exaggerates that thickness slightly so overlapping repositories remain readable in an interactive 3D view.
 
 Reference background:
 
 - NASA, *Types of Galaxies*: https://science.nasa.gov/universe/galaxies/types/
+- NASA, *Dark Matter 101: Looking for the Missing Mass*: https://science.nasa.gov/universe/stories/quick-reads/dark-matter-101-looking-for-the-missing-mass/
 - ESA, *Guide to our galaxy*: https://www.esa.int/Science_Exploration/Space_Science/Gaia/Guide_to_our_galaxy
 - ESA/Hubble, *Face to face with a spiral’s arms*: https://www.esa.int/ESA_Multimedia/Images/2025/05/Face_to_face_with_a_spiral_s_arms
 - ESA/Hubble, *Seeing things sideways*: https://www.esa.int/ESA_Multimedia/Images/2017/03/Seeing_things_sideways
