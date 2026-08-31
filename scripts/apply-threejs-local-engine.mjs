@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { patchThreejsGalaxyOrbits } from "./threejs-galaxy-orbits.mjs";
 
 export const THREE_VERSION = "0.185.1";
 export const THREE_SOURCE_COMMIT = "2431a09f46f34c560bc8e44b33be0e567723d5b9";
@@ -78,7 +79,7 @@ export async function applyThreejsLocalEngine({
     readFile(runtimePath, "utf8"),
     readFile(htmlPath, "utf8"),
   ]);
-  const patchedRuntime = patchThreejsRuntimeForLocalEngine(runtime);
+  const patchedRuntime = patchThreejsRuntimeForLocalEngine(patchThreejsGalaxyOrbits(runtime));
   const patchedHtml = patchThreejsCspForLocalEngine(html);
 
   await mkdir(vendorDir, { recursive: true });
