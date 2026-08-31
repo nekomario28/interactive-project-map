@@ -99,13 +99,31 @@ The deployed Pages artifact at main `82ddd9466a390da3dc7dc016b7d472415ae26eb8` w
 
 Runtime engine assets are local/same-origin and sourced from immutable Three.js 0.185.1 upstream content. Project Pages subpath behavior is regression-tested. Do not restore a runtime jsDelivr dependency casually.
 
-### 3D styles Cosmic / Aurora / Wireframe — ADOPTED
+### 3D styles Cosmic / Galaxy / Aurora / Wireframe — ADOPTED
 
-They share graph/camera/semantic structure and vary presentation. `style3d=` remains renderer-local.
+They share graph/camera/semantic contracts while allowing renderer-local presentation and, where justified, renderer-local layout. `style3d=` remains separate from 2D `style=`.
+
+### Galaxy 3D — ADOPTED
+
+PR #316 introduced `style3d=galaxy` in response to a concrete product request to translate the established 2D Galaxy design into 3D while keeping the existing 3D style family.
+
+The accepted interpretation is deliberately native to 3D:
+
+- owner at the nucleus;
+- owned categories distributed deterministically along one to three shallow spiral arms based on category count;
+- repository systems clustered locally around categories with bounded vertical thickness;
+- external Contributed repositories on outer rings, with no fake owned membership;
+- existing Cosmic starfield, nebula and spiral-dust machinery reused with a Galaxy-specific theme;
+- existing subtle environmental/ring/pulse motion retained;
+- no large autonomous category/repository position motion in the first production form, so semantic positions and edge geometry remain stable.
+
+PR #316 passed the full Verify gate, twelve-preset comparison, Chromium style switching/render evidence and iPhone WebKit smoke. Pages run #218 built/deployed the same main head. The uploaded Pages artifact was inspected and contains the Galaxy Style option, `THREE_D_STYLES` admission, `layoutGalaxyGraph`, Galaxy layout selection and Galaxy theme.
+
+This is a precedent for **purpose-driven** new styles, not permission for style-count expansion. Galaxy qualified because it changes the spatial interpretation to preserve a proven information hierarchy in 3D.
 
 ### Additional visual presets — DORMANT
 
-Magic/spell-array and other parked concepts are idea inventory, not backlog.
+Magic/spell-array and other parked concepts remain idea inventory, not backlog.
 
 **Reopen condition:** a candidate demonstrates a distinct readability, hierarchy, focus, dense-profile or profile-identity benefit rather than only visual novelty.
 
@@ -126,11 +144,15 @@ The ranking/schema/generator/admission/viewer/dedicated-viewer/visual research i
 
 Use the reviewed warm distinct identity without adding ownership-like presentation. Dedicated and shared viewers must preserve the same primary relation semantics.
 
+### Contributed in Galaxy 3D — ADOPTED
+
+Galaxy 3D keeps external repositories on outer rings beyond the owned galaxy systems. The 2D shared-Galaxy motion contract is not automatically copied to 3D: the first 3D Galaxy form prioritizes stable semantic positions while the existing scene/background motion supplies visual life.
+
 ### Galaxy Systems static external rail — REJECTED / SUPERSEDED
 
 The static `external-rail` behavior caused a visible regression: Contributed appeared not to move while Classic/Hybrid did. PR #308 replaced it with a deliberately slower external orbit in Galaxy Systems and changed E2E so motion is required when enabled.
 
-**Current rule:** Contributed moves in all three shared Galaxy styles when motion is enabled; Motion Off / reduced-motion may stop it.
+**Current 2D rule:** Contributed moves in all three shared Galaxy styles when motion is enabled; Motion Off / reduced-motion may stop it.
 
 **Reopen condition:** a new visual design with rendered evidence that preserves the expectation of a living Galaxy and does not regress semantic separation.
 
@@ -140,9 +162,15 @@ The static `external-rail` behavior caused a visible regression: Contributed app
 
 Wheel normalization, pointer-anchored zoom, bounded scene-aware zoom and pan containment are baseline behavior. Fit/Reset remain explicit. Do not reopen raw camera constants without a visible regression.
 
-### Cosmic background depth — ADOPTED
+### Cosmic / Three.js background depth — ADOPTED
 
-Deterministic layered stars and the world/camera-coherent diffuse galaxy treatment are baseline. Reduced-motion remains respected.
+Deterministic layered stars and the world/camera-coherent diffuse galaxy treatment are baseline. Three.js Cosmic and Galaxy reuse the far/mid/near star layers, nebula sprites and spiral dust. Reduced-motion remains respected.
+
+### 2D back-port of Three.js star depth — DORMANT
+
+The Three.js star layers may be a useful donor for improving the 2D Galaxy background, but this is not automatic parity work and was intentionally excluded from PR #316.
+
+**Reopen condition:** a rendered 2D comparison demonstrates better depth/readability without obscuring labels, edges, category hierarchy or selected/search emphasis.
 
 ### Adaptive labels — ADOPTED
 
