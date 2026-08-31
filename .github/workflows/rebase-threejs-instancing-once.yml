@@ -51,6 +51,7 @@ jobs:
           fixture = Path('tests/threejs-repository-instancing.test.mjs')
           test_source = fixture.read_text()
           test_source = test_source.replace('node.type==\\"repository\\"', 'node.type===\\"repository\\"')
+          test_source = test_source.replace('node.type=="repository"', 'node.type==="repository"')
           fixture.write_text(test_source)
           PY
 
