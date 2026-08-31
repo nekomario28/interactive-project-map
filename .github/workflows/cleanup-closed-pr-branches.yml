@@ -2,7 +2,8 @@ name: Cleanup closed PR branches
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -10,7 +11,6 @@ permissions:
 
 jobs:
   cleanup:
-    if: github.event.head_commit.message == 'maintenance: run one-shot closed-PR branch cleanup'
     runs-on: ubuntu-latest
     steps:
       - name: Delete branches whose PRs are all closed
@@ -23,27 +23,41 @@ jobs:
           const token = process.env.GH_TOKEN;
           const repo = process.env.REPO;
           const owner = process.env.OWNER;
-          const protectedBranches = new Set(['main','v1','perf/threejs-repository-instancing']);
-          async function api(path, init={}) {
-            const r=await fetch(`https://api.github.com${path}`,{...init,headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28',...(init.headers||{})}});
-            if(!r.ok){const t=await r.text();throw new Error(`${init.method||'GET'} ${path}: ${r.status} ${t}`)}
-            return r.status===204?null:r.json();
+          const protectedBranches = new Set(['main', 'v1', 'perf/threejs-repository-instancing']);
+          async function api(path, init = {}) {
+            const r = await fetch(`https://api.github.com${path}`, {
+              ...init,
+              headers: {
+                Accept: 'application/vnd.github+json',
+                Authorization: `Bearer ${token}`,
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+            });
+            if (!r.ok) throw new Error(`${init.method || 'GET'} ${path}: ${r.status} ${await r.text()}`);
+            return r.status === 204 ? null : r.json();
           }
-          const branches=[];
-          for(let p=1;;p++){const b=await api(`/repos/${repo}/branches?per_page=100&page=${p}`);branches.push(...b);if(b.length<100)break}
-          const out={deleted:[],skippedOpen:[],skippedNoPr:[],skippedProtected:[]};
-          for(const {name} of branches){
-            if(protectedBranches.has(name)){out.skippedProtected.push(name);continue}
-            if(name==='maintenance/closed-pr-branch-cleanup-20260831'){
-              await api(`/repos/${repo}/git/refs/${encodeURIComponent(`heads/${name}`)}`,{method:'DELETE'});
-              out.deleted.push(name);console.log(`DELETED ${name}`);continue;
+          const branches = [];
+          for (let page = 1; ; page++) {
+            const batch = await api(`/repos/${repo}/branches?per_page=100&page=${page}`);
+            branches.push(...batch);
+            if (batch.length < 100) break;
+          }
+          const out = {deleted: [], skippedOpen: [], skippedNoPr: [], skippedProtected: []};
+          for (const {name} of branches) {
+            if (protectedBranches.has(name)) { out.skippedProtected.push(name); continue; }
+            if (name === 'maintenance/closed-pr-branch-cleanup-20260831') {
+              await api(`/repos/${repo}/git/refs/${encodeURIComponent(`heads/${name}`)}`, {method: 'DELETE'});
+              out.deleted.push(name);
+              console.log(`DELETED ${name}`);
+              continue;
             }
-            const q=new URLSearchParams({state:'all',head:`${owner}:${name}`,per_page:'100'});
-            const prs=await api(`/repos/${repo}/pulls?${q}`);
-            if(!prs.length){out.skippedNoPr.push(name);continue}
-            if(prs.some(pr=>pr.state==='open')){out.skippedOpen.push(name);continue}
-            await api(`/repos/${repo}/git/refs/${encodeURIComponent(`heads/${name}`)}`,{method:'DELETE'});
-            out.deleted.push(name);console.log(`DELETED ${name}`);
+            const q = new URLSearchParams({state: 'all', head: `${owner}:${name}`, per_page: '100'});
+            const prs = await api(`/repos/${repo}/pulls?${q}`);
+            if (!prs.length) { out.skippedNoPr.push(name); continue; }
+            if (prs.some(pr => pr.state === 'open')) { out.skippedOpen.push(name); continue; }
+            await api(`/repos/${repo}/git/refs/${encodeURIComponent(`heads/${name}`)}`, {method: 'DELETE'});
+            out.deleted.push(name);
+            console.log(`DELETED ${name}`);
           }
-          console.log(`CLEANUP_RESULT ${JSON.stringify({...out,deletedCount:out.deleted.length})}`);
+          console.log(`CLEANUP_RESULT ${JSON.stringify({...out, deletedCount: out.deleted.length})}`);
           NODE
