@@ -14,6 +14,7 @@ function replaceRequired(source, from, to, label) {
 }
 
 export function patchThreejsGalaxyOrbits(source) {
+  if (!source.includes("function layoutGalaxyGraph(THREE,graph)")) return source;
   let next = source;
   if (!next.includes("function createGalaxyMotionModel(graph,positions)")) {
     next = replaceRequired(
