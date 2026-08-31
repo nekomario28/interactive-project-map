@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+import { ProjectMapViewModel } from "../../packages/project-map-view-model/src/index.js";
+import { ProjectMapSearchContext } from "../../packages/project-map-view-model/src/search-context.js";
+
 const graph = {
   owner: "example",
   generatedAt: "2026-08-26T00:00:00Z",
@@ -117,26 +120,39 @@ const graph = {
   ],
 };
 
+const sanitizedGraph = ProjectMapViewModel.sanitizeGraph(graph, "example");
+if (!sanitizedGraph) throw new Error("threejs-search-context fixture must sanitize");
+
+function canonicalSearchSnapshot(query) {
+  return ProjectMapSearchContext.project(sanitizedGraph, query).snapshot();
+}
+
 async function installGraph(page) {
   await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(graph) });
   });
 }
 
-async function twoDSnapshot(page, query) {
-  await page.goto("/u/?username=example&style=galaxy-systems");
-  await expect(page.locator("#status")).toBeHidden();
-  await page.locator("#search").fill(query);
-  await expect.poll(() => page.evaluate(() => window.ProjectMapSearchContext?.snapshot().query)).toBe(query.normalize("NFKC").toLocaleLowerCase("en-US").trim());
+async function waitForSearchSnapshot(page, expected) {
+  await expect.poll(
+    () => page.evaluate(() => window.ProjectMapSearchContext?.snapshot() || null),
+    { timeout: 10_000 },
+  ).toEqual(expected);
   return page.evaluate(() => window.ProjectMapSearchContext.snapshot());
 }
 
-async function threeSnapshot(page, query) {
+async function twoDSnapshot(page, query, expected) {
+  await page.goto("/u/?username=example&style=galaxy-systems");
+  await expect(page.locator("#status")).toBeHidden();
+  await page.locator("#search").fill(query);
+  return waitForSearchSnapshot(page, expected);
+}
+
+async function threeSnapshot(page, query, expected) {
   const params = new URLSearchParams({ username: "example", q: query });
   await page.goto(`/three/?${params}`);
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
-  await expect.poll(() => page.evaluate(() => window.ProjectMapSearchContext?.snapshot().query)).toBe(query.normalize("NFKC").toLocaleLowerCase("en-US").trim());
-  return page.evaluate(() => window.ProjectMapSearchContext.snapshot());
+  return waitForSearchSnapshot(page, expected);
 }
 
 test("2D and Three.js return identical renderer-neutral search IDs and reasons", async ({ page, browserName }) => {
@@ -144,9 +160,11 @@ test("2D and Three.js return identical renderer-neutral search IDs and reasons",
   await installGraph(page);
 
   for (const query of ["ecosystem:ros2", "autonomous systems", "topic:manipulation"]) {
-    const expected = await twoDSnapshot(page, query);
-    const actual = await threeSnapshot(page, query);
-    expect(actual).toEqual(expected);
+    const canonical = canonicalSearchSnapshot(query);
+    const twoD = await twoDSnapshot(page, query, canonical);
+    const threeD = await threeSnapshot(page, query, canonical);
+    expect(twoD).toEqual(canonical);
+    expect(threeD).toEqual(canonical);
   }
 });
 
