@@ -4,7 +4,7 @@ Status: **2026-09-01**
 
 This ledger is the canonical decision layer above older research notes, experiment PRs and issue bodies. It preserves historical evidence while preventing completed, rejected or superseded experiments from silently becoming active TODOs.
 
-Use together with `docs/current-roadmap.md`. For Three.js Galaxy morphology/motion, `docs/threejs-galaxy-astronomy.md` is the detailed scientific/semantic boundary.
+Use together with `docs/current-roadmap.md`. For Three.js Galaxy morphology/motion, `docs/threejs-galaxy-astronomy.md` is the detailed scientific/semantic boundary and `docs/threejs-galaxy-corotation.md` records the adopted classical corotation visualization.
 
 ## Decision states
 
@@ -78,7 +78,7 @@ PR #320 replaced the first static-node Galaxy assumption with slow meaningful mo
 
 - categories co-rotate around the semantic nucleus;
 - galactocentric visual period increases approximately with radius under a bounded flat-rotation-curve-inspired rule (`T ∝ r`), so outer angular speed is lower;
-- repositories follow deliberately slow category-local orbits as an interaction metaphor, **not** a stellar/planetary gravity claim;
+- repositories follow deliberately slow category-local orbits as an interaction metaphor on approximately the same several-minute scale as 2D Galaxy Hybrid, **not** a stellar/planetary gravity claim;
 - Contributed repositories move on external lanes using the same visual radial-period policy while remaining outside owned membership;
 - moving labels, selection target and retained edge endpoints follow the meshes;
 - Motion Off freezes semantic node motion and reduced-motion remains respected.
@@ -105,9 +105,22 @@ PR #327 replaces the earlier effectively Archimedean category/dust winding with 
 
 ### Spiral pattern vs material motion — ADOPTED WITH SCIENTIFIC BOUNDARY
 
-The visible spiral dust rotates as a separate, slower presentation pattern while semantic category/repository systems undergo radius-dependent motion. This prevents semantic systems from being permanently glued to a material-looking arm and is consistent with the broad idea that spiral morphology need not be rigidly attached to the same material.
+The visible spiral dust rotates as a separate presentation pattern while semantic category/repository systems undergo radius-dependent motion. This prevents semantic systems from being permanently glued to a material-looking arm and is consistent with the broad idea that spiral morphology need not be rigidly attached to the same material.
 
-Do **not** elevate this to a claim that one long-lived constant-pattern-speed density-wave theory is uniquely correct. Spiral-arm formation/evolution remains an active area with transient/recurrent and more nearly co-rotating alternatives. A future corotation-specific model therefore requires stronger product/scientific evidence, not merely a desire for more physics.
+Do **not** elevate this to a claim that one long-lived constant-pattern-speed density-wave theory is uniquely correct. Spiral-arm formation/evolution remains an active area with transient/recurrent and more nearly co-rotating alternatives.
+
+### Visual corotation — ADOPTED WITH SCIENTIFIC BOUNDARY
+
+PR #329 makes the already-separate material/pattern motion internally coherent under one **classical density-wave-inspired visual approximation**:
+
+- Galaxy spiral presentation-pattern period is **2400 s**, intentionally matching the established 2D Galaxy Hybrid global-turn period;
+- the visual material rule is approximately `T = 16r` over the main disc;
+- therefore the visual crossing occurs at **`r = 150` renderer units**;
+- inside that radius semantic disc material has the shorter period and overtakes the arm pattern;
+- outside it the rigid presentation pattern is faster than the slower material;
+- `ProjectMapThreejsGalaxyMotion.snapshot()` exposes `patternModel: "rigid-density-wave-inspired"`, `patternPeriod: 2400`, and `corotationRadius: 150`.
+
+This is **not** a physical scale conversion and is not authority to claim every observed galaxy has one rigid pattern speed or one corotation radius. Real spiral structure can be transient, recurrent, multi-pattern-speed or more nearly co-rotating. The purpose of #329 is internal visual consistency, not selection of a universal spiral-arm theory.
 
 ### Inertial decorative star backdrop — ADOPTED
 
@@ -131,13 +144,13 @@ Graph lines remain semantic navigation aids, never claimed astrophysical structu
 
 ### Galaxy 3D scientific claim boundary — ADOPTED
 
-`docs/threejs-galaxy-astronomy.md` explicitly separates:
+`docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` explicitly separate:
 
-**astronomy-inspired:** flattened disc, central concentration, co-rotation, outer angular slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop;
+**astronomy-inspired:** flattened disc, central concentration, co-rotation, bounded flat-curve-inspired outer slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop, and a classical visual corotation crossing;
 
 **semantic metaphors:** owner=nucleus, category=local system, repos orbit categories, Contributed=external lanes, metadata controls size/color, graph membership lines.
 
-Non-goals include N-body simulation, physical galactic timescale, exact Milky Way bar/warp/rotation curve, literal stellar dynamics or astrophysical interpretation of repository metadata.
+Non-goals include N-body simulation, physical galactic timescale, exact Milky Way bar/warp/rotation curve, universal rigid density-wave claims, literal stellar dynamics or astrophysical interpretation of repository metadata.
 
 ## 5. Contributed research line
 
@@ -220,6 +233,7 @@ Historical docs, closed PRs and issue bodies remain evidence carriers, not activ
 - static Galaxy Systems external rail;
 - persistent cross-disc Galaxy contribution/ownership spokes;
 - Kepler-like category-local repo physics from closed PR #321;
+- treating one rigid Galaxy pattern/corotation model as a universal physical truth;
 - halo suppression / InstancedMesh batching;
 - duplicate 2D star-depth back-port runtime;
 - one-click installer production exposure;
