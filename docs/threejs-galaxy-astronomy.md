@@ -51,7 +51,7 @@ When `style3d=galaxy` and Motion is enabled:
 4. Contributed repositories co-rotate on external lanes with the same radial period rule as a semantic animation policy, not a physical outer-halo claim;
 5. spiral dust rotates as a separate, slower visual pattern so systems are not glued rigidly to an arm;
 6. the far/mid/near decorative star shells remain in an inertial world frame instead of counter-rotating autonomously. Camera movement can still create perspective/depth change, but the background does not compete with or contradict the semantic disc rotation;
-7. group/repository labels, selection targets and structural edge endpoints follow the moving meshes;
+7. group/repository labels, selection targets and the retained membership-edge endpoints follow the moving meshes;
 8. Motion Off freezes the semantic node orbits;
 9. the existing reduced-motion-derived default remains respected.
 
@@ -74,13 +74,14 @@ Visible graph lines are **semantic navigation aids, not astrophysical structures
 
 For `Galaxy` specifically:
 
-- owner → category ownership and category → repository membership lines remain as very faint structural scaffolding because spatial proximity alone is not always enough to recover exact project membership from an oblique camera angle;
-- persistent line opacity is reduced well below the other Three.js styles so the stellar-disc / spiral morphology stays primary;
-- long owner → Contributed `contribution` edges are not drawn persistently. Contributed identity is already carried by the external lane, status color/filter and details UI, while a permanent cross-galaxy line can be misread as a physical trajectory and visually cuts across the disc;
-- dynamic structural edge endpoints continue to follow moving nodes;
+- persistent lines are limited to **category → repository `membership`** edges. These carry information that spatial proximity alone cannot always recover from an oblique 3D view: the exact category membership of a repository;
+- owner → category `ownership` lines are not persistent. In a single-owner Project Map every displayed owned category already shares the same owner, so those long radial spokes repeat known information while cutting across the spiral morphology;
+- owner → Contributed `contribution` lines are not persistent. Contributed identity is already carried by the external lane, status color/filter and details UI, while a permanent cross-galaxy chord can be misread as a physical trajectory;
+- other relation edges are not persistent in Galaxy by default. A relation may be surfaced contextually when selected/focused without becoming an always-on astrophysical-looking structure;
+- the retained membership lines keep the reduced Galaxy opacity, well below the other Three.js styles, and their endpoints continue to follow moving category/repository meshes;
 - Cosmic / Aurora / Wireframe keep their existing edge policy.
 
-A future contextual relation highlight may temporarily surface a Contributed relation when its repository is selected or focused, but that is separate from the always-on Galaxy structure.
+This policy deliberately uses fewer lines than the generic graph renderer: keep only the relation whose exact topology is otherwise genuinely ambiguous.
 
 ## Arm-count contract
 
