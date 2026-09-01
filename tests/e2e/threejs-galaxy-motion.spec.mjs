@@ -102,7 +102,7 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(before).toBeTruthy();
   expect(before.model).toBe("flat-curve-inspired");
   expect(before.direction).toBe("co-rotating");
-  expect(before.edgePolicy).toBe("structural-only");
+  expect(before.edgePolicy).toBe("membership-only");
   expect(before.starfieldFrame).toBe("inertial");
   expect(before.armCount).toBe(3);
   expect(before.systems).toHaveLength(5);
