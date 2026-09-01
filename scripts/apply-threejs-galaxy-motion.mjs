@@ -22,8 +22,9 @@ const DUST_ANGLE = "angle=arm*TAU/4+t*TAU*2.1+jitter*.008;";
 const DUST_ANGLE_DYNAMIC = "angle=arm*TAU/armCount+t*TAU*winding+jitter*.008;";
 const DUST_CALL = "dust=createSpiralDust(THREE,username);";
 const DUST_CALL_GALAXY = "dust=createSpiralDust(THREE,username,threeStyle===\"galaxy\"?galaxyArmCount(graph):4,threeStyle===\"galaxy\"?1.35:2.1);";
+const DUST_CALL_GALAXY_ALIGNED = "dust=createSpiralDust(THREE,username,threeStyle===\"galaxy\"?galaxyArmCount(graph):4,threeStyle===\"galaxy\"?1.35:2.1);if(threeStyle===\"galaxy\")dust.rotation.x=0;";
 const MOTION_INIT_ANCHOR = "let edgeLines=null;const edgeMaterial=";
-const MOTION_INIT = "const galaxyMotion=threeStyle===\"galaxy\"?createGalaxyMotionModel(THREE,graph,positions,nodeMeshes):null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>galaxyMotion.snapshot()});let edgeLines=null;const edgeMaterial=";
+const MOTION_INIT = "const galaxyMotion=threeStyle===\"galaxy\"?createGalaxyMotionModel(THREE,graph,positions,nodeMeshes):null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),armPlane:\"galactic-disc\",armPlaneTilt:dust.rotation.x})});let edgeLines=null;const edgeMaterial=";
 const EDGE_MATERIAL = "const edgeMaterial=new THREE.LineBasicMaterial({color:0x607399,transparent:true,opacity:.25,blending:THREE.AdditiveBlending});";
 const GALAXY_EDGE_MATERIAL = "const edgeMaterial=new THREE.LineBasicMaterial({color:0x607399,transparent:true,opacity:threeStyle===\"galaxy\"?.11:.25,blending:THREE.AdditiveBlending});";
 const EDGE_LOOP_START = "for(const edge of graph.edges){const source=nodeMeshes.get(edge.source),targetMesh=nodeMeshes.get(edge.target);";
@@ -57,6 +58,7 @@ export function patchThreejsGalaxyMotionRuntime(source) {
   next = replaceRequired(next, DUST_ARM, DUST_ARM_DYNAMIC, "spiral dust dynamic arm index");
   next = replaceRequired(next, DUST_ANGLE, DUST_ANGLE_DYNAMIC, "spiral dust winding model");
   next = replaceRequired(next, DUST_CALL, DUST_CALL_GALAXY, "Galaxy spiral dust call");
+  next = replaceRequired(next, DUST_CALL_GALAXY, DUST_CALL_GALAXY_ALIGNED, "Galaxy spiral dust disc-plane alignment");
   next = replaceRequired(next, MOTION_INIT_ANCHOR, MOTION_INIT, "Galaxy motion runtime initialization");
   next = replaceRequired(next, EDGE_MATERIAL, GALAXY_EDGE_MATERIAL, "Galaxy edge opacity policy");
   next = replaceRequired(next, EDGE_LOOP_START, GALAXY_EDGE_LOOP_START, "Galaxy persistent contribution-edge suppression");
