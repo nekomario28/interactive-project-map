@@ -1,12 +1,12 @@
 # Current roadmap
 
-Status snapshot: **2026-09-01**
+Status snapshot: **2026-09-02**
 
 This is the canonical list of work that is still worth doing. `docs/research-decision-ledger.md` records adopted / completed / rejected / dormant decisions; `docs/threejs-galaxy-astronomy.md` is the detailed physical/semantic boundary for the native Three.js Galaxy style, with `docs/threejs-galaxy-corotation.md` documenting the adopted visual corotation approximation.
 
 ## Current production/release state
 
-- Interactive Pages runtime baseline at this reconcile cut: **`9d529d1d1524bfc52f4da76f3c4514d77f08cff3`** (PR #329, visual Galaxy corotation on top of the adopted logarithmic/moving Galaxy model).
+- Interactive Pages runtime baseline at this reconcile cut: **`80f87d333c44b6d6c4c12a433f3b7e88241a4821`** (PR #334, no persistent Galaxy graph lines, on top of PR #332's qualified subtle central stellar bulge and the previously adopted logarithmic/moving/corotation model).
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - Pages `main`, reusable `v1`, the outer reusable workflow and the reviewed immutable inner Action pin are independent authority/release layers.
 - The published GitHub-only setup path remains the production source of truth. The Cloudflare/GitHub App one-click installer remains dormant / not production exposed.
@@ -42,12 +42,13 @@ Current adopted contract:
 - with the visual material rule `T ≈ 16r`, the current classical density-wave-inspired presentation has a **visual corotation radius `r = 150` renderer units**: inner semantic material overtakes the slower arm pattern, while outside that radius the rigid visual pattern is faster than the material;
 - this single rigid pattern speed/corotation point is explicitly a visualization choice, not a claim that all spiral galaxies obey one long-lived density-wave model. Transient/recurrent and approximately co-rotating arm behavior remain scientifically valid alternatives;
 - far/mid/near decorative star shells stay in an inertial world frame in Galaxy instead of counter-rotating against the semantic disc;
-- persistent Galaxy graph lines are restricted to faint **category → repository membership** edges. Ownership, contribution and other relation spokes are not always-on astrophysical-looking structures;
-- moving labels, selection targets, selected camera target and retained edge endpoints follow moving meshes;
+- a subtle warm central stellar concentration/glow sits behind the owner as non-semantic, non-pickable Galaxy morphology; it does not change node positions, authority, motion, arm geometry or corotation;
+- **Galaxy draws no persistent node-to-node graph lines.** Membership, ownership, contribution and other graph relations remain in the canonical semantic graph and are communicated through spatial grouping, labels/navigation, search/focus, selection/details and status/authority presentation rather than always-on straight chords;
+- moving labels, selection targets and selected camera target follow moving meshes;
 - Motion Off freezes semantic node orbits; the existing reduced-motion-derived default remains respected;
-- Cosmic / Aurora / Wireframe retain their existing non-Galaxy layout/motion policy.
+- Cosmic / Aurora / Wireframe retain their existing non-Galaxy layout/motion/edge policy.
 
-The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, Motion Off freeze, inertial starfield behavior, membership-only line policy, separate arm-pattern motion, and the current visual corotation boundary.
+The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, Motion Off freeze, inertial starfield behavior, `edgePolicy: "no-persistent-lines"` with `persistentEdgeObjects: 0`, separate arm-pattern motion, the current visual corotation boundary, and the qualified central bulge. Before/after rendered evidence shows that removing the remaining membership chords reduces trajectory-like clutter while preserving owner, category grouping and Contributed readability.
 
 For the detailed astronomy/non-astronomy boundary, use `docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` rather than inferring physics from presentation code.
 
@@ -115,7 +116,7 @@ Priorities remain evidence-driven:
 3. **Galaxy 3D only when evidence improves comprehension.** Morphology/motion refinements need astronomy evidence *and* rendered readability evidence; do not chase literal astrophysical simulation.
 4. **UX/accessibility improvements with browser evidence.** Camera/selection/search feedback, labels, keyboard/mobile behavior and readable motion are valid when a real problem appears.
 5. **Renderer-neutral maintenance only when it removes real drift.** Do not commonize Canvas and WebGL internals for symmetry.
-6. **Optional semantic overlays only from concrete user value.** Activity/Freshness, repository Quality or focused relation visuals remain dormant unless they improve navigation without clutter.
+6. **Optional semantic overlays only from concrete user value.** Activity/Freshness, repository Quality or selected/focused relation visuals remain dormant unless they improve navigation without restoring persistent clutter.
 7. **New styles only with a distinct product purpose.** Galaxy qualified because it changes spatial interpretation while preserving semantics; style-count growth itself is not a goal.
 
 ## Explicitly not active
@@ -125,7 +126,7 @@ Priorities remain evidence-driven:
 - forcing a single universal spiral-arm theory, pattern speed, corotation radius or exact Milky Way pitch/rotation curve;
 - adding a forced central bar/warp/thick-disc taxonomy merely for Milky Way resemblance;
 - fast/chaotic repository motion or autonomous camera motion;
-- persistent ownership/contribution spokes through the Galaxy disc;
+- **persistent node-to-node graph lines in Galaxy**, including membership, ownership or contribution chords; exact relations may only be reconsidered as bounded contextual selected/focused presentation from a concrete navigation need;
 - Three.js InstancedMesh / halo optimization based only on software CI FPS;
 - Auto / High / Low render-density UI or Canvas DPR experiments;
 - duplicate 2D starfield back-port work;
