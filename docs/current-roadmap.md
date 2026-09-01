@@ -6,7 +6,7 @@ This is the canonical list of work that is still worth doing. `docs/research-dec
 
 ## Current production/release state
 
-- Interactive Pages runtime baseline at this reconcile cut: **`c7accdb077acd0c8732ddb4126d2d93e10cdfd38`** (PR #323, astronomy-aligned inertial Galaxy star backdrop on top of the adopted Galaxy motion/edge model from #320/#322). Evidence-only PR #324 later proved trailing-arm differential rotation without changing runtime behavior.
+- Interactive Pages runtime baseline at this reconcile cut: **`22db571b488ca2303269d41b675a63e102f53214`** (PR #326, membership-only persistent Galaxy lines on top of the astronomy-aligned motion model from #320–#324).
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - The reviewed immutable inner Action pin remains an independent release/authority layer. Moving Pages `main`, reusable `v1`, the outer reusable workflow, and the inner Action pin are separate decisions and require evidence appropriate to each layer.
 - The published GitHub-only setup path has one production source of truth: `scripts/public-home.js` emits the reusable workflow caller. The legacy public direct composite-action caller must not return.
@@ -26,7 +26,7 @@ There is currently **no pre-approved feature backlog** after the 2026-09-01 Gala
 
 ### Galaxy 3D — adopted native moving style
 
-PR #316 introduced `style3d=galaxy` as a native Three.js interpretation of the established 2D Galaxy Hybrid design language rather than a flat 2D copy. PRs #319–#324 then promoted its camera, motion, edge and astronomy contracts.
+PR #316 introduced `style3d=galaxy` as a native Three.js interpretation of the established 2D Galaxy Hybrid design language rather than a flat 2D copy. PRs #319–#324 then promoted its camera, motion and astronomy contracts; PR #326 refined the persistent line policy from broad structural scaffolding to membership-only.
 
 Current contract:
 
@@ -39,13 +39,13 @@ Current contract:
 - the spiral dust is a separate, slower presentation pattern rather than a rigid material arm, so systems can move through the arm pattern;
 - the adopted arm chirality is **trailing** relative to the co-rotation direction. PR #324 proves in Chromium that a same-arm inner category rotates farther than its outer counterpart while the trailing offset remains positive;
 - far/mid/near decorative star shells remain in an inertial world frame in Galaxy, avoiding a contradictory autonomous counter-rotation field; Cosmic/Aurora/Wireframe retain their own ambient star motion;
-- persistent ownership/membership edges remain very faint structural scaffolding and follow moving nodes; long persistent `contribution` lines are suppressed in Galaxy so they are not mistaken for physical trajectories;
+- only category → repository `membership` edges remain persistently visible, at the reduced Galaxy opacity, and follow moving endpoints. Owner → category `ownership`, persistent `contribution`, and other relation lines are suppressed so redundant radial spokes/chords do not compete with the spiral morphology or look like physical trajectories;
 - Motion Off freezes Galaxy semantic node orbits; the reduced-motion-derived default remains respected;
 - the motion is intentionally slow and does **not** introduce autonomous camera movement.
 
 Astronomy boundary: `docs/threejs-galaxy-astronomy.md` is authoritative for what is physically inspired versus intentionally semantic. The style is a generic spiral-galaxy metaphor, not a literal Milky Way or N-body simulation.
 
-The rich Chromium evidence shows a nucleus, flattened semantic disc, multiple category systems and external Contributed nodes against the layered starfield. PR #323 main passed Verify / Chromium / iPhone WebKit and Pages #223 deployed successfully. PR #324 is evidence-only and does not move the runtime baseline.
+The rich Chromium evidence shows a nucleus, flattened semantic disc, multiple category systems and external Contributed nodes against the layered starfield. PR #326 passed full Verify / Chromium / iPhone WebKit before merge, and Pages #225 deployed the membership-only runtime successfully.
 
 ### 2D cosmic / Galaxy background — already has depth
 
