@@ -1,283 +1,241 @@
 # Research decision ledger
 
-Status: **2026-08-31**
+Status: **2026-09-01**
 
-This ledger is the canonical decision layer above older research notes, experiment PRs and issue bodies. It does not delete historical evidence. It records what that evidence currently means so negative, superseded or completed research is not accidentally promoted back into active work.
+This ledger is the canonical decision layer above older research notes, experiment PRs and issue bodies. It preserves historical evidence while preventing completed, rejected or superseded experiments from silently becoming active TODOs.
 
-Use together with `docs/current-roadmap.md`.
+Use together with `docs/current-roadmap.md`. For Three.js Galaxy morphology/motion, `docs/threejs-galaxy-astronomy.md` is the detailed scientific/semantic boundary.
 
 ## Decision states
 
-- **ADOPTED** — part of the current product/architecture baseline; preserve unless new evidence justifies changing it.
-- **COMPLETED** — research or migration reached its intended conclusion; retained as evidence, not an active task.
-- **REJECTED / NOT_PLANNED** — tested or considered and currently not worth product complexity; do not revive by default.
-- **DORMANT** — viable concept with no current product trigger.
-- **REOPEN CONDITION** — concrete evidence required before restarting the work.
+- **ADOPTED** — current product/architecture baseline.
+- **COMPLETED** — intended research/migration conclusion reached; evidence remains, task is not active.
+- **REJECTED / NOT_PLANNED** — do not revive without satisfying an explicit reopen condition.
+- **DORMANT** — viable idea without a current product trigger.
+- **REOPEN CONDITION** — concrete evidence required before restarting a lane.
 
 ## 1. Authority, release and setup
 
 ### Separate release/authority layers — ADOPTED
 
-Keep these independent:
+Keep canonical/generated graph semantics, immutable inner Action pin, outer reusable workflow, stable reusable `v1`, and interactive Pages `main` independent. Pages viewer work does not imply an Action or `v1` release.
 
-1. canonical/generated graph and static-output semantics;
-2. immutable inner Action implementation pin;
-3. outer reusable workflow;
-4. stable reusable `v1`;
-5. interactive Pages `main`.
-
-Pages viewer work does not imply an Action or `v1` release. Release movement requires evidence for the layer being moved.
-
-Stable reusable `v1` at this cut: `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`.
+Stable reusable `v1`: `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`.
 
 ### Published GitHub-only setup — ADOPTED
 
-`scripts/public-home.js` is the production setup implementation and emits the reusable workflow caller. Tests guard against resurrection of the old public direct composite-action caller.
+`scripts/public-home.js` remains the production setup implementation and emits the reusable workflow caller. The legacy public direct composite-action caller must not return.
 
 ### Cloudflare/GitHub App one-click installer — DORMANT
 
-Retained implementation/security knowledge may remain, but it is not production-exposed and should not be advertised, credential-tested or expanded without explicit product evidence.
-
-**Reopen condition:** measured onboarding failure/friction that the GitHub-only setup cannot reasonably solve, followed by explicit review of the additional credential/security surface.
+Do not production-expose, advertise or expand it without measured onboarding evidence and explicit review of the additional credential/security surface.
 
 ## 2. Semantic architecture
 
 ### Spatial Core boundary — ADOPTED
 
-`packages/spatial-core` remains domain-neutral. Project Map/GitHub-specific identity, Contributed semantics, taxonomy/search state, URL state and details presentation belong above it.
+`packages/spatial-core` remains domain-neutral. GitHub/Project Map identity, taxonomy, Contributed semantics, URL state and details/presentation belong above it.
 
-### Project Map view-model — ADOPTED
+### Project Map view-model / renderer-neutral convergence — ADOPTED + COMPLETED
 
-The #276 P0/P1/P2 migration established one renderer-neutral semantic boundary used by 2D and Three.js for the parts that should agree:
+The #276 program and #297/#299 evidence contract established the shared semantic boundary used by 2D and Three.js for admission, status projection, Contributed safety, URL state, Local Graph, Search Context, category navigation, bounded labels and renderer evidence snapshots.
 
-- browser-safe graph admission;
-- status semantics and structural projection;
-- strict Contributed admission/safe metadata;
-- transferable URL state;
-- Local Graph projection;
-- Search Context;
-- Category navigation semantics;
-- bounded selected/direct-search labeling semantics;
-- common renderer evidence snapshot.
+Canvas/WebGL drawing, camera math, 2D hit testing and Three.js raycasting remain renderer-specific.
 
-Canvas/WebGL drawing, camera math, 2D hit testing, Three.js raycasting and renderer-specific visual encodings remain separate.
-
-### Renderer-neutral convergence tracker #276 — COMPLETED
-
-The historical issue checklist is not a live backlog. P0/P1/P2 materialized through #277/#278/#280/#281/#282/#283/#284; the common renderer snapshot followed through #297/#299.
-
-**Reopen condition:** a concrete cross-renderer semantic parity regression that cannot be corrected through the existing view-model/adapters.
+**Reopen condition:** a demonstrated cross-renderer semantic parity regression that cannot be corrected through the existing adapters/view-model.
 
 ### 2D graph-bootstrap ordering — ADOPTED
 
-A strengthened 2D/Three.js Search Context parity test first exposed an intermittent mismatch. The initial assumption that this was only a test-settling race was superseded when main failed again after the test had been strengthened.
-
-The production cause was script ordering:
-
-1. the base 2D viewer could start `graph.json` fetch immediately;
-2. later ordered/deferred scripts installed the canonical view-model/search/sanitizer patches;
-3. a sufficiently fast graph response could therefore be sanitized by the legacy base sanitizer before those patches existed;
-4. taxonomy aliases/facets/semantic metadata were then permanently absent from `state.graph`, producing a correct query string with empty derived Search Context IDs/reasons.
-
-PR #313 introduced `scripts/apply-2d-runtime-bootstrap-gate.mjs`. All nine 2D viewer runtimes now start graph loading from a one-shot `DOMContentLoaded` listener, after the ordered deferred patch set has run. The regression proof checks that canonical `ProjectMapViewModel.projectSearchContext` and `ProjectMapSearchContext` already exist when graph fetch begins, then validates alias and facet search.
-
-The deployed Pages artifact at main `82ddd9466a390da3dc7dc016b7d472415ae26eb8` was inspected directly and contains exactly one bootstrap gate in each of `viewer.js`, `radial-viewer.js`, `tree-viewer.js`, `treemap-viewer.js`, `timeline-viewer.js`, `cluster-viewer.js`, `sunburst-viewer.js`, `matrix-viewer.js`, and `sankey-viewer.js`.
-
-**Current rule:** do not start 2D graph fetch before the shared runtime patch layer has installed. Do not introduce a second early graph-fetch path. Search semantic readiness is the full renderer-neutral projection, not merely a normalized query string.
-
-**Reopen condition:** a concrete startup/load regression showing that the `DOMContentLoaded` gate itself causes user-visible harm, together with an alternative ordering mechanism that still proves all required shared patches are installed before graph sanitization.
+PR #313 fixed a production initialization race. Shared/deferred 2D runtime patches must be installed before `graph.json` loading/sanitization starts. Do not create a second early fetch path. Full renderer-neutral derived state, not merely the query string, defines semantic readiness.
 
 ## 3. View and Style architecture
 
 ### Separate View axis — ADOPTED
 
-`View: 2D | 3D Lab` is separate from Style. Three.js is not a thirteenth 2D preset.
-
-2D retains its twelve styles. 3D keeps renderer-local style state and restores the prior 2D style on return.
+`View: 2D | 3D Lab` remains separate from Style. 2D keeps twelve styles. Three.js remains renderer-local and is not a thirteenth 2D preset.
 
 ### Local Three.js engine — ADOPTED
 
-Runtime engine assets are local/same-origin and sourced from immutable Three.js 0.185.1 upstream content. Project Pages subpath behavior is regression-tested. Do not restore a runtime jsDelivr dependency casually.
+Three.js 0.185.1 runtime assets remain local/same-origin and project-subpath-safe. Do not casually restore a runtime CDN dependency.
 
 ### 3D styles Cosmic / Galaxy / Aurora / Wireframe — ADOPTED
 
-They share graph/camera/semantic contracts while allowing renderer-local presentation and, where justified, renderer-local layout. `style3d=` remains separate from 2D `style=`.
+They share semantic/camera/state contracts while allowing renderer-local presentation and, where justified, renderer-local layout/motion.
 
-### Galaxy 3D — ADOPTED
+## 4. Galaxy 3D astronomy / semantic visualization
 
-PR #316 introduced `style3d=galaxy` in response to a concrete product request to translate the established 2D Galaxy design into 3D while keeping the existing 3D style family.
+### Native Galaxy style — ADOPTED
 
-The accepted interpretation is deliberately native to 3D:
+PR #316 established `style3d=galaxy` as a native 3D translation of the proven Galaxy information hierarchy rather than a flat 2D copy.
 
-- owner at the nucleus;
-- owned categories distributed deterministically along one to three shallow spiral arms based on category count;
-- repository systems clustered locally around categories with bounded vertical thickness;
-- external Contributed repositories on outer rings, with no fake owned membership;
-- existing Cosmic starfield, nebula and spiral-dust machinery reused with a Galaxy-specific theme;
-- existing subtle environmental/ring/pulse motion retained;
-- no large autonomous category/repository position motion in the first production form, so semantic positions and edge geometry remain stable.
+### Higher Galaxy viewing angle — ADOPTED
 
-PR #316 passed the full Verify gate, twelve-preset comparison, Chromium style switching/render evidence and iPhone WebKit smoke. Pages run #218 built/deployed the same main head. The uploaded Pages artifact was inspected and contains the Galaxy Style option, `THREE_D_STYLES` admission, `layoutGalaxyGraph`, Galaxy layout selection and Galaxy theme.
+PR #319 raised the Galaxy initial/reset camera elevation so the flattened disc and spiral structure are readable instead of appearing edge-on. Other Three.js styles retain their prior camera default.
 
-This is a precedent for **purpose-driven** new styles, not permission for style-count expansion. Galaxy qualified because it changes the spatial interpretation to preserve a proven information hierarchy in 3D.
+### Moving Galaxy semantic disc — ADOPTED
 
-### Additional visual presets — DORMANT
+PR #320 replaced the first static-node Galaxy assumption with slow meaningful motion inspired by 2D Galaxy Hybrid and broad galactic kinematics:
 
-Magic/spell-array and other parked concepts remain idea inventory, not backlog.
+- categories co-rotate around the semantic nucleus;
+- galactocentric visual period increases approximately with radius under a bounded flat-rotation-curve-inspired rule (`T ∝ r`), so outer angular speed is lower;
+- repositories follow deliberately slow category-local orbits as an interaction metaphor, **not** a stellar/planetary gravity claim;
+- Contributed repositories move on external lanes using the same visual radial-period policy while remaining outside owned membership;
+- moving labels, selection target and retained edge endpoints follow the meshes;
+- Motion Off freezes semantic node motion and reduced-motion remains respected.
 
-**Reopen condition:** a candidate demonstrates a distinct readability, hierarchy, focus, dense-profile or profile-identity benefit rather than only visual novelty.
+Alternative PR #321 used a more explicitly Kepler-like category-local interpretation and was closed unmerged. Do not revive it by default: category-local repo orbit is a semantic 2D-like metaphor, not an astrophysical sub-system claim.
 
-## 4. Contributed research line
+### Differential rotation / trailing arms — ADOPTED
 
-The ranking/schema/generator/admission/viewer/dedicated-viewer/visual research is consolidated into the following product contract.
+PR #324 records and tests the current handedness: semantic systems co-rotate, inner same-arm systems accumulate more angular motion than outer systems, and the arms trail the direction of rotation.
+
+This is a generic morphology choice; rare leading-arm galaxies exist.
+
+### Logarithmic spiral geometry, generic 22° pitch — ADOPTED
+
+PR #327 replaces the earlier effectively Archimedean category/dust winding with a shared **logarithmic spiral** convention:
+
+- Galaxy category-arm initialization uses `θ ∝ ln(r) / tan(p)`;
+- Galaxy spiral dust uses the same pitch convention;
+- adopted visual pitch is **22°**;
+- Chromium evidence reconstructs roughly 20–24° from deterministic same-arm category positions before differential shear;
+- the runtime snapshot reports `spiralModel: "logarithmic"` and `pitchAngleDeg: 22`.
+
+22° is deliberately a readable **generic spiral** choice. It is not the claimed pitch of the Milky Way and not a universal value for spiral galaxies.
+
+### Spiral pattern vs material motion — ADOPTED WITH SCIENTIFIC BOUNDARY
+
+The visible spiral dust rotates as a separate, slower presentation pattern while semantic category/repository systems undergo radius-dependent motion. This prevents semantic systems from being permanently glued to a material-looking arm and is consistent with the broad idea that spiral morphology need not be rigidly attached to the same material.
+
+Do **not** elevate this to a claim that one long-lived constant-pattern-speed density-wave theory is uniquely correct. Spiral-arm formation/evolution remains an active area with transient/recurrent and more nearly co-rotating alternatives. A future corotation-specific model therefore requires stronger product/scientific evidence, not merely a desire for more physics.
+
+### Inertial decorative star backdrop — ADOPTED
+
+PR #323 stops Galaxy’s far/mid/near decorative star shells from autonomously counter-rotating. Camera parallax may still change their view, but the background no longer competes with the semantic disc’s rotation field. Cosmic / Aurora / Wireframe retain their existing ambient behavior.
+
+### Flattened finite-thickness disc — ADOPTED
+
+Galaxy-specific group/repository/external vertical scatter is smaller than generic 3D. It remains exaggerated enough for interaction/readability and is not a physical scale-height claim.
+
+### Persistent Galaxy graph lines — MEMBERSHIP-ONLY ADOPTED
+
+PR #322 first reduced Galaxy line prominence; PR #326 completed the policy:
+
+- persistent lines are limited to faint category → repository `membership` edges;
+- owner → category ownership spokes are omitted because single-owner identity is already known and the spokes cut across spiral morphology;
+- persistent owner → Contributed contribution chords are omitted because external lane/status/details already carry the relation and a cross-disc line can look like a physical trajectory;
+- other relation edges are not globally persistent by default;
+- retained membership endpoints follow moving nodes.
+
+Graph lines remain semantic navigation aids, never claimed astrophysical structures.
+
+### Galaxy 3D scientific claim boundary — ADOPTED
+
+`docs/threejs-galaxy-astronomy.md` explicitly separates:
+
+**astronomy-inspired:** flattened disc, central concentration, co-rotation, outer angular slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop;
+
+**semantic metaphors:** owner=nucleus, category=local system, repos orbit categories, Contributed=external lanes, metadata controls size/color, graph membership lines.
+
+Non-goals include N-body simulation, physical galactic timescale, exact Milky Way bar/warp/rotation curve, literal stellar dynamics or astrophysical interpretation of repository metadata.
+
+## 5. Contributed research line
 
 ### Contributed identity and authority — ADOPTED
 
 - primary relation is `contributed` external work;
-- external work never acquires fake owned category membership;
-- `fork` / `archived` are secondary source flags;
-- contribution edges are semantic evidence, not ownership membership;
-- browser admission fails closed on malformed external identity/diagnostics;
-- generated graph, source ownership/taxonomy, browser projection/layout and presentation are separate authority layers.
+- external work never gains fake owned category membership;
+- `fork` / `archived` are secondary flags;
+- contribution edges are evidence, not ownership membership;
+- malformed external provenance fails closed;
+- graph authority, ownership/taxonomy, projection/layout and visual presentation remain separate layers.
 
-### Contributed 2D visual identity — ADOPTED
+### 2D Contributed motion — ADOPTED
 
-Use the reviewed warm distinct identity without adding ownership-like presentation. Dedicated and shared viewers must preserve the same primary relation semantics.
+All three shared 2D Galaxy styles move Contributed when motion is enabled. The old Galaxy Systems static `external-rail` is REJECTED / SUPERSEDED by PR #308.
 
-### Contributed in Galaxy 3D — ADOPTED
+### Galaxy 3D Contributed motion — ADOPTED
 
-Galaxy 3D keeps external repositories on outer rings beyond the owned galaxy systems. The 2D shared-Galaxy motion contract is not automatically copied to 3D: the first 3D Galaxy form prioritizes stable semantic positions while the existing scene/background motion supplies visual life.
+External Contributed lanes co-rotate slowly outside the owned semantic disc, remain status/filter-distinct and do not gain category membership. Persistent cross-galaxy contribution lines remain omitted.
 
-### Galaxy Systems static external rail — REJECTED / SUPERSEDED
-
-The static `external-rail` behavior caused a visible regression: Contributed appeared not to move while Classic/Hybrid did. PR #308 replaced it with a deliberately slower external orbit in Galaxy Systems and changed E2E so motion is required when enabled.
-
-**Current 2D rule:** Contributed moves in all three shared Galaxy styles when motion is enabled; Motion Off / reduced-motion may stop it.
-
-**Reopen condition:** a new visual design with rendered evidence that preserves the expectation of a living Galaxy and does not regress semantic separation.
-
-## 5. Camera, background, labels and interaction research
+## 6. Camera, background, labels and interaction
 
 ### Camera coherence / pan containment — ADOPTED
 
-Wheel normalization, pointer-anchored zoom, bounded scene-aware zoom and pan containment are baseline behavior. Fit/Reset remain explicit. Do not reopen raw camera constants without a visible regression.
+Pointer-anchored zoom, bounded scene-aware movement and explicit Fit/Reset remain baseline. Do not change camera constants without rendered evidence.
 
-### Cosmic / Three.js background depth — ADOPTED
+### 2D cosmic/star depth — ALREADY ADOPTED, NO BACK-PORT TODO
 
-Deterministic layered stars and the world/camera-coherent diffuse galaxy treatment are baseline. Three.js Cosmic and Galaxy reuse the far/mid/near star layers, nebula sprites and spiral dust. Reduced-motion remains respected.
+2D already contains deterministic far/mid/near star layers, camera-depth parallax, haze, galaxy envelope/dust and reduced-motion handling. Earlier wording that suggested a future direct “Three.js star-depth back-port” is superseded: a second parallel starfield runtime would duplicate existing work.
 
-### 2D back-port of Three.js star depth — DORMANT
-
-The Three.js star layers may be a useful donor for improving the 2D Galaxy background, but this is not automatic parity work and was intentionally excluded from PR #316.
-
-**Reopen condition:** a rendered 2D comparison demonstrates better depth/readability without obscuring labels, edges, category hierarchy or selected/search emphasis.
+**Reopen condition:** a rendered comparison identifies a concrete deficiency in the existing 2D cosmic background and demonstrates a minimal improvement.
 
 ### Adaptive labels — ADOPTED
 
-2D semantic label LOD and 3D bounded selected/direct-search labels are preferable to repository-wide always-on labels. Normal 3D repositories remain sphere-only until direct/selected/hovered context justifies labeling.
+2D semantic label LOD and bounded 3D selected/direct-search labels remain preferred over repository-wide always-on labels.
 
-**Reopen condition:** concrete readability/accessibility evidence showing the current budget hides necessary information.
-
-## 6. Render density / quality-control research
+## 7. Render density / quality-control research
 
 ### Canvas bounded DPR experiment — COMPLETED research, REJECTED product feature
 
-The experiment demonstrated that a bounded opt-in Canvas backing store could substantially reduce DPR3 pixel area while preserving high screenshot similarity in tested fixtures. That evidence remains valid as research.
-
-It did **not** establish a useful user-facing control. Auto/High/Low appeared ineffective/unclear in normal use and added toolbar/state complexity.
+Research evidence remains, but Auto/High/Low did not establish useful product value and added control/state complexity.
 
 ### Product decision — ADOPTED
 
 - no Auto / High / Low render-density selector;
 - no `render=` product contract;
-- 2D uses native DPR;
-- 3D uses one internal bounded backing-store policy;
-- do not conflate render density with repository Quality evidence.
+- 2D native DPR;
+- 3D one internal bounded backing-store policy;
+- repository Quality evidence is separate and unchanged.
 
-The Canvas experimental runtime/postprocessor/shim and experiment-specific tests were removed.
-
-**Reopen condition:** a concrete device/readability/performance problem where backing-store density is demonstrated to be the relevant cause and an automatic internal fix is insufficient.
-
-## 7. Common renderer evidence
+## 8. Common renderer evidence
 
 ### `window.ProjectMapRenderer.snapshot()` — ADOPTED
 
-The #297/#299 work provides a shared read-only evidence/capability shape for 2D and Three.js: renderer/style identity, visible semantic counts, selected identity, capability flags and viewport/backing-store evidence.
+Shared read-only evidence/capability shape across 2D/3D remains test infrastructure, not a reason to force renderer implementation symmetry.
 
-This is test/evidence plumbing, not a reason to force renderer implementation symmetry.
-
-## 8. Three.js performance research
+## 9. Three.js performance research
 
 ### Synthetic large-portfolio profiler — COMPLETED
 
-The #275/#298/#300/#301/#303 research established useful CI-harness facts:
-
-- moderate/large deterministic scenes can be compared through the common renderer snapshot;
-- short-window heap did not show the dominant scaling signal;
-- backing-store density was controlled in the paired evidence;
-- hiding visible semantic scene nodes recovered much more throughput than Motion Off;
-- the paired 480-repository Motion On/Off discriminator was essentially neutral;
-- therefore the synthetic software-rendered hotspot class is visible per-node scene/render work rather than animation.
-
-These are **software-rendered CI findings**, not hardware FPS claims.
+The software-rendered CI harness isolated visible scene/render work as the dominant synthetic scale cost, with Motion On/Off essentially neutral in the paired near-cap test. These are CI-harness findings, not hardware FPS claims.
 
 ### Performance optimization mandate — REJECTED
 
-Current real-environment use has no observed Three.js heaviness. There is therefore no demonstrated product reason to complicate the renderer just to improve synthetic FPS.
+Real-environment use has no observed Three.js heaviness. Halo suppression and InstancedMesh batching remain NOT_PLANNED without reproducible real-device/user evidence.
 
-### Repository halo suppression #302 / prototype #305 — REJECTED / NOT_PLANNED
+**Reopen condition:** meaningful real-device startup/interaction/memory/thermal/power/scale failure.
 
-Do not remove or suppress normal visual treatment based only on synthetic CI cost.
+## 10. Optional semantic overlays / further styles
 
-### InstancedMesh batching #306 / prototypes #307 and #310 — REJECTED / NOT_PLANNED
+Activity/Freshness, repository Quality presentation and focused relation visuals remain DORMANT until a concrete comprehension/navigation use case exists. Magic/spell-array and other parked style concepts remain idea inventory, not backlog.
 
-The prototypes are preserved in GitHub history but remain unmerged. PR #310 demonstrated why a fresh-main rebuild or green synthetic gate is not, by itself, authority to reopen a NOT_PLANNED lane. Do not create a second large-scene rendering path while real use is healthy.
+Galaxy is precedent for **purpose-driven** renderer-local style work, not permission for style-count growth.
 
-**Reopen condition for any Three.js optimization:** reproducible real-device/user evidence such as noticeable interaction latency, startup delay, memory failure, thermal/power cost, or realistic portfolio scale failure. When reopened, use the existing synthetic harness as a discriminator, not as the sole acceptance authority.
+## 11. Maintenance / negative-result hygiene
 
-## 9. Optional 3D semantic overlays
+Historical docs, closed PRs and issue bodies remain evidence carriers, not active TODOs. Do not revive by default:
 
-### Activity/Freshness, repository Quality presentation, focused semantic relation visuals — DORMANT
-
-Renderer-neutral data can support these, but they are not automatically required for parity and should not be added simply because 2D has related presentation.
-
-**Reopen condition:** a concrete comprehension/navigation use case and a renderer-specific visual design that avoids clutter and preserves authority boundaries.
-
-Global semantic-edge rendering and repository-wide labels remain out of scope by default.
-
-## 10. Maintenance and branch/research hygiene
-
-### Branch cleanup — COMPLETED
-
-A 2026-08-31 cleanup pass pruned merged/contained/redundant branches and removed the temporary cleanup workflows afterward. Do not install permanent cleanup machinery merely because a one-shot cleanup was useful.
-
-### Negative/superseded experiment handling — ADOPTED
-
-Historical docs, closed PRs and old issue bodies remain evidence carriers. They are not active TODOs. In particular, do not revive:
-
-- Render Auto/High/Low;
-- Canvas `render=` experiment runtime;
-- static Galaxy Systems Contributed rail;
-- halo suppression;
-- InstancedMesh batching;
+- Render Auto/High/Low or Canvas `render=` runtime;
+- static Galaxy Systems external rail;
+- persistent cross-disc Galaxy contribution/ownership spokes;
+- Kepler-like category-local repo physics from closed PR #321;
+- halo suppression / InstancedMesh batching;
+- duplicate 2D star-depth back-port runtime;
 - one-click installer production exposure;
-- arbitrary clustering restarts;
 - Three.js-as-13th-2D-style;
-- style-count expansion without a product purpose.
+- arbitrary clustering/style expansion.
 
-Fresh main, a cleaner implementation, CI GREEN, or stronger synthetic evidence does not override a documented NOT_PLANNED/REJECTED reopen condition.
+Fresh main, cleaner code or CI GREEN is not itself authority to reopen a documented rejected/not-planned lane.
 
-## 11. Current work queue
+## 12. Current work queue
 
-At this reconcile cut there is **no pre-approved implementation backlog**. This is intentional, not an absence of direction.
-
-New work should be created only from one of these evidence classes, in order:
+No implementation is pre-approved simply because it can be made more physically detailed. New work should come from, in order:
 
 1. production correctness/visible regression;
 2. release/setup integrity failure;
-3. accessibility or UX problem demonstrated in rendered/browser use;
-4. semantic drift/duplication with a concrete maintenance cost;
-5. new feature with a clear user comprehension/navigation benefit;
-6. real-device performance problem.
-
-Every new task should state its evidence, authority boundary, smallest acceptance test and explicit non-goals before implementation.
+3. accessibility or UX evidence;
+4. demonstrated semantic drift/maintenance cost;
+5. a new feature with clear comprehension/navigation benefit;
+6. real-device performance evidence;
+7. for Galaxy physics, a change that improves both scientific plausibility **and** semantic readability without pretending the map is a literal galactic simulation.
