@@ -112,7 +112,8 @@ test("Galaxy uses co-rotating radius-dependent motion, a bounded visual corotati
   expect(before.patternModel).toBe("rigid-density-wave-inspired");
   expect(before.patternPeriod).toBe(2400);
   expect(before.corotationRadius).toBe(150);
-  expect(before.edgePolicy).toBe("membership-only");
+  expect(before.edgePolicy).toBe("no-persistent-lines");
+  expect(before.persistentEdgeObjects).toBe(0);
   expect(before.starfieldFrame).toBe("inertial");
   expect(before.armCount).toBe(3);
   expect(before.systems).toHaveLength(5);
@@ -151,6 +152,7 @@ test("Galaxy uses co-rotating radius-dependent motion, a bounded visual corotati
   const repoAfter = innerAfter.repositories.find((repo) => repo.id === repoBefore.id);
   const externalAfter = after.external.find((repo) => repo.id === before.external[0].id);
 
+  expect(after.persistentEdgeObjects).toBe(0);
   expect(distance(inner, innerAfter)).toBeGreaterThan(0.08);
   expect(distance(repoBefore, repoAfter)).toBeGreaterThan(0.08);
   expect(distance(before.external[0], externalAfter)).toBeGreaterThan(0.08);
@@ -176,6 +178,8 @@ test("Galaxy Motion Off freezes category, repository, and Contributed orbital po
   await page.waitForTimeout(800);
   const after = await galaxySnapshot(page);
 
+  expect(before.persistentEdgeObjects).toBe(0);
+  expect(after.persistentEdgeObjects).toBe(0);
   expect(after.elapsed).toBe(before.elapsed);
   expect(distance(before.systems[0], after.systems[0])).toBeLessThan(1e-7);
   expect(distance(before.systems[0].repositories[0], after.systems[0].repositories[0])).toBeLessThan(1e-7);
