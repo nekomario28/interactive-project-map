@@ -92,6 +92,11 @@ function signedAngularDelta(from, to) {
   return Math.atan2(Math.sin(to - from), Math.cos(to - from));
 }
 
+function logarithmicPitchAngleDeg(inner, outer) {
+  const angularSeparation = Math.abs(signedAngularDelta(azimuth(inner), azimuth(outer)));
+  return Math.atan(Math.log(outer.radius / inner.radius) / angularSeparation) * 180 / Math.PI;
+}
+
 test("Galaxy uses co-rotating radius-dependent motion and keeps external work on the slower outer orbit", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js orbital motion is exercised once in Chromium.");
   await installGraph(page);
@@ -102,6 +107,8 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(before).toBeTruthy();
   expect(before.model).toBe("flat-curve-inspired");
   expect(before.direction).toBe("co-rotating");
+  expect(before.spiralModel).toBe("logarithmic");
+  expect(before.pitchAngleDeg).toBe(22);
   expect(before.edgePolicy).toBe("membership-only");
   expect(before.starfieldFrame).toBe("inertial");
   expect(before.armCount).toBe(3);
@@ -117,16 +124,18 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(before.external[0].period).toBeGreaterThan(outer.period);
 
   // With five equal-size groups the deterministic ordering places alpha and epsilon
-  // on successive radial tiers of the same arm. The outer tier is at a larger
-  // azimuth while co-rotation proceeds toward decreasing azimuth, so the arm trails.
+  // on successive radial tiers of the same arm. Their initial radii and azimuths
+  // should recover the adopted ~22° logarithmic pitch before differential shear.
   const sameArmInner = before.systems.find((system) => system.id === "group:alpha");
   const sameArmOuter = before.systems.find((system) => system.id === "group:epsilon");
   expect(sameArmInner).toBeTruthy();
   expect(sameArmOuter).toBeTruthy();
   expect(sameArmOuter.radius).toBeGreaterThan(sameArmInner.radius);
   const trailingOffsetBefore = signedAngularDelta(azimuth(sameArmInner), azimuth(sameArmOuter));
-  expect(trailingOffsetBefore).toBeGreaterThan(0.45);
-  expect(trailingOffsetBefore).toBeLessThan(0.8);
+  expect(trailingOffsetBefore).toBeGreaterThan(1.65);
+  expect(trailingOffsetBefore).toBeLessThan(1.95);
+  expect(logarithmicPitchAngleDeg(sameArmInner, sameArmOuter)).toBeGreaterThan(20);
+  expect(logarithmicPitchAngleDeg(sameArmInner, sameArmOuter)).toBeLessThan(24);
 
   await page.waitForTimeout(1_250);
   const after = await galaxySnapshot(page);
@@ -146,7 +155,7 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(innerAngularStep).toBeLessThan(-0.001);
   expect(outerAngularStep).toBeLessThan(-0.001);
   expect(Math.abs(innerAngularStep)).toBeGreaterThan(Math.abs(outerAngularStep));
-  expect(signedAngularDelta(azimuth(sameArmInnerAfter), azimuth(sameArmOuterAfter))).toBeGreaterThan(0.45);
+  expect(signedAngularDelta(azimuth(sameArmInnerAfter), azimuth(sameArmOuterAfter))).toBeGreaterThan(1.65);
 });
 
 test("Galaxy Motion Off freezes category, repository, and Contributed orbital positions", async ({ page, browserName }) => {
