@@ -6,7 +6,7 @@ import { patchThreejsGalaxyMotionRuntime } from "../scripts/apply-threejs-galaxy
 
 const fixture = `
 function layoutGalaxyGraph(THREE,graph){const count=2,armCount=count<=3?1:count<=8?2:3,y=(hashUnit(group.id+":galaxy-y")-.5)*14,thickness=(hashUnit(repo.id+":galaxy-thickness")-.5)*(10+ring*2.6);positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-loose-y")-.5)*24,0));positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-external-y")-.5)*34,0));}
-function createSpiralDust(THREE,seed){const count=1800,positions=new Float32Array(count*3),colors=new Float32Array(count*3),blue=new THREE.Color(0x6387ff),violet=new THREE.Color(0xa86cff);for(let index=0;index<count;index+=1){const arm=index%4,t=hashUnit(\`${"${seed}"}:dust:t:${"${index}"}\`),radius=42+t*230,jitter=(hashUnit(\`${"${seed}"}:dust:j:${"${index}"}\`)-.5)*30,angle=arm*TAU/4+t*TAU*2.1+jitter*.008;positions[index*3]=Math.cos(angle)*(radius+jitter);}return new THREE.Points();}
+function createSpiralDust(THREE,seed){const count=1800,positions=new Float32Array(count*3),colors=new Float32Array(count*3),blue=new THREE.Color(0x6387ff),violet=new THREE.Color(0xa86cff);for(let index=0;index<count;index+=1){const arm=index%4,t=hashUnit(\`${"${seed}"}:dust:t:${"${index}"}\`),radius=42+t*230,jitter=(hashUnit(\`${"${seed}"}:dust:j:${"${index}"}\`)-.5)*30,angle=arm*TAU/4+t*TAU*2.1+jitter*.008;positions[index*3]=Math.cos(angle)*(radius+jitter);}const points=new THREE.Points();points.rotation.x=-.11;return points;}
 function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy";
 const positions=layoutGalaxyGraph(THREE,graph),nodeMeshes=new Map();
@@ -17,7 +17,7 @@ function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=de
 }
 `;
 
-test("Galaxy motion patch uses a flatter 2-4 arm disc, co-rotation, an inertial star backdrop, radial slowdown, and structural-only dynamic edges", () => {
+test("Galaxy motion patch uses a co-planar flatter 2-4 arm disc, co-rotation, an inertial star backdrop, radial slowdown, and structural-only dynamic edges", () => {
   const patched = patchThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /function galaxyArmCount\(graph\)/);
   assert.match(patched, /count<=4\?2:count<=8\?3:4/);
@@ -31,7 +31,9 @@ test("Galaxy motion patch uses a flatter 2-4 arm disc, co-rotation, an inertial 
   assert.match(patched, /angle=arm\*TAU\/armCount\+t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
   assert.match(patched, /threeStyle==="galaxy"\?1\.35:2\.1/);
+  assert.match(patched, /if\(threeStyle==="galaxy"\)dust\.rotation\.x=0/);
   assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),edgePolicy:"structural-only",starfieldFrame:"inertial"/);
+  assert.match(patched, /armPlane:"galactic-disc",armPlaneTilt:dust\.rotation\.x/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
   assert.match(patched, /period:480\+ring\*220/);
   assert.match(patched, /verticalAmplitude:Math\.min\(1\.4,localRadius\*\.06\)/);
