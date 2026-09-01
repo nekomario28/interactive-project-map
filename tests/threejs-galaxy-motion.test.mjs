@@ -17,9 +17,11 @@ function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=de
 }
 `;
 
-test("Galaxy motion patch uses a flatter 2-4 arm logarithmic disc, co-rotation, an inertial star backdrop, radial slowdown, and membership-only dynamic edges", () => {
+test("Galaxy motion patch uses a flatter 2-4 arm logarithmic disc, co-rotation, visual corotation, an inertial star backdrop, radial slowdown, and membership-only dynamic edges", () => {
   const patched = patchThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /GALAXY_LOG_PITCH_DEG=22/);
+  assert.match(patched, /GALAXY_PATTERN_PERIOD=2400/);
+  assert.match(patched, /GALAXY_COROTATION_RADIUS=GALAXY_PATTERN_PERIOD\/16/);
   assert.match(patched, /function galaxyLogAngle\(radius,referenceRadius\)/);
   assert.match(patched, /Math\.log\(Math\.max\(1,radius\/referenceRadius\)\)\/Math\.tan\(GALAXY_LOG_PITCH\)/);
   assert.match(patched, /function galaxyArmCount\(graph\)/);
@@ -35,7 +37,7 @@ test("Galaxy motion patch uses a flatter 2-4 arm logarithmic disc, co-rotation, 
   assert.match(patched, /pitch>0\?Math\.log\(Math\.max\(1,radius\/42\)\)\/Math\.tan\(pitch\):t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
   assert.match(patched, /threeStyle==="galaxy"\?GALAXY_LOG_PITCH:0/);
-  assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),spiralModel:"logarithmic",pitchAngleDeg:GALAXY_LOG_PITCH_DEG,edgePolicy:"membership-only",starfieldFrame:"inertial"/);
+  assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),spiralModel:"logarithmic",pitchAngleDeg:GALAXY_LOG_PITCH_DEG,patternModel:"rigid-density-wave-inspired",patternPeriod:GALAXY_PATTERN_PERIOD,corotationRadius:GALAXY_COROTATION_RADIUS,edgePolicy:"membership-only",starfieldFrame:"inertial"/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
   assert.match(patched, /period:480\+ring\*220/);
   assert.match(patched, /verticalAmplitude:Math\.min\(1\.4,localRadius\*\.06\)/);
@@ -45,7 +47,7 @@ test("Galaxy motion patch uses a flatter 2-4 arm logarithmic disc, co-rotation, 
   assert.match(patched, /if\(threeStyle!=="galaxy"\)\{farStars\.rotation\.y\+=delta\*\.002;midStars\.rotation\.y-=delta\*\.004;nearStars\.rotation\.y\+=delta\*\.006;\}/);
   assert.match(patched, /function syncDynamicEdges\(\)/);
   assert.match(patched, /attribute\.needsUpdate=true/);
-  assert.match(patched, /dust\.rotation\.y\+=delta\*\(threeStyle==="galaxy"\?\.0011:\.0035\)/);
+  assert.match(patched, /dust\.rotation\.y\+=delta\*\(threeStyle==="galaxy"\?TAU\/GALAXY_PATTERN_PERIOD:\.0035\)/);
   assert.match(patched, /if\(galaxyMotion&&galaxyMotion\.step\(delta\)\)/);
   assert.match(patched, /if\(selectedMesh\)desiredTarget\.copy\(selectedMesh\.position\)/);
   assert.equal(patchThreejsGalaxyMotionRuntime(patched), patched);
