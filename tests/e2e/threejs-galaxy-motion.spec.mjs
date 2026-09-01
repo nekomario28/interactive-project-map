@@ -104,6 +104,8 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(before.direction).toBe("co-rotating");
   expect(before.edgePolicy).toBe("structural-only");
   expect(before.starfieldFrame).toBe("inertial");
+  expect(before.armPlane).toBe("galactic-disc");
+  expect(Math.abs(before.armPlaneTilt)).toBeLessThan(1e-7);
   expect(before.armCount).toBe(3);
   expect(before.systems).toHaveLength(5);
   expect(before.external).toHaveLength(1);
@@ -135,6 +137,7 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   const repoAfter = innerAfter.repositories.find((repo) => repo.id === repoBefore.id);
   const externalAfter = after.external.find((repo) => repo.id === before.external[0].id);
 
+  expect(Math.abs(after.armPlaneTilt)).toBeLessThan(1e-7);
   expect(distance(inner, innerAfter)).toBeGreaterThan(0.08);
   expect(distance(repoBefore, repoAfter)).toBeGreaterThan(0.08);
   expect(distance(before.external[0], externalAfter)).toBeGreaterThan(0.08);
@@ -161,6 +164,7 @@ test("Galaxy Motion Off freezes category, repository, and Contributed orbital po
   const after = await galaxySnapshot(page);
 
   expect(after.elapsed).toBe(before.elapsed);
+  expect(Math.abs(after.armPlaneTilt)).toBeLessThan(1e-7);
   expect(distance(before.systems[0], after.systems[0])).toBeLessThan(1e-7);
   expect(distance(before.systems[0].repositories[0], after.systems[0].repositories[0])).toBeLessThan(1e-7);
   expect(distance(before.external[0], after.external[0])).toBeLessThan(1e-7);
