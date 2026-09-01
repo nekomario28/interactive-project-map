@@ -1,6 +1,6 @@
 # Three.js Galaxy visual corotation
 
-Status: 2026-09-01
+Status: 2026-09-02
 
 This note extends `docs/threejs-galaxy-astronomy.md` without changing its semantic authority boundary.
 
@@ -31,7 +31,8 @@ A classical density-wave-style picture is more internally coherent when the mate
 - Slow 2D-like repository-local orbits around category centers.
 - External Contributed separation.
 - Inertial decorative star shells.
-- Membership-only persistent Galaxy lines.
+- The qualified subtle central stellar concentration remains non-semantic and does not participate in the corotation model.
+- **Galaxy has no persistent node-to-node graph lines.** PR #334 superseded the earlier membership-only presentation without changing graph semantics, node motion, arm pattern speed or the corotation crossing.
 - Motion Off and reduced-motion behavior.
 
 ## Evidence contract
@@ -41,7 +42,8 @@ A classical density-wave-style picture is more internally coherent when the mate
 - `patternModel: "rigid-density-wave-inspired"`
 - `patternPeriod: 2400`
 - `corotationRadius: 150`
+- `edgePolicy: "no-persistent-lines"`
 
-Chromium evidence checks that an inner semantic system has a period shorter than the pattern while an external orbit is beyond the visual corotation radius with a longer period.
+Chromium evidence checks that an inner semantic system has a period shorter than the pattern while an external orbit is beyond the visual corotation radius with a longer period. The same runtime evidence requires `persistentEdgeObjects: 0`; that line-free presentation is intentionally orthogonal to the corotation calculation.
 
 This is a visualization contract, not a conversion to kpc, Myr, stellar mass, or a literal Milky Way model.
