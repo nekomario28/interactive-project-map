@@ -42,7 +42,7 @@ These are **not** astrophysical claims:
 - the portfolio owner occupies the nucleus because it is the semantic root, not because a GitHub user represents a black hole or bulge;
 - categories are coherent local systems so repository membership remains readable;
 - repositories orbiting a category are a 3D continuation of the 2D Galaxy Hybrid interaction metaphor, not a claim that galactic stars orbit spiral-arm labels;
-- therefore repository-to-category local orbits intentionally do **not** claim Keplerian gravity. Their slow 2D-like periods preserve category membership and make the map feel alive without inventing a physical mass model for semantic nodes;
+- repository-to-category local orbits intentionally do **not** claim Keplerian gravity. PR #335 makes their UI grammar more explicit: the local path is an ellipse with axis ratio **0.68**, the period family is **`480 + lane×240 s`**, and each category reuses the 2D Hybrid `:hybrid-direction` sign. Three.js deliberately keeps its own compact local packing/radii and maps the existing repository offset onto the ellipse at phase zero, so this is cross-renderer interaction consistency rather than a physical orbit or a literal copy of 2D geometry;
 - Contributed repositories remain on clearly external outer lanes because authority/ownership semantics require separation; this is not intended as a literal stellar halo model, and the shared visual period rule must not be read as an extrapolated physical outer-galaxy rotation curve;
 - repository/category size, color and luminosity encode project metadata and interaction state, not stellar mass, age or spectrum;
 - the decorative central stellar concentration is not the semantic owner, does not encode owner authority, and must not be interpreted as an assigned black-hole/bulge mass;
@@ -55,13 +55,15 @@ When `style3d=galaxy` and Motion is enabled:
 
 1. category systems co-rotate around the owner/nucleus;
 2. their visual orbital period increases with galactocentric radius using the bounded flat-curve-inspired rule;
-3. repositories keep their category membership while following deliberately slow local category orbits, on the same several-minute scale as the 2D Galaxy Hybrid metaphor;
+3. owned repositories keep their category membership while following deliberately slow local **0.68-axis-ratio ellipses**. Their period family is **`480 + lane×240 s`** and the per-category local direction uses the same deterministic `:hybrid-direction` seed as 2D Galaxy Hybrid. The 3D renderer retains its existing compact ring/packing as the local lane analogue, and phase zero reproduces the existing repository position rather than causing a re-layout jump;
 4. Contributed repositories co-rotate on external lanes with the same radial period rule as a semantic animation policy, not a physical outer-halo claim;
 5. spiral dust rotates as a separate, slower visual pattern so systems are not glued rigidly to an arm;
 6. the far/mid/near decorative star shells remain in an inertial world frame instead of counter-rotating autonomously. Camera movement can still create perspective/depth change, but the background does not compete with or contradict the semantic disc rotation;
 7. group/repository labels, selection targets and selected-camera target follow the moving meshes;
 8. Motion Off freezes the semantic node orbits;
 9. the existing reduced-motion-derived default remains respected.
+
+`ProjectMapThreejsGalaxyMotion.snapshot()` identifies this local semantic model as `localOrbitModel: "2d-galaxy-hybrid-ellipse"`, with `localOrbitAxisRatio: 0.68` and `localOrbitPeriodModel: "480+lane*240"`. These fields are evidence for renderer behavior, not physical orbital parameters.
 
 The model is deliberately slow. It should read as a living galaxy over seconds and minutes rather than as a fast mechanical solar-system animation.
 
@@ -109,6 +111,7 @@ Within each arm, radial growth follows the same **22° logarithmic pitch** for t
 - N-body gravity simulation;
 - physically scaled galactic time;
 - claiming category-local repository motion obeys stellar or planetary gravity;
+- treating the 0.68 local ellipse, `480 + lane×240 s` period family, direction seed or renderer-local lane packing as astrophysical truth;
 - claiming repository metadata maps to astrophysical observables;
 - claiming graph relations or any future contextual relation overlay are gravitational, magnetic-field, gas-flow or orbital structures;
 - claiming the central decorative concentration is a physical mass model or a literal black-hole/bulge representation;
