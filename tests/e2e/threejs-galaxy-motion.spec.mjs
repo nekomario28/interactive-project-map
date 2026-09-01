@@ -27,12 +27,7 @@ const graph = {
   groupCount: groups.length,
   nodes: [
     { id: "user:example", label: "example", type: "owner", url: "https://github.com/example" },
-    ...groups.map((group) => ({
-      id: `group:${group}`,
-      label: group[0].toUpperCase() + group.slice(1),
-      type: "group",
-      repositoryCount: 1,
-    })),
+    ...groups.map((group) => ({ id: `group:${group}`, label: group[0].toUpperCase() + group.slice(1), type: "group", repositoryCount: 1 })),
     ...ownedRepositories,
     {
       id: "repository:outside/zeta",
@@ -80,24 +75,15 @@ async function galaxySnapshot(page) {
   return page.evaluate(() => window.ProjectMapThreejsGalaxyMotion?.snapshot());
 }
 
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-}
-
-function azimuth(point) {
-  return Math.atan2(point.z, point.x);
-}
-
-function signedAngularDelta(from, to) {
-  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
-}
-
+function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z); }
+function azimuth(point) { return Math.atan2(point.z, point.x); }
+function signedAngularDelta(from, to) { return Math.atan2(Math.sin(to - from), Math.cos(to - from)); }
 function logarithmicPitchAngleDeg(inner, outer) {
   const angularSeparation = Math.abs(signedAngularDelta(azimuth(inner), azimuth(outer)));
   return Math.atan(Math.log(outer.radius / inner.radius) / angularSeparation) * 180 / Math.PI;
 }
 
-test("Galaxy uses co-rotating radius-dependent motion, a bounded visual corotation, and slower external work", async ({ page, browserName }) => {
+test("Galaxy keeps astronomy-informed galactocentric motion while local repositories use the 2D Hybrid ellipse metaphor", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js orbital motion is exercised once in Chromium.");
   await installGraph(page);
   await page.goto("/three/?username=example&style3d=galaxy");
@@ -115,9 +101,21 @@ test("Galaxy uses co-rotating radius-dependent motion, a bounded visual corotati
   expect(before.edgePolicy).toBe("no-persistent-lines");
   expect(before.persistentEdgeObjects).toBe(0);
   expect(before.starfieldFrame).toBe("inertial");
+  expect(before.localOrbitModel).toBe("2d-galaxy-hybrid-ellipse");
+  expect(before.localOrbitAxisRatio).toBeCloseTo(0.68, 8);
+  expect(before.localOrbitPeriodModel).toBe("480+lane*240");
   expect(before.armCount).toBe(3);
   expect(before.systems).toHaveLength(5);
   expect(before.external).toHaveLength(1);
+
+  const localRepositories = before.systems.flatMap((system) => system.repositories);
+  expect(localRepositories).toHaveLength(5);
+  expect(new Set(localRepositories.map((repo) => repo.period))).toEqual(new Set([480]));
+  expect([...new Set(localRepositories.map((repo) => repo.direction))].sort()).toEqual([-1, 1]);
+  for (const repo of localRepositories) {
+    expect(repo.semiMajor).toBeGreaterThan(0);
+    expect(repo.semiMinor / repo.semiMajor).toBeCloseTo(0.68, 8);
+  }
 
   const systemsByRadius = [...before.systems].sort((a, b) => a.radius - b.radius);
   const inner = systemsByRadius[0];
@@ -131,9 +129,6 @@ test("Galaxy uses co-rotating radius-dependent motion, a bounded visual corotati
   expect(before.external[0].radius).toBeGreaterThan(outer.radius);
   expect(before.external[0].period).toBeGreaterThan(outer.period);
 
-  // With five equal-size groups the deterministic ordering places alpha and epsilon
-  // on successive radial tiers of the same arm. Their initial radii and azimuths
-  // should recover the adopted ~22° logarithmic pitch before differential shear.
   const sameArmInner = before.systems.find((system) => system.id === "group:alpha");
   const sameArmOuter = before.systems.find((system) => system.id === "group:epsilon");
   expect(sameArmInner).toBeTruthy();

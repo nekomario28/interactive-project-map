@@ -17,11 +17,12 @@ function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=de
 }
 `;
 
-test("Galaxy motion patch uses a flatter 2-4 arm logarithmic disc, co-rotation, visual corotation, an inertial star backdrop, radial slowdown, and no persistent graph lines", () => {
+test("Galaxy motion patch keeps the astronomy-informed disc while using 2D-Hybrid-like local ellipses and no persistent graph lines", () => {
   const patched = patchThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /GALAXY_LOG_PITCH_DEG=22/);
   assert.match(patched, /GALAXY_PATTERN_PERIOD=2400/);
   assert.match(patched, /GALAXY_COROTATION_RADIUS=GALAXY_PATTERN_PERIOD\/16/);
+  assert.match(patched, /GALAXY_LOCAL_AXIS_RATIO=\.68/);
   assert.match(patched, /function galaxyLogAngle\(radius,referenceRadius\)/);
   assert.match(patched, /Math\.log\(Math\.max\(1,radius\/referenceRadius\)\)\/Math\.tan\(GALAXY_LOG_PITCH\)/);
   assert.match(patched, /function galaxyArmCount\(graph\)/);
@@ -37,9 +38,12 @@ test("Galaxy motion patch uses a flatter 2-4 arm logarithmic disc, co-rotation, 
   assert.match(patched, /pitch>0\?Math\.log\(Math\.max\(1,radius\/42\)\)\/Math\.tan\(pitch\):t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
   assert.match(patched, /threeStyle==="galaxy"\?GALAXY_LOG_PITCH:0/);
-  assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),spiralModel:"logarithmic",pitchAngleDeg:GALAXY_LOG_PITCH_DEG,patternModel:"rigid-density-wave-inspired",patternPeriod:GALAXY_PATTERN_PERIOD,corotationRadius:GALAXY_COROTATION_RADIUS,edgePolicy:"no-persistent-lines",starfieldFrame:"inertial"/);
+  assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),spiralModel:"logarithmic",pitchAngleDeg:GALAXY_LOG_PITCH_DEG,patternModel:"rigid-density-wave-inspired",patternPeriod:GALAXY_PATTERN_PERIOD,corotationRadius:GALAXY_COROTATION_RADIUS,edgePolicy:"no-persistent-lines",starfieldFrame:"inertial",localOrbitModel:"2d-galaxy-hybrid-ellipse",localOrbitAxisRatio:GALAXY_LOCAL_AXIS_RATIO,localOrbitPeriodModel:"480\+lane\*240"/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
-  assert.match(patched, /period:480\+ring\*220/);
+  assert.match(patched, /direction=\(hash\(group\.id\+":hybrid-direction"\)&1\)===0\?1:-1/);
+  assert.match(patched, /semiMinor=semiMajor\*GALAXY_LOCAL_AXIS_RATIO/);
+  assert.match(patched, /period:480\+ring\*240/);
+  assert.doesNotMatch(patched, /galaxy-motion-period/);
   assert.match(patched, /verticalAmplitude:Math\.min\(1\.4,localRadius\*\.06\)/);
   assert.match(patched, /ProjectMapThreejsGalaxyMotion/);
   assert.match(patched, /persistentEdgeObjects:edgeLines\?1:0/);
