@@ -136,14 +136,22 @@ Current motion contract:
 
 `docs/threejs-galaxy-astronomy.md` is the authority boundary for what is physically inspired and what remains a product-semantic metaphor.
 
-### Galaxy structural line policy #322 — ADOPTED
+### Galaxy broad structural-line policy #322 — SUPERSEDED BY #326
 
-Graph lines are semantic navigation aids, not orbital trails or astrophysical structures.
+PR #322 established the key boundary that graph lines are semantic navigation aids, not orbital trails or astrophysical structures, reduced Galaxy line opacity, and removed persistent `contribution` chords. Its original decision to keep both ownership and membership scaffolding was later narrowed by rendered evidence.
 
-- ownership/membership lines remain very faint and dynamically follow moving endpoints;
-- persistent Galaxy line opacity is lower than the other Three.js styles;
-- persistent `contribution` lines are suppressed in Galaxy because a long owner-to-external chord cuts across the disc and can be mistaken for a physical trajectory;
-- Contributed relation evidence remains available through external placement, status/filter and details UI.
+### Galaxy membership-only line policy #326 — ADOPTED
+
+Persistent Galaxy graph lines are limited to category → repository `membership` edges.
+
+- exact repository/category membership can remain ambiguous from an oblique 3D view, so this topology earns a persistent visual carrier;
+- owner → category `ownership` spokes are suppressed because the single-owner Project Map already establishes that relation and the radial lines repeat known information while cutting across the spiral morphology;
+- persistent `contribution` chords remain suppressed because external placement, status/filter and details already preserve the relation and a cross-disc line can look like a physical trajectory;
+- other relation edges are not persistent by default; a future selected/focused contextual relation may surface them temporarily if there is concrete navigation value;
+- retained membership lines keep the reduced Galaxy opacity and dynamically follow moving endpoints;
+- the runtime evidence snapshot reports `edgePolicy: "membership-only"`.
+
+The rich Chromium before/after evidence showed the central radial spokes disappearing while short local membership cues remained, improving the Galaxy reading without losing exact category membership.
 
 ### Galaxy inertial star backdrop #323 — ADOPTED
 
@@ -301,6 +309,7 @@ Historical docs, closed PRs and old issue bodies remain evidence carriers. They 
 - Canvas `render=` experiment runtime;
 - static Galaxy Systems Contributed rail;
 - the superseded “Galaxy 3D semantic nodes must remain static” assumption;
+- persistent Galaxy ownership/contribution spokes as default background structure;
 - halo suppression;
 - InstancedMesh batching;
 - one-click installer production exposure;
