@@ -1,6 +1,6 @@
 # Three.js Galaxy — astronomy boundary
 
-Status: **2026-09-01**
+Status: **2026-09-02**
 
 The Three.js `Galaxy` style is a semantic project map rendered with a spiral-galaxy visual model. It should be astronomically plausible where that improves spatial intuition, but it must not claim that repository/category semantics are literal astrophysical objects.
 
@@ -9,6 +9,7 @@ The Three.js `Galaxy` style is a semantic project map rendered with a spiral-gal
 The visual/motion model follows these broad spiral-galaxy properties:
 
 - a spiral galaxy is dominated by a flattened stellar disc plus a dense central concentration;
+- the qualified Galaxy presentation now includes a **subtle warm central stellar concentration** behind the semantic owner. It is deliberately low-opacity, non-pickable and non-semantic: its role is generic spiral-galaxy morphology, not a physical bulge mass/scale model;
 - stars and gas in the disc orbit the galactic centre;
 - disc material is predominantly co-rotating rather than arbitrarily alternating orbital direction;
 - observed spiral-galaxy rotation curves are much flatter than a luminous-matter-only Kepler-like falloff. The renderer therefore keeps visual tangential speed broadly comparable across most of the semantic disc. With `v ≈ constant`, `T = 2πr / v`, so the visual galactocentric period grows approximately in proportion to radius and outer systems have lower angular speed. This is a **bounded generic optical-disc approximation**, not an assertion that a Milky-Way rotation curve stays exactly flat indefinitely; Gaia DR3 analyses can show a decline beyond the optical disc;
@@ -44,6 +45,8 @@ These are **not** astrophysical claims:
 - therefore repository-to-category local orbits intentionally do **not** claim Keplerian gravity. Their slow 2D-like periods preserve category membership and make the map feel alive without inventing a physical mass model for semantic nodes;
 - Contributed repositories remain on clearly external outer lanes because authority/ownership semantics require separation; this is not intended as a literal stellar halo model, and the shared visual period rule must not be read as an extrapolated physical outer-galaxy rotation curve;
 - repository/category size, color and luminosity encode project metadata and interaction state, not stellar mass, age or spectrum;
+- the decorative central stellar concentration is not the semantic owner, does not encode owner authority, and must not be interpreted as an assigned black-hole/bulge mass;
+- graph membership/ownership/contribution relations remain semantic data even though Galaxy no longer draws persistent straight node-to-node lines;
 - the style does not force a central stellar bar or Milky-Way-specific warp, because `Galaxy` is a generic semantic spiral style rather than an asserted scale model of our own galaxy.
 
 ## Motion contract
@@ -56,7 +59,7 @@ When `style3d=galaxy` and Motion is enabled:
 4. Contributed repositories co-rotate on external lanes with the same radial period rule as a semantic animation policy, not a physical outer-halo claim;
 5. spiral dust rotates as a separate, slower visual pattern so systems are not glued rigidly to an arm;
 6. the far/mid/near decorative star shells remain in an inertial world frame instead of counter-rotating autonomously. Camera movement can still create perspective/depth change, but the background does not compete with or contradict the semantic disc rotation;
-7. group/repository labels, selection targets and the retained membership-edge endpoints follow the moving meshes;
+7. group/repository labels, selection targets and selected-camera target follow the moving meshes;
 8. Motion Off freezes the semantic node orbits;
 9. the existing reduced-motion-derived default remains respected.
 
@@ -77,18 +80,19 @@ Chromium motion evidence uses two deterministic category systems on successive t
 
 ## Edge / line contract
 
-Visible graph lines are **semantic navigation aids, not astrophysical structures or orbital trails**.
+Visible graph lines, when used by other renderers/styles, are **semantic navigation aids, not astrophysical structures or orbital trails**.
 
-For `Galaxy` specifically:
+For `Galaxy` specifically, PR #334 supersedes the earlier membership-only presentation:
 
-- persistent lines are limited to **category → repository `membership`** edges. These carry information that spatial proximity alone cannot always recover from an oblique 3D view: the exact category membership of a repository;
-- owner → category `ownership` lines are not persistent. In a single-owner Project Map every displayed owned category already shares the same owner, so those long radial spokes repeat known information while cutting across the spiral morphology;
-- owner → Contributed `contribution` lines are not persistent. Contributed identity is already carried by the external lane, status color/filter and details UI, while a permanent cross-galaxy chord can be misread as a physical trajectory;
-- other relation edges are not persistent in Galaxy by default. A relation may be surfaced contextually when selected/focused without becoming an always-on astrophysical-looking structure;
-- the retained membership lines keep the reduced Galaxy opacity, well below the other Three.js styles, and their endpoints continue to follow moving category/repository meshes;
+- **no persistent node-to-node graph lines are drawn**. Galaxy does not create a persistent `THREE.LineSegments` edge object for membership, ownership, contribution or other graph relations;
+- canonical graph relations are unchanged. Category → repository membership, owner/category ownership, owner/Contributed contribution and other admitted relations remain available to Search, Local Graph, Category Navigator, focus, filters and selection/details semantics;
+- exact category membership is communicated primarily by spatial grouping around category systems plus the existing category/navigation/detail surfaces. Direct rendered comparison found this cleaner than retaining faint straight membership chords in the oblique spiral scene;
+- Contributed authority remains carried by external-lane placement, status/filter presentation and details rather than a cross-galaxy chord;
+- Motion On therefore has no Galaxy-specific edge endpoint synchronization to maintain; moving semantic meshes, labels and selected targets remain synchronized normally;
+- `ProjectMapThreejsGalaxyMotion.snapshot()` reports `edgePolicy: "no-persistent-lines"`, and browser evidence requires `persistentEdgeObjects: 0` with Motion On and Motion Off;
 - Cosmic / Aurora / Wireframe keep their existing edge policy.
 
-This policy deliberately uses fewer lines than the generic graph renderer: keep only the relation whose exact topology is otherwise genuinely ambiguous.
+If a future concrete navigation problem requires relation visualization, prefer a bounded **selected/focused contextual overlay** and qualify it separately. Do not restore always-on Galaxy chords merely because the semantic graph contains those relations.
 
 ## Arm geometry / count contract
 
@@ -106,7 +110,8 @@ Within each arm, radial growth follows the same **22° logarithmic pitch** for t
 - physically scaled galactic time;
 - claiming category-local repository motion obeys stellar or planetary gravity;
 - claiming repository metadata maps to astrophysical observables;
-- claiming graph lines are gravitational, magnetic-field, gas-flow or orbital structures;
+- claiming graph relations or any future contextual relation overlay are gravitational, magnetic-field, gas-flow or orbital structures;
+- claiming the central decorative concentration is a physical mass model or a literal black-hole/bulge representation;
 - claiming the bounded flat-curve-inspired visual rule is an exact Milky-Way rotation curve at all radii;
 - claiming 22° is the exact pitch angle of the Milky Way or of spiral galaxies in general;
 - claiming the style is a literal Milky Way reconstruction;
