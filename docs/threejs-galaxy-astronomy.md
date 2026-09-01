@@ -14,6 +14,8 @@ The visual/motion model follows these broad spiral-galaxy properties:
 - observed spiral-galaxy rotation curves are much flatter than a luminous-matter-only Kepler-like falloff. The renderer therefore keeps visual tangential speed broadly comparable across most of the semantic disc. With `v ≈ constant`, `T = 2πr / v`, so the visual galactocentric period grows approximately in proportion to radius and outer systems have lower angular speed. This is a **bounded generic optical-disc approximation**, not an assertion that a Milky-Way rotation curve stays exactly flat indefinitely; Gaia DR3 analyses can show a decline beyond the optical disc;
 - spiral arms are treated as density/presentation patterns rather than rigid material arms, so the dust/arm pattern has a separate slower pattern speed while semantic systems can move through it;
 - the adopted arm chirality is **trailing** relative to the co-rotation direction. Most spiral galaxies are observed with trailing arms, although rare leading-arm systems exist;
+- the adopted Galaxy arm geometry is a **logarithmic spiral** with a constant visual pitch angle of **22°**. Logarithmic spirals are a standard approximation for observed galactic arms and pitch angle is the usual measure of how tightly they wind. The 22° value is intentionally a readable generic-spiral choice, not a claim that the Milky Way has that pitch; published Milky Way global estimates are commonly tighter, around the low-teens, while observed spiral galaxies span substantially different pitch angles;
+- category-system initial positions and the spiral-dust density pattern use the same pitch convention, so the semantic arm skeleton and the visible arm morphology start coherent before differential rotation shears the semantic systems through the slower pattern;
 - the disc has finite vertical thickness. IPM still exaggerates it for readability, but the Galaxy-specific layout is kept substantially flatter than the generic 3D layout;
 - the style uses a 2–4 arm visual grammar rather than a one-arm minimum. This is still a semantic visualization, not a literal Milky Way reconstruction, but it better matches the common multi-arm morphology of disk galaxies and current Gaia-informed Milky Way depictions.
 
@@ -23,11 +25,14 @@ Reference background:
 - NASA, *Barred Spiral Galaxy NGC 1300*: https://science.nasa.gov/asset/hubble/barred-spiral-galaxy-ngc-1300/
 - NASA, *Hubble Comes Face-to-Face with Spiral's Arms*: https://science.nasa.gov/missions/hubble/hubble-comes-face-to-face-with-spirals-arms/
 - NASA, *Spiral Galaxy NGC 4622 Spins “Backwards”*: https://science.nasa.gov/asset/hubble/spiral-galaxy-ngc-4622-spins-backwards/
+- NASA APOD, *Unwinding M51*: https://apod.nasa.gov/apod/ap200821.html
+- NASA/JPL, *Astronomers Find a ‘Break’ in One of the Milky Way’s Spiral Arms*: https://www.nasa.gov/centers-and-facilities/jpl/astronomers-find-a-break-in-one-of-the-milky-ways-spiral-arms/
 - ESA, *Guide to our galaxy*: https://www.esa.int/Science_Exploration/Space_Science/Gaia/Guide_to_our_galaxy
 - ESA/Gaia, *Milky Way*: https://www.cosmos.esa.int/web/gaia/milky-way
 - ESA/Gaia, *The rotation curve of the Milky Way based on Gaia DR3*: https://www.cosmos.esa.int/web/gaia/iow_20230927
 - ESA, *Anatomy of the Milky Way*: https://www.esa.int/ESA_Multimedia/Images/2016/09/Anatomy_of_the_Milky_Way
 - Shen & Zheng, *The Bar and Spiral Arms in the Milky Way: Structure and Kinematics*: https://arxiv.org/abs/2012.10130
+- Davis et al., *Measurement of Galactic Logarithmic Spiral Arm Pitch Angle Using Two-Dimensional Fast Fourier Transform Decomposition*: https://arxiv.org/abs/1202.4780
 
 ## Product-semantic metaphors kept intentionally
 
@@ -57,16 +62,18 @@ When `style3d=galaxy` and Motion is enabled:
 
 The model is deliberately slow. It should read as a living galaxy over seconds and minutes rather than as a fast mechanical solar-system animation.
 
-## Arm-orientation contract
+## Arm-orientation and pitch contract
 
-The semantic group layout and the dust pattern use the same handedness:
+The semantic group layout and the dust pattern use the same handedness and logarithmic pitch convention:
 
 - moving semantic systems advance toward decreasing XZ azimuth under the current `rotateXZ` convention;
 - successive outward tiers on the same arm start at increasing azimuth;
 - therefore the outer part of an arm lies behind the inner part in the direction of rotation: a **trailing spiral**;
-- the inner same-arm system has the shorter visual period and accumulates more angular motion than the outer system, preserving differential rotation instead of rigid-disc rotation.
+- before differential shear, same-arm category radii and azimuths recover the adopted ~22° logarithmic pitch through `tan(p) = ln(r₂/r₁) / Δθ`;
+- the inner same-arm system has the shorter visual period and accumulates more angular motion than the outer system, preserving differential rotation instead of rigid-disc rotation;
+- the slower spiral-dust pattern means the semantic systems are allowed to drift through the visible arm pattern rather than remaining permanently attached to it.
 
-Chromium motion evidence uses two deterministic category systems on successive tiers of the same arm to prove this relationship directly from rendered runtime positions. This is a morphology contract, not a claim that every observed spiral galaxy must trail; unusual leading-arm galaxies are known.
+Chromium motion evidence uses two deterministic category systems on successive tiers of the same arm to prove the initial logarithmic pitch, trailing handedness, co-rotation and differential angular speed directly from runtime positions. This is a morphology contract, not a claim that every observed spiral galaxy must trail or share one pitch angle; unusual leading-arm galaxies and strong arm substructure are known.
 
 ## Edge / line contract
 
@@ -83,7 +90,7 @@ For `Galaxy` specifically:
 
 This policy deliberately uses fewer lines than the generic graph renderer: keep only the relation whose exact topology is otherwise genuinely ambiguous.
 
-## Arm-count contract
+## Arm geometry / count contract
 
 The Galaxy semantic layout and its spiral dust use the same bounded arm family:
 
@@ -91,7 +98,7 @@ The Galaxy semantic layout and its spiral dust use the same bounded arm family:
 - 3 arms for 5–8 categories;
 - 4 arms above 8 categories.
 
-The dust field uses a more open winding than the generic Cosmic field. This is a visual morphology choice, not a fit to an exact observed pitch angle. Other Three.js styles keep their existing generic four-arm dust treatment.
+Within each arm, radial growth follows the same **22° logarithmic pitch** for the category skeleton and dust field. Small deterministic angular jitter prevents a sterile mathematical diagram while preserving the pitch envelope. Other Three.js styles keep their existing generic four-arm dust treatment.
 
 ## Non-goals
 
@@ -101,6 +108,7 @@ The dust field uses a more open winding than the generic Cosmic field. This is a
 - claiming repository metadata maps to astrophysical observables;
 - claiming graph lines are gravitational, magnetic-field, gas-flow or orbital structures;
 - claiming the bounded flat-curve-inspired visual rule is an exact Milky-Way rotation curve at all radii;
+- claiming 22° is the exact pitch angle of the Milky Way or of spiral galaxies in general;
 - claiming the style is a literal Milky Way reconstruction;
 - sacrificing category/ownership readability for strict galactic scale ratios;
 - adding large autonomous camera motion.
