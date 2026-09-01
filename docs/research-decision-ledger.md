@@ -85,6 +85,20 @@ PR #320 replaced the first static-node Galaxy assumption with slow meaningful mo
 
 Alternative PR #321 used a more explicitly Kepler-like category-local interpretation and was closed unmerged. Do not revive it by default: category-local repo orbit is a semantic 2D-like metaphor, not an astrophysical sub-system claim.
 
+### 2D Hybrid-aligned local repository ellipse motion — ADOPTED
+
+PR #335 refines only the **repository-local** category orbit while preserving the adopted galactocentric astronomy-inspired motion:
+
+- local repository paths use ellipse axis ratio **0.68**, matching the 2D Galaxy Hybrid motion grammar;
+- local periods use **`480 + lane×240 s`** and the same deterministic per-category `:hybrid-direction` sign used by 2D Hybrid;
+- Three.js deliberately keeps its existing compact local ring/packing as the renderer-local lane analogue instead of importing 2D's absolute `54 + lane×50` radii/capacity into the 3D scene;
+- each current 3D repository offset is analytically mapped onto its ellipse at phase zero, preventing a style-start position jump or unrelated re-layout;
+- small vertical breathing remains a 3D readability cue;
+- `ProjectMapThreejsGalaxyMotion.snapshot()` exposes `localOrbitModel: "2d-galaxy-hybrid-ellipse"`, `localOrbitAxisRatio: 0.68`, and `localOrbitPeriodModel: "480+lane*240"`;
+- Chromium motion evidence covers the ellipse contract while preserving category differential rotation, corotation, external Contributed motion, no-persistent-lines and Motion Off freeze.
+
+This commonizes the **interaction/motion grammar**, not the absolute 2D geometry and not any physical gravity model.
+
 ### Differential rotation / trailing arms — ADOPTED
 
 PR #324 records and tests the current handedness: semantic systems co-rotate, inner same-arm systems accumulate more angular motion than outer systems, and the arms trail the direction of rotation.
@@ -163,7 +177,7 @@ A relation may be reconsidered later as a **bounded selected/focused contextual 
 
 **astronomy-inspired:** flattened disc, subtle central stellar concentration, co-rotation, bounded flat-curve-inspired outer slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop, and a classical visual corotation crossing;
 
-**semantic metaphors:** owner=nucleus, category=local system, repos orbit categories, Contributed=external lanes, metadata controls size/color, and graph relations retained in the semantic model even when Galaxy does not draw persistent straight lines.
+**semantic metaphors:** owner=nucleus, category=local system, repos orbit categories on 2D-Hybrid-aligned local ellipses, Contributed=external lanes, metadata controls size/color, and graph relations retained in the semantic model even when Galaxy does not draw persistent straight lines.
 
 Non-goals include N-body simulation, physical galactic timescale, exact Milky Way bar/warp/rotation curve, universal rigid density-wave claims, literal stellar dynamics or astrophysical interpretation of repository metadata.
 

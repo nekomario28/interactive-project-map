@@ -6,7 +6,7 @@ This is the canonical list of work that is still worth doing. `docs/research-dec
 
 ## Current production/release state
 
-- Interactive Pages runtime baseline at this reconcile cut: **`80f87d333c44b6d6c4c12a433f3b7e88241a4821`** (PR #334, no persistent Galaxy graph lines, on top of PR #332's qualified subtle central stellar bulge and the previously adopted logarithmic/moving/corotation model).
+- Interactive Pages runtime baseline at this reconcile cut: **`dd1e1d60e21ad998416199ac069198b736b72248`** (PR #335, 2D-Galaxy-Hybrid-aligned local repository ellipse motion, on top of PR #334's no-persistent-lines policy and PR #332's qualified subtle central stellar bulge).
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - Pages `main`, reusable `v1`, the outer reusable workflow and the reviewed immutable inner Action pin are independent authority/release layers.
 - The published GitHub-only setup path remains the production source of truth. The Cloudflare/GitHub App one-click installer remains dormant / not production exposed.
@@ -36,7 +36,7 @@ Current adopted contract:
 - 22° is a readable generic spiral choice, not a claimed Milky Way value;
 - category systems co-rotate around the nucleus;
 - galactocentric visual period grows approximately with radius (`T ∝ r`, bounded), giving lower outer angular speed and a flat-rotation-curve-inspired differential rotation;
-- repositories follow deliberately slow local category orbits on approximately the same several-minute scale as 2D Galaxy Hybrid, continuing the 2D interaction metaphor rather than claiming stellar/Keplerian category gravity;
+- repositories follow deliberately slow **elliptical local category orbits** using the 2D Galaxy Hybrid motion grammar: axis ratio **0.68**, period family **`480 + lane×240 s`**, and the same deterministic per-category `:hybrid-direction` sign. Three.js keeps its compact existing local packing as the renderer-local lane analogue and analytically maps the current position onto the ellipse at phase zero, so this refinement does not cause a style-start re-layout jump. This remains a semantic interaction metaphor rather than stellar/Keplerian category gravity;
 - Contributed repositories remain semantically external on outer lanes and co-rotate without gaining owned category membership;
 - spiral dust is a separate presentation pattern rather than a material arm. Its adopted period is **2400 s**, matching the established 2D Galaxy Hybrid global-turn timescale;
 - with the visual material rule `T ≈ 16r`, the current classical density-wave-inspired presentation has a **visual corotation radius `r = 150` renderer units**: inner semantic material overtakes the slower arm pattern, while outside that radius the rigid visual pattern is faster than the material;
@@ -48,7 +48,7 @@ Current adopted contract:
 - Motion Off freezes semantic node orbits; the existing reduced-motion-derived default remains respected;
 - Cosmic / Aurora / Wireframe retain their existing non-Galaxy layout/motion/edge policy.
 
-The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, Motion Off freeze, inertial starfield behavior, `edgePolicy: "no-persistent-lines"` with `persistentEdgeObjects: 0`, separate arm-pattern motion, the current visual corotation boundary, and the qualified central bulge. Before/after rendered evidence shows that removing the remaining membership chords reduces trajectory-like clutter while preserving owner, category grouping and Contributed readability.
+The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, the 0.68 local ellipse model and 2D-Hybrid-aligned local period/direction grammar, Motion Off freeze, inertial starfield behavior, `edgePolicy: "no-persistent-lines"` with `persistentEdgeObjects: 0`, separate arm-pattern motion, the current visual corotation boundary, and the qualified central bulge. Before/after rendered evidence shows that removing the remaining membership chords reduces trajectory-like clutter while preserving owner, category grouping and Contributed readability.
 
 For the detailed astronomy/non-astronomy boundary, use `docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` rather than inferring physics from presentation code.
 
