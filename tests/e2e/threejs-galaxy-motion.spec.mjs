@@ -84,6 +84,14 @@ function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
+function azimuth(point) {
+  return Math.atan2(point.z, point.x);
+}
+
+function signedAngularDelta(from, to) {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+}
+
 test("Galaxy uses co-rotating radius-dependent motion and keeps external work on the slower outer orbit", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js orbital motion is exercised once in Chromium.");
   await installGraph(page);
@@ -108,6 +116,18 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(before.external[0].radius).toBeGreaterThan(outer.radius);
   expect(before.external[0].period).toBeGreaterThan(outer.period);
 
+  // With five equal-size groups the deterministic ordering places alpha and epsilon
+  // on successive radial tiers of the same arm. The outer tier is at a larger
+  // azimuth while co-rotation proceeds toward decreasing azimuth, so the arm trails.
+  const sameArmInner = before.systems.find((system) => system.id === "group:alpha");
+  const sameArmOuter = before.systems.find((system) => system.id === "group:epsilon");
+  expect(sameArmInner).toBeTruthy();
+  expect(sameArmOuter).toBeTruthy();
+  expect(sameArmOuter.radius).toBeGreaterThan(sameArmInner.radius);
+  const trailingOffsetBefore = signedAngularDelta(azimuth(sameArmInner), azimuth(sameArmOuter));
+  expect(trailingOffsetBefore).toBeGreaterThan(0.45);
+  expect(trailingOffsetBefore).toBeLessThan(0.8);
+
   await page.waitForTimeout(1_250);
   const after = await galaxySnapshot(page);
   const innerAfter = after.systems.find((system) => system.id === inner.id);
@@ -118,6 +138,15 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(distance(inner, innerAfter)).toBeGreaterThan(0.08);
   expect(distance(repoBefore, repoAfter)).toBeGreaterThan(0.08);
   expect(distance(before.external[0], externalAfter)).toBeGreaterThan(0.08);
+
+  const sameArmInnerAfter = after.systems.find((system) => system.id === sameArmInner.id);
+  const sameArmOuterAfter = after.systems.find((system) => system.id === sameArmOuter.id);
+  const innerAngularStep = signedAngularDelta(azimuth(sameArmInner), azimuth(sameArmInnerAfter));
+  const outerAngularStep = signedAngularDelta(azimuth(sameArmOuter), azimuth(sameArmOuterAfter));
+  expect(innerAngularStep).toBeLessThan(-0.001);
+  expect(outerAngularStep).toBeLessThan(-0.001);
+  expect(Math.abs(innerAngularStep)).toBeGreaterThan(Math.abs(outerAngularStep));
+  expect(signedAngularDelta(azimuth(sameArmInnerAfter), azimuth(sameArmOuterAfter))).toBeGreaterThan(0.45);
 });
 
 test("Galaxy Motion Off freezes category, repository, and Contributed orbital positions", async ({ page, browserName }) => {
