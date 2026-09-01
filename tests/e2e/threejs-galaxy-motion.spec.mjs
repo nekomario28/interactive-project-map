@@ -97,7 +97,7 @@ function logarithmicPitchAngleDeg(inner, outer) {
   return Math.atan(Math.log(outer.radius / inner.radius) / angularSeparation) * 180 / Math.PI;
 }
 
-test("Galaxy uses co-rotating radius-dependent motion and keeps external work on the slower outer orbit", async ({ page, browserName }) => {
+test("Galaxy uses co-rotating radius-dependent motion, a bounded visual corotation, and slower external work", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js orbital motion is exercised once in Chromium.");
   await installGraph(page);
   await page.goto("/three/?username=example&style3d=galaxy");
@@ -109,6 +109,9 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   expect(before.direction).toBe("co-rotating");
   expect(before.spiralModel).toBe("logarithmic");
   expect(before.pitchAngleDeg).toBe(22);
+  expect(before.patternModel).toBe("rigid-density-wave-inspired");
+  expect(before.patternPeriod).toBe(2400);
+  expect(before.corotationRadius).toBe(150);
   expect(before.edgePolicy).toBe("membership-only");
   expect(before.starfieldFrame).toBe("inertial");
   expect(before.armCount).toBe(3);
@@ -120,6 +123,10 @@ test("Galaxy uses co-rotating radius-dependent motion and keeps external work on
   const outer = systemsByRadius.at(-1);
   expect(outer.radius).toBeGreaterThan(inner.radius + 20);
   expect(outer.period).toBeGreaterThan(inner.period);
+  expect(inner.radius).toBeLessThan(before.corotationRadius);
+  expect(inner.period).toBeLessThan(before.patternPeriod);
+  expect(before.external[0].radius).toBeGreaterThan(before.corotationRadius);
+  expect(before.external[0].period).toBeGreaterThan(before.patternPeriod);
   expect(before.external[0].radius).toBeGreaterThan(outer.radius);
   expect(before.external[0].period).toBeGreaterThan(outer.period);
 
