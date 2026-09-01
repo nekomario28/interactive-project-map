@@ -1,6 +1,6 @@
 # Research decision ledger
 
-Status: **2026-09-01**
+Status: **2026-09-02**
 
 This ledger is the canonical decision layer above older research notes, experiment PRs and issue bodies. It preserves historical evidence while preventing completed, rejected or superseded experiments from silently becoming active TODOs.
 
@@ -80,7 +80,7 @@ PR #320 replaced the first static-node Galaxy assumption with slow meaningful mo
 - galactocentric visual period increases approximately with radius under a bounded flat-rotation-curve-inspired rule (`T ∝ r`), so outer angular speed is lower;
 - repositories follow deliberately slow category-local orbits as an interaction metaphor on approximately the same several-minute scale as 2D Galaxy Hybrid, **not** a stellar/planetary gravity claim;
 - Contributed repositories move on external lanes using the same visual radial-period policy while remaining outside owned membership;
-- moving labels, selection target and retained edge endpoints follow the meshes;
+- moving labels and selection/camera targets follow the meshes;
 - Motion Off freezes semantic node motion and reduced-motion remains respected.
 
 Alternative PR #321 used a more explicitly Kepler-like category-local interpretation and was closed unmerged. Do not revive it by default: category-local repo orbit is a semantic 2D-like metaphor, not an astrophysical sub-system claim.
@@ -130,25 +130,40 @@ PR #323 stops Galaxy’s far/mid/near decorative star shells from autonomously c
 
 Galaxy-specific group/repository/external vertical scatter is smaller than generic 3D. It remains exaggerated enough for interaction/readability and is not a physical scale-height claim.
 
-### Persistent Galaxy graph lines — MEMBERSHIP-ONLY ADOPTED
+### Subtle central stellar bulge — ADOPTED
 
-PR #322 first reduced Galaxy line prominence; PR #326 completed the policy:
+PR #332 adds one Galaxy-only decorative central concentration after rendered astronomy/readability review:
 
-- persistent lines are limited to faint category → repository `membership` edges;
-- owner → category ownership spokes are omitted because single-owner identity is already known and the spokes cut across spiral morphology;
-- persistent owner → Contributed contribution chords are omitted because external lane/status/details already carry the relation and a cross-disc line can look like a physical trajectory;
-- other relation edges are not globally persistent by default;
-- retained membership endpoints follow moving nodes.
+- deterministic warm stellar points plus a low-opacity glow sit behind the owner;
+- the structure is non-semantic and non-pickable;
+- it does not change owner/category/repository positions, motion, arms, corotation or graph authority;
+- Chromium evidence confirms that the owner remains readable and the central concentration strengthens the generic spiral-galaxy morphology without dominating the scene.
 
-Graph lines remain semantic navigation aids, never claimed astrophysical structures.
+This is a presentation-level stellar concentration, not a mass model, black-hole claim, physical bulge scale or authority change.
+
+### Persistent Galaxy graph lines — NO-PERSISTENT-LINES ADOPTED
+
+PR #322 first reduced Galaxy line prominence and PR #326 reduced the persistent policy to membership-only. **PR #334 supersedes that final membership-only presentation** after direct rendered comparison showed that the remaining straight category → repository chords still add trajectory-like visual clutter without enough navigation value to justify always-on drawing.
+
+Current contract:
+
+- `style3d=galaxy` creates **no persistent node-to-node graph edge draw object**;
+- membership, ownership, contribution and other relations remain intact in the canonical semantic graph; this is a renderer-specific presentation change, not schema deletion;
+- category membership remains readable through spatial grouping, category labels/navigation, Search/Local Graph, focus, selection/details and filters/status presentation;
+- Contributed remains authority-distinct on external lanes without cross-disc contribution chords;
+- Cosmic / Aurora / Wireframe keep their existing edge policy;
+- `ProjectMapThreejsGalaxyMotion.snapshot()` reports `edgePolicy: "no-persistent-lines"` and runtime evidence reports `persistentEdgeObjects: 0` with Motion On and Motion Off;
+- the now-unused Galaxy-specific per-frame membership-edge endpoint synchronization was removed rather than kept as dead runtime work.
+
+A relation may be reconsidered later as a **bounded selected/focused contextual visualization** only when a concrete navigation problem demonstrates value. This is not authority to restore persistent chords.
 
 ### Galaxy 3D scientific claim boundary — ADOPTED
 
 `docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` explicitly separate:
 
-**astronomy-inspired:** flattened disc, central concentration, co-rotation, bounded flat-curve-inspired outer slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop, and a classical visual corotation crossing;
+**astronomy-inspired:** flattened disc, subtle central stellar concentration, co-rotation, bounded flat-curve-inspired outer slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop, and a classical visual corotation crossing;
 
-**semantic metaphors:** owner=nucleus, category=local system, repos orbit categories, Contributed=external lanes, metadata controls size/color, graph membership lines.
+**semantic metaphors:** owner=nucleus, category=local system, repos orbit categories, Contributed=external lanes, metadata controls size/color, and graph relations retained in the semantic model even when Galaxy does not draw persistent straight lines.
 
 Non-goals include N-body simulation, physical galactic timescale, exact Milky Way bar/warp/rotation curve, universal rigid density-wave claims, literal stellar dynamics or astrophysical interpretation of repository metadata.
 
@@ -169,7 +184,7 @@ All three shared 2D Galaxy styles move Contributed when motion is enabled. The o
 
 ### Galaxy 3D Contributed motion — ADOPTED
 
-External Contributed lanes co-rotate slowly outside the owned semantic disc, remain status/filter-distinct and do not gain category membership. Persistent cross-galaxy contribution lines remain omitted.
+External Contributed lanes co-rotate slowly outside the owned semantic disc, remain status/filter-distinct and do not gain category membership. Persistent cross-galaxy contribution lines remain omitted as part of the broader no-persistent-lines Galaxy policy.
 
 ## 6. Camera, background, labels and interaction
 
@@ -221,7 +236,7 @@ Real-environment use has no observed Three.js heaviness. Halo suppression and In
 
 ## 10. Optional semantic overlays / further styles
 
-Activity/Freshness, repository Quality presentation and focused relation visuals remain DORMANT until a concrete comprehension/navigation use case exists. Magic/spell-array and other parked style concepts remain idea inventory, not backlog.
+Activity/Freshness, repository Quality presentation and focused relation visuals remain DORMANT until a concrete comprehension/navigation use case exists. Focused relation visuals, if ever justified, must remain contextual and must not silently reintroduce persistent Galaxy chords. Magic/spell-array and other parked style concepts remain idea inventory, not backlog.
 
 Galaxy is precedent for **purpose-driven** renderer-local style work, not permission for style-count growth.
 
@@ -231,7 +246,7 @@ Historical docs, closed PRs and issue bodies remain evidence carriers, not activ
 
 - Render Auto/High/Low or Canvas `render=` runtime;
 - static Galaxy Systems external rail;
-- persistent cross-disc Galaxy contribution/ownership spokes;
+- persistent Galaxy node-to-node graph lines, including the superseded membership-only policy;
 - Kepler-like category-local repo physics from closed PR #321;
 - treating one rigid Galaxy pattern/corotation model as a universal physical truth;
 - halo suppression / InstancedMesh batching;
