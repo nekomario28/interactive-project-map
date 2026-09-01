@@ -13,6 +13,7 @@ The visual/motion model follows these broad spiral-galaxy properties:
 - disc material is predominantly co-rotating rather than arbitrarily alternating orbital direction;
 - observed spiral-galaxy rotation curves are much flatter than a luminous-matter-only Kepler-like falloff. The renderer therefore keeps visual tangential speed broadly comparable across most of the semantic disc. With `v ≈ constant`, `T = 2πr / v`, so the visual galactocentric period grows approximately in proportion to radius and outer systems have lower angular speed;
 - spiral arms are treated as density/presentation patterns rather than rigid material arms, so the dust/arm pattern has a separate slower pattern speed while semantic systems can move through it;
+- the adopted arm chirality is **trailing** relative to the co-rotation direction. Most spiral galaxies are observed with trailing arms, although rare leading-arm systems exist;
 - the disc has finite vertical thickness. IPM still exaggerates it for readability, but the Galaxy-specific layout is kept substantially flatter than the generic 3D layout;
 - the style uses a 2–4 arm visual grammar rather than a one-arm minimum. This is still a semantic visualization, not a literal Milky Way reconstruction, but it better matches the common multi-arm morphology of disk galaxies and current Gaia-informed Milky Way depictions.
 
@@ -21,6 +22,7 @@ Reference background:
 - NASA, *Types of Galaxies*: https://science.nasa.gov/universe/galaxies/types/
 - NASA, *Barred Spiral Galaxy NGC 1300*: https://science.nasa.gov/asset/hubble/barred-spiral-galaxy-ngc-1300/
 - NASA, *Hubble Comes Face-to-Face with Spiral's Arms*: https://science.nasa.gov/missions/hubble/hubble-comes-face-to-face-with-spirals-arms/
+- NASA, *Spiral Galaxy NGC 4622 Spins “Backwards”*: https://science.nasa.gov/asset/hubble/spiral-galaxy-ngc-4622-spins-backwards/
 - ESA, *Guide to our galaxy*: https://www.esa.int/Science_Exploration/Space_Science/Gaia/Guide_to_our_galaxy
 - ESA/Gaia, *Milky Way*: https://www.cosmos.esa.int/web/gaia/milky-way
 - ESA, *Anatomy of the Milky Way*: https://www.esa.int/ESA_Multimedia/Images/2016/09/Anatomy_of_the_Milky_Way
@@ -53,6 +55,17 @@ When `style3d=galaxy` and Motion is enabled:
 9. the existing reduced-motion-derived default remains respected.
 
 The model is deliberately slow. It should read as a living galaxy over seconds and minutes rather than as a fast mechanical solar-system animation.
+
+## Arm-orientation contract
+
+The semantic group layout and the dust pattern use the same handedness:
+
+- moving semantic systems advance toward decreasing XZ azimuth under the current `rotateXZ` convention;
+- successive outward tiers on the same arm start at increasing azimuth;
+- therefore the outer part of an arm lies behind the inner part in the direction of rotation: a **trailing spiral**;
+- the inner same-arm system has the shorter visual period and accumulates more angular motion than the outer system, preserving differential rotation instead of rigid-disc rotation.
+
+Chromium motion evidence uses two deterministic category systems on successive tiers of the same arm to prove this relationship directly from rendered runtime positions. This is a morphology contract, not a claim that every observed spiral galaxy must trail; unusual leading-arm galaxies are known.
 
 ## Edge / line contract
 
