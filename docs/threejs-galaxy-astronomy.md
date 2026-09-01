@@ -47,9 +47,10 @@ When `style3d=galaxy` and Motion is enabled:
 3. repositories keep their category membership while following deliberately slow local category orbits, on the same several-minute scale as the 2D Galaxy Hybrid metaphor;
 4. Contributed repositories co-rotate on external lanes with the same radial period rule;
 5. spiral dust rotates as a separate, slower visual pattern so systems are not glued rigidly to an arm;
-6. group/repository labels, selection targets and structural edge endpoints follow the moving meshes;
-7. Motion Off freezes these semantic node orbits;
-8. the existing reduced-motion-derived default remains respected.
+6. the far/mid/near decorative star shells remain in an inertial world frame instead of counter-rotating autonomously. Camera movement can still create perspective/depth change, but the background does not compete with or contradict the semantic disc rotation;
+7. group/repository labels, selection targets and structural edge endpoints follow the moving meshes;
+8. Motion Off freezes the semantic node orbits;
+9. the existing reduced-motion-derived default remains respected.
 
 The model is deliberately slow. It should read as a living galaxy over seconds and minutes rather than as a fast mechanical solar-system animation.
 
