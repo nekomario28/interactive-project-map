@@ -1,6 +1,6 @@
 # Research decision ledger
 
-Status: **2026-08-31**
+Status: **2026-09-01**
 
 This ledger is the canonical decision layer above older research notes, experiment PRs and issue bodies. It does not delete historical evidence. It records what that evidence currently means so negative, superseded or completed research is not accidentally promoted back into active work.
 
@@ -101,25 +101,63 @@ Runtime engine assets are local/same-origin and sourced from immutable Three.js 
 
 ### 3D styles Cosmic / Galaxy / Aurora / Wireframe — ADOPTED
 
-They share graph/camera/semantic contracts while allowing renderer-local presentation and, where justified, renderer-local layout. `style3d=` remains separate from 2D `style=`.
+They share graph/camera/semantic contracts while allowing renderer-local presentation and, where justified, renderer-local layout/motion. `style3d=` remains separate from 2D `style=`.
 
-### Galaxy 3D — ADOPTED
+### Galaxy 3D base style #316 — ADOPTED
 
 PR #316 introduced `style3d=galaxy` in response to a concrete product request to translate the established 2D Galaxy design into 3D while keeping the existing 3D style family.
 
-The accepted interpretation is deliberately native to 3D:
+Accepted base interpretation:
 
 - owner at the nucleus;
-- owned categories distributed deterministically along one to three shallow spiral arms based on category count;
-- repository systems clustered locally around categories with bounded vertical thickness;
-- external Contributed repositories on outer rings, with no fake owned membership;
-- existing Cosmic starfield, nebula and spiral-dust machinery reused with a Galaxy-specific theme;
-- existing subtle environmental/ring/pulse motion retained;
-- no large autonomous category/repository position motion in the first production form, so semantic positions and edge geometry remain stable.
+- owned categories in a flattened spiral semantic layout;
+- repository systems clustered locally around categories;
+- external Contributed repositories on outer lanes with no fake owned membership;
+- Cosmic starfield / nebula / spiral-dust assets reused with a Galaxy-specific theme;
+- renderer-local style state remains `style3d=galaxy` rather than becoming a 2D Style option.
 
-PR #316 passed the full Verify gate, twelve-preset comparison, Chromium style switching/render evidence and iPhone WebKit smoke. Pages run #218 built/deployed the same main head. The uploaded Pages artifact was inspected and contains the Galaxy Style option, `THREE_D_STYLES` admission, `layoutGalaxyGraph`, Galaxy layout selection and Galaxy theme.
+### Galaxy 3D camera #319 — ADOPTED
 
-This is a precedent for **purpose-driven** new styles, not permission for style-count expansion. Galaxy qualified because it changes the spatial interpretation to preserve a proven information hierarchy in 3D.
+The Galaxy default/reset camera uses a steeper oblique pitch than generic Three.js so the flattened disc and real vertical depth read simultaneously. Camera remains user-controlled; no autonomous camera orbit is part of the Galaxy motion model.
+
+### Galaxy 3D astronomy-inspired motion #320 — ADOPTED
+
+The earlier “stable positions only” first-production assumption is **SUPERSEDED**. Motion is now an intentional product feature, derived from the living 2D Galaxy metaphor but constrained by a generic spiral-galaxy motion model.
+
+Current motion contract:
+
+- category systems co-rotate around the nucleus;
+- their bounded visual period grows with galactocentric radius under a `flat-curve-inspired` rule, so inner systems have greater angular speed than outer systems;
+- local repositories remain attached to their category and orbit on deliberately slow several-minute periods comparable to 2D Galaxy Hybrid. This is a semantic metaphor, not Keplerian gravity;
+- Contributed repositories co-rotate on external lanes and remain outside owned category membership;
+- spiral dust/arm presentation uses a separate slower pattern speed rather than rotating rigidly with semantic systems;
+- the disc is flatter than the generic 3D layout and uses a 2/3/4-arm grammar for 1–4 / 5–8 / 9+ categories;
+- Motion Off freezes semantic node orbits and the reduced-motion-derived default remains respected.
+
+`docs/threejs-galaxy-astronomy.md` is the authority boundary for what is physically inspired and what remains a product-semantic metaphor.
+
+### Galaxy structural line policy #322 — ADOPTED
+
+Graph lines are semantic navigation aids, not orbital trails or astrophysical structures.
+
+- ownership/membership lines remain very faint and dynamically follow moving endpoints;
+- persistent Galaxy line opacity is lower than the other Three.js styles;
+- persistent `contribution` lines are suppressed in Galaxy because a long owner-to-external chord cuts across the disc and can be mistaken for a physical trajectory;
+- Contributed relation evidence remains available through external placement, status/filter and details UI.
+
+### Galaxy inertial star backdrop #323 — ADOPTED
+
+Galaxy semantic systems and arm dust already carry the meaningful rotation. Far/mid/near decorative star shells therefore stay in an inertial world frame for Galaxy instead of adding a second autonomous counter-rotating field. Cosmic/Aurora/Wireframe keep their existing ambient star-shell motion.
+
+### Galaxy trailing-arm / differential-rotation evidence #324 — COMPLETED / ADOPTED CONTRACT
+
+The adopted spiral handedness is trailing under the renderer's XZ rotation convention. Chromium evidence proves that deterministic same-arm inner/outer category systems:
+
+- co-rotate in the same direction;
+- keep the outer tier behind the inner tier in the direction of rotation;
+- give the inner system a larger angular step than the outer system.
+
+The astronomy boundary also records that trailing arms are common but leading-arm galaxies exist, and that the bounded visual flat-curve approximation must not be extrapolated as an exact Milky-Way rotation curve at all radii.
 
 ### Additional visual presets — DORMANT
 
@@ -146,7 +184,9 @@ Use the reviewed warm distinct identity without adding ownership-like presentati
 
 ### Contributed in Galaxy 3D — ADOPTED
 
-Galaxy 3D keeps external repositories on outer rings beyond the owned galaxy systems. The 2D shared-Galaxy motion contract is not automatically copied to 3D: the first 3D Galaxy form prioritizes stable semantic positions while the existing scene/background motion supplies visual life.
+Galaxy 3D keeps external repositories on outer lanes beyond owned galaxy systems. When Motion is enabled they **co-rotate** with the generic radial visual-period rule. This supersedes the first-production assumption that the 3D external lane would remain static.
+
+This remains semantic animation: the external lane is not a literal stellar halo and its period must not be read as a physical extrapolation of a Milky-Way rotation curve.
 
 ### Galaxy Systems static external rail — REJECTED / SUPERSEDED
 
@@ -162,15 +202,17 @@ The static `external-rail` behavior caused a visible regression: Contributed app
 
 Wheel normalization, pointer-anchored zoom, bounded scene-aware zoom and pan containment are baseline behavior. Fit/Reset remain explicit. Do not reopen raw camera constants without a visible regression.
 
-### Cosmic / Three.js background depth — ADOPTED
+### 2D cosmic background depth — ADOPTED
 
-Deterministic layered stars and the world/camera-coherent diffuse galaxy treatment are baseline. Three.js Cosmic and Galaxy reuse the far/mid/near star layers, nebula sprites and spiral dust. Reduced-motion remains respected.
+The existing 2D background already contains deterministic far/mid/near star layers, camera-depth parallax, haze and a graph-aware galaxy envelope/dust treatment. It is not missing a star-depth runtime.
 
-### 2D back-port of Three.js star depth — DORMANT
+### Three.js Galaxy background — ADOPTED
 
-The Three.js star layers may be a useful donor for improving the 2D Galaxy background, but this is not automatic parity work and was intentionally excluded from PR #316.
+Galaxy reuses the Three.js layered starfield, nebula sprites and spiral dust, but applies Galaxy-specific motion semantics: decorative star shells are inertial while spiral dust is the slower rotating arm/pattern carrier. Large visual nebula sprites remain decorative ambience, not a physical gas-density map.
 
-**Reopen condition:** a rendered 2D comparison demonstrates better depth/readability without obscuring labels, edges, category hierarchy or selected/search emphasis.
+### “Back-port Three.js stars to 2D” as a standalone feature — REJECTED AS DUPLICATE / DORMANT VISUAL DONOR
+
+Do not create another 2D star/parallax subsystem solely to match Three.js. A specific visual detail may be borrowed only if rendered evidence shows improvement over the existing 2D depth treatment without obscuring labels, edges, hierarchy or selected/search emphasis.
 
 ### Adaptive labels — ADOPTED
 
@@ -258,6 +300,7 @@ Historical docs, closed PRs and old issue bodies remain evidence carriers. They 
 - Render Auto/High/Low;
 - Canvas `render=` experiment runtime;
 - static Galaxy Systems Contributed rail;
+- the superseded “Galaxy 3D semantic nodes must remain static” assumption;
 - halo suppression;
 - InstancedMesh batching;
 - one-click installer production exposure;
