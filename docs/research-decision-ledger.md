@@ -4,7 +4,7 @@ Status: **2026-09-01**
 
 This ledger is the canonical decision layer above older research notes, experiment PRs and issue bodies. It preserves historical evidence while preventing completed, rejected or superseded experiments from silently becoming active TODOs.
 
-Use together with `docs/current-roadmap.md`. For Three.js Galaxy morphology/motion, `docs/threejs-galaxy-astronomy.md` is the detailed scientific/semantic boundary.
+Use together with `docs/current-roadmap.md`. For Three.js Galaxy morphology/motion, use `docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` as the detailed scientific/semantic boundary.
 
 ## Decision states
 
@@ -93,7 +93,7 @@ This is a generic morphology choice; rare leading-arm galaxies exist.
 
 ### Logarithmic spiral geometry, generic 22° pitch — ADOPTED
 
-PR #327 replaces the earlier effectively Archimedean category/dust winding with a shared **logarithmic spiral** convention:
+PR #327 replaced the earlier effectively Archimedean category/dust winding with a shared **logarithmic spiral** convention:
 
 - Galaxy category-arm initialization uses `θ ∝ ln(r) / tan(p)`;
 - Galaxy spiral dust uses the same pitch convention;
@@ -103,11 +103,21 @@ PR #327 replaces the earlier effectively Archimedean category/dust winding with 
 
 22° is deliberately a readable **generic spiral** choice. It is not the claimed pitch of the Milky Way and not a universal value for spiral galaxies.
 
-### Spiral pattern vs material motion — ADOPTED WITH SCIENTIFIC BOUNDARY
+### Spiral pattern / visual corotation — ADOPTED WITH SCIENTIFIC BOUNDARY
 
-The visible spiral dust rotates as a separate, slower presentation pattern while semantic category/repository systems undergo radius-dependent motion. This prevents semantic systems from being permanently glued to a material-looking arm and is consistent with the broad idea that spiral morphology need not be rigidly attached to the same material.
+PR #329 completes the current classical density-wave-inspired presentation model without changing semantic-node orbit policy:
 
-Do **not** elevate this to a claim that one long-lived constant-pattern-speed density-wave theory is uniquely correct. Spiral-arm formation/evolution remains an active area with transient/recurrent and more nearly co-rotating alternatives. A future corotation-specific model therefore requires stronger product/scientific evidence, not merely a desire for more physics.
+- the visible logarithmic spiral/dust pattern uses one rigid visual period of **2400 s**, intentionally matching the established 2D Galaxy Hybrid global-turn period;
+- the semantic galactocentric material rule remains the bounded flat-curve-inspired `T ≈ 16r` policy;
+- these cross at a visual **corotation radius `r = 150` renderer units**;
+- inside `r = 150`, semantic disc material has a shorter period and overtakes the arm pattern;
+- outside `r = 150`, the rigid presentation pattern overtakes slower material;
+- runtime evidence reports `patternModel: "rigid-density-wave-inspired"`, `patternPeriod: 2400`, and `corotationRadius: 150`;
+- Chromium evidence checks both sides of this visual period boundary using an inner owned system and an outer external lane.
+
+This is **not** a claim that one long-lived constant-pattern-speed density-wave theory is uniquely correct. Real spiral structure can be transient/recurrent, support multiple pattern speeds, or approximately co-rotate with material. The 2400 s and 150 values are renderer presentation units, not Myr/kpc and not a Milky Way measurement.
+
+`docs/threejs-galaxy-corotation.md` is the explicit claim boundary for this extension.
 
 ### Inertial decorative star backdrop — ADOPTED
 
@@ -131,13 +141,15 @@ Graph lines remain semantic navigation aids, never claimed astrophysical structu
 
 ### Galaxy 3D scientific claim boundary — ADOPTED
 
-`docs/threejs-galaxy-astronomy.md` explicitly separates:
+`docs/threejs-galaxy-astronomy.md` plus `docs/threejs-galaxy-corotation.md` explicitly separate:
 
-**astronomy-inspired:** flattened disc, central concentration, co-rotation, outer angular slowdown, trailing logarithmic arms, finite thickness, independent arm-pattern presentation, inertial backdrop;
+**astronomy-inspired:** flattened disc, central concentration, co-rotation, outer angular slowdown, trailing logarithmic arms, finite thickness, independent visual arm pattern, visual corotation and inertial backdrop;
 
 **semantic metaphors:** owner=nucleus, category=local system, repos orbit categories, Contributed=external lanes, metadata controls size/color, graph membership lines.
 
-Non-goals include N-body simulation, physical galactic timescale, exact Milky Way bar/warp/rotation curve, literal stellar dynamics or astrophysical interpretation of repository metadata.
+Non-goals include N-body simulation, physical galactic timescale/distance, exact Milky Way bar/warp/rotation curve, literal stellar dynamics or astrophysical interpretation of repository metadata.
+
+**Further-physics gate:** do not add bar/warp/epicycles/N-body or additional resonance machinery merely because it exists in astrophysics. A new physical mechanism must improve both scientific plausibility and Project Map comprehension without weakening the semantic authority boundary.
 
 ## 5. Contributed research line
 
@@ -156,7 +168,7 @@ All three shared 2D Galaxy styles move Contributed when motion is enabled. The o
 
 ### Galaxy 3D Contributed motion — ADOPTED
 
-External Contributed lanes co-rotate slowly outside the owned semantic disc, remain status/filter-distinct and do not gain category membership. Persistent cross-galaxy contribution lines remain omitted.
+External Contributed lanes co-rotate slowly outside the owned semantic disc, remain status/filter-distinct and do not gain category membership. Persistent cross-galaxy contribution lines remain omitted. Their possible position outside visual corotation is a consequence of semantic placement and must not be read as a physical halo claim.
 
 ## 6. Camera, background, labels and interaction
 
