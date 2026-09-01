@@ -2,11 +2,11 @@
 
 Status snapshot: **2026-09-01**
 
-This is the canonical list of work that is still worth doing. `docs/research-decision-ledger.md` records adopted / completed / rejected / dormant decisions; `docs/threejs-galaxy-astronomy.md` is the detailed physical/semantic boundary for the native Three.js Galaxy style.
+This is the canonical list of work that is still worth doing. `docs/research-decision-ledger.md` records adopted / completed / rejected / dormant decisions; `docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` record the detailed physical/semantic boundary for the native Three.js Galaxy style.
 
 ## Current production/release state
 
-- Interactive Pages runtime baseline at this reconcile cut: **`67f8c67a567a742a6aba05c358671a33517d5e5a`** (PR #327, logarithmic Three.js Galaxy morphology).
+- Interactive Pages runtime baseline at this reconcile cut: **`9d529d1d1524bfc52f4da76f3c4514d77f08cff3`** (PR #329, visual Galaxy corotation).
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - Pages `main`, reusable `v1`, the outer reusable workflow and the reviewed immutable inner Action pin are independent authority/release layers.
 - The published GitHub-only setup path remains the production source of truth. The Cloudflare/GitHub App one-click installer remains dormant / not production exposed.
@@ -38,16 +38,18 @@ Current adopted contract:
 - galactocentric visual period grows approximately with radius (`T ∝ r`, bounded), giving lower outer angular speed and a flat-rotation-curve-inspired differential rotation;
 - repositories follow deliberately slow local category orbits, continuing the 2D Galaxy Hybrid interaction metaphor rather than claiming stellar/Keplerian category gravity;
 - Contributed repositories remain semantically external on outer lanes and co-rotate without gaining owned category membership;
-- spiral dust has a separate slower pattern speed, so semantic systems are not glued rigidly to the arms;
+- spiral dust is an independent **rigid-density-wave-inspired presentation pattern** with a 2400 s period, matching the established 2D Galaxy Hybrid global-turn timescale;
+- under the current visual material rule `T ≈ 16r`, the model exposes a visual corotation radius `r = 150`: semantic material inside it overtakes the arm pattern, while the pattern overtakes slower material outside it;
+- that corotation is a renderer-unit visualization contract, not a kpc/Myr conversion and not a claim that one fixed-pattern-speed spiral theory is universally correct;
 - far/mid/near decorative star shells stay in an inertial world frame in Galaxy instead of counter-rotating against the semantic disc;
 - persistent Galaxy graph lines are restricted to faint **category → repository membership** edges. Ownership, contribution and other relation spokes are not always-on astrophysical-looking structures;
 - moving labels, selection targets, selected camera target and retained edge endpoints follow moving meshes;
 - Motion Off freezes semantic node orbits; the existing reduced-motion-derived default remains respected;
 - Cosmic / Aurora / Wireframe retain their existing non-Galaxy layout/motion policy.
 
-The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, and Motion Off freeze.
+The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, the visual corotation contract, and Motion Off freeze.
 
-For the detailed astronomy/non-astronomy boundary, use `docs/threejs-galaxy-astronomy.md` rather than inferring physics from presentation code.
+For the detailed astronomy/non-astronomy boundary, use `docs/threejs-galaxy-astronomy.md` plus `docs/threejs-galaxy-corotation.md` rather than inferring physics from presentation code.
 
 ### Renderer-neutral semantics — completed baseline
 
@@ -120,7 +122,8 @@ Priorities remain evidence-driven:
 
 - N-body or physically scaled galactic simulation;
 - claiming Galaxy is a literal Milky Way reconstruction;
-- forcing a single universal spiral-arm theory or exact Milky Way pitch/rotation curve;
+- presenting the adopted rigid-pattern/corotation model as the one universal theory of spiral arms;
+- epicycle/bar/warp additions merely to make the map look more physical without a readability benefit;
 - fast/chaotic repository motion or autonomous camera motion;
 - persistent ownership/contribution spokes through the Galaxy disc;
 - Three.js InstancedMesh / halo optimization based only on software CI FPS;
@@ -134,6 +137,6 @@ Priorities remain evidence-driven:
 
 For future changes:
 
-`refresh latest main -> read roadmap + research decision ledger + astronomy boundary when Galaxy is involved -> identify one concrete gap -> smallest authority-preserving delta -> focused tests -> rendered Chromium/WebKit evidence -> Pages proof for deployment changes -> release proof only if release pins move`
+`refresh latest main -> read roadmap + research decision ledger + astronomy/corotation boundary when Galaxy is involved -> identify one concrete gap -> smallest authority-preserving delta -> focused tests -> rendered Chromium/WebKit evidence -> Pages proof for deployment changes -> release proof only if release pins move`
 
 Source/build success alone does not prove visible behavior. Astronomy plausibility alone does not justify harming semantic readability, and a semantic metaphor must not be presented as literal astrophysics.
