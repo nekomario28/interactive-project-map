@@ -29,7 +29,7 @@ test("Galaxy center stays sparse while low-frequency haze softly follows the ado
   assert.match(patched, /visualRadius=radius\*312/);
   assert.match(patched, /spiral=pitch>0\?Math\.log\(Math\.max\(1,visualRadius\/42\)\)\/Math\.tan\(pitch\):0/);
   assert.match(patched, /armWave=\.5\+\.5\*Math\.cos\(\(angle-spiral\)\*armCount\)/);
-  assert.match(patched, /armMod=\.9\+\.16\*armWave\*armWave/);
+  assert.match(patched, /armMod=\.79\+\.56\*armWave\*armWave/);
   assert.match(patched, /\(\.38\+\.62\*cloud\)\*armMod/);
   assert.match(patched, /new THREE\.CanvasTexture\(canvas\)/);
   assert.match(patched, /new THREE\.CircleGeometry\(312,96\)/);
