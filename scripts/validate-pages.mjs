@@ -65,7 +65,7 @@ async function generateWorkflowFixture() {
   new vm.Script(appJs, { filename: "site/app.js" }).runInContext(context);
   const workflow = vm.runInContext("workflowFor({username:'nekomario28',theme:'dark',style:'galaxy-hybrid',maxRepos:100,forks:true,archived:false,contributed:false})", context);
   if (typeof workflow !== "string" || !workflow.includes("jobs:") || !workflow.includes("uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@v1")) throw new Error("Generated installer workflow must call the stable v1 reusable generator channel");
-  if (!workflow.includes(`# Stable generator baseline: nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`)) throw new Error("Generated installer workflow must expose the reviewed immutable generator baseline");
+  if (!workflow.includes(`# Reviewed immutable inner Action baseline: nekomario28/interactive-project-map@${PUBLIC_ACTION_REF}`)) throw new Error("Generated installer workflow must expose the reviewed immutable generator baseline");
   if (workflow.includes("actions/upload-artifact@")) throw new Error("Generated caller must not duplicate reusable generator artifact-upload steps");
   if (!workflow.includes("contents: write") || !workflow.includes("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c")) throw new Error("Generated caller must keep the fixed write-capable publisher local and pinned");
   if (!workflow.includes("style: galaxy-hybrid")) throw new Error("Generated installer workflow must preserve Galaxy Hybrid style");
