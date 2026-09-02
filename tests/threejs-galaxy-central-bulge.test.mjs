@@ -13,15 +13,15 @@ scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe
 }
 `;
 
-test("Galaxy central-bulge patch keeps a subtle non-semantic glow while clearing noisy stars from the owner nucleus", () => {
+test("Galaxy central-bulge patch makes the nucleus glow-dominant instead of particle-dense", () => {
   const patched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
   assert.match(patched, /function createGalaxyCentralBulge\(THREE,seed,glowTexture\)/);
-  assert.match(patched, /count=innerWidth<720\?96:192,clearRadius=10,outerRadius=44/);
-  assert.match(patched, /radius=clearRadius\+\(outerRadius-clearRadius\)\*Math\.pow\(hashUnit\(seed\+":bulge:radius:"\+index\),1\.35\)/);
+  assert.match(patched, /count=innerWidth<720\?48:96,clearRadius=14,outerRadius=44/);
+  assert.match(patched, /radius=clearRadius\+\(outerRadius-clearRadius\)\*Math\.pow\(hashUnit\(seed\+":bulge:radius:"\+index\),1\.2\)/);
   assert.match(patched, /positions\[index\*3\]=Math\.cos\(theta\)\*radius/);
-  assert.match(patched, /vertical\*radius\*\.46/);
-  assert.match(patched, /size:innerWidth<720\?1:1\.22/);
-  assert.match(patched, /opacity:\.14/);
+  assert.match(patched, /vertical\*radius\*\.42/);
+  assert.match(patched, /size:innerWidth<720\?\.9:1\.08/);
+  assert.match(patched, /opacity:\.1/);
   assert.match(patched, /color:0xffd8aa/);
   assert.match(patched, /color:0xffcf91/);
   assert.match(patched, /opacity:\.12/);
