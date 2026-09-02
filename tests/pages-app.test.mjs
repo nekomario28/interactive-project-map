@@ -50,7 +50,8 @@ test("public Pages build emits twelve map presets and explicit default-off Contr
     assert.match(appJs, /STYLE_VALUES=new Set\(\['radial','galaxy-classic','galaxy-systems','galaxy-hybrid','obsidian','tree','treemap','timeline','cluster','sunburst','matrix','sankey'\]\)/);
     assert.match(appJs, /if\(value==='galaxy'\)return'galaxy-systems'/);
     assert.match(appJs, /contributedInput=document\.getElementById\('contributed'\)/);
-    assert.match(appJs, /'      contributed: '\+v\.contributed/);
+    assert.match(appJs, /includeContributed=v\.contributed===true/);
+    assert.match(appJs, /'      contributed: '\+includeContributed/);
     assert.match(appJs, /share\.searchParams\.set\('contributed',String\(v\.contributed\)\)/);
     assert.match(appJs, /contributedInput\.checked=initial\.get\('contributed'\)==='true'/);
     assert.doesNotMatch(appJs, /__PROJECT_MAP_ACTION_REF__/);
