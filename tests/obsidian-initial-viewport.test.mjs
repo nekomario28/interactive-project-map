@@ -6,17 +6,18 @@ import { tmpdir } from "node:os";
 import { buildPublicPages } from "../scripts/build-public-pages.mjs";
 import { postprocessPublicPages } from "../scripts/postprocess-public-pages.mjs";
 
-const postprocessPath = new URL("../scripts/postprocess-public-pages.mjs", import.meta.url);
+const viewerSourcePath = new URL("../scripts/public-viewer.js", import.meta.url);
 
 test("Obsidian initial viewport stays neutral while explicit Fit and Galaxy auto-fit remain available", async () => {
-  const source = await readFile(postprocessPath, "utf8");
-  assert.match(source, /const VIEWER_AUTO_FIT_OLD = "  if \(fit\) fitView\(\);";/);
+  const source = await readFile(viewerSourcePath, "utf8");
   assert.match(source, /if \(fit && state\.style === "obsidian"\)/);
   assert.match(source, /state\.zoom = 1;/);
   assert.match(source, /state\.pan\.x = 0;/);
   assert.match(source, /state\.pan\.y = 0;/);
   assert.match(source, /state\.fitted = true;/);
   assert.match(source, /else if \(fit\) \{\s*fitView\(\);/);
+  assert.match(source, /fitButton\.addEventListener\("click", fitView\)/);
+  assert.match(source, /event\.key === "0"[\s\S]*fitView\(\)/);
   assert.doesNotMatch(source, /state\.zoom = 1 \/ devicePixelRatio|state\.zoom = 1 \/ dpr/);
 
   const dir = await mkdtemp(join(tmpdir(), "project-map-obsidian-viewport-"));
