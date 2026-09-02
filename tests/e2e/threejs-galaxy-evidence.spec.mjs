@@ -98,6 +98,7 @@ test("Galaxy 3D emits rich multi-category rendered evidence", async ({ page, bro
   await expect(page.locator("#threeStyle")).toHaveValue("galaxy");
   await expect(page.locator('body[data-map-style="threejs-galaxy"]')).toHaveCount(1);
   await expect(page.locator('body[data-galaxy-central-structure="bulge"]')).toHaveCount(1);
+  await expect(page.locator('body[data-galaxy-disc-texture="procedural-haze-v1"]')).toHaveCount(1);
   await expect(page.locator("#resultCount")).toHaveText("14 / 14 projects");
   await expect(page.locator('[data-status-filter="original"]')).toHaveText("Original 12");
   await expect(page.locator('[data-status-filter="contributed"]')).toHaveText("Contributed 2");
