@@ -1,7 +1,8 @@
 "use strict";
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const STYLE_VALUES = new Set(["galaxy", "obsidian"]);
+const STYLE_VALUES = new Set(["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"]);
+function normalizeGraphStyle(value) { return value === "galaxy" ? "galaxy-systems" : STYLE_VALUES.has(value) ? value : "galaxy-systems"; }
 const TAU = Math.PI * 2;
 
 const canvas = document.getElementById("galaxy");
@@ -26,7 +27,7 @@ const status = document.getElementById("status");
 
 const query = new URL(location.href).searchParams;
 let username = "";
-let initialStyle = STYLE_VALUES.has(query.get("style")) ? query.get("style") : "galaxy";
+let initialStyle = normalizeGraphStyle(query.get("style"));
 
 const state = {
   graph: null,
@@ -195,8 +196,8 @@ function estimateLabelWidth(node) {
 }
 
 function nodeRadius(node) {
-  if (node.type === "owner") return state.style === "galaxy" ? 24 : 18;
-  if (node.type === "group") return state.style === "galaxy" ? 8 : 12;
+  if (node.type === "owner") return state.style !== "obsidian" ? 24 : 18;
+  if (node.type === "group") return state.style !== "obsidian" ? 8 : 12;
   return clamp(5.5 + Math.log2((node.stars || 0) + 1) * 1.35, 5.5, 12);
 }
 
@@ -339,7 +340,17 @@ function rebuildLayout({ fit = true } = {}) {
   subtitle.textContent = state.style === "obsidian"
     ? "Obsidian-like force graph · search, select, drag, pan and zoom"
     : "Galaxy view · label-aware orbital spacing · search, select, drag, pan and zoom";
-  if (fit) fitView();
+  if (fit && state.style === "obsidian") {
+    // Native Obsidian opens the graph around its centered spawn at a neutral
+    // camera scale instead of continuously fitting current graph bounds. Keep
+    // the explicit Fit command available, but do not hide the live bloom on open.
+    state.zoom = 1;
+    state.pan.x = 0;
+    state.pan.y = 0;
+    state.fitted = true;
+  } else if (fit) {
+    fitView();
+  }
   draw();
 }
 
@@ -375,7 +386,7 @@ function fitView() {
   }
   const width = Math.max(1, maxX - minX);
   const height = Math.max(1, maxY - minY);
-  state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.25, 2.2);
+  state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);
   state.pan.x = -((minX + maxX) / 2) * state.zoom;
   state.pan.y = -((minY + maxY) / 2) * state.zoom;
   draw();
@@ -507,7 +518,7 @@ function drawNodesAndLabels(colors) {
     ctx.font = `${candidate.node.type === "owner" ? 700 : candidate.node.type === "group" ? 600 : 500} ${candidate.fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.lineWidth = state.style === "galaxy" ? 3 : 2;
+    ctx.lineWidth = state.style !== "obsidian" ? 3 : 2;
     ctx.strokeStyle = colors.background;
     ctx.strokeText(box.text, candidate.point.x, box.top + 2);
     ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
@@ -606,7 +617,7 @@ canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
   const before = screenToWorld(event.offsetX, event.offsetY);
   const factor = Math.exp(-event.deltaY * 0.0012);
-  state.zoom = clamp(state.zoom * factor, 0.2, 4.5);
+  state.zoom = clamp(state.zoom * factor, 0.04, 4.5);
   const after = worldToScreen(before.x, before.y);
   state.pan.x += event.offsetX - after.x;
   state.pan.y += event.offsetY - after.y;
@@ -646,7 +657,7 @@ canvas.addEventListener("pointermove", (event) => {
     const midpoint = { x: (pair[0].x + pair[1].x) / 2, y: (pair[0].y + pair[1].y) / 2 };
     if (state.pinchDistance > 0 && distance > 0) {
       const before = screenToWorld(midpoint.x, midpoint.y);
-      state.zoom = clamp(state.zoom * (distance / state.pinchDistance), 0.2, 4.5);
+      state.zoom = clamp(state.zoom * (distance / state.pinchDistance), 0.04, 4.5);
       const after = worldToScreen(before.x, before.y);
       state.pan.x += midpoint.x - after.x;
       state.pan.y += midpoint.y - after.y;
@@ -711,7 +722,7 @@ canvas.addEventListener("keydown", (event) => {
     fitView();
   } else if (["+", "=", "-"].includes(event.key)) {
     event.preventDefault();
-    state.zoom = clamp(state.zoom * (event.key === "-" ? 1 / 1.16 : 1.16), 0.2, 4.5);
+    state.zoom = clamp(state.zoom * (event.key === "-" ? 1 / 1.16 : 1.16), 0.04, 4.5);
     draw();
   } else if (event.key === "Enter" && state.selected?.url) {
     event.preventDefault();
@@ -726,7 +737,7 @@ searchInput.addEventListener("input", () => {
   draw();
 });
 styleSelect.addEventListener("change", () => {
-  state.style = STYLE_VALUES.has(styleSelect.value) ? styleSelect.value : "galaxy";
+  state.style = normalizeGraphStyle(styleSelect.value);
   const url = new URL(location.href);
   url.searchParams.set("style", state.style);
   history.replaceState(null, "", url);
