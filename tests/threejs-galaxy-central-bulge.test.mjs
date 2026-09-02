@@ -25,6 +25,7 @@ test("Galaxy center stays sparse while low-frequency haze softly follows the ado
   assert.match(patched, /galaxyDiscSmooth\(\(radius-\.72\)\/\.26\)/);
   assert.match(patched, /coarse=galaxyDiscNoise\(seed,u\*4\.4,v\*4\.4\)/);
   assert.match(patched, /fine=galaxyDiscNoise\(seed\+":fine",u\*8\.2,v\*8\.2\)/);
+  assert.match(patched, /angle=Math\.atan2\(-nz,nx\)/);
   assert.match(patched, /visualRadius=radius\*312/);
   assert.match(patched, /spiral=pitch>0\?Math\.log\(Math\.max\(1,visualRadius\/42\)\)\/Math\.tan\(pitch\):0/);
   assert.match(patched, /armWave=\.5\+\.5\*Math\.cos\(\(angle-spiral\)\*armCount\)/);
