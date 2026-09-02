@@ -42,7 +42,7 @@ The safest high-value first cut is the shared-viewer hardening currently owned b
 1. style normalization for `galaxy-classic`, `galaxy-systems`, `galaxy-hybrid`, and `obsidian`;
 2. the adopted minimum zoom floor;
 3. neutral initial Obsidian viewport while preserving explicit Fit and Galaxy auto-fit;
-4. narrow-mobile toolbar/detail CSS.
+4. narrow-mobile toolbar/detail CSS — **canonical source moved to `scripts/public-viewer.css`; postprocess fallback is now expected to no-op**.
 
 These are already production behavior. They should live directly in `scripts/public-viewer.js` / `scripts/public-viewer.css` rather than requiring generated-output string replacement. Once canonical sources emit the same result, delete only the corresponding postprocess code and retain existing behavior/evidence gates.
 

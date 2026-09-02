@@ -556,3 +556,52 @@ kbd {
     display: none;
   }
 }
+
+/* Emitted-site mobile hardening: keep the viewer inside narrow viewports. */
+@media (max-width: 480px) {
+  .app,
+  .toolbar,
+  .controls,
+  .workspace,
+  footer {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app,
+  .controls {
+    width: 100%;
+  }
+
+  .field {
+    min-width: 0;
+  }
+
+  .field:first-child {
+    flex: 1 1 100%;
+  }
+
+  .field:nth-child(2) {
+    flex: 1 1 150px;
+  }
+
+  .field select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .toolbar button {
+    flex: 0 0 auto;
+  }
+
+  footer {
+    overflow: hidden;
+  }
+
+  footer > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
