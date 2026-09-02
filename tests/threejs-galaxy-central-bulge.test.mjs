@@ -17,11 +17,11 @@ function animate(){const delta=.016;if(motionEnabled){dust.rotation.y+=delta*(th
 }
 `;
 
-test("Galaxy center stays sparse while arm-aware haze stays phase-locked to the adopted pattern", () => {
+test("Galaxy arm-aware haze matches scaled dust spatial phase and stays pattern-locked", () => {
   const patched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
   assert.match(patched, /function galaxyDiscSmooth\(value\)/);
   assert.match(patched, /function galaxyDiscNoise\(seed,x,y\)/);
-  assert.match(patched, /function createGalaxyDiscHaze\(THREE,seed,armCount=4,pitch=0\)/);
+  assert.match(patched, /function createGalaxyDiscHaze\(THREE,seed,armCount=4,pitch=0,referenceRadius=42\)/);
   assert.match(patched, /size=128,canvas=document\.createElement\("canvas"\)/);
   assert.match(patched, /galaxyDiscSmooth\(\(radius-\.12\)\/\.1\)/);
   assert.match(patched, /galaxyDiscSmooth\(\(radius-\.72\)\/\.26\)/);
@@ -29,7 +29,8 @@ test("Galaxy center stays sparse while arm-aware haze stays phase-locked to the 
   assert.match(patched, /fine=galaxyDiscNoise\(seed\+":fine",u\*8\.2,v\*8\.2\)/);
   assert.match(patched, /angle=Math\.atan2\(-nz,nx\)/);
   assert.match(patched, /visualRadius=radius\*312/);
-  assert.match(patched, /spiral=pitch>0\?Math\.log\(Math\.max\(1,visualRadius\/42\)\)\/Math\.tan\(pitch\):0/);
+  assert.match(patched, /spiral=pitch>0\?Math\.log\(Math\.max\(1,visualRadius\/referenceRadius\)\)\/Math\.tan\(pitch\):0/);
+  assert.doesNotMatch(patched, /visualRadius\/42/);
   assert.match(patched, /armWave=\.5\+\.5\*Math\.cos\(\(angle-spiral\)\*armCount\)/);
   assert.match(patched, /armMod=\.79\+\.56\*armWave\*armWave/);
   assert.match(patched, /\(\.38\+\.62\*cloud\)\*armMod/);
@@ -44,7 +45,8 @@ test("Galaxy center stays sparse while arm-aware haze stays phase-locked to the 
   assert.match(patched, /textureModel="procedural-low-frequency-log-arm-haze"/);
   assert.match(patched, /mesh\.userData\.armCount=armCount/);
   assert.match(patched, /mesh\.userData\.pitchAngleDeg=pitch\*180\/Math\.PI/);
-  assert.match(patched, /createGalaxyDiscHaze\(THREE,username,galaxyArmCount\(graph\),GALAXY_LOG_PITCH\)/);
+  assert.match(patched, /mesh\.userData\.referenceRadius=referenceRadius/);
+  assert.match(patched, /createGalaxyDiscHaze\(THREE,username,galaxyArmCount\(graph\),GALAXY_LOG_PITCH,42\*dust\.scale\.x\)/);
   assert.match(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v2"/);
   assert.doesNotMatch(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v1"/);
 
@@ -54,6 +56,8 @@ test("Galaxy center stays sparse while arm-aware haze stays phase-locked to the 
   assert.match(patched, /discHazePatternFrame:galaxyDiscHaze\?"co-rotating-arm-pattern":"none"/);
   assert.match(patched, /dustPatternRotationY:dust\.rotation\.y/);
   assert.match(patched, /hazePatternRotationY:galaxyDiscHaze\?galaxyDiscHaze\.rotation\.z:null/);
+  assert.match(patched, /dustPatternReferenceRadius:42\*dust\.scale\.x/);
+  assert.match(patched, /hazePatternReferenceRadius:galaxyDiscHaze\?galaxyDiscHaze\.userData\.referenceRadius:null/);
 
   assert.match(patched, /function softenGalaxyCentralDust\(dust\)/);
   assert.match(patched, /fadeStart=30,fadeEnd=64/);
