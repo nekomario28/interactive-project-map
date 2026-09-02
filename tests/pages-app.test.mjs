@@ -10,9 +10,17 @@ import { buildPublicPages, PUBLIC_ACTION_REF } from "../scripts/build-public-pag
 const styles = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const dedicated = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
-test("Pages generator source retains distributed static installation URLs and isolated permissions", () => {
+test("Pages home render source is shell-only and delegates setup to app.js", () => {
   const html = renderPagesHome();
-  assert.match(html, /raw\.githubusercontent\.com/); assert.match(html, /HEAD\/project-map/); assert.match(html, /new URL\('u\/'/); assert.match(html, /nekomario28\/interactive-project-map@v1/); assert.match(html, /contents: read/); assert.match(html, /contents: write/); assert.match(html, /actions\/upload-artifact@/); assert.doesNotMatch(html, /api\.github\.com/);
+  assert.match(html, /<script src="\.\/app\.js" defer><\/script>/);
+  assert.match(html, /script-src 'self'/);
+  assert.match(html, /id="workflow"/);
+  assert.match(html, /id="readmeHtml"/);
+  assert.doesNotMatch(html, /function workflowFor\(/);
+  assert.doesNotMatch(html, /nekomario28\/interactive-project-map@v1/);
+  assert.doesNotMatch(html, /actions\/upload-artifact@/);
+  assert.doesNotMatch(html, /contents: write/);
+  assert.doesNotMatch(html, /api\.github\.com/);
 });
 
 test("legacy viewer render source remains static-only before public shell replacement", () => {
@@ -28,6 +36,8 @@ test("public Pages build emits twelve map presets and explicit default-off Contr
     const home = await read("index.html"); const shared = await read("u/index.html"); const appJs = await read("app.js"); const routerJs = await read("tree-router.js"); const navJs = await read("tree-nav.js"); const presetCss = await read("presets.css"); const noJekyll = await read(".nojekyll");
     assert.match(home, /Radial Tree \(Classic\)/); assert.match(home, />Galaxy Classic</); assert.match(home, />Galaxy Systems</); assert.match(home, />Galaxy Hybrid</); assert.match(home, />Matrix \/ Heatmap</); assert.match(home, />Sankey</);
     assert.match(home, /<input id="contributed" type="checkbox" \/> Include Contributed/);
+    assert.match(home, /<script src="\.\/app\.js" defer><\/script>/);
+    assert.doesNotMatch(home, /function workflowFor\(/);
     assert.doesNotMatch(home, /id="contributed"[^>]*checked/);
     for (const style of styles) assert.match(home, new RegExp(`data-style-preset="${style}"`));
     for (const style of styles) assert.match(shared, new RegExp(`value="${style}"`));
