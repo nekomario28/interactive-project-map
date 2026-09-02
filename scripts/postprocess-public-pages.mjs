@@ -1,6 +1,7 @@
 import { copyFile, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 import {
   DEFAULT_FORCE_SETTINGS,
   hashText,
@@ -9,10 +10,9 @@ import {
   stepForceLayout,
 } from "../packages/spatial-core/src/index.js";
 
-// Keep generated consumer workflows on the reviewed immutable Action release.
-// Taxonomy artifact-identity F passed Verify #1054 and exact real-profile Action proof #203.
-export const PUBLIC_ACTION_REF = "9d018370d7b22d82d8974ae1ac018de5589dd85a";
-const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
+// Compatibility export for validators/tests that consume the emitted Pages
+// release surface. The authority lives in src/action-ref.ts.
+export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;
 
 const MOBILE_FIX = `
 
@@ -259,13 +259,6 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
   await emitObsidianRuntime(outputDir);
   await emitGalaxyRuntimes(outputDir);
   await emitInteractionPolish(outputDir);
-
-  const appPath = join(outputDir, "app.js");
-  const app = await readFile(appPath, "utf8");
-  if (!app.includes(BUILDER_ACTION_REF) && !app.includes(PUBLIC_ACTION_REF)) throw new Error("Emitted app.js does not contain the expected installer Action ref");
-  const promotedApp = app.replaceAll(BUILDER_ACTION_REF, PUBLIC_ACTION_REF);
-  if (!promotedApp.includes(PUBLIC_ACTION_REF) || promotedApp.includes(BUILDER_ACTION_REF)) throw new Error("Could not promote emitted installer Action ref");
-  if (promotedApp !== app) await writeFile(appPath, promotedApp);
 }
 
 async function main() {
