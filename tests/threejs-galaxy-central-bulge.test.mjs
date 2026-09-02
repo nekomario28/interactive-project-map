@@ -13,8 +13,15 @@ scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe
 }
 `;
 
-test("Galaxy central-bulge patch makes the nucleus glow-dominant instead of particle-dense", () => {
+test("Galaxy center becomes glow-dominant while preserving spiral-dust geometry", () => {
   const patched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
+  assert.match(patched, /function softenGalaxyCentralDust\(dust\)/);
+  assert.match(patched, /fadeStart=30,fadeEnd=64/);
+  assert.match(patched, /Math\.hypot\(position\.getX\(index\),position\.getZ\(index\)\)/);
+  assert.match(patched, /\(radius-fadeStart\)\/\(fadeEnd-fadeStart\)/);
+  assert.match(patched, /color\.setXYZ\(index,color\.getX\(index\)\*fade,color\.getY\(index\)\*fade,color\.getZ\(index\)\*fade\)/);
+  assert.match(patched, /color\.needsUpdate=true/);
+  assert.match(patched, /if\(threeStyle==="galaxy"\)softenGalaxyCentralDust\(dust\)/);
   assert.match(patched, /function createGalaxyCentralBulge\(THREE,seed,glowTexture\)/);
   assert.match(patched, /count=innerWidth<720\?48:96,clearRadius=14,outerRadius=44/);
   assert.match(patched, /radius=clearRadius\+\(outerRadius-clearRadius\)\*Math\.pow\(hashUnit\(seed\+":bulge:radius:"\+index\),1\.2\)/);
