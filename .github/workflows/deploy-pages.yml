@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/deploy-pages.yml"
       - "action.yml"
+      - "packages/**"
       - "scripts/**"
       - "tests/**"
       - "package.json"
