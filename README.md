@@ -26,38 +26,18 @@
   &nbsp;·&nbsp;
   <a href="#quick-start">Quick start</a>
   &nbsp;·&nbsp;
-  <a href="#12-visual-presets">Presets</a>
+  <a href="#visual-presets">Presets</a>
+  &nbsp;·&nbsp;
+  <a href="CONTRIBUTING.md">Development</a>
   &nbsp;·&nbsp;
   <a href="docs/current-roadmap.md">Roadmap</a>
 </p>
 
 ---
 
-<table>
-<tr>
-<td width="25%" valign="top"><strong>🪐 One graph, 12 views</strong><br/><sub>Radial, three Galaxy variants, Obsidian-like, Tree, Treemap, Timeline, Cluster, Sunburst, Matrix and Sankey.</sub></td>
-<td width="25%" valign="top"><strong>📦 User-owned artifacts</strong><br/><sub>Your profile repository stores <code>project-map/galaxy.svg</code> and <code>project-map/graph.json</code>.</sub></td>
-<td width="25%" valign="top"><strong>⚡ Static-first</strong><br/><sub>README and viewer traffic read generated files instead of spending a shared GitHub REST quota.</sub></td>
-<td width="25%" valign="top"><strong>🔎 Interactive exploration</strong><br/><sub>Search, focus, local graph depth, pan/zoom/pinch, activity overlay and repository-status filters.</sub></td>
-</tr>
-</table>
-
 ## What it does
 
-Project Galaxy turns public GitHub repositories into a reusable portfolio graph. The same generated `graph.json` drives both a compact SVG for a profile README and twelve browser visualizations.
-
-The generated data keeps repository status explicit: **Original**, **Fork**, **Archived**, and opt-in **Contributed** are never silently merged into one ownership meaning. Contributed is **off by default** and represents bounded public work in repositories owned by other people or organizations; it never means that you own those repositories. See [`docs/current-roadmap.md`](docs/current-roadmap.md) and [`docs/external-contributions-research.md`](docs/external-contributions-research.md).
-
-## Quick start
-
-1. Open the **[public generator](https://nekomario28.github.io/interactive-project-map/)**.
-2. Enter your GitHub username and choose a theme, preset and repository filters. Enable **Include Contributed** only if you want bounded public work in repositories owned by others included; the default is off.
-3. If you do not yet have the special `USERNAME/USERNAME` profile repository, use the guided **Step 0** link to create it as a public repository.
-4. Use **Step 1** to copy the generated workflow and open GitHub's new-file editor at `.github/workflows/project-map.yml`.
-5. Commit the workflow, then use **Step 2** to run **Update project map** once.
-6. Add the generated SVG to your profile README and link it to the interactive viewer.
-
-The first run creates:
+Project Galaxy turns public GitHub repositories into a reusable portfolio graph. Your profile repository owns the generated artifacts:
 
 ```text
 project-map/
@@ -65,9 +45,22 @@ project-map/
 └── graph.json
 ```
 
-`galaxy.svg` remains the filename for backward compatibility regardless of the selected visual preset.
+`galaxy.svg` is the static README image. `graph.json` drives the interactive viewers. The filename `galaxy.svg` is retained for backwards compatibility even when another visual preset is selected.
 
-### Embed it in a profile README
+Repository status remains explicit: **Original**, **Fork**, **Archived**, and opt-in **Contributed** are not silently merged into one ownership meaning. Contributed is **off by default** and represents bounded public work in repositories owned by other people or organizations; it never means that you own those repositories.
+
+## Quick start
+
+1. Open the **[public generator](https://nekomario28.github.io/interactive-project-map/)**.
+2. Enter your GitHub username and choose a theme, visual preset, and repository filters.
+3. If `USERNAME/USERNAME` does not exist yet, use **Step 0** to create the public GitHub profile repository.
+4. Use **Step 1** to copy the generated workflow and open GitHub's editor for `.github/workflows/project-map.yml`.
+5. Commit the workflow, then use **Step 2** to run **Update project map** once.
+6. Add the generated SVG snippet to your profile README.
+
+No personal access token is required for the normal setup. The generated workflow uses the profile repository's GitHub token for read-only metadata generation, then a separate publish job receives the narrow write permission needed to commit the two generated files.
+
+### Embed the generated map
 
 ```html
 <p align="center">
@@ -77,15 +70,15 @@ project-map/
 </p>
 ```
 
-## 12 visual presets
+## Visual presets
 
-`radial` remains the backward-compatible default. The legacy `style=galaxy` value aliases to `galaxy-systems` and is intentionally not a thirteenth preset.
+`radial` is the backwards-compatible default. Legacy `style=galaxy` aliases to `galaxy-systems`; it is not a thirteenth preset.
 
 | Preset | Viewer route | Best for |
 |---|---|---|
 | `radial` | `/radial/` | compact profile README and general default |
 | `galaxy-classic` | `/u/` | original one-galaxy atmosphere and global motion |
-| `galaxy-systems` | `/u/` | clearest category → repository spatial membership |
+| `galaxy-systems` | `/u/` | clear category → repository spatial membership |
 | `galaxy-hybrid` | `/u/` | spiral atmosphere plus readable local systems |
 | `obsidian` | `/u/` | organic force-directed exploration |
 | `tree` | `/tree/` | explicit Owner → Category → Repository hierarchy |
@@ -96,17 +89,7 @@ project-map/
 | `matrix` | `/matrix/` | Category × Language composition |
 | `sankey` | `/sankey/` | Owner → Category → repository-status flow |
 
-All presets consume the same graph and preserve the same repository-status semantics. Archived repositories receive an additional dashed treatment where individual repository marks are drawn.
-
-### Galaxy Systems
-
-Galaxy Systems is the default showcase because it makes hierarchy readable without leaving a permanent spoke network on screen. The owner is the center; categories form local systems; repositories orbit only their category. Hover/focus reveals the explanatory path when it is useful.
-
-For static SVGs with at most 80 repositories, Galaxy Systems and Galaxy Hybrid can use script-free declarative SVG motion. Dense portfolios automatically fall back to bounded non-animated rendering.
-
-### Obsidian-like
-
-The Obsidian-like view is an independently implemented deterministic force-directed graph. It is not affiliated with or endorsed by Obsidian or Dynalist Inc.; Obsidian is a trademark of Dynalist Inc.
+All presets consume the same graph and preserve the same repository-status semantics. The Obsidian-like renderer is independently implemented and is not affiliated with or endorsed by Obsidian or Dynalist Inc.
 
 ## Architecture
 
@@ -122,9 +105,9 @@ flowchart LR
   H --> E
 ```
 
-The GitHub REST API is used when the user's Action refreshes repository metadata. Normal README views and interactive-map views consume the generated static files instead.
+The GitHub REST API is used when the user's workflow refreshes repository metadata. Normal README views and interactive-map views consume the generated static files instead of spending a shared GitHub REST quota.
 
-The generated caller workflow also isolates permissions:
+The caller workflow keeps generation and publishing permissions separate:
 
 ```text
 generate
@@ -134,25 +117,14 @@ generate
 publish
   actions: read
   contents: write
-  pinned GitHub-maintained Actions + fixed project-map paths
+  fixed project-map output paths
 ```
 
 The reusable generator never receives the caller's write-capable publish token.
 
-## Interactive view controls
+## Viewer behavior
 
-Shared Galaxy/Obsidian views support:
-
-- **Original / Fork / Archived** visibility controls
-- **Activity** freshness overlay using the already-generated `updatedAt`
-- **Focus / Local Graph** with bounded depth
-- search across repository metadata and taxonomy context
-- shareable semantic URL state
-- Motion **ON / OFF**
-
-Dedicated views use the same repository-status projection rules, including removal of now-empty category nodes after filtering.
-
-## Static graph validation
+Shared Galaxy/Obsidian views support repository-status filters, Activity freshness, bounded Focus / Local Graph depth, search, shareable semantic URL state, pan/zoom/pinch, and Motion On/Off. Dedicated views use the same repository-status projection rules.
 
 Every viewer reads:
 
@@ -160,35 +132,40 @@ Every viewer reads:
 https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/graph.json
 ```
 
-before rendering, and applies bounded validation. Among other checks:
+and applies bounded validation before rendering. Owner identity, repository URLs, labels, topics, node/edge counts, and supported edge forms are checked. Missing or invalid graphs produce setup/recovery guidance rather than silently falling back to a shared API request.
 
-- the requested username must be valid
-- graph owner must match that username
-- repository URLs must point to the expected public GitHub repository identity
-- labels, topics, node counts and edge counts are bounded
-- malformed nodes/URLs and unsupported edges are discarded
+## Setup configuration
 
-If the graph is missing or invalid, the viewer shows setup/recovery guidance instead of falling back to a shared API call.
+### Recommended reusable workflow
 
-## Action inputs
+The public generator emits a caller of:
+
+```yaml
+uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@v1
+```
+
+The normal reusable-workflow surface is intentionally small:
 
 | Input | Default | Meaning |
 |---|---:|---|
-| `github_token` | required | token used to read public GitHub metadata |
-| `username` | caller owner | GitHub user to visualize |
-| `theme` | `dark` | `dark` or `light` static SVG theme |
-| `style` | `radial` | one of the 12 visible preset IDs; legacy `galaxy` aliases to `galaxy-systems` |
+| `theme` | `dark` in generated setup | `dark` or `light` static SVG theme |
+| `style` | `radial` in generated setup | one of the 12 visible preset IDs |
 | `max_repos` | `100` | `1`–`300` eligible repositories |
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
-| `contributed` | `false` | include bounded public contributions to repositories owned by others; never changes repository ownership |
-| `width` | `740` | SVG width, `420`–`1600` |
-| `height` | `420` | SVG height, `260`–`1000` |
-| `output_dir` | `project-map` | relative output directory |
+| `contributed` | `false` | include bounded public contributions owned by others without changing ownership |
 
-Stable installs use the reusable generator channel `@v1`. Advanced users may pin a full reviewed 40-character generator commit SHA.
+The reusable workflow derives the visualized username from the caller repository owner, uses `github.token` for read-only metadata access, and writes its transfer artifact under the fixed `project-map` contract.
 
-## GitHub Pages and dormant one-click implementation
+Stable installs use outer channel `@v1`. Advanced users may replace `v1` with a reviewed full 40-character reusable-workflow commit SHA. See [`docs/release-chain.md`](docs/release-chain.md) and [`docs/update-policy.md`](docs/update-policy.md).
+
+### Direct Action — advanced
+
+`action.yml` is a lower-level interface used by the reusable workflow and by advanced callers. It additionally exposes `github_token`, `username`, `width`, `height`, and `output_dir`. Do not assume those lower-level inputs are configurable through the recommended reusable-workflow setup.
+
+See [`action.yml`](action.yml) for the exact direct-Action contract.
+
+## Production and dormant backend boundary
 
 The production setup path is GitHub-owned:
 
@@ -196,69 +173,44 @@ The production setup path is GitHub-owned:
 GitHub repository + GitHub Actions + GitHub Pages
 ```
 
-The Cloudflare Worker may still serve hosted previews/fallback, but GitHub App one-click onboarding is **DORMANT / NOT_PRODUCTION_EXPOSED**. Its small signed-state/callback implementation and security tests are retained in `main` for possible future reuse. Normal UI does not show the one-click control, and installer routes fail closed unless the separate explicit `ENABLE_ONE_CLICK_INSTALLER=true` gate and complete credentials are both present. The gate stays off unless concrete onboarding evidence or an explicit reviewed product decision justifies reactivation and the documented real-credential acceptance is then completed. Runtime secrets stay outside the public repository. See [`docs/current-roadmap.md`](docs/current-roadmap.md), [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md) and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
+The retained Cloudflare Worker can support development/legacy hosted paths, while GitHub App one-click onboarding remains **DORMANT / NOT_PRODUCTION_EXPOSED**. Normal UI does not expose the one-click control. Installer activation requires the separate explicit gate plus complete credentials and the documented reviewed reactivation/acceptance conditions. Runtime secrets stay outside the public repository.
+
+See [`docs/current-roadmap.md`](docs/current-roadmap.md), [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md), and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
 
 ## Development
+
+Node.js **24 is recommended** and matches CI; `package.json` currently supports Node.js `>=22.18.0`.
 
 ```bash
 npm ci --ignore-scripts
 npm run build:pages
+npm test
+```
+
+For the full repository gate:
+
+```bash
 npm run verify
 ```
 
-Verification includes TypeScript checking, Wrangler dry-run, Node syntax checks, HTML validation, ESLint, Stylelint, actionlint, static graph validation, permission-isolation tests, dense 300-repository regressions, and renderer-specific gates across all twelve presets.
+The current full verify path expects a Unix-like environment because Action validation uses `bash`, `curl`, `tar`, and `sha256sum` and downloads a pinned Linux x86_64 `actionlint` binary. Browser E2E is a separate rendered-behavior gate:
 
-CI also renders all twelve presets from the same graph and uploads a visual comparison artifact on relevant changes.
+```bash
+npm run test:e2e
+npm run test:e2e:webkit
+```
+
+CI runs those suites in the pinned Playwright container. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development loop, evidence expectations, and release boundaries.
 
 ## Project status
 
-The current roadmap, completed Contributed production proof, and remaining product/operations work are tracked in [`docs/current-roadmap.md`](docs/current-roadmap.md).
+[`docs/current-roadmap.md`](docs/current-roadmap.md) is the canonical active-work snapshot. [`docs/research-decision-ledger.md`](docs/research-decision-ledger.md) records adopted, completed, rejected, not-planned, and dormant decisions so historical research does not become an accidental backlog.
 
-## Contributors & credits
+## Contributors and research credits
 
-### Project contributors
+Project maintainers/contributors include [Yuu / nekomario28](https://github.com/nekomario28) and [SYUN / syun88](https://github.com/syun88). GitHub's Contributors view remains commit-authorship-driven.
 
-<table>
-<tr>
-<td align="center" width="180">
-<a href="https://github.com/nekomario28"><img src="https://github.com/nekomario28.png?size=96" width="72" alt="@nekomario28"/><br/><sub><b>Yuu / nekomario28</b></sub></a><br/><sub>Maintainer · implementation</sub>
-</td>
-<td align="center" width="180">
-<a href="https://github.com/syun88"><img src="https://github.com/syun88.png?size=96" width="72" alt="@syun88"/><br/><sub><b>SYUN / syun88</b></sub></a><br/><sub>Project contributor</sub>
-</td>
-</tr>
-</table>
-
-GitHub's automatic **Contributors** view remains commit-authorship-driven. Research credits acknowledge public work that informed design decisions; they are not presented as Git co-authors or bundled dependencies.
-
-<details>
-<summary><b>Research & upstream credits</b></summary>
-
-<br/>
-<table>
-<tr>
-<td align="center" valign="top" width="25%"><a href="https://github.com/tjqscott/obsidian-graph-spawn"><img src="https://github.com/tjqscott.png?size=96" width="64" alt="tjqscott"/><br/><sub><b>Graph Spawn</b></sub></a><br/><sub>spawn lifecycle · MIT</sub></td>
-<td align="center" valign="top" width="25%"><a href="https://github.com/Sanqui/obsidian-persistent-graph"><img src="https://github.com/Sanqui.png?size=96" width="64" alt="Sanqui"/><br/><sub><b>Persistent Graph</b></sub></a><br/><sub>simulation lifecycle · MIT</sub></td>
-<td align="center" valign="top" width="25%"><a href="https://github.com/CalfMoon/node-factor"><img src="https://github.com/CalfMoon.png?size=96" width="64" alt="CalfMoon"/><br/><sub><b>Node Factor</b></sub></a><br/><sub>connectivity sizing · MIT</sub></td>
-<td align="center" valign="top" width="25%"><a href="https://github.com/d3/d3-force"><img src="https://github.com/d3.png?size=96" width="64" alt="d3"/><br/><sub><b>d3-force</b></sub></a><br/><sub>force behavior reference · ISC</sub></td>
-</tr>
-<tr>
-<td align="center" valign="top"><a href="https://github.com/jacomyal/sigma.js"><img src="https://github.com/jacomyal.png?size=96" width="64" alt="jacomyal"/><br/><sub><b>Sigma.js</b></sub></a><br/><sub>label density / LOD · MIT</sub></td>
-<td align="center" valign="top"><a href="https://github.com/microsoft/msagljs"><img src="https://github.com/microsoft.png?size=96" width="64" alt="Microsoft"/><br/><sub><b>MSAGLJS</b></sub></a><br/><sub>semantic zoom · MIT</sub></td>
-<td align="center" valign="top"><a href="https://github.com/cytoscape/cytoscape.js"><img src="https://github.com/cytoscape.png?size=96" width="64" alt="Cytoscape"/><br/><sub><b>Cytoscape.js</b></sub></a><br/><sub>label visibility threshold · MIT</sub></td>
-<td align="center" valign="top"><a href="https://github.com/maplibre/maplibre-gl-js"><img src="https://github.com/maplibre.png?size=96" width="64" alt="MapLibre"/><br/><sub><b>MapLibre GL JS</b></sub></a><br/><sub>scale / collision policy · BSD-3-Clause</sub></td>
-</tr>
-<tr>
-<td align="center" valign="top"><a href="https://github.com/Stellarium/stellarium"><img src="https://github.com/Stellarium.png?size=96" width="64" alt="Stellarium"/><br/><sub><b>Stellarium</b></sub></a><br/><sub>FOV label disclosure · GPL-2.0 concept only</sub></td>
-<td align="center" valign="top"><a href="https://github.com/kenforthewin/atomic"><img src="https://github.com/kenforthewin.png?size=96" width="64" alt="kenforthewin"/><br/><sub><b>Atomic</b></sub></a><br/><sub>semantic-unit model · MIT</sub></td>
-<td align="center" valign="top"><a href="https://github.com/juanceresa/sift-kg"><img src="https://github.com/juanceresa.png?size=96" width="64" alt="juanceresa"/><br/><sub><b>sift-kg</b></sub></a><br/><sub>schema discovery · MIT</sub></td>
-<td align="center" valign="top"><a href="https://github.com/microsoft/graphrag"><img src="https://github.com/microsoft.png?size=96" width="64" alt="Microsoft"/><br/><sub><b>GraphRAG</b></sub></a><br/><sub>hierarchical community reference · MIT</sub></td>
-</tr>
-</table>
-
-Detailed adoption and licensing boundaries are recorded in [`docs/licensing-audit-2026-08-21.md`](docs/licensing-audit-2026-08-21.md) and the corresponding research notes.
-
-</details>
+Public projects and papers that informed implementation choices are research references, not automatically bundled dependencies or Git co-authors. Detailed adoption and licensing boundaries are recorded in [`docs/licensing-audit-2026-08-21.md`](docs/licensing-audit-2026-08-21.md) and the corresponding research notes.
 
 ## License
 
