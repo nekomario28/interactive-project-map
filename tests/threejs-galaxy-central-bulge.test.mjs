@@ -6,16 +6,18 @@ import { patchThreejsGalaxyCentralBulgeRuntime } from "../scripts/apply-threejs-
 
 const fixture = `
 const TAU=Math.PI*2;
-const GALAXY_LOG_PITCH=22*Math.PI/180;
+const GALAXY_LOG_PITCH=22*Math.PI/180,GALAXY_PATTERN_PERIOD=2400;
 function hashUnit(value){return .5;}
 function galaxyArmCount(){return 3;}
 function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy",glowTexture={};
 scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe";if(threeStyle==="galaxy"){dust.scale.setScalar(1.08);dust.material.opacity=.44;}
+const galaxyMotion={snapshot:()=>({})};let edgeLines=null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0})});
+function animate(){const delta=.016;if(motionEnabled){dust.rotation.y+=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);}}
 }
 `;
 
-test("Galaxy center stays sparse while low-frequency haze softly follows the adopted logarithmic arms", () => {
+test("Galaxy center stays sparse while arm-aware haze stays phase-locked to the adopted pattern", () => {
   const patched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
   assert.match(patched, /function galaxyDiscSmooth\(value\)/);
   assert.match(patched, /function galaxyDiscNoise\(seed,x,y\)/);
@@ -34,6 +36,7 @@ test("Galaxy center stays sparse while low-frequency haze softly follows the ado
   assert.match(patched, /new THREE\.CanvasTexture\(canvas\)/);
   assert.match(patched, /new THREE\.CircleGeometry\(312,96\)/);
   assert.match(patched, /opacity:\.46/);
+  assert.match(patched, /mesh\.rotation\.x=-Math\.PI\/2/);
   assert.match(patched, /mesh\.position\.y=-6/);
   assert.match(patched, /mesh\.raycast=\(\)=>\{\}/);
   assert.match(patched, /mesh\.userData\.decorative=true/);
@@ -44,6 +47,13 @@ test("Galaxy center stays sparse while low-frequency haze softly follows the ado
   assert.match(patched, /createGalaxyDiscHaze\(THREE,username,galaxyArmCount\(graph\),GALAXY_LOG_PITCH\)/);
   assert.match(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v2"/);
   assert.doesNotMatch(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v1"/);
+
+  assert.match(patched, /const galaxyPatternDelta=delta\*\(threeStyle==="galaxy"\?TAU\/GALAXY_PATTERN_PERIOD:\.0035\)/);
+  assert.match(patched, /dust\.rotation\.y\+=galaxyPatternDelta/);
+  assert.match(patched, /if\(threeStyle==="galaxy"&&galaxyDiscHaze\)galaxyDiscHaze\.rotation\.z\+=galaxyPatternDelta/);
+  assert.match(patched, /discHazePatternFrame:galaxyDiscHaze\?"co-rotating-arm-pattern":"none"/);
+  assert.match(patched, /dustPatternRotationY:dust\.rotation\.y/);
+  assert.match(patched, /hazePatternRotationY:galaxyDiscHaze\?galaxyDiscHaze\.rotation\.z:null/);
 
   assert.match(patched, /function softenGalaxyCentralDust\(dust\)/);
   assert.match(patched, /fadeStart=30,fadeEnd=64/);

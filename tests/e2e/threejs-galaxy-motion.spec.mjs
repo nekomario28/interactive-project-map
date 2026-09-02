@@ -107,6 +107,9 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   expect(before.armCount).toBe(3);
   expect(before.systems).toHaveLength(5);
   expect(before.external).toHaveLength(1);
+  expect(before.discHazePatternFrame).toBe("co-rotating-arm-pattern");
+  expect(before.hazePatternRotationY).not.toBeNull();
+  expect(before.hazePatternRotationY).toBeCloseTo(before.dustPatternRotationY, 10);
 
   const localRepositories = before.systems.flatMap((system) => system.repositories);
   expect(localRepositories).toHaveLength(5);
@@ -151,6 +154,9 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   expect(distance(inner, innerAfter)).toBeGreaterThan(0.08);
   expect(distance(repoBefore, repoAfter)).toBeGreaterThan(0.08);
   expect(distance(before.external[0], externalAfter)).toBeGreaterThan(0.08);
+  expect(after.dustPatternRotationY).toBeGreaterThan(before.dustPatternRotationY + 0.001);
+  expect(after.hazePatternRotationY).toBeGreaterThan(before.hazePatternRotationY + 0.001);
+  expect(after.hazePatternRotationY).toBeCloseTo(after.dustPatternRotationY, 10);
 
   const sameArmInnerAfter = after.systems.find((system) => system.id === sameArmInner.id);
   const sameArmOuterAfter = after.systems.find((system) => system.id === sameArmOuter.id);
@@ -162,7 +168,7 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   expect(signedAngularDelta(azimuth(sameArmInnerAfter), azimuth(sameArmOuterAfter))).toBeGreaterThan(1.65);
 });
 
-test("Galaxy Motion Off freezes category, repository, and Contributed orbital positions", async ({ page, browserName }) => {
+test("Galaxy Motion Off freezes category, repository, Contributed, and arm-haze pattern motion", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Real Three.js orbital motion is exercised once in Chromium.");
   await installGraph(page);
   await page.goto("/three/?username=example&style3d=galaxy&motion=off");
@@ -179,4 +185,7 @@ test("Galaxy Motion Off freezes category, repository, and Contributed orbital po
   expect(distance(before.systems[0], after.systems[0])).toBeLessThan(1e-7);
   expect(distance(before.systems[0].repositories[0], after.systems[0].repositories[0])).toBeLessThan(1e-7);
   expect(distance(before.external[0], after.external[0])).toBeLessThan(1e-7);
+  expect(after.dustPatternRotationY).toBeCloseTo(before.dustPatternRotationY, 12);
+  expect(after.hazePatternRotationY).toBeCloseTo(before.hazePatternRotationY, 12);
+  expect(after.hazePatternRotationY).toBeCloseTo(after.dustPatternRotationY, 12);
 });

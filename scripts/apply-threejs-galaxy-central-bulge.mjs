@@ -17,6 +17,10 @@ const DISC_TEXTURE_V1_PIXEL = 'const center=galaxyDiscSmooth((radius-.12)/.1),ed
 const DISC_TEXTURE_V2_PIXEL = 'const center=galaxyDiscSmooth((radius-.12)/.1),edge=1-galaxyDiscSmooth((radius-.72)/.26),coarse=galaxyDiscNoise(seed,u*4.4,v*4.4),fine=galaxyDiscNoise(seed+":fine",u*8.2,v*8.2),cloud=.72*coarse+.28*fine,angle=Math.atan2(-nz,nx),visualRadius=radius*312,spiral=pitch>0?Math.log(Math.max(1,visualRadius/42))/Math.tan(pitch):0,armWave=.5+.5*Math.cos((angle-spiral)*armCount),armMod=.79+.56*armWave*armWave,alpha=Math.round(255*.18*center*edge*(.38+.62*cloud)*armMod),warm=1-Math.min(1,radius),offset=(py*size+px)*4;';
 const DISC_TEXTURE_V1_METADATA = 'mesh.userData.textureModel="procedural-low-frequency-haze";mesh.userData.textureSize=size;mesh.userData.centerClearFraction=.12;';
 const DISC_TEXTURE_V2_METADATA = 'mesh.userData.textureModel="procedural-low-frequency-log-arm-haze";mesh.userData.textureSize=size;mesh.userData.centerClearFraction=.12;mesh.userData.armCount=armCount;mesh.userData.pitchAngleDeg=pitch*180/Math.PI;';
+const GALAXY_PATTERN_ANIMATE = 'dust.rotation.y+=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);';
+const GALAXY_PATTERN_ANIMATE_WITH_HAZE = 'const galaxyPatternDelta=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);dust.rotation.y+=galaxyPatternDelta;if(threeStyle==="galaxy"&&galaxyDiscHaze)galaxyDiscHaze.rotation.z+=galaxyPatternDelta;';
+const GALAXY_MOTION_SNAPSHOT = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0})});';
+const GALAXY_MOTION_SNAPSHOT_WITH_HAZE = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0,discHazePatternFrame:galaxyDiscHaze?"co-rotating-arm-pattern":"none",dustPatternRotationY:dust.rotation.y,hazePatternRotationY:galaxyDiscHaze?galaxyDiscHaze.rotation.z:null})});';
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return source;
@@ -39,6 +43,8 @@ export function patchThreejsGalaxyCentralBulgeRuntime(source) {
   if (next.includes(SCENE_WITH_MORPHOLOGY_V1)) next = next.replace(SCENE_WITH_MORPHOLOGY_V1, SCENE_WITH_MORPHOLOGY);
   else if (next.includes(PREVIOUS_SCENE_WITH_BULGE)) next = next.replace(PREVIOUS_SCENE_WITH_BULGE, SCENE_WITH_MORPHOLOGY);
   else next = replaceRequired(next, SCENE_ANCHOR, SCENE_WITH_MORPHOLOGY, "Galaxy central morphology scene insertion point");
+  next = replaceRequired(next, GALAXY_PATTERN_ANIMATE, GALAXY_PATTERN_ANIMATE_WITH_HAZE, "Galaxy haze/pattern phase-locked animation");
+  next = replaceRequired(next, GALAXY_MOTION_SNAPSHOT, GALAXY_MOTION_SNAPSHOT_WITH_HAZE, "Galaxy haze motion evidence snapshot");
   return next;
 }
 
