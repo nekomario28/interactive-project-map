@@ -1,12 +1,12 @@
 # Current roadmap
 
-Status snapshot: **2026-09-02**
+Status snapshot: **2026-09-03**
 
 This is the canonical list of work that is still worth doing. `docs/research-decision-ledger.md` records adopted / completed / rejected / dormant decisions; `docs/threejs-galaxy-astronomy.md` is the detailed physical/semantic boundary for the native Three.js Galaxy style, with `docs/threejs-galaxy-corotation.md` documenting the adopted visual corotation approximation.
 
 ## Current production/release state
 
-- Interactive Pages runtime baseline at this reconcile cut: **`990703956cd85fe41e77eb75b87ce0242c5e8daf`** (PR #340, Galaxy centre-readability refinement, on top of PR #335's 2D-Galaxy-Hybrid-aligned local repository ellipse motion, PR #334's no-persistent-lines policy and PR #332's central stellar bulge).
+- Interactive Pages runtime baseline at this reconcile cut: **`b2e721295093e9807dbec1bc5269ee14d659252d`** (PR #342, subtle procedural Galaxy disc texture, on top of PR #340's centre-readability refinement, PR #335's 2D-Galaxy-Hybrid-aligned local repository ellipse motion, PR #334's no-persistent-lines policy and PR #332's central stellar bulge).
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - Pages `main`, reusable `v1`, the outer reusable workflow and the reviewed immutable inner Action pin are independent authority/release layers.
 - The published GitHub-only setup path remains the production source of truth. The Cloudflare/GitHub App one-click installer remains dormant / not production exposed.
@@ -43,12 +43,13 @@ Current adopted contract:
 - this single rigid pattern speed/corotation point is explicitly a visualization choice, not a claim that all spiral galaxies obey one long-lived density-wave model. Transient/recurrent and approximately co-rotating arm behavior remain scientifically valid alternatives;
 - far/mid/near decorative star shells stay in an inertial world frame in Galaxy instead of counter-rotating against the semantic disc;
 - the central stellar concentration is now deliberately **glow-dominant rather than particle-dense**: decorative bulge points are bounded to 96 desktop / 48 mobile with a 14-unit nucleus clear radius, while the existing warm glow remains. Galaxy spiral-dust vertex colour is strongly attenuated only near the nucleus (`r < 30`) and smoothly returns to full brightness by `r = 64`; dust vertices, arm geometry and pattern motion are unchanged. This is a readability treatment, not a physical dust-density claim;
+- a single **low-frequency procedural disc-haze texture** now adds broad surface depth beneath the semantic disc without adding star points. It is generated once as a 128×128 CanvasTexture, rendered on one 312-unit transparent/additive disc mesh, is explicitly non-semantic and non-pickable, and keeps the nucleus clear: texture contribution is absent through normalized `r = 0.12` (~37 renderer units), fades in by `r = 0.22` (~69 units), then fades toward the outer edge. It is a renderer-local readability treatment, not a physical stellar/gas/dust density map;
 - **Galaxy draws no persistent node-to-node graph lines.** Membership, ownership, contribution and other graph relations remain in the canonical semantic graph and are communicated through spatial grouping, labels/navigation, search/focus, selection/details and status/authority presentation rather than always-on straight chords;
 - moving labels, selection targets and selected camera target follow moving meshes;
 - Motion Off freezes semantic node orbits; the existing reduced-motion-derived default remains respected;
 - Cosmic / Aurora / Wireframe retain their existing non-Galaxy layout/motion/edge policy.
 
-The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, the 0.68 local ellipse model and 2D-Hybrid-aligned local period/direction grammar, Motion Off freeze, inertial starfield behavior, `edgePolicy: "no-persistent-lines"` with `persistentEdgeObjects: 0`, separate arm-pattern motion, the current visual corotation boundary, and the qualified central morphology. Rendered before/after evidence now covers both clutter reductions: removing persistent membership chords reduces trajectory-like clutter, while PR #340's sparse glow-dominant bulge plus nucleus-only dust fade makes the owner/centre visibly cleaner without changing arms, node placement or semantic authority.
+The rich Chromium Galaxy evidence uses multi-category + Contributed fixtures. Runtime evidence proves co-rotation, outer slowdown, external-lane separation, initial logarithmic pitch, trailing orientation, actual category/repository/Contributed movement, the 0.68 local ellipse model and 2D-Hybrid-aligned local period/direction grammar, Motion Off freeze, inertial starfield behavior, `edgePolicy: "no-persistent-lines"` with `persistentEdgeObjects: 0`, separate arm-pattern motion, the current visual corotation boundary, the qualified central morphology, and the procedural disc-texture marker. Rendered before/after evidence covers all current clutter/depth changes: removing persistent membership chords reduces trajectory-like clutter, PR #340's sparse glow-dominant bulge plus nucleus-only dust fade makes the owner/centre visibly cleaner, and PR #342 adds only a subtle broad surface contribution while keeping the nucleus clear and semantic nodes/arms dominant.
 
 For the detailed astronomy/non-astronomy boundary, use `docs/threejs-galaxy-astronomy.md` and `docs/threejs-galaxy-corotation.md` rather than inferring physics from presentation code.
 
@@ -127,6 +128,7 @@ Priorities remain evidence-driven:
 - adding a forced central bar/warp/thick-disc taxonomy merely for Milky Way resemblance;
 - fast/chaotic repository motion or autonomous camera motion;
 - **persistent node-to-node graph lines in Galaxy**, including membership, ownership or contribution chords; exact relations may only be reconsidered as bounded contextual selected/focused presentation from a concrete navigation need;
+- treating the procedural disc haze as a physical stellar/gas/dust density field or encoding semantic metadata into that decorative texture;
 - Three.js InstancedMesh / halo optimization based only on software CI FPS;
 - Auto / High / Low render-density UI or Canvas DPR experiments;
 - duplicate 2D starfield back-port work;
