@@ -1,7 +1,3 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-
 export function renderPagesHome() {
   return `<!doctype html>
 <html lang="en">
@@ -9,7 +5,7 @@ export function renderPagesHome() {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="description" content="Generate a static GitHub project galaxy for your profile README and open it in an interactive map." />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://raw.githubusercontent.com data:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://raw.githubusercontent.com; base-uri 'none'; frame-ancestors 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://raw.githubusercontent.com data:; script-src 'self'; style-src 'unsafe-inline'; connect-src https://raw.githubusercontent.com; base-uri 'none'; frame-ancestors 'none'" />
 <title>GitHub Project Galaxy</title>
 <style>
 :root{color-scheme:dark;background:#060912;color:#edf2ff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#14223f 0,#080d18 34%,#060912 70%)}.wrap{max-width:1040px;margin:0 auto;padding:62px 22px 96px}.eyebrow{color:#8fb8ff;font-size:.82rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}h1{font-size:clamp(2.5rem,8vw,5.5rem);line-height:.94;margin:12px 0 20px;letter-spacing:-.055em}.lead{max-width:770px;color:#aab7cc;font-size:clamp(1rem,2.2vw,1.2rem);line-height:1.65}.generator{margin-top:32px;padding:22px;border:1px solid #283650;border-radius:22px;background:#0b111ecc;box-shadow:0 24px 90px #0008}.form{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:12px}.username{width:100%;padding:14px 15px;border:1px solid #344561;border-radius:13px;background:#070c16;color:#f2f6ff;font:inherit;outline:none}.username:focus{border-color:#74a7ff;box-shadow:0 0 0 3px #4f8cff22}.primary,.button{border-radius:13px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer}.primary{border:0;background:#dce9ff;color:#0a1220}.button{border:1px solid #30405a;background:#151e2e;color:#dbe8ff}.options{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:15px;color:#aab7cc;font-size:.9rem}.options label{display:flex;gap:7px;align-items:center}.options select,.options input[type=number]{padding:6px 8px;border:1px solid #2d3b53;border-radius:8px;background:#080e19;color:#eaf1ff}.options input[type=number]{width:76px}.status{min-height:22px;margin-top:14px;color:#91a1b8;font-size:.9rem}.status.error{color:#ff9f9f}.result{display:none;margin-top:26px}.result.visible{display:block}.preview{padding:16px;border:1px solid #26344d;border-radius:18px;background:#070b14}.preview img{display:none;width:100%;height:auto;border-radius:14px;background:#050811}.preview img.ready{display:block}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.actions a{text-decoration:none}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}.panel{padding:16px;border:1px solid #26344d;border-radius:16px;background:#09101c}.panel h2{font-size:.96rem;margin:0 0 10px}.panel p{color:#8f9db2;font-size:.84rem;line-height:1.5}.code{width:100%;min-height:122px;resize:vertical;padding:12px;border:1px solid #283750;border-radius:10px;background:#050912;color:#cbd8ee;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.workflow{min-height:380px}.copyrow{display:flex;justify-content:flex-end;margin-top:9px}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:26px}.step{padding:18px;border:1px solid #202d42;border-radius:16px;background:#090f1a}.step strong{display:block;margin-bottom:7px}.step span{color:#8e9cb1;font-size:.9rem;line-height:1.5}.foot{margin-top:34px;color:#77869c;font-size:.86rem;line-height:1.6}.foot a{color:#9ec2ff}@media(max-width:700px){.wrap{padding-top:42px}.form,.grid,.steps{grid-template-columns:1fr}.generator{padding:16px}}
@@ -60,45 +56,7 @@ export function renderPagesHome() {
 </section>
 <p class="foot">The interactive viewer is a static GitHub Pages application. It reads <code>USERNAME/USERNAME/HEAD/project-map/graph.json</code> directly from <code>raw.githubusercontent.com</code>; there is no shared GitHub REST API request in the normal viewing path.</p>
 </main>
-<script>
-const USERNAME_RE=/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const CHECKOUT_SHA='3d3c42e5aac5ba805825da76410c181273ba90b1';
-const UPLOAD_SHA='043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
-const DOWNLOAD_SHA='3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
-const form=document.getElementById('form');
-const usernameInput=document.getElementById('username');
-const themeInput=document.getElementById('theme');
-const maxReposInput=document.getElementById('maxRepos');
-const forksInput=document.getElementById('forks');
-const archivedInput=document.getElementById('archived');
-const statusEl=document.getElementById('status');
-const resultEl=document.getElementById('result');
-const preview=document.getElementById('preview');
-const previewMessage=document.getElementById('previewMessage');
-const openMap=document.getElementById('openMap');
-function values(){const username=usernameInput.value.trim().toLowerCase();const maxRepos=Math.max(1,Math.min(300,Math.round(Number(maxReposInput.value)||100)));return{username,theme:themeInput.value==='light'?'light':'dark',maxRepos,forks:forksInput.checked,archived:archivedInput.checked}}
-function urls(v){const owner=encodeURIComponent(v.username);const raw='https://raw.githubusercontent.com/'+owner+'/'+owner+'/HEAD/project-map';const viewer=new URL('u/',new URL('./',location.href));viewer.searchParams.set('username',v.username);return{svg:raw+'/galaxy.svg',graph:raw+'/graph.json',viewer:viewer.toString()}}
-function workflowFor(v){return[
-'name: Update project map','',
-'on:','  workflow_dispatch:','  schedule:','    - cron: "37 3 * * *"','',
-'permissions:','  contents: read','',
-'jobs:','  generate:','    runs-on: ubuntu-latest','    permissions:','      contents: read','    steps:',
-'      - name: Checkout profile repository','        uses: actions/checkout@'+CHECKOUT_SHA+' # v7.0.1','',
-'      - name: Generate project map','        uses: nekomario28/interactive-project-map@v1','        with:',
-'          github_token: \${{ github.token }}','          username: \${{ github.repository_owner }}','          theme: '+v.theme,'          max_repos: "'+v.maxRepos+'"','          forks: "'+v.forks+'"','          archived: "'+v.archived+'"','          output_dir: project-map','',
-'      - name: Transfer generated files to publish job','        uses: actions/upload-artifact@'+UPLOAD_SHA+' # v7.0.1','        with:','          name: project-map-generated','          path: project-map','          if-no-files-found: error','          retention-days: 1','',
-'  publish:','    needs: generate','    runs-on: ubuntu-latest','    permissions:','      actions: read','      contents: write','    steps:',
-'      - name: Checkout profile repository','        uses: actions/checkout@'+CHECKOUT_SHA+' # v7.0.1','',
-'      - name: Download generated files','        uses: actions/download-artifact@'+DOWNLOAD_SHA+' # v8.0.1','        with:','          name: project-map-generated','          path: project-map','',
-'      - name: Commit only when the generated map changed','        shell: bash','        run: |','          set -euo pipefail','          git add -- project-map/galaxy.svg project-map/graph.json','          if git diff --cached --quiet; then','            echo "Project map is already up to date."','            exit 0','          fi','          git config user.name "github-actions[bot]"','          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"','          git commit -m "chore: update project map"','          git push',''
-].join('\n')}
-function generate(){const v=values();maxReposInput.value=String(v.maxRepos);if(!USERNAME_RE.test(v.username)){statusEl.textContent='Enter a valid GitHub username.';statusEl.classList.add('error');resultEl.classList.remove('visible');return}const u=urls(v);const workflow=workflowFor(v);const html='<p align="center">\n  <a href="'+u.viewer+'">\n    <img width="740" src="'+u.svg+'" alt="'+v.username+' project galaxy" />\n  </a>\n</p>';const md='[!['+v.username+' project galaxy]('+u.svg+')]('+u.viewer+')';document.getElementById('workflow').value=workflow;document.getElementById('readmeHtml').value=html;document.getElementById('readmeMarkdown').value=md;document.getElementById('staticUrls').value='SVG: '+u.svg+'\nGraph: '+u.graph+'\nInteractive: '+u.viewer;openMap.href=u.viewer;preview.classList.remove('ready');previewMessage.textContent='Checking for an existing generated SVG…';preview.src=u.svg;resultEl.classList.add('visible');statusEl.textContent='Setup generated. Add the workflow to '+v.username+'/'+v.username+' and run it once.';statusEl.classList.remove('error');const share=new URL(location.href);share.search='';share.searchParams.set('username',v.username);share.searchParams.set('theme',v.theme);share.searchParams.set('max_repos',String(v.maxRepos));share.searchParams.set('forks',String(v.forks));share.searchParams.set('archived',String(v.archived));history.replaceState(null,'',share)}
-form.addEventListener('submit',e=>{e.preventDefault();generate()});
-preview.addEventListener('load',()=>{preview.classList.add('ready');previewMessage.textContent='Existing static SVG found in the profile repository.'});
-preview.addEventListener('error',()=>{preview.classList.remove('ready');previewMessage.textContent='No static SVG yet. Run the generated workflow once, then reload this page.'});
-for(const button of document.querySelectorAll('[data-copy]'))button.addEventListener('click',async()=>{const target=document.getElementById(button.dataset.copy);if(!target)return;try{await navigator.clipboard.writeText(target.value);const old=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=old,1200)}catch{target.select();document.execCommand('copy')}});
-const initial=new URL(location.href).searchParams;if(initial.has('username')){usernameInput.value=initial.get('username')||'';themeInput.value=initial.get('theme')==='light'?'light':'dark';maxReposInput.value=initial.get('max_repos')||'100';forksInput.checked=initial.get('forks')!=='false';archivedInput.checked=initial.get('archived')==='true';generate()}
-</script>
+<script src="./app.js" defer></script>
 </body>
 </html>`;
 }
@@ -148,25 +106,4 @@ if(username){const owner=encodeURIComponent(username);const graphUrl='https://ra
 </script>
 </body>
 </html>`;
-}
-
-export async function buildPagesApp(outputDir = join(process.cwd(), "site")) {
-  await rm(outputDir, { recursive: true, force: true });
-  await mkdir(join(outputDir, "u"), { recursive: true });
-  await writeFile(join(outputDir, ".nojekyll"), "\n");
-  await writeFile(join(outputDir, "index.html"), renderPagesHome());
-  await writeFile(join(outputDir, "u", "index.html"), renderPagesViewer());
-}
-
-async function main() {
-  const outputDir = join(process.cwd(), "site");
-  await buildPagesApp(outputDir);
-  console.log(`Built static GitHub Pages app into ${outputDir}`);
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  });
 }
