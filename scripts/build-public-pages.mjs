@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
-// Immutable Action commit used by the source builder. postprocess-public-pages.mjs
-// promotes generated setup to the latest reviewed public Action commit.
+// Immutable Action commit substituted into the canonical public-home.js setup
+// serializer. postprocess-public-pages.mjs promotes it to the reviewed release.
 export const PUBLIC_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const PRESETS = [
@@ -105,7 +105,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   const navScript = await readFile(join(sourceDir, "public-tree-nav.js"), "utf8");
   const viewerCss = await readFile(join(sourceDir, "public-viewer.css"), "utf8");
   const presetCss = await readFile(join(sourceDir, "public-home-presets.css"), "utf8");
-  const baseHome = normalizePublicHtml(externalizeBrowserScript(renderPagesHome(), "./app.js"));
+  const baseHome = normalizePublicHtml(renderPagesHome());
   const baseViewer = normalizePublicHtml(externalizeBrowserScript(renderPagesViewer(), "../viewer.js"));
   await writeFile(join(outputDir, ".nojekyll"), "\n");
   await writeFile(join(outputDir, "index.html"), addHomeStylePreset(baseHome));
