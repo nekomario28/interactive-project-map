@@ -6,23 +6,31 @@ import { patchThreejsGalaxyCentralBulgeRuntime } from "../scripts/apply-threejs-
 
 const fixture = `
 const TAU=Math.PI*2;
+const GALAXY_LOG_PITCH=22*Math.PI/180;
 function hashUnit(value){return .5;}
+function galaxyArmCount(){return 3;}
 function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy",glowTexture={};
 scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe";if(threeStyle==="galaxy"){dust.scale.setScalar(1.08);dust.material.opacity=.44;}
 }
 `;
 
-test("Galaxy center stays sparse while a non-pickable low-frequency disc texture adds surface depth", () => {
+test("Galaxy center stays sparse while low-frequency haze softly follows the adopted logarithmic arms", () => {
   const patched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
   assert.match(patched, /function galaxyDiscSmooth\(value\)/);
   assert.match(patched, /function galaxyDiscNoise\(seed,x,y\)/);
-  assert.match(patched, /function createGalaxyDiscHaze\(THREE,seed\)/);
+  assert.match(patched, /function createGalaxyDiscHaze\(THREE,seed,armCount=4,pitch=0\)/);
   assert.match(patched, /size=128,canvas=document\.createElement\("canvas"\)/);
   assert.match(patched, /galaxyDiscSmooth\(\(radius-\.12\)\/\.1\)/);
   assert.match(patched, /galaxyDiscSmooth\(\(radius-\.72\)\/\.26\)/);
   assert.match(patched, /coarse=galaxyDiscNoise\(seed,u\*4\.4,v\*4\.4\)/);
   assert.match(patched, /fine=galaxyDiscNoise\(seed\+":fine",u\*8\.2,v\*8\.2\)/);
+  assert.match(patched, /angle=Math\.atan2\(-nz,nx\)/);
+  assert.match(patched, /visualRadius=radius\*312/);
+  assert.match(patched, /spiral=pitch>0\?Math\.log\(Math\.max\(1,visualRadius\/42\)\)\/Math\.tan\(pitch\):0/);
+  assert.match(patched, /armWave=\.5\+\.5\*Math\.cos\(\(angle-spiral\)\*armCount\)/);
+  assert.match(patched, /armMod=\.79\+\.56\*armWave\*armWave/);
+  assert.match(patched, /\(\.38\+\.62\*cloud\)\*armMod/);
   assert.match(patched, /new THREE\.CanvasTexture\(canvas\)/);
   assert.match(patched, /new THREE\.CircleGeometry\(312,96\)/);
   assert.match(patched, /opacity:\.46/);
@@ -30,8 +38,12 @@ test("Galaxy center stays sparse while a non-pickable low-frequency disc texture
   assert.match(patched, /mesh\.raycast=\(\)=>\{\}/);
   assert.match(patched, /mesh\.userData\.decorative=true/);
   assert.match(patched, /mesh\.userData\.semantic=false/);
-  assert.match(patched, /textureModel="procedural-low-frequency-haze"/);
-  assert.match(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v1"/);
+  assert.match(patched, /textureModel="procedural-low-frequency-log-arm-haze"/);
+  assert.match(patched, /mesh\.userData\.armCount=armCount/);
+  assert.match(patched, /mesh\.userData\.pitchAngleDeg=pitch\*180\/Math\.PI/);
+  assert.match(patched, /createGalaxyDiscHaze\(THREE,username,galaxyArmCount\(graph\),GALAXY_LOG_PITCH\)/);
+  assert.match(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v2"/);
+  assert.doesNotMatch(patched, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v1"/);
 
   assert.match(patched, /function softenGalaxyCentralDust\(dust\)/);
   assert.match(patched, /fadeStart=30,fadeEnd=64/);
