@@ -14,44 +14,6 @@ import {
 export const PUBLIC_ACTION_REF = "9d018370d7b22d82d8974ae1ac018de5589dd85a";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
-const MOBILE_FIX = `
-
-/* Emitted-site mobile hardening: keep the viewer inside narrow viewports. */
-@media (max-width: 480px) {
-  .app,
-  .toolbar,
-  .controls,
-  .workspace,
-  footer {
-    min-width: 0;
-    max-width: 100%;
-  }
-  .app,
-  .controls { width: 100%; }
-  .field { min-width: 0; }
-  .field:first-child { flex: 1 1 100%; }
-  .field:nth-child(2) { flex: 1 1 150px; }
-  .field select { width: 100%; min-width: 0; }
-  .toolbar button { flex: 0 0 auto; }
-  footer { overflow: hidden; }
-  footer > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-`;
-
-const VIEWER_FIT_OLD = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.25, 2.2);";
-const VIEWER_FIT_NEW = "state.zoom = clamp(Math.min((size.width * 0.84) / width, (size.height * 0.78) / height), 0.04, 2.2);";
-const VIEWER_AUTO_FIT_OLD = "  if (fit) fitView();";
-const VIEWER_AUTO_FIT_NEW = `  if (fit && state.style === "obsidian") {
-    // Native Obsidian opens the graph around its centered spawn at a neutral
-    // camera scale instead of continuously fitting current graph bounds. Keep
-    // the explicit Fit command available, but do not hide the live bloom on open.
-    state.zoom = 1;
-    state.pan.x = 0;
-    state.pan.y = 0;
-    state.fitted = true;
-  } else if (fit) {
-    fitView();
-  }`;
 const VIEWER_SCRIPT = '<script src="../viewer.js" defer></script>';
 const COMMON_SCRIPT = '<script src="../galaxy-common.js" defer></script>';
 const CLASSIC_SCRIPT = '<script src="../galaxy-classic-runtime.js" defer></script>';
@@ -83,39 +45,6 @@ async function htmlFiles(dir) {
     else if (entry.isFile() && entry.name.endsWith(".html")) found.push(path);
   }
   return found;
-}
-
-function patchViewerStyles(source) {
-  let patched = source;
-  patched = patched.replace(
-    'const STYLE_VALUES = new Set(["galaxy", "obsidian"]);',
-    'const STYLE_VALUES = new Set(["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"]);\nfunction normalizeGraphStyle(value) { return value === "galaxy" ? "galaxy-systems" : STYLE_VALUES.has(value) ? value : "galaxy-systems"; }',
-  );
-  patched = patched.replace(
-    'let initialStyle = STYLE_VALUES.has(query.get("style")) ? query.get("style") : "galaxy";',
-    'let initialStyle = normalizeGraphStyle(query.get("style"));',
-  );
-  patched = patched.replaceAll('state.style === "galaxy"', 'state.style !== "obsidian"');
-  patched = patched.replace(
-    'state.style = STYLE_VALUES.has(styleSelect.value) ? styleSelect.value : "galaxy";',
-    'state.style = normalizeGraphStyle(styleSelect.value);',
-  );
-  return patched;
-}
-
-async function hardenSharedViewer(outputDir) {
-  const viewerPath = join(outputDir, "viewer.js");
-  const source = await readFile(viewerPath, "utf8");
-  if (!source.includes(VIEWER_FIT_OLD) && !source.includes(VIEWER_FIT_NEW)) throw new Error("Could not locate shared viewer Fit zoom contract");
-  if (!source.includes(VIEWER_AUTO_FIT_OLD) && !source.includes(VIEWER_AUTO_FIT_NEW)) throw new Error("Could not locate shared viewer initial-fit contract");
-  const patched = patchViewerStyles(source)
-    .replace(VIEWER_FIT_OLD, VIEWER_FIT_NEW)
-    .replace(VIEWER_AUTO_FIT_OLD, VIEWER_AUTO_FIT_NEW)
-    .replaceAll(", 0.2, 4.5)", ", 0.04, 4.5)");
-  if (!patched.includes('"galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"')) throw new Error("Could not expand shared viewer Galaxy style contract");
-  if (!patched.includes(VIEWER_FIT_NEW) || patched.includes(VIEWER_FIT_OLD)) throw new Error("Could not lower shared viewer minimum zoom");
-  if (!patched.includes(VIEWER_AUTO_FIT_NEW) || patched.includes(VIEWER_AUTO_FIT_OLD)) throw new Error("Could not isolate Obsidian initial viewport from auto-fit");
-  if (patched !== source) await writeFile(viewerPath, patched);
 }
 
 function isolateRuntime(source, style) {
@@ -250,11 +179,6 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
     if (cleaned !== source) await writeFile(path, cleaned);
   }
 
-  const cssPath = join(outputDir, "viewer.css");
-  const css = await readFile(cssPath, "utf8");
-  if (!css.includes("Emitted-site mobile hardening")) await writeFile(cssPath, css + MOBILE_FIX);
-
-  await hardenSharedViewer(outputDir);
   await emitSpatialCoreRuntime(outputDir);
   await emitObsidianRuntime(outputDir);
   await emitGalaxyRuntimes(outputDir);
