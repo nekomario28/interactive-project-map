@@ -15,7 +15,7 @@ import {
   DIRECT_SEARCH_LABEL_BUDGET,
 } from "../scripts/public-threejs-repository-labels.mjs";
 
-test("bounded Three.js repository labels attach with Category Navigator and remain lazy", async () => {
+test("bounded Three.js repository labels attach with shared search and remain lazy", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-repo-labels-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
@@ -23,11 +23,12 @@ test("bounded Three.js repository labels attach with Category Navigator and rema
     assert.doesNotMatch(base, /three-label-repository/);
 
     await applyThreejsLocalGraph({ siteDir: root });
-    await applyThreejsSearchContext({ siteDir: root });
-    const combined = await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    const combined = await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     assert.equal(combined.injected, true);
-    const compatibility = await applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    assert.equal(compatibility.injected, false);
+    const navigatorCompatibility = await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    assert.equal(navigatorCompatibility.injected, false);
+    const labelCompatibility = await applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    assert.equal(labelCompatibility.injected, false);
 
     const [runtime, page, style] = await Promise.all([
       readFile(join(root, "threejs-viewer.js"), "utf8"),
@@ -71,7 +72,6 @@ test("bounded repository labels fail closed when Category Navigator has not run"
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     await applyThreejsLocalGraph({ siteDir: root });
-    await applyThreejsSearchContext({ siteDir: root });
     await assert.rejects(
       () => applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") }),
       /Category Navigator adapter must run before bounded repository labels/,
