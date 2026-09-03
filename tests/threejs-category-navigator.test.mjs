@@ -14,14 +14,15 @@ import {
   composeThreejsCategoryNavigatorRuntime,
 } from "../scripts/public-threejs-category-navigator.mjs";
 
-test("Three.js Category Navigator attaches after Local Graph/search and exports a thin renderer adapter", async () => {
+test("Three.js Category Navigator attaches with shared search and the compatibility adapter becomes a no-op", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-category-nav-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     await applyThreejsLocalGraph({ siteDir: root });
-    await applyThreejsSearchContext({ siteDir: root });
-    const first = await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    assert.equal(first.injected, true);
+    const combined = await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    assert.equal(combined.injected, true);
+    const compatibility = await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    assert.equal(compatibility.injected, false);
 
     const [runtime, page, navigator] = await Promise.all([
       readFile(join(root, "threejs-viewer.js"), "utf8"),
