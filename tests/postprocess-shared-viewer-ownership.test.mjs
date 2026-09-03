@@ -16,12 +16,13 @@ test("shared viewer and setup Action-ref behavior are no longer patched after ca
     "Emitted-site mobile hardening",
     "BUILDER_ACTION_REF",
     "app.replaceAll",
+    "emitSpatialCoreRuntime",
+    "spatialCoreRuntimeSource",
   ]) {
     assert.doesNotMatch(postprocess, new RegExp(retiredMarker.replaceAll(".", "\\.")), `${retiredMarker} must remain retired from postprocess`);
   }
 
   assert.match(postprocess, /export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;/);
-  assert.match(postprocess, /await emitSpatialCoreRuntime\(outputDir\);/);
   assert.match(postprocess, /await emitObsidianRuntime\(outputDir\);/);
   assert.match(postprocess, /await emitGalaxyRuntimes\(outputDir\);/);
   assert.match(postprocess, /await emitInteractionPolish\(outputDir\);/);
