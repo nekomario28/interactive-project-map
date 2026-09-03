@@ -70,9 +70,10 @@ test("public builder owns Spatial Core runtime emission and postprocess keeps it
 });
 
 test("canonical Obsidian and interaction runtimes avoid duplicated Spatial Core kernels", async () => {
-  const [obsidianSource, polishSource, postprocessSource] = await Promise.all([
+  const [obsidianSource, polishSource, builderSource, postprocessSource] = await Promise.all([
     readFile(new URL("../scripts/public-obsidian-runtime.js", import.meta.url), "utf8"),
     readFile(new URL("../scripts/public-interaction-polish.js", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/build-public-pages.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8"),
   ]);
 
@@ -81,7 +82,7 @@ test("canonical Obsidian and interaction runtimes avoid duplicated Spatial Core 
   assert.match(obsidianSource, /ProjectMapSpatialCore\.stepForceLayout/);
   assert.doesNotMatch(obsidianSource, /for \(let first = 0; first < nodes\.length; first \+= 1\)/);
   assert.doesNotMatch(postprocessSource, /tuneObsidianRuntime/);
-  assert.match(postprocessSource, /copyFile\(join\(sourceDir, "public-obsidian-runtime\.js"\), join\(outputDir, "obsidian-runtime\.js"\)\)/);
+  assert.match(builderSource, /\["public-obsidian-runtime\.js", "obsidian-runtime\.js"\]/);
 
   assert.match(polishSource, /ProjectMapSpatialCore/);
   assert.match(polishSource, /normalizeWeightedEdges/);
@@ -90,8 +91,9 @@ test("canonical Obsidian and interaction runtimes avoid duplicated Spatial Core 
   assert.match(polishSource, /maxInput: 2400/);
   assert.match(polishSource, /maxOutput: 1200/);
   assert.doesNotMatch(postprocessSource, /tuneInteractionPolish/);
-  assert.match(postprocessSource, /copyFile\(sourcePath, join\(outputDir, "interaction-polish\.js"\)\)/);
+  assert.match(builderSource, /\["public-interaction-polish\.js", "interaction-polish\.js"\]/);
 
   assert.doesNotMatch(postprocessSource, /emitSpatialCoreRuntime|spatialCoreRuntimeSource/);
   assert.doesNotMatch(postprocessSource, /DEFAULT_FORCE_SETTINGS|normalizeWeightedEdges|linkForceEdges|stepForceLayout/);
+  assert.doesNotMatch(postprocessSource, /copyFile|public-obsidian-runtime\.js|public-interaction-polish\.js/);
 });
