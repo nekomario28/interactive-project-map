@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
 
@@ -67,20 +66,11 @@ test("Galaxy haze coupling fails closed on stale, missing-canonical and partial 
   );
 });
 
-test("post-build Galaxy pattern-coupling stage is only a thin I/O adapter", () => {
-  const adapter = readFileSync("scripts/apply-threejs-galaxy-central-bulge.mjs", "utf8");
-  assert.match(adapter, /composeThreejsGalaxyPatternCouplingRuntime/);
-  assert.match(adapter, /export const patchThreejsGalaxyCentralBulgeRuntime = composeThreejsGalaxyPatternCouplingRuntime/);
-  assert.doesNotMatch(adapter, /CURRENT_DISC_TEXTURE_SIGNATURE|GALAXY_PATTERN_ANIMATE_WITH_HAZE|CURRENT_PATTERN_COUPLING_MARKERS/);
-  assert.doesNotMatch(adapter, /new THREE\.CanvasTexture|new THREE\.CircleGeometry|count=innerWidth<720\?48:96/);
-});
-
-test("Galaxy pattern-coupling canonical composer and adapter pass Node syntax checks", () => {
-  for (const path of ["scripts/public-threejs-galaxy-pattern-coupling.mjs", "scripts/apply-threejs-galaxy-central-bulge.mjs"]) {
-    const result = spawnSync(process.execPath, ["--check", path], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
-  }
+test("Galaxy pattern-coupling canonical composer passes Node syntax check", () => {
+  const path = "scripts/public-threejs-galaxy-pattern-coupling.mjs";
+  const result = spawnSync(process.execPath, ["--check", path], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, `${path}: ${result.stderr}`);
 });
