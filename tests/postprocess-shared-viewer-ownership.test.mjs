@@ -4,7 +4,7 @@ import test from "node:test";
 
 const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8");
 
-test("shared viewer and setup Action-ref behavior are no longer patched after canonical emission", () => {
+test("postprocess keeps retired generated-runtime ownership out of its boundary", () => {
   for (const retiredMarker of [
     "MOBILE_FIX",
     "VIEWER_FIT_OLD",
@@ -18,12 +18,17 @@ test("shared viewer and setup Action-ref behavior are no longer patched after ca
     "app.replaceAll",
     "emitSpatialCoreRuntime",
     "spatialCoreRuntimeSource",
+    "emitObsidianRuntime",
+    "emitGalaxyRuntimes",
+    "emitInteractionPolish",
+    "copyFile",
   ]) {
     assert.doesNotMatch(postprocess, new RegExp(retiredMarker.replaceAll(".", "\\.")), `${retiredMarker} must remain retired from postprocess`);
   }
 
   assert.match(postprocess, /export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;/);
-  assert.match(postprocess, /await emitObsidianRuntime\(outputDir\);/);
-  assert.match(postprocess, /await emitGalaxyRuntimes\(outputDir\);/);
-  assert.match(postprocess, /await emitInteractionPolish\(outputDir\);/);
+  assert.match(postprocess, /await attachGalaxyRuntimes\(outputDir\);/);
+  assert.match(postprocess, /await attachInteractionPolish\(outputDir\);/);
+  assert.match(postprocess, /frame-ancestors/);
+  assert.match(postprocess, /style-src/);
 });
