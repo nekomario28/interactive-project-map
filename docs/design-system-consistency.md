@@ -14,6 +14,40 @@ The Three.js viewer declares eight namespaced `--three-*` custom properties. Cur
 
 Raw Three.js color literals remain outside semantic authority. The linter counts them but does not ban them. A future cleanup must first establish which repeated values actually represent stable semantic roles.
 
+## Neutral semantic-role mapping
+
+`docs/ui-semantic-token-mapping.json` records a value-free interoperability view over a bounded subset of the already-authoritative shared 2D tokens.
+
+It does not create new CSS tokens, change either measured palette, or replace `design/ui-reference-grammar.json` as local design authority.
+
+The current mapping is intentionally `EXPLICIT` and covers eight neutral roles across both owner modes:
+
+```text
+default
+obsidian
+```
+
+Only owner tokens with clear cross-project semantics are mapped:
+
+```text
+--bg             -> color.bg.canvas
+--panel          -> color.bg.surface
+--panel-elevated -> color.bg.surfaceRaised
+--text           -> color.text.primary
+--muted          -> color.text.muted
+--border         -> color.border.subtle
+--accent         -> color.border.focus
+--accent         -> color.selection.selected
+```
+
+Reusing `--accent` for two neutral roles reflects current owner behavior: the same token already drives focus treatment and committed `aria-pressed` emphasis. The mapping does not split or rename the owner token merely to fit an external vocabulary.
+
+The repository-specific `--owner`, `--group`, `--original`, `--fork`, `--archived`, and `--relation` roles remain outside the neutral mapping. `--shadow` also remains local because it is a resolved shadow color input, not by itself an elevation semantic. No `--three-*` declaration is mapped; current Three.js semantic authority remains exactly as measured by the local grammar.
+
+The external neutral role catalog is therefore an interoperability vocabulary only. Concrete values, palettes, rendering behavior, accessibility acceptance, and theme acceptance remain owned and verified here.
+
+`tests/ui-semantic-token-mapping.test.mjs` fails closed if the manifest expands beyond this boundary, maps a token not measured as consumed, loses either default or Obsidian owner coverage, or promotes repository-specific/Three.js tokens through the neutral manifest.
+
 ## Fail-closed boundaries
 
 The gate fails when:
