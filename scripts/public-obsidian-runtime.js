@@ -5,14 +5,7 @@
   // Obsidian-like runtime: one global force system with four user-facing
   // concepts only: center, repel, link, and distance. Repository importance is
   // derived from visible graph connectivity rather than GitHub popularity.
-  const settings = {
-    center: 0.0026,
-    repel: 9200,
-    link: 0.022,
-    linkDistance: 138,
-    damping: 0.855,
-    cooling: 0.986,
-  };
+  const settings = window.ProjectMapSpatialCore.DEFAULT_FORCE_SETTINGS;
   const SPAWN_ALPHA = 0.6;
   const REDUCED_MOTION_SETTLE_STEPS = 120;
   const TEXT_FADE_START_ZOOM = 0.36;
@@ -180,10 +173,7 @@
   }
 
   function linkedEdges(graph, nodes) {
-    const byId = new Map(nodes.map((node) => [node.id, node]));
-    return graph.edges
-      .map((edge) => ({ ...edge, sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) }))
-      .filter((edge) => edge.sourceNode && edge.targetNode);
+    return window.ProjectMapSpatialCore.linkForceEdges(graph?.edges, nodes);
   }
 
   function compactSpawnPoint(node, index, count) {
@@ -204,70 +194,11 @@
   }
 
   function applyForceStep(nodes, edges, alpha, dragging = null) {
-    if (alpha < 0.001 || !nodes.length) return;
-
-    for (let first = 0; first < nodes.length; first += 1) {
-      const a = nodes[first];
-      for (let second = first + 1; second < nodes.length; second += 1) {
-        const b = nodes[second];
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        let distanceSquared = dx * dx + dy * dy;
-        if (distanceSquared < 1) {
-          const angle = (hash(`${a.id}:${b.id}:obsidian-force`) % 6283) / 1000;
-          dx = Math.cos(angle);
-          dy = Math.sin(angle);
-          distanceSquared = 1;
-        }
-        const distance = Math.sqrt(distanceSquared);
-        const minimum = physicsRadius(a) + physicsRadius(b) + 18;
-        const effectiveSquared = Math.max(distanceSquared, minimum * minimum * 0.28);
-        const force = settings.repel * alpha / effectiveSquared;
-        const fx = dx / distance * force;
-        const fy = dy / distance * force;
-        if (a !== dragging) {
-          a.vx -= fx;
-          a.vy -= fy;
-        }
-        if (b !== dragging) {
-          b.vx += fx;
-          b.vy += fy;
-        }
-      }
-    }
-
-    for (const edge of edges) {
-      const a = edge.sourceNode;
-      const b = edge.targetNode;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const distance = Math.max(1, Math.hypot(dx, dy));
-      const amount = (distance - settings.linkDistance) * settings.link * alpha;
-      const fx = dx / distance * amount;
-      const fy = dy / distance * amount;
-      if (a !== dragging) {
-        a.vx += fx;
-        a.vy += fy;
-      }
-      if (b !== dragging) {
-        b.vx -= fx;
-        b.vy -= fy;
-      }
-    }
-
-    for (const node of nodes) {
-      if (node === dragging) {
-        node.vx = 0;
-        node.vy = 0;
-        continue;
-      }
-      node.vx += -node.x * settings.center * alpha;
-      node.vy += -node.y * settings.center * alpha;
-      node.vx *= settings.damping;
-      node.vy *= settings.damping;
-      node.x += node.vx;
-      node.y += node.vy;
-    }
+    window.ProjectMapSpatialCore.stepForceLayout(nodes, edges, alpha, {
+      settings,
+      draggingId: dragging?.id ?? null,
+      radius: physicsRadius,
+    });
   }
 
   buildObsidianLayout = function liveObsidianForceSpawn(graph) {
