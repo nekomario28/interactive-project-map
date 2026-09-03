@@ -22,31 +22,39 @@ The adopted Three.js Galaxy motion semantics live in:
 
 `scripts/apply-threejs-galaxy-motion.mjs` remains as a compatibility filesystem adapter and is still syntax-checked, but it is no longer an active `build:pages` stage. Motion constants and the motion kernel must not return to that adapter.
 
+The already-qualified haze/dust phase lock and read-only motion-evidence augmentation live in:
+
+`scripts/public-threejs-galaxy-pattern-coupling.mjs`
+
+`scripts/apply-threejs-galaxy-central-bulge.mjs` likewise remains only as a syntax-checked compatibility adapter and is no longer an active `build:pages` stage.
+
 ## Current invocation order
 
-The active generated-runtime order is:
+The active generated-runtime order is now one combined post-build stage:
 
 `apply-threejs-style-presets.mjs`
 → internally `composeThreejsStyleRuntime(source)`
 → internally `composeThreejsGalaxyMotionRuntime(styledRuntime)`
-→ `apply-threejs-galaxy-central-bulge.mjs`
+→ internally `composeThreejsGalaxyPatternCouplingRuntime(motionRuntime)`
 
-The style composer creates the `threeStyle === "galaxy"` and `layoutGalaxyGraph` surface consumed by the motion composer. The later haze/pattern stage still observes the final motion pattern contract.
+The style composer creates the `threeStyle === "galaxy"` and `layoutGalaxyGraph` surface consumed by the motion composer. The canonical pattern-coupling composer then observes the final motion pattern contract and preserves the existing 2400 s dust/haze phase lock and read-only evidence augmentation.
 
-`tests/threejs-galaxy-stage-order.test.mjs` makes this dependency executable and prevents the standalone motion stage from returning.
+`tests/threejs-galaxy-stage-order.test.mjs` makes this dependency executable and prevents either standalone Galaxy motion or standalone Galaxy pattern-coupling stages from returning.
 
 ## Stage retirement
 
-The standalone `apply-threejs-galaxy-motion.mjs` invocation can be removed safely because the previous style and motion stages were adjacent and the existing style adapter now performs the same two canonical compositions in the same order before haze/pattern coupling.
+The standalone `apply-threejs-galaxy-motion.mjs` invocation was removed safely because the previous style and motion stages were adjacent and the style adapter performs the same canonical compositions in the same order.
 
-The compatibility adapter remains available for direct callers and `check:pages`, but `build:pages` no longer executes it separately. This reduces the active post-build mutation chain from 18 to 17 stages without changing the qualified runtime order.
+After pattern-coupling ownership became canonical, the immediately-following standalone `apply-threejs-galaxy-central-bulge.mjs` invocation can likewise be removed because the same style adapter now performs `style → motion → pattern coupling` before any unrelated post-build transform. Both compatibility adapters remain available for direct callers and `check:pages` syntax/API checks.
+
+Together these two execution-boundary retirements reduce the active post-build mutation chain from 18 to 16 stages without changing the qualified Galaxy runtime order or renderer semantics.
 
 The retirement remains valid only while:
 
 1. `composeThreejsStyleRuntime(source)` runs before `composeThreejsGalaxyMotionRuntime(styledRuntime)`;
-2. the haze/pattern stage runs after that combined composition;
+2. `composeThreejsGalaxyPatternCouplingRuntime(motionRuntime)` runs after the final Galaxy motion contract;
 3. `GALAXY_PATTERN_PERIOD`, the motion evidence surface, and existing astronomy-inspired presentation parameters remain unchanged;
-4. the standalone motion stage does not reappear in `build:pages`;
+4. neither standalone Galaxy motion nor standalone Galaxy pattern-coupling stage reappears in `build:pages`;
 5. unit tests plus Chromium motion/local-lane evidence and iPhone WebKit remain GREEN.
 
-This changes invocation plumbing, not renderer semantics. It does not change the graph model, release authority, `v1`, or the accepted astronomy-inspired presentation contract.
+This changes invocation plumbing, not renderer semantics. It does not change the graph model, owner/contributed authority, release authority, `v1`, or the accepted astronomy-inspired presentation contract.
