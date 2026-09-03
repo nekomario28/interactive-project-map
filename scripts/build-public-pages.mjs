@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
@@ -26,6 +26,18 @@ const PRESETS = [
 ];
 
 const DEDICATED_STYLES = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
+const CANONICAL_RUNTIME_ASSETS = Object.freeze([
+  ["public-galaxy-common.js", "galaxy-common.js"],
+  ["public-galaxy-classic.js", "galaxy-classic-runtime.js"],
+  ["public-galaxy-hybrid.js", "galaxy-hybrid-runtime.js"],
+  ["public-galaxy-systems.js", "galaxy-systems-runtime.js"],
+  ["public-galaxy-edge-policy.js", "galaxy-edge-policy.js"],
+  ["public-adaptive-labels.js", "adaptive-labels.js"],
+  ["public-obsidian-runtime.js", "obsidian-runtime.js"],
+  ["public-obsidian-hover.js", "obsidian-hover.js"],
+  ["public-interaction-polish.js", "interaction-polish.js"],
+  ["public-search-emphasis.js", "search-emphasis.js"],
+]);
 
 function externalizeBrowserScript(html, src) {
   const pattern = /<script>[\s\S]*?<\/script>/;
@@ -120,6 +132,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await writeFile(join(outputDir, "tree-nav.js"), navScript);
   await writeFile(join(outputDir, "viewer.css"), viewerCss);
   await writeFile(join(outputDir, "spatial-core-runtime.js"), spatialCoreRuntimeSource());
+  await Promise.all(CANONICAL_RUNTIME_ASSETS.map(([source, target]) => copyFile(join(sourceDir, source), join(outputDir, target))));
   await writeFile(join(outputDir, "u", "index.html"), enhanceViewer(baseViewer, { mode: "graph" }));
   for (const mode of DEDICATED_STYLES) {
     await writeFile(join(outputDir, `${mode}-viewer.js`), await readFile(join(sourceDir, `public-${mode}-viewer.js`), "utf8"));
