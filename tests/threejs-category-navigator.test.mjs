@@ -8,10 +8,11 @@ import { spawnSync } from "node:child_process";
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
 import { applyThreejsLocalGraph } from "../scripts/apply-threejs-local-graph.mjs";
 import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
+import { applyThreejsCategoryNavigator } from "../scripts/apply-threejs-category-navigator.mjs";
 import {
-  applyThreejsCategoryNavigator,
-  patchThreejsCategoryNavigatorPage,
-} from "../scripts/apply-threejs-category-navigator.mjs";
+  composeThreejsCategoryNavigatorPage,
+  composeThreejsCategoryNavigatorRuntime,
+} from "../scripts/public-threejs-category-navigator.mjs";
 
 test("Three.js Category Navigator attaches after Local Graph/search and exports a thin renderer adapter", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-category-nav-"));
@@ -53,13 +54,14 @@ test("Three.js Category Navigator attaches after Local Graph/search and exports 
   }
 });
 
-test("Three.js Category Navigator postprocessor fails closed if shared search has not run", async () => {
+test("canonical Category Navigator composer fails closed if shared search has not run", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-category-nav-order-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     await applyThreejsLocalGraph({ siteDir: root });
-    await assert.rejects(
-      () => applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") }),
+    const runtime = await readFile(join(root, "threejs-viewer.js"), "utf8");
+    assert.throws(
+      () => composeThreejsCategoryNavigatorRuntime(runtime),
       /Local Graph and shared search adapters must run before Category Navigator/,
     );
   } finally {
@@ -67,17 +69,34 @@ test("Three.js Category Navigator postprocessor fails closed if shared search ha
   }
 });
 
-test("Three.js Category Navigator page attachment is idempotent and reuses the existing navigator stylesheet", () => {
+test("canonical Category Navigator page attachment is idempotent and reuses the existing navigator stylesheet", () => {
   const html = '<!doctype html><html><head><title>x</title></head><body data-map-style="threejs-cosmic"></body></html>';
-  const once = patchThreejsCategoryNavigatorPage(html);
+  const once = composeThreejsCategoryNavigatorPage(html);
   assert.match(once, /href="\.\.\/category-navigator\.css"/);
   assert.match(once, /src="\.\.\/threejs-category-navigator\.js"/);
-  assert.equal(patchThreejsCategoryNavigatorPage(once), once);
+  assert.equal(composeThreejsCategoryNavigatorPage(once), once);
 });
 
-test("Three.js Category Navigator source scripts pass Node syntax check", () => {
-  for (const file of ["scripts/apply-threejs-category-navigator.mjs", "scripts/public-threejs-category-navigator.js"]) {
+test("canonical Category Navigator composer owns semantics while the apply adapter stays thin", async () => {
+  const [canonical, adapter] = await Promise.all([
+    readFile(new URL("../scripts/public-threejs-category-navigator.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/apply-threejs-category-navigator.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(canonical, /IPM_THREEJS_CATEGORY_NAVIGATOR_P2/);
+  assert.match(canonical, /navigatorNodeById/);
+  assert.match(canonical, /projectmap:threejs-navigator-ready/);
+  assert.match(canonical, /projectmap:threejs-navigator-change/);
+  assert.match(adapter, /composeThreejsCategoryNavigatorRuntime/);
+  assert.match(adapter, /composeThreejsCategoryNavigatorPage/);
+  assert.doesNotMatch(adapter, /IPM_THREEJS_CATEGORY_NAVIGATOR_P2|navigatorNodeById|projectmap:threejs-navigator-ready/);
+
+  for (const file of [
+    "scripts/public-threejs-category-navigator.mjs",
+    "scripts/apply-threejs-category-navigator.mjs",
+    "scripts/public-threejs-category-navigator.js",
+  ]) {
     const result = spawnSync(process.execPath, ["--check", file], { cwd: process.cwd(), encoding: "utf8" });
-    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.status, 0, `${file}: ${result.stderr}`);
   }
 });
