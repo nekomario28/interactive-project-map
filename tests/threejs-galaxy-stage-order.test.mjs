@@ -14,7 +14,7 @@ function stageIndex(scriptName) {
 
 test("Three.js dimension → style → motion → pattern composition remains explicit after standalone style retirement", () => {
   stageIndex("apply-view-dimension-toggle.mjs");
-  assert.equal(stages.length - 1, 11, "active post-build stage count must be 11 after Three.js style-stage retirement");
+  assert.equal(stages.length - 1, 10, "active post-build stage count must be 10 after Local Graph stage retirement");
 
   for (const retired of [
     "apply-threejs-style-presets.mjs",
