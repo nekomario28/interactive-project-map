@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import { projectMapViewModelRuntimeSource } from "./project-map-view-model-runtime.mjs";
 import { projectMapViewStateRuntimeSource } from "./project-map-view-state-runtime.mjs";
+import { composeThreejsGalaxyCentralMorphologyRuntime } from "./public-threejs-galaxy-central-morphology.mjs";
 
 const THREE_CDN_ORIGIN = "https://cdn.jsdelivr.net";
 
@@ -128,7 +129,7 @@ export async function buildThreejsLab({ siteDir = join(process.cwd(), "site"), s
     readFile(join(sourceDir, "public-threejs-viewer.js"), "utf8"),
     readFile(join(sourceDir, "public-threejs-viewer.css"), "utf8"),
   ]);
-  const runtime = patchThreejsViewModelRuntime(sourceRuntime);
+  const runtime = composeThreejsGalaxyCentralMorphologyRuntime(patchThreejsViewModelRuntime(sourceRuntime));
   const viewModelRuntime = projectMapViewModelRuntimeSource();
   const viewStateRuntime = projectMapViewStateRuntimeSource();
   await Promise.all([
