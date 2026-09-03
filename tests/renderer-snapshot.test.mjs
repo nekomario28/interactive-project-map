@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createRendererSnapshot } from "../packages/project-map-view-model/src/renderer-snapshot.js";
-import { patchThreeDRendererSnapshot, patchTwoDRendererSnapshot } from "../scripts/apply-renderer-snapshot.mjs";
+import { patchThreeDRendererSnapshot, patchTwoDRendererSnapshot } from "../scripts/public-renderer-snapshot.mjs";
 
 test("renderer snapshot normalizes a stable evidence shape", () => {
   const snapshot = createRendererSnapshot({
@@ -60,4 +61,19 @@ test("renderer adapters patch exactly once and fail closed when their insertion 
   assert.match(patchedThreeD, /rendererId:"threejs"/);
   assert.equal(patchThreeDRendererSnapshot(patchedThreeD), patchedThreeD);
   assert.throws(() => patchThreeDRendererSnapshot("drift"), /Three\.js renderer snapshot insertion point/);
+});
+
+test("renderer snapshot semantics stay in the canonical composer while apply stage remains I/O-only", async () => {
+  const [canonical, adapter] = await Promise.all([
+    readFile(new URL("../scripts/public-renderer-snapshot.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/apply-renderer-snapshot.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(canonical, /IPM_COMMON_RENDERER_SNAPSHOT_2D_V1/);
+  assert.match(canonical, /IPM_COMMON_RENDERER_SNAPSHOT_3D_V1/);
+  assert.match(canonical, /rendererId: "canvas2d"/);
+  assert.match(canonical, /rendererId:"threejs"/);
+  assert.doesNotMatch(adapter, /IPM_COMMON_RENDERER_SNAPSHOT_[23]D_V1/);
+  assert.doesNotMatch(adapter, /createRendererSnapshot\(/);
+  assert.match(adapter, /patchTwoDRendererSnapshot/);
+  assert.match(adapter, /patchThreeDRendererSnapshot/);
 });
