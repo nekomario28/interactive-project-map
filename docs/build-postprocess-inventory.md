@@ -10,7 +10,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 - Canonical builder: `scripts/build-public-pages.mjs`
 - Reviewed historical post-build mutators: **18**
-- Active post-build mutators: **16**
+- Active post-build mutators: **15**
 - Direction: **monotonic decrease**
 - Preferred destination: canonical `public-*` runtime/template sources or shared package mechanisms
 - Migration rule: one bounded mechanism at a time, with rendered/evidence gates preserved
@@ -26,15 +26,14 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 | `apply-quality-view.mjs` | Quality presentation bootstrap and shared model wiring | P1 |
 | `apply-threejs-local-graph.mjs` | Three.js Local Graph adapter | P2 |
 | `apply-threejs-search-context.mjs` | Three.js shared search adapter | P2 |
-| `apply-threejs-category-navigator.mjs` | Three.js category navigator adapter | P2 |
-| `apply-threejs-repository-labels.mjs` | bounded Three.js repository-label adapter | P2 |
+| `apply-threejs-category-navigator.mjs` | thin filesystem/order carrier invoking canonical Three.js Category Navigator → bounded repository labels and copying their assets | P2 |
 | `apply-view-dimension-toggle.mjs` | 2D/3D navigation controls and assets | P1 |
 | `apply-threejs-style-presets.mjs` | thin filesystem/order adapter invoking canonical Three.js style → Galaxy motion → Galaxy pattern coupling in that order | **P1 relocate only with broader Three.js composition authority** |
 | `apply-threejs-local-engine.mjs` | pinned/localized Three.js engine | P2 keep until localization owner is clearer |
 | `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
 | `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
 
-`apply-threejs-galaxy-motion.mjs` and `apply-threejs-galaxy-central-bulge.mjs` remain as compatibility/syntax-checked adapters but are no longer active `build:pages` stages.
+`apply-threejs-repository-labels.mjs` remains a compatibility/syntax-checked adapter but is no longer an active `build:pages` stage. `apply-threejs-galaxy-motion.mjs` and `apply-threejs-galaxy-central-bulge.mjs` are fully retired: neither source file nor build/check invocation remains active. Their names stay only in the historical mutator allowlist so the original reviewed baseline remains auditable.
 
 ## First migration cut — complete
 
@@ -186,11 +185,58 @@ The twelfth bounded cut removes the second redundant Galaxy execution boundary w
 
 This cut changes invocation plumbing only. The 2/3/4-arm policy, 22° pitch, 2400 s pattern, 45.36 scaled dust reference, local `0.68` ellipse, `480 + lane * 240`, Motion Off behavior, no-persistent-lines policy, owner/contributed authority, and non-physical haze boundary are unchanged.
 
+## Thirteenth migration cut — Three.js repository-label semantic ownership
+
+PR #390 moves the bounded Three.js repository-label semantics into `scripts/public-threejs-repository-labels.mjs` without changing the then-active 16-stage execution order:
+
+1. selected/direct-search lazy label behavior and its existing budgets remain canonical;
+2. Category Navigator remains the required semantic prerequisite;
+3. `apply-threejs-repository-labels.mjs` becomes a thin filesystem compatibility adapter;
+4. label/search/category semantics, CSS presentation, graph semantics and release authority are unchanged.
+
+This ownership-only cut leaves the active mutator count at 16.
+
+## Fourteenth migration cut — retire standalone repository-label stage
+
+PR #393 removes the redundant repository-label execution boundary while preserving Category Navigator → repository-label order:
+
+1. `apply-threejs-category-navigator.mjs` composes Category Navigator runtime/page state and then canonical repository-label runtime/page state;
+2. the combined stage copies both Category Navigator assets and the repository-label stylesheet;
+3. standalone `node scripts/apply-threejs-repository-labels.mjs` is removed from `build:pages` but the adapter remains syntax-checked for compatibility;
+4. executable order tests prevent the standalone label stage from returning;
+5. the repository-wide active post-build count decreases from **16 to 15**.
+
+No repository-label budget, search/category semantic, Galaxy semantic, graph authority, or `v1` behavior changes in this cut.
+
+## Fifteenth migration cut — Three.js Category Navigator semantic ownership
+
+PR #396 moves the already-qualified Category Navigator transformation into `scripts/public-threejs-category-navigator.mjs`:
+
+1. canonical runtime/page composers own the existing navigator marker, selection/clear/visibility change notifications, navigator adapter export, and page attachments;
+2. `apply-threejs-category-navigator.mjs` becomes a thin filesystem/order carrier;
+3. the same active stage continues to compose canonical Category Navigator → repository labels in the qualified order;
+4. fail-close, idempotence and source-ownership tests remain executable.
+
+This ownership-only cut leaves the active mutator count at 15.
+
+## Sixteenth migration cut — remove retired Galaxy compatibility adapters
+
+PR #397 removes dead source/API surface after both Galaxy-specific execution stages were already retired:
+
+1. repository-wide reference search found no production caller of `patchThreejsGalaxyMotionRuntime`, `applyThreejsGalaxyMotion`, `patchThreejsGalaxyCentralBulgeRuntime`, or `applyThreejsGalaxyCentralBulge` outside the obsolete adapters and adapter-only tests/docs/check list;
+2. `scripts/apply-threejs-galaxy-motion.mjs` and `scripts/apply-threejs-galaxy-central-bulge.mjs` are deleted;
+3. their obsolete `check:pages` syntax-check entries are removed;
+4. canonical motion and pattern-coupling semantics, idempotence, stale/partial fail-close behavior and syntax checks remain tested directly;
+5. an explicit absence gate prevents the retired adapter files from silently returning;
+6. `build:pages` is unchanged by PR #397, so the active post-build count remains **15**.
+
+This is dead-code retirement only. Galaxy morphology, motion, pattern coupling, evidence semantics, owner/contributed authority, graph semantics, release authority and `v1` are unchanged.
+
 ## Next bounded migrations
 
 Re-inventory the residual `postprocess-public-pages.mjs` responsibilities separately from renderer-local work. Treat CSP compatibility rewriting and runtime-script attachment as independent mechanisms and do not collapse them merely to reduce line count.
 
-For Three.js Galaxy, central morphology, disc-haze presentation, style semantics, motion semantics, and pattern coupling now all have canonical owners. No standalone Galaxy-specific semantic post-build stage remains. The remaining `apply-threejs-style-presets.mjs` stage is now a combined Three.js renderer composition/order carrier; relocate it only if a broader canonical Three.js build boundary can preserve style → motion → pattern order and all current browser evidence. Do not keep reducing stages merely for the number, and do not combine maintenance with Galaxy redesign.
+For Three.js Galaxy, central morphology, disc-haze presentation, style semantics, motion semantics and pattern coupling now all have canonical owners. No standalone Galaxy-specific semantic post-build stage or dead Galaxy compatibility adapter remains. The remaining `apply-threejs-style-presets.mjs` stage is a broader Three.js renderer composition/order carrier; relocate it only if a broader canonical Three.js build boundary can preserve style → motion → pattern order and all current browser evidence. Do not keep reducing stages merely for the number, and do not combine maintenance with Galaxy redesign.
 
 ## Rules for future changes
 
