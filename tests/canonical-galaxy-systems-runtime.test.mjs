@@ -7,7 +7,7 @@ const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.
 
 test("Galaxy Systems owns its adopted runtime identity and motion policy canonically", () => {
   assert.match(systems, /window\.addEventListener\("DOMContentLoaded", \(\) => \{\n  if \(state\.style !== "galaxy-systems"\) return;/);
-  assert.equal((systems.match(/"galaxy-systems"/g) || []).length, 6);
+  assert.equal((systems.match(/"galaxy-systems"/g) || []).length, 7);
   assert.doesNotMatch(systems, /"galaxy"/);
 
   assert.match(systems, /const direction = \(hash\(`\$\{group\.id\}:orbit-direction`\) & 1\) === 0 \? 1 : -1;/);
