@@ -19,6 +19,13 @@ const GALAXY_PATTERN_ANIMATE = 'dust.rotation.y+=delta*(threeStyle==="galaxy"?TA
 const GALAXY_PATTERN_ANIMATE_WITH_HAZE = 'const galaxyPatternDelta=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);dust.rotation.y+=galaxyPatternDelta;if(threeStyle==="galaxy"&&galaxyDiscHaze)galaxyDiscHaze.rotation.z+=galaxyPatternDelta;';
 const GALAXY_MOTION_SNAPSHOT = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0})});';
 const GALAXY_MOTION_SNAPSHOT_WITH_HAZE = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0,discHazePatternFrame:galaxyDiscHaze?"co-rotating-arm-pattern":"none",dustPatternRotationY:dust.rotation.y,hazePatternRotationY:galaxyDiscHaze?galaxyDiscHaze.rotation.z:null,dustPatternReferenceRadius:42*dust.scale.x,hazePatternReferenceRadius:galaxyDiscHaze?galaxyDiscHaze.userData.referenceRadius:null})});';
+const CURRENT_MORPHOLOGY_MARKERS = [
+  CURRENT_DISC_TEXTURE_SIGNATURE,
+  CURRENT_BULGE_SIGNATURE,
+  SCENE_WITH_MORPHOLOGY,
+  GALAXY_PATTERN_ANIMATE_WITH_HAZE,
+  GALAXY_MOTION_SNAPSHOT_WITH_HAZE,
+];
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return source;
@@ -32,9 +39,8 @@ function assertCurrentMorphologyInput(source) {
       throw new Error("Legacy Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source");
     }
   }
-  const hasCurrentDisc = source.includes(CURRENT_DISC_TEXTURE_SIGNATURE);
-  const hasCurrentBulge = source.includes(CURRENT_BULGE_SIGNATURE);
-  if (hasCurrentDisc !== hasCurrentBulge) {
+  const currentCount = CURRENT_MORPHOLOGY_MARKERS.filter((marker) => source.includes(marker)).length;
+  if (currentCount !== 0 && currentCount !== CURRENT_MORPHOLOGY_MARKERS.length) {
     throw new Error("Partial Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source");
   }
 }
