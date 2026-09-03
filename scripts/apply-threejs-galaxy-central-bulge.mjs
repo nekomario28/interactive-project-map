@@ -8,23 +8,16 @@ const GALAXY_BULGE_HELPER = `function softenGalaxyCentralDust(dust){const positi
 
 const RUNTIME_ANCHOR = "function createSceneRuntime(THREE,graph,username){";
 const SCENE_ANCHOR = 'scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe";if(threeStyle==="galaxy"){dust.scale.setScalar(1.08);dust.material.opacity=.44;}';
-const PREVIOUS_SCENE_WITH_BULGE = `${SCENE_ANCHOR}if(threeStyle==="galaxy")softenGalaxyCentralDust(dust);const galaxyBulge=threeStyle==="galaxy"?createGalaxyCentralBulge(THREE,username,glowTexture):null;if(galaxyBulge){scene.add(galaxyBulge);document.body.dataset.galaxyCentralStructure="bulge";}`;
-const SCENE_WITH_MORPHOLOGY_V1 = `${SCENE_ANCHOR}if(threeStyle==="galaxy")softenGalaxyCentralDust(dust);const galaxyDiscHaze=threeStyle==="galaxy"?createGalaxyDiscHaze(THREE,username):null;if(galaxyDiscHaze){scene.add(galaxyDiscHaze);document.body.dataset.galaxyDiscTexture="procedural-haze-v1";}const galaxyBulge=threeStyle==="galaxy"?createGalaxyCentralBulge(THREE,username,glowTexture):null;if(galaxyBulge){scene.add(galaxyBulge);document.body.dataset.galaxyCentralStructure="bulge";}`;
-const SCENE_WITH_MORPHOLOGY_V2 = `${SCENE_ANCHOR}if(threeStyle==="galaxy")softenGalaxyCentralDust(dust);const galaxyDiscHaze=threeStyle==="galaxy"?createGalaxyDiscHaze(THREE,username,galaxyArmCount(graph),GALAXY_LOG_PITCH):null;if(galaxyDiscHaze){scene.add(galaxyDiscHaze);document.body.dataset.galaxyDiscTexture="procedural-haze-v2";}const galaxyBulge=threeStyle==="galaxy"?createGalaxyCentralBulge(THREE,username,glowTexture):null;if(galaxyBulge){scene.add(galaxyBulge);document.body.dataset.galaxyCentralStructure="bulge";}`;
 const SCENE_WITH_MORPHOLOGY = `${SCENE_ANCHOR}if(threeStyle==="galaxy")softenGalaxyCentralDust(dust);const galaxyDiscHaze=threeStyle==="galaxy"?createGalaxyDiscHaze(THREE,username,galaxyArmCount(graph),GALAXY_LOG_PITCH,42*dust.scale.x):null;if(galaxyDiscHaze){scene.add(galaxyDiscHaze);document.body.dataset.galaxyDiscTexture="procedural-haze-v2";}const galaxyBulge=threeStyle==="galaxy"?createGalaxyCentralBulge(THREE,username,glowTexture):null;if(galaxyBulge){scene.add(galaxyBulge);document.body.dataset.galaxyCentralStructure="bulge";}`;
-const DISC_TEXTURE_V1_SIGNATURE = "function createGalaxyDiscHaze(THREE,seed){";
-const DISC_TEXTURE_V2_SIGNATURE = "function createGalaxyDiscHaze(THREE,seed,armCount=4,pitch=0){";
-const DISC_TEXTURE_V3_SIGNATURE = "function createGalaxyDiscHaze(THREE,seed,armCount=4,pitch=0,referenceRadius=42){";
-const DISC_TEXTURE_V1_PIXEL = 'const center=galaxyDiscSmooth((radius-.12)/.1),edge=1-galaxyDiscSmooth((radius-.72)/.26),coarse=galaxyDiscNoise(seed,u*4.4,v*4.4),fine=galaxyDiscNoise(seed+":fine",u*8.2,v*8.2),cloud=.72*coarse+.28*fine,alpha=Math.round(255*.18*center*edge*(.38+.62*cloud)),warm=1-Math.min(1,radius),offset=(py*size+px)*4;';
-const DISC_TEXTURE_V2_PIXEL = 'const center=galaxyDiscSmooth((radius-.12)/.1),edge=1-galaxyDiscSmooth((radius-.72)/.26),coarse=galaxyDiscNoise(seed,u*4.4,v*4.4),fine=galaxyDiscNoise(seed+":fine",u*8.2,v*8.2),cloud=.72*coarse+.28*fine,angle=Math.atan2(-nz,nx),visualRadius=radius*312,spiral=pitch>0?Math.log(Math.max(1,visualRadius/42))/Math.tan(pitch):0,armWave=.5+.5*Math.cos((angle-spiral)*armCount),armMod=.79+.56*armWave*armWave,alpha=Math.round(255*.18*center*edge*(.38+.62*cloud)*armMod),warm=1-Math.min(1,radius),offset=(py*size+px)*4;';
-const DISC_TEXTURE_V3_PIXEL = 'const center=galaxyDiscSmooth((radius-.12)/.1),edge=1-galaxyDiscSmooth((radius-.72)/.26),coarse=galaxyDiscNoise(seed,u*4.4,v*4.4),fine=galaxyDiscNoise(seed+":fine",u*8.2,v*8.2),cloud=.72*coarse+.28*fine,angle=Math.atan2(-nz,nx),visualRadius=radius*312,spiral=pitch>0?Math.log(Math.max(1,visualRadius/referenceRadius))/Math.tan(pitch):0,armWave=.5+.5*Math.cos((angle-spiral)*armCount),armMod=.79+.56*armWave*armWave,alpha=Math.round(255*.18*center*edge*(.38+.62*cloud)*armMod),warm=1-Math.min(1,radius),offset=(py*size+px)*4;';
-const DISC_TEXTURE_V1_METADATA = 'mesh.userData.textureModel="procedural-low-frequency-haze";mesh.userData.textureSize=size;mesh.userData.centerClearFraction=.12;';
-const DISC_TEXTURE_V2_METADATA = 'mesh.userData.textureModel="procedural-low-frequency-log-arm-haze";mesh.userData.textureSize=size;mesh.userData.centerClearFraction=.12;mesh.userData.armCount=armCount;mesh.userData.pitchAngleDeg=pitch*180/Math.PI;';
-const DISC_TEXTURE_V3_METADATA = 'mesh.userData.textureModel="procedural-low-frequency-log-arm-haze";mesh.userData.textureSize=size;mesh.userData.centerClearFraction=.12;mesh.userData.armCount=armCount;mesh.userData.pitchAngleDeg=pitch*180/Math.PI;mesh.userData.referenceRadius=referenceRadius;';
+const CURRENT_DISC_TEXTURE_SIGNATURE = "function createGalaxyDiscHaze(THREE,seed,armCount=4,pitch=0,referenceRadius=42){";
+const CURRENT_BULGE_SIGNATURE = "function createGalaxyCentralBulge(THREE,seed,glowTexture){";
+const LEGACY_DISC_TEXTURE_SIGNATURES = [
+  "function createGalaxyDiscHaze(THREE,seed){",
+  "function createGalaxyDiscHaze(THREE,seed,armCount=4,pitch=0){",
+];
 const GALAXY_PATTERN_ANIMATE = 'dust.rotation.y+=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);';
 const GALAXY_PATTERN_ANIMATE_WITH_HAZE = 'const galaxyPatternDelta=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);dust.rotation.y+=galaxyPatternDelta;if(threeStyle==="galaxy"&&galaxyDiscHaze)galaxyDiscHaze.rotation.z+=galaxyPatternDelta;';
 const GALAXY_MOTION_SNAPSHOT = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0})});';
-const GALAXY_MOTION_SNAPSHOT_WITH_HAZE_V1 = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0,discHazePatternFrame:galaxyDiscHaze?"co-rotating-arm-pattern":"none",dustPatternRotationY:dust.rotation.y,hazePatternRotationY:galaxyDiscHaze?galaxyDiscHaze.rotation.z:null})});';
 const GALAXY_MOTION_SNAPSHOT_WITH_HAZE = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0,discHazePatternFrame:galaxyDiscHaze?"co-rotating-arm-pattern":"none",dustPatternRotationY:dust.rotation.y,hazePatternRotationY:galaxyDiscHaze?galaxyDiscHaze.rotation.z:null,dustPatternReferenceRadius:42*dust.scale.x,hazePatternReferenceRadius:galaxyDiscHaze?galaxyDiscHaze.userData.referenceRadius:null})});';
 
 function replaceRequired(source, from, to, label) {
@@ -33,30 +26,31 @@ function replaceRequired(source, from, to, label) {
   return source.replace(from, to);
 }
 
-export function patchThreejsGalaxyCentralBulgeRuntime(source) {
-  let next = source;
-  if (next.includes(DISC_TEXTURE_V1_SIGNATURE)) {
-    next = replaceRequired(next, DISC_TEXTURE_V1_SIGNATURE, DISC_TEXTURE_V2_SIGNATURE, "Galaxy disc-texture v2 signature");
-    next = replaceRequired(next, DISC_TEXTURE_V1_PIXEL, DISC_TEXTURE_V2_PIXEL, "Galaxy logarithmic-arm texture modulation");
-    next = replaceRequired(next, DISC_TEXTURE_V1_METADATA, DISC_TEXTURE_V2_METADATA, "Galaxy disc-texture v2 metadata");
+function assertCurrentMorphologyInput(source) {
+  for (const signature of LEGACY_DISC_TEXTURE_SIGNATURES) {
+    if (source.includes(signature)) {
+      throw new Error("Legacy Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source");
+    }
   }
-  if (next.includes(DISC_TEXTURE_V2_SIGNATURE)) {
-    next = replaceRequired(next, DISC_TEXTURE_V2_SIGNATURE, DISC_TEXTURE_V3_SIGNATURE, "Galaxy scaled-reference disc-texture signature");
-    next = replaceRequired(next, DISC_TEXTURE_V2_PIXEL, DISC_TEXTURE_V3_PIXEL, "Galaxy scaled-reference logarithmic-arm texture");
-    next = replaceRequired(next, DISC_TEXTURE_V2_METADATA, DISC_TEXTURE_V3_METADATA, "Galaxy scaled-reference texture metadata");
-  } else if (!next.includes(DISC_TEXTURE_V3_SIGNATURE)) {
+  const hasCurrentDisc = source.includes(CURRENT_DISC_TEXTURE_SIGNATURE);
+  const hasCurrentBulge = source.includes(CURRENT_BULGE_SIGNATURE);
+  if (hasCurrentDisc !== hasCurrentBulge) {
+    throw new Error("Partial Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source");
+  }
+}
+
+export function patchThreejsGalaxyCentralBulgeRuntime(source) {
+  assertCurrentMorphologyInput(source);
+  let next = source;
+  if (!next.includes(CURRENT_DISC_TEXTURE_SIGNATURE)) {
     next = replaceRequired(next, RUNTIME_ANCHOR, `${GALAXY_DISC_TEXTURE_HELPER}\n${RUNTIME_ANCHOR}`, "Galaxy procedural disc-texture helper insertion point");
   }
-  if (!next.includes("function createGalaxyCentralBulge(THREE,seed,glowTexture)")) {
+  if (!next.includes(CURRENT_BULGE_SIGNATURE)) {
     next = replaceRequired(next, RUNTIME_ANCHOR, `${GALAXY_BULGE_HELPER}\n${RUNTIME_ANCHOR}`, "Galaxy central-bulge helper insertion point");
   }
-  if (next.includes(SCENE_WITH_MORPHOLOGY_V2)) next = next.replace(SCENE_WITH_MORPHOLOGY_V2, SCENE_WITH_MORPHOLOGY);
-  else if (next.includes(SCENE_WITH_MORPHOLOGY_V1)) next = next.replace(SCENE_WITH_MORPHOLOGY_V1, SCENE_WITH_MORPHOLOGY);
-  else if (next.includes(PREVIOUS_SCENE_WITH_BULGE)) next = next.replace(PREVIOUS_SCENE_WITH_BULGE, SCENE_WITH_MORPHOLOGY);
-  else next = replaceRequired(next, SCENE_ANCHOR, SCENE_WITH_MORPHOLOGY, "Galaxy central morphology scene insertion point");
+  next = replaceRequired(next, SCENE_ANCHOR, SCENE_WITH_MORPHOLOGY, "Galaxy current central morphology scene insertion point");
   next = replaceRequired(next, GALAXY_PATTERN_ANIMATE, GALAXY_PATTERN_ANIMATE_WITH_HAZE, "Galaxy haze/pattern phase-locked animation");
-  if (next.includes(GALAXY_MOTION_SNAPSHOT_WITH_HAZE_V1)) next = next.replace(GALAXY_MOTION_SNAPSHOT_WITH_HAZE_V1, GALAXY_MOTION_SNAPSHOT_WITH_HAZE);
-  else next = replaceRequired(next, GALAXY_MOTION_SNAPSHOT, GALAXY_MOTION_SNAPSHOT_WITH_HAZE, "Galaxy haze motion evidence snapshot");
+  next = replaceRequired(next, GALAXY_MOTION_SNAPSHOT, GALAXY_MOTION_SNAPSHOT_WITH_HAZE, "Galaxy haze motion evidence snapshot");
   return next;
 }
 
