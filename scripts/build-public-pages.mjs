@@ -1,11 +1,13 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
 
-// Immutable Action commit substituted into the canonical public-home.js setup
-// serializer. postprocess-public-pages.mjs promotes it to the reviewed release.
-export const PUBLIC_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
+// Pages setup uses the same reviewed immutable inner Action release as the
+// reusable workflow and dormant Worker serializer. Do not emit a stale ref
+// and rely on postprocessing to promote it later.
+export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;
 
 const PRESETS = [
   { id: "radial", label: "Radial Tree", badge: "Classic", description: "Compact Owner → Category → Repository hierarchy around one center." },

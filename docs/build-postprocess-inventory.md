@@ -16,7 +16,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 | Stage | Current responsibility | Migration priority |
 |---|---|---|
-| `postprocess-public-pages.mjs` | runtime emission/attachment, final Action pin, and compatibility rewrites; shared-viewer, Galaxy identity/tuning, Obsidian force-kernel, and interaction semantic rewrites retired | **P0 split/shrink** |
+| `postprocess-public-pages.mjs` | Spatial Core runtime emission, script attachment, and CSP compatibility rewriting; shared-viewer, Galaxy, Obsidian, interaction semantic, and Action-ref rewrites retired | **P0 split/shrink** |
 | `apply-contributed-render-sync.mjs` | shared/Obsidian/Galaxy Contributed render parity | P1 |
 | `apply-dedicated-view-state.mjs` | dedicated viewer shared state layer | P1 |
 | `apply-dedicated-contributed-render-sync.mjs` | dedicated Contributed primary-status parity | P1 |
@@ -94,11 +94,24 @@ The fifth bounded cut moves the already-adopted semantic-edge normalization into
 
 The Spatial Core primitive parity test remains the normalization-semantics authority, while existing shared/dedicated interaction and browser tests remain the rendering/search authority.
 
-`postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, script attachment, CSP compatibility rewriting, and the reviewed installer Action-ref promotion.
+## Sixth migration cut — complete
+
+The sixth bounded cut removes the setup Action-ref build-then-rewrite path without moving release authority:
+
+1. `scripts/build-public-pages.mjs` imports the reviewed inner Action ref from `src/action-ref.ts` and emits it directly into `app.js`;
+2. `PUBLIC_ACTION_REF` remains a compatibility export backed by the same canonical authority;
+3. the historical builder SHA is no longer emitted;
+4. `BUILDER_ACTION_REF` and the final `app.js` string-promotion block are retired from `postprocess-public-pages.mjs`;
+5. the setup source-of-truth test proves the built `app.js` already contains `PROJECT_MAP_ACTION_REF` and remains byte-identical through postprocess;
+6. the release-chain test continues to prove the outer reusable `@v1` channel and immutable inner Action SHA are separate release targets.
+
+This is the still-valid maintenance residue from stale PR #350. Its already-superseded serializer changes are intentionally not replayed.
+
+`postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, shared/dedicated script attachment, and CSP compatibility rewriting.
 
 ## Next bounded migrations
 
-The smallest remaining high-drift rewrite inside `postprocess-public-pages.mjs` is the setup Action-ref promotion: `scripts/build-public-pages.mjs` still emits the historical builder SHA and postprocess rewrites it to the reviewed immutable Action SHA. Fresh-main reimplement only the still-valid part of stale PR #350: make the builder use `src/action-ref.ts` directly, prove `app.js` is already final before postprocess, then remove `BUILDER_ACTION_REF` and the promotion block. Do not replay #350's already-superseded serializer changes.
+Re-inventory the residual `postprocess-public-pages.mjs` responsibilities after this cut. Treat CSP compatibility rewriting and runtime-script attachment as separate mechanisms: canonicalize one only if its owner is clear and the generated output can be proven equivalent. Do not collapse them merely to reduce line count.
 
 Three.js Galaxy motion and central morphology remain high-value post-build debt, but they are renderer-semantic and currently active development surfaces. Migrate them one mechanism at a time only from a fresh main after checking for concurrent Galaxy work. Do not combine motion and central morphology in one cleanup cut.
 

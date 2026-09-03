@@ -4,7 +4,7 @@ import test from "node:test";
 
 const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8");
 
-test("shared viewer behavior is no longer patched after canonical emission", () => {
+test("shared viewer and setup Action-ref behavior are no longer patched after canonical emission", () => {
   for (const retiredMarker of [
     "MOBILE_FIX",
     "VIEWER_FIT_OLD",
@@ -14,13 +14,15 @@ test("shared viewer behavior is no longer patched after canonical emission", () 
     "patchViewerStyles",
     "hardenSharedViewer",
     "Emitted-site mobile hardening",
+    "BUILDER_ACTION_REF",
+    "app.replaceAll",
   ]) {
-    assert.doesNotMatch(postprocess, new RegExp(retiredMarker), `${retiredMarker} must remain retired from postprocess`);
+    assert.doesNotMatch(postprocess, new RegExp(retiredMarker.replaceAll(".", "\\.")), `${retiredMarker} must remain retired from postprocess`);
   }
 
+  assert.match(postprocess, /export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;/);
   assert.match(postprocess, /await emitSpatialCoreRuntime\(outputDir\);/);
   assert.match(postprocess, /await emitObsidianRuntime\(outputDir\);/);
   assert.match(postprocess, /await emitGalaxyRuntimes\(outputDir\);/);
   assert.match(postprocess, /await emitInteractionPolish\(outputDir\);/);
-  assert.match(postprocess, /app\.replaceAll\(BUILDER_ACTION_REF, PUBLIC_ACTION_REF\)/);
 });
