@@ -110,6 +110,8 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   expect(before.discHazePatternFrame).toBe("co-rotating-arm-pattern");
   expect(before.hazePatternRotationY).not.toBeNull();
   expect(before.hazePatternRotationY).toBeCloseTo(before.dustPatternRotationY, 10);
+  expect(before.dustPatternReferenceRadius).toBeCloseTo(42 * 1.08, 10);
+  expect(before.hazePatternReferenceRadius).toBeCloseTo(before.dustPatternReferenceRadius, 10);
 
   const localRepositories = before.systems.flatMap((system) => system.repositories);
   expect(localRepositories).toHaveLength(5);
@@ -157,6 +159,7 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   expect(after.dustPatternRotationY).toBeGreaterThan(before.dustPatternRotationY + 0.001);
   expect(after.hazePatternRotationY).toBeGreaterThan(before.hazePatternRotationY + 0.001);
   expect(after.hazePatternRotationY).toBeCloseTo(after.dustPatternRotationY, 10);
+  expect(after.hazePatternReferenceRadius).toBeCloseTo(after.dustPatternReferenceRadius, 10);
 
   const sameArmInnerAfter = after.systems.find((system) => system.id === sameArmInner.id);
   const sameArmOuterAfter = after.systems.find((system) => system.id === sameArmOuter.id);
@@ -188,4 +191,5 @@ test("Galaxy Motion Off freezes category, repository, Contributed, and arm-haze 
   expect(after.dustPatternRotationY).toBeCloseTo(before.dustPatternRotationY, 12);
   expect(after.hazePatternRotationY).toBeCloseTo(before.hazePatternRotationY, 12);
   expect(after.hazePatternRotationY).toBeCloseTo(after.dustPatternRotationY, 12);
+  expect(after.hazePatternReferenceRadius).toBeCloseTo(after.dustPatternReferenceRadius, 12);
 });
