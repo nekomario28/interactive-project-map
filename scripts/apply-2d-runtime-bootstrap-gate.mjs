@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { patchThreeDRendererSnapshot, patchTwoDRendererSnapshot } from "./public-renderer-snapshot.mjs";
 
 export const BOOTSTRAP_GATE_MARKER = "/* IPM_2D_RUNTIME_BOOTSTRAP_GATE_V1 */";
 
@@ -37,7 +38,25 @@ export function gate2DRuntimeBootstrap(source) {
   return `${prefix}\n${BOOTSTRAP_GATE_MARKER}\nfunction startProjectMapGraphLoad() {\n${bootstrap}\n}\nwindow.addEventListener("DOMContentLoaded", startProjectMapGraphLoad, { once: true });\n`;
 }
 
+async function applyRendererSnapshotBeforeBootstrap(root) {
+  const twoDPath = join(root, "view-state.js");
+  const threeDPath = join(root, "threejs-viewer.js");
+  const [twoDSource, threeDSource] = await Promise.all([
+    readFile(twoDPath, "utf8"),
+    readFile(threeDPath, "utf8"),
+  ]);
+  const twoDNext = patchTwoDRendererSnapshot(twoDSource);
+  const threeDNext = patchThreeDRendererSnapshot(threeDSource);
+  await Promise.all([
+    twoDNext !== twoDSource ? writeFile(twoDPath, twoDNext) : Promise.resolve(),
+    threeDNext !== threeDSource ? writeFile(threeDPath, threeDNext) : Promise.resolve(),
+  ]);
+}
+
 export async function apply2DRuntimeBootstrapGate(root = "site") {
+  // Preserve the former adjacent stage order exactly: renderer snapshot first,
+  // then gate the final 2D graph bootstraps behind DOMContentLoaded.
+  await applyRendererSnapshotBeforeBootstrap(root);
   for (const file of TWO_D_VIEWER_FILES) {
     const path = join(root, file);
     const source = await readFile(path, "utf8");

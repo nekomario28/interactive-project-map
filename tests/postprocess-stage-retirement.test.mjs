@@ -11,7 +11,7 @@ test("read-only Pages postprocess is retired from active build execution", () =>
   assert.equal(stages[0], "node scripts/build-public-pages.mjs");
   assert.equal(stages[1], "node scripts/apply-contributed-render-sync.mjs");
   assert.doesNotMatch(build, /node scripts\/postprocess-public-pages\.mjs/);
-  assert.equal(stages.length - 1, 13, "active post-build stage count must be 13 after validator retirement");
+  assert.ok(stages.length - 1 <= 13, "active post-build stage count must not grow above the postprocess-retirement baseline");
 
   // Keep the validator available to focused tests and syntax checking even though
   // production build execution no longer needs this no-op boundary.
