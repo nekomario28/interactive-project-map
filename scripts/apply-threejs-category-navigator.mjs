@@ -2,6 +2,11 @@ import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import {
+  composeThreejsRepositoryLabelsPage,
+  composeThreejsRepositoryLabelsRuntime,
+} from "./public-threejs-repository-labels.mjs";
+
 const MARKER = "/* IPM_THREEJS_CATEGORY_NAVIGATOR_P2 */";
 const STYLE_TAG = '<link rel="stylesheet" href="../category-navigator.css">';
 const SCRIPT_TAG = '<script src="../threejs-category-navigator.js" defer></script>';
@@ -77,26 +82,33 @@ export async function applyThreejsCategoryNavigator({
   const runtimePath = join(siteDir, "threejs-viewer.js");
   const pagePath = join(siteDir, "three", "index.html");
   const navigatorPath = join(siteDir, "threejs-category-navigator.js");
+  const repositoryLabelStylePath = join(siteDir, "threejs-repository-labels.css");
   const [runtime, page] = await Promise.all([
     readFile(runtimePath, "utf8"),
     readFile(pagePath, "utf8"),
   ]);
-  const nextRuntime = patchThreejsCategoryNavigatorRuntime(runtime);
-  const nextPage = patchThreejsCategoryNavigatorPage(page);
+  const navigatorRuntime = patchThreejsCategoryNavigatorRuntime(runtime);
+  const nextRuntime = composeThreejsRepositoryLabelsRuntime(navigatorRuntime);
+  const navigatorPage = patchThreejsCategoryNavigatorPage(page);
+  const nextPage = composeThreejsRepositoryLabelsPage(navigatorPage);
   if (nextRuntime !== runtime) await writeFile(runtimePath, nextRuntime);
   if (nextPage !== page) await writeFile(pagePath, nextPage);
-  await copyFile(join(sourceDir, "public-threejs-category-navigator.js"), navigatorPath);
+  await Promise.all([
+    copyFile(join(sourceDir, "public-threejs-category-navigator.js"), navigatorPath),
+    copyFile(join(sourceDir, "public-threejs-repository-labels.css"), repositoryLabelStylePath),
+  ]);
   return {
     runtimePath,
     pagePath,
     navigatorPath,
+    repositoryLabelStylePath,
     injected: nextRuntime !== runtime || nextPage !== page,
   };
 }
 
 async function main() {
   const result = await applyThreejsCategoryNavigator();
-  console.log(`Applied Three.js Category Navigator adapter to ${result.pagePath}`);
+  console.log(`Applied Three.js Category Navigator and repository labels to ${result.pagePath}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
