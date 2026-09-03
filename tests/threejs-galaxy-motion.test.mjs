@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import test from "node:test";
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
 
-import { patchThreejsGalaxyMotionRuntime } from "../scripts/apply-threejs-galaxy-motion.mjs";
+import { composeThreejsGalaxyMotionRuntime } from "../scripts/public-threejs-galaxy-motion.mjs";
 
 const fixture = `
 function layoutGalaxyGraph(THREE,graph){const count=2,armCount=count<=3?1:count<=8?2:3,angle=-Math.PI/2+arm*TAU/armCount+tier*.62+(hashUnit(group.id+":galaxy-angle")-.5)*.1,radius=baseRadius+tier*tierGap,y=(hashUnit(group.id+":galaxy-y")-.5)*14,thickness=(hashUnit(repo.id+":galaxy-thickness")-.5)*(10+ring*2.6);positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-loose-y")-.5)*24,0));positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-external-y")-.5)*34,0));}
@@ -17,8 +18,8 @@ function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=de
 }
 `;
 
-test("Galaxy motion patch keeps the astronomy-informed disc while using 2D-Hybrid-like local ellipses and no persistent graph lines", () => {
-  const patched = patchThreejsGalaxyMotionRuntime(fixture);
+test("canonical Galaxy motion composer keeps the astronomy-informed disc while using 2D-Hybrid-like local ellipses and no persistent graph lines", () => {
+  const patched = composeThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /GALAXY_LOG_PITCH_DEG=22/);
   assert.match(patched, /GALAXY_PATTERN_PERIOD=2400/);
   assert.match(patched, /GALAXY_COROTATION_RADIUS=GALAXY_PATTERN_PERIOD\/16/);
@@ -54,13 +55,22 @@ test("Galaxy motion patch keeps the astronomy-informed disc while using 2D-Hybri
   assert.match(patched, /if\(threeStyle!=="galaxy"\)\{farStars\.rotation\.y\+=delta\*\.002;midStars\.rotation\.y-=delta\*\.004;nearStars\.rotation\.y\+=delta\*\.006;\}/);
   assert.match(patched, /dust\.rotation\.y\+=delta\*\(threeStyle==="galaxy"\?TAU\/GALAXY_PATTERN_PERIOD:\.0035\)/);
   assert.match(patched, /if\(galaxyMotion&&galaxyMotion\.step\(delta\)\)\{if\(selectedMesh\)desiredTarget\.copy\(selectedMesh\.position\);\}/);
-  assert.equal(patchThreejsGalaxyMotionRuntime(patched), patched);
+  assert.equal(composeThreejsGalaxyMotionRuntime(patched), patched);
 });
 
-test("Galaxy motion postprocessor source passes Node syntax check", () => {
-  const result = spawnSync(process.execPath, ["--check", "scripts/apply-threejs-galaxy-motion.mjs"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  });
-  assert.equal(result.status, 0, result.stderr);
+test("post-build Galaxy motion stage is only a thin I/O adapter", async () => {
+  const adapter = await readFile(new URL("../scripts/apply-threejs-galaxy-motion.mjs", import.meta.url), "utf8");
+  assert.match(adapter, /composeThreejsGalaxyMotionRuntime/);
+  assert.match(adapter, /export const patchThreejsGalaxyMotionRuntime = composeThreejsGalaxyMotionRuntime/);
+  assert.doesNotMatch(adapter, /GALAXY_LOG_PITCH_DEG|GALAXY_PATTERN_PERIOD=2400|function createGalaxyMotionModel/);
+});
+
+test("Galaxy motion canonical composer and adapter pass Node syntax checks", () => {
+  for (const path of ["scripts/public-threejs-galaxy-motion.mjs", "scripts/apply-threejs-galaxy-motion.mjs"]) {
+    const result = spawnSync(process.execPath, ["--check", path], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
+  }
 });
