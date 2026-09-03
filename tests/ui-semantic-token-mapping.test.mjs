@@ -20,6 +20,8 @@ const expectedMappings = new Map([
   ["color.selection.selected", "--accent"]
 ]);
 
+const neutralRegistryRevision = "9157d2c7fba788bfc11ae97295442a5075fe8e63";
+
 function sorted(values) {
   return [...values].sort();
 }
@@ -27,6 +29,9 @@ function sorted(values) {
 test("neutral semantic-token mapping stays bounded to the measured shared 2D viewer", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.authority, "CONSUMER_OWNED_MAPPING");
+  assert.equal(manifest.registry.path, "registry/ui-semantic-token-catalog.yaml");
+  assert.equal(manifest.registry.schemaVersion, 1);
+  assert.equal(manifest.registry.revision, neutralRegistryRevision);
   assert.equal(manifest.consumer.project, "nekomario28/interactive-project-map");
   assert.equal(manifest.consumer.surface, "PUBLIC_2D_VIEWER");
   assert.deepEqual(manifest.consumer.claimedModes, ["default", "obsidian"]);
