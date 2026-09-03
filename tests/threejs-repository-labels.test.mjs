@@ -15,7 +15,7 @@ import {
   DIRECT_SEARCH_LABEL_BUDGET,
 } from "../scripts/public-threejs-repository-labels.mjs";
 
-test("bounded Three.js repository labels attach after Category Navigator and remain lazy", async () => {
+test("bounded Three.js repository labels attach with Category Navigator and remain lazy", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-repo-labels-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
@@ -24,9 +24,10 @@ test("bounded Three.js repository labels attach after Category Navigator and rem
 
     await applyThreejsLocalGraph({ siteDir: root });
     await applyThreejsSearchContext({ siteDir: root });
-    await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    const first = await applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    assert.equal(first.injected, true);
+    const combined = await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    assert.equal(combined.injected, true);
+    const compatibility = await applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    assert.equal(compatibility.injected, false);
 
     const [runtime, page, style] = await Promise.all([
       readFile(join(root, "threejs-viewer.js"), "utf8"),
