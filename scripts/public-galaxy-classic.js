@@ -2,6 +2,7 @@
 /* global state, clamp, hash, collisionRadius, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, palette, performance, console, requestAnimationFrame */
 
 window.addEventListener("DOMContentLoaded", () => {
+  if (state.style !== "galaxy-classic") return;
   const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
   const tau = Math.PI * 2;
   const runtime = {
@@ -111,7 +112,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function initialize() {
-    if (state.style !== "galaxy" || !state.graph || !state.nodes.length) return false;
+    if (state.style !== "galaxy-classic" || !state.graph || !state.nodes.length) return false;
     const owner = state.nodes.find((node) => node.type === "owner");
     if (!owner) return false;
     runtime.owner = owner;
@@ -441,14 +442,14 @@ window.addEventListener("DOMContentLoaded", () => {
   const baseDrawNodesAndLabels = drawNodesAndLabels;
 
   nodeRadius = function galaxyNodeRadius(node) {
-    if (state.style !== "galaxy") return baseNodeRadius(node);
+    if (state.style !== "galaxy-classic") return baseNodeRadius(node);
     if (node.type === "owner") return 7;
     if (node.type === "group") return 2.2;
     return baseNodeRadius(node);
   };
 
   drawBackground = function galaxyBackground(colors, width, height) {
-    if (state.style !== "galaxy" || !runtime.initialized) {
+    if (state.style !== "galaxy-classic" || !runtime.initialized) {
       baseDrawBackground(colors, width, height);
       return;
     }
@@ -481,7 +482,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   drawEdges = function galaxyEdges(colors) {
-    if (state.style !== "galaxy") {
+    if (state.style !== "galaxy-classic") {
       baseDrawEdges(colors);
       return;
     }
@@ -511,7 +512,7 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   drawNodesAndLabels = function galaxyNodesAndLabels(colors) {
-    if (state.style !== "galaxy") {
+    if (state.style !== "galaxy-classic") {
       baseDrawNodesAndLabels(colors);
       return;
     }
@@ -599,7 +600,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function frame(now) {
     try {
-      if (state.style === "galaxy" && state.graph && state.nodes.length) {
+      if (state.style === "galaxy-classic" && state.graph && state.nodes.length) {
         if (step(now)) draw();
       } else if (runtime.initialized || runtime.nodesRef) reset();
     } catch (error) {

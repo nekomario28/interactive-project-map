@@ -47,14 +47,6 @@ async function htmlFiles(dir) {
   return found;
 }
 
-function isolateRuntime(source, style) {
-  let patched = source.replaceAll('"galaxy"', `"${style}"`);
-  const listener = 'window.addEventListener("DOMContentLoaded", () => {';
-  if (!patched.includes(listener)) throw new Error(`Could not locate DOMContentLoaded boundary for ${style}`);
-  patched = patched.replace(listener, `${listener}\n  if (state.style !== "${style}") return;`);
-  return patched;
-}
-
 export function spatialCoreRuntimeSource() {
   return `"use strict";\n/* global window */\n(() => {\n  const DEFAULT_FORCE_SETTINGS = Object.freeze(${JSON.stringify(DEFAULT_FORCE_SETTINGS)});\n\n  ${hashText.toString()}\n\n  ${normalizeWeightedEdges.toString()}\n\n  ${linkForceEdges.toString()}\n\n  ${stepForceLayout.toString()}\n\n  window.ProjectMapSpatialCore = Object.freeze({\n    DEFAULT_FORCE_SETTINGS,\n    normalizeWeightedEdges,\n    linkForceEdges,\n    stepForceLayout,\n  });\n})();\n`;
 }
@@ -107,13 +99,11 @@ async function emitSpatialCoreRuntime(outputDir) {
 async function emitGalaxyRuntimes(outputDir) {
   const sourceDir = resolve(process.cwd(), "scripts");
   await copyFile(join(sourceDir, "public-galaxy-common.js"), join(outputDir, "galaxy-common.js"));
+  await copyFile(join(sourceDir, "public-galaxy-classic.js"), join(outputDir, "galaxy-classic-runtime.js"));
   await copyFile(join(sourceDir, "public-galaxy-hybrid.js"), join(outputDir, "galaxy-hybrid-runtime.js"));
   await copyFile(join(sourceDir, "public-galaxy-systems.js"), join(outputDir, "galaxy-systems-runtime.js"));
   await copyFile(join(sourceDir, "public-galaxy-edge-policy.js"), join(outputDir, "galaxy-edge-policy.js"));
   await copyFile(join(sourceDir, "public-adaptive-labels.js"), join(outputDir, "adaptive-labels.js"));
-
-  const classicTemplate = await readFile(join(sourceDir, "public-galaxy-classic.js"), "utf8");
-  await writeFile(join(outputDir, "galaxy-classic-runtime.js"), isolateRuntime(classicTemplate, "galaxy-classic"));
 
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
