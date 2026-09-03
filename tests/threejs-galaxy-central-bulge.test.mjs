@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
 
@@ -86,6 +87,45 @@ test("Galaxy arm-aware haze matches scaled dust spatial phase and stays pattern-
   assert.doesNotMatch(patched, /count=innerWidth<720\?180:360/);
   assert.doesNotMatch(patched, /radius=44\*Math\.pow/);
   assert.equal(patchThreejsGalaxyCentralBulgeRuntime(patched), patched);
+});
+
+test("Galaxy morphology rejects stale and partial intermediate runtimes", () => {
+  const legacyV1 = fixture.replace(
+    "function createSceneRuntime(THREE,graph,username){",
+    "function createGalaxyDiscHaze(THREE,seed){return null;}\nfunction createSceneRuntime(THREE,graph,username){",
+  );
+  const legacyV2 = fixture.replace(
+    "function createSceneRuntime(THREE,graph,username){",
+    "function createGalaxyDiscHaze(THREE,seed,armCount=4,pitch=0){return null;}\nfunction createSceneRuntime(THREE,graph,username){",
+  );
+  const partial = fixture.replace(
+    "function createSceneRuntime(THREE,graph,username){",
+    "function createGalaxyCentralBulge(THREE,seed,glowTexture){return null;}\nfunction createSceneRuntime(THREE,graph,username){",
+  );
+  assert.throws(
+    () => patchThreejsGalaxyCentralBulgeRuntime(legacyV1),
+    /Legacy Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source/,
+  );
+  assert.throws(
+    () => patchThreejsGalaxyCentralBulgeRuntime(legacyV2),
+    /Legacy Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source/,
+  );
+  assert.throws(
+    () => patchThreejsGalaxyCentralBulgeRuntime(partial),
+    /Partial Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source/,
+  );
+});
+
+test("Galaxy morphology patcher no longer carries legacy upgrade branches", () => {
+  const source = readFileSync("scripts/apply-threejs-galaxy-central-bulge.mjs", "utf8");
+  assert.doesNotMatch(source, /SCENE_WITH_MORPHOLOGY_V1/);
+  assert.doesNotMatch(source, /SCENE_WITH_MORPHOLOGY_V2/);
+  assert.doesNotMatch(source, /PREVIOUS_SCENE_WITH_BULGE/);
+  assert.doesNotMatch(source, /DISC_TEXTURE_V1_PIXEL/);
+  assert.doesNotMatch(source, /DISC_TEXTURE_V2_PIXEL/);
+  assert.doesNotMatch(source, /GALAXY_MOTION_SNAPSHOT_WITH_HAZE_V1/);
+  assert.match(source, /LEGACY_DISC_TEXTURE_SIGNATURES/);
+  assert.match(source, /assertCurrentMorphologyInput/);
 });
 
 test("Galaxy central-morphology postprocessor source passes Node syntax check", () => {
