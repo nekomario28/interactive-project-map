@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const classic = await readFile(new URL("../scripts/public-galaxy-classic.js", import.meta.url), "utf8");
+const builder = await readFile(new URL("../scripts/build-public-pages.mjs", import.meta.url), "utf8");
 const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8");
 
 test("Galaxy Classic owns its runtime identity canonically", () => {
@@ -13,9 +14,10 @@ test("Galaxy Classic owns its runtime identity canonically", () => {
   assert.match(classic, /if \(state\.style === "galaxy-classic" && state\.graph && state\.nodes\.length\) \{/);
 });
 
-test("Pages postprocess emits canonical Galaxy Classic without identity string patching", () => {
+test("public builder emits canonical Galaxy Classic without postprocess identity or copy ownership", () => {
   assert.doesNotMatch(postprocess, /function isolateRuntime/);
   assert.doesNotMatch(postprocess, /replaceAll\('\"galaxy\"'/);
-  assert.match(postprocess, /copyFile\(join\(sourceDir, "public-galaxy-classic\.js"\), join\(outputDir, "galaxy-classic-runtime\.js"\)\)/);
+  assert.match(builder, /\["public-galaxy-classic\.js", "galaxy-classic-runtime\.js"\]/);
+  assert.doesNotMatch(postprocess, /public-galaxy-classic\.js|galaxy-classic-runtime\.js.*copyFile/);
   assert.doesNotMatch(postprocess, /classicTemplate/);
 });
