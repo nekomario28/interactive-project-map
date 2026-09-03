@@ -4,6 +4,7 @@ import test from "node:test";
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const stages = packageJson.scripts["build:pages"].split(" && ");
+const styleAdapter = await readFile(new URL("../scripts/apply-threejs-style-presets.mjs", import.meta.url), "utf8");
 
 function stageIndex(scriptName) {
   const index = stages.findIndex((stage) => stage === `node scripts/${scriptName}`);
@@ -11,11 +12,19 @@ function stageIndex(scriptName) {
   return index;
 }
 
-test("Three.js Galaxy style, motion, and haze composition order is explicit", () => {
+test("Three.js Galaxy style → motion → haze composition order remains explicit after motion-stage retirement", () => {
   const style = stageIndex("apply-threejs-style-presets.mjs");
-  const motion = stageIndex("apply-threejs-galaxy-motion.mjs");
   const haze = stageIndex("apply-threejs-galaxy-central-bulge.mjs");
 
-  assert.ok(style < motion, "Galaxy motion currently consumes the style-preset runtime surface");
-  assert.ok(motion < haze, "arm haze/pattern coupling must observe the final Galaxy motion pattern contract");
+  assert.equal(
+    stages.includes("node scripts/apply-threejs-galaxy-motion.mjs"),
+    false,
+    "Galaxy motion must not return as a standalone post-build stage",
+  );
+  assert.ok(style < haze, "the combined style/motion stage must run before haze/pattern coupling");
+
+  const styleCall = styleAdapter.indexOf("composeThreejsStyleRuntime(source)");
+  const motionCall = styleAdapter.indexOf("composeThreejsGalaxyMotionRuntime(styledRuntime)");
+  assert.ok(styleCall >= 0, "style adapter must invoke the canonical style composer");
+  assert.ok(motionCall > styleCall, "Galaxy motion must compose after the style runtime surface is established");
 });
