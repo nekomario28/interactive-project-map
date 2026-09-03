@@ -21,14 +21,8 @@ test("dedicated search emphasis keeps one shared visual contract", () => {
   assert.doesNotThrow(() => new Function(emphasis));
 });
 
-test("builder emits search emphasis and postprocess attaches it after shared search semantics for every dedicated viewer", () => {
+test("builder owns dedicated Spatial Core → polish → search-emphasis script ordering", () => {
   assert.match(builder, /public-search-emphasis\.js/);
-  assert.match(builder, /search-emphasis\.js/);
-  assert.doesNotMatch(postprocess, /public-search-emphasis\.js/);
-  assert.match(postprocess, /search-emphasis\.js/);
-  assert.match(postprocess, /SEARCH_EMPHASIS_SCRIPT/);
-  assert.match(postprocess, /POLISH_SCRIPT.*SEARCH_EMPHASIS_SCRIPT/s);
-  for (const style of ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]) {
-    assert.match(postprocess, new RegExp(`\\[\\"${style}\\"`));
-  }
+  assert.match(builder, /const DEDICATED_SCRIPT_TAIL = Object\.freeze\(\[[\s\S]*"spatial-core-runtime\.js",[\s\S]*"interaction-polish\.js",[\s\S]*"search-emphasis\.js"/);
+  assert.doesNotMatch(postprocess, /public-search-emphasis\.js|search-emphasis\.js|interaction-polish\.js|spatial-core-runtime\.js/);
 });

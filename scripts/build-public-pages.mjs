@@ -38,6 +38,30 @@ const CANONICAL_RUNTIME_ASSETS = Object.freeze([
   ["public-interaction-polish.js", "interaction-polish.js"],
   ["public-search-emphasis.js", "search-emphasis.js"],
 ]);
+const SHARED_SCRIPT_ORDER = Object.freeze([
+  "tree-router.js",
+  "viewer.js",
+  "galaxy-common.js",
+  "galaxy-classic-runtime.js",
+  "galaxy-systems-runtime.js",
+  "galaxy-hybrid-runtime.js",
+  "spatial-core-runtime.js",
+  "obsidian-runtime.js",
+  "galaxy-edge-policy.js",
+  "interaction-polish.js",
+  "obsidian-hover.js",
+  "adaptive-labels.js",
+  "view-state.js",
+]);
+const DEDICATED_SCRIPT_TAIL = Object.freeze([
+  "spatial-core-runtime.js",
+  "interaction-polish.js",
+  "search-emphasis.js",
+]);
+
+function scriptTags(sources) {
+  return sources.map((source) => `<script src="../${source}" defer></script>`).join("\n");
+}
 
 function externalizeBrowserScript(html, src) {
   const pattern = /<script>[\s\S]*?<\/script>/;
@@ -96,8 +120,8 @@ function exploratoryControls() {
 function viewerBody({ mode = "graph" } = {}) {
   const activeStyle = mode === "graph" ? "galaxy-systems" : mode;
   const scripts = DEDICATED_STYLES.includes(mode)
-    ? `<script src="../tree-nav.js" defer></script>\n<script src="../${mode}-viewer.js" defer></script>`
-    : '<script src="../tree-router.js" defer></script>\n<script src="../viewer.js" defer></script>\n<script src="../view-state.js" defer></script>';
+    ? scriptTags(["tree-nav.js", `${mode}-viewer.js`, ...DEDICATED_SCRIPT_TAIL])
+    : scriptTags(SHARED_SCRIPT_ORDER);
   const extraControls = mode === "graph" ? exploratoryControls() : "";
   const focusAction = mode === "graph" ? '<a id="focusButton" href="#" hidden>Focus</a>' : "";
   return `<body data-map-style="${activeStyle}"><main class="app"><header class="toolbar"><div class="title-block"><h1 id="title">Interactive Project Map</h1><p id="subtitle">Loading project graph…</p></div><div class="controls"><label class="field"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off"></label><label class="field"><span>Style</span><select id="style">${styleOptions(activeStyle)}</select></label><button id="fit" type="button">Fit</button><button id="reset" type="button">Reset</button>${extraControls}</div></header><section class="workspace"><canvas id="galaxy" tabindex="0" aria-label="Interactive project graph"></canvas><aside id="details" class="details" aria-live="polite"><button id="detailsClose" class="details-close" type="button" aria-label="Close project details">×</button><h2 id="detailsTitle">Project map</h2><p id="detailsDescription">Select a project to inspect it.</p><dl id="detailsMeta" hidden></dl><a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>${focusAction}</aside><div class="legend"><span><i class="owner"></i>Owner</span><span><i class="group"></i>Category</span><span><i class="original"></i>Original</span><span><i class="fork"></i>Fork</span><span><i class="archived"></i>Archived</span><span><i class="relation"></i>Relation</span></div><div id="tip" class="tip" role="status" hidden></div><div id="status" class="status">Loading map…</div><div id="error" class="error" role="alert"><div id="errorText">Could not load project map.</div><a id="setup" href="../">Generate setup</a></div></section><footer><span>Static graph from the profile repository · no shared GitHub REST request while viewing</span><span class="shortcuts"><kbd>0</kbd> Fit · <kbd>+</kbd>/<kbd>−</kbd> Zoom · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span></footer></main>${scripts}</body>`;
