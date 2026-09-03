@@ -29,8 +29,8 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 | `apply-threejs-repository-labels.mjs` | bounded Three.js repository-label adapter | P2 |
 | `apply-view-dimension-toggle.mjs` | 2D/3D navigation controls and assets | P1 |
 | `apply-threejs-style-presets.mjs` | Three.js renderer-local style controls | P2 |
-| `apply-threejs-galaxy-motion.mjs` | adopted Galaxy motion behavior | **P1 canonicalize** |
-| `apply-threejs-galaxy-central-bulge.mjs` | adopted central morphology and arm-haze pattern coupling | **P1 canonicalize after active Galaxy changes stabilize** |
+| `apply-threejs-galaxy-motion.mjs` | adopted Galaxy morphology/motion primitives and node motion behavior | **P1 canonicalize** |
+| `apply-threejs-galaxy-central-bulge.mjs` | Galaxy haze/dust 2400 s pattern phase-lock plus haze motion-evidence augmentation; central bulge, nucleus dust fade, and haze object/scene attachment are canonical | **P1 shrink with motion canonicalization** |
 | `apply-threejs-local-engine.mjs` | pinned/localized Three.js engine | P2 keep until localization owner is clearer |
 | `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
 | `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
@@ -109,11 +109,24 @@ This is the still-valid maintenance residue from stale PR #350. Its already-supe
 
 `postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, shared/dedicated script attachment, and CSP compatibility rewriting.
 
+## Seventh migration cut — Three.js Galaxy presentation source
+
+The seventh bounded cut reduces the historical `apply-threejs-galaxy-central-bulge.mjs` stage without changing the qualified Galaxy render:
+
+1. PR #368 already moved the sparse 96/48 central bulge and nucleus-only `r = 30..64` dust-colour fade into builder-owned `scripts/public-threejs-galaxy-central-morphology.mjs`;
+2. builder-owned `scripts/public-threejs-galaxy-disc-haze.mjs` now owns the existing 128×128 procedural arm-aware haze helper and its non-semantic/non-pickable scene attachment;
+3. the haze still consumes the existing Galaxy arm count, 22° pitch, and scaled dust reference `42 × 1.08 = 45.36`; this cut introduces no second morphology or motion truth;
+4. raw `threejs-cosmic` builder output remains inert because presentation activation is gated by the final `data-map-style="threejs-galaxy"` identity;
+5. the remaining `apply-threejs-galaxy-central-bulge.mjs` responsibility is only the already-qualified 2400 s haze/dust phase lock and read-only motion evidence augmentation;
+6. stale or partial generated intermediates continue to fail closed and require rebuilding from canonical source.
+
+Rendered Chromium/WebKit Galaxy evidence remains the behavior authority. The reviewed mutator budget remains **18** because this cut shrinks a stage rather than deleting it.
+
 ## Next bounded migrations
 
-Re-inventory the residual `postprocess-public-pages.mjs` responsibilities after this cut. Treat CSP compatibility rewriting and runtime-script attachment as separate mechanisms: canonicalize one only if its owner is clear and the generated output can be proven equivalent. Do not collapse them merely to reduce line count.
+Re-inventory the residual `postprocess-public-pages.mjs` responsibilities after the Action-ref cut. Treat CSP compatibility rewriting and runtime-script attachment as separate mechanisms: canonicalize one only if its owner is clear and the generated output can be proven equivalent. Do not collapse them merely to reduce line count.
 
-Three.js Galaxy motion and central morphology remain high-value post-build debt, but they are renderer-semantic and currently active development surfaces. Migrate them one mechanism at a time only from a fresh main after checking for concurrent Galaxy work. Do not combine motion and central morphology in one cleanup cut.
+For Three.js Galaxy, central morphology and haze presentation are no longer post-build-owned. The remaining high-value renderer-semantic debt is `apply-threejs-galaxy-motion.mjs` plus the small haze/dust pattern-coupling and evidence augmentation still carried by `apply-threejs-galaxy-central-bulge.mjs`. Canonicalize those only from a fresh main, preserving the existing 2/3/4-arm, 22° pitch, 2400 s pattern, 45.36 reference, Motion Off, no-persistent-lines, authority, and rendered-evidence contracts. Do not combine that maintenance with a renderer redesign.
 
 ## Rules for future changes
 
