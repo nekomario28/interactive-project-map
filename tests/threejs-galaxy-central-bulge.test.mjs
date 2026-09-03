@@ -4,8 +4,9 @@ import test from "node:test";
 import { spawnSync } from "node:child_process";
 
 import { patchThreejsGalaxyCentralBulgeRuntime } from "../scripts/apply-threejs-galaxy-central-bulge.mjs";
+import { composeThreejsGalaxyCentralMorphologyRuntime } from "../scripts/public-threejs-galaxy-central-morphology.mjs";
 
-const fixture = `
+const baseFixture = `
 const TAU=Math.PI*2;
 const GALAXY_LOG_PITCH=22*Math.PI/180,GALAXY_PATTERN_PERIOD=2400;
 function hashUnit(value){return .5;}
@@ -17,8 +18,9 @@ const galaxyMotion={snapshot:()=>({})};let edgeLines=null;if(galaxyMotion)window
 function animate(){const delta=.016;if(motionEnabled){dust.rotation.y+=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);}}
 }
 `;
+const fixture = composeThreejsGalaxyCentralMorphologyRuntime(baseFixture);
 
-test("Galaxy arm-aware haze matches scaled dust spatial phase and stays pattern-locked", () => {
+test("Galaxy arm-aware haze extends canonical central morphology and stays pattern-locked", () => {
   const patched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
   assert.match(patched, /function galaxyDiscSmooth\(value\)/);
   assert.match(patched, /function galaxyDiscNoise\(seed,x,y\)/);
@@ -62,34 +64,16 @@ test("Galaxy arm-aware haze matches scaled dust spatial phase and stays pattern-
 
   assert.match(patched, /function softenGalaxyCentralDust\(dust\)/);
   assert.match(patched, /fadeStart=30,fadeEnd=64/);
-  assert.match(patched, /Math\.hypot\(position\.getX\(index\),position\.getZ\(index\)\)/);
-  assert.match(patched, /\(radius-fadeStart\)\/\(fadeEnd-fadeStart\)/);
-  assert.match(patched, /color\.setXYZ\(index,color\.getX\(index\)\*fade,color\.getY\(index\)\*fade,color\.getZ\(index\)\*fade\)/);
-  assert.match(patched, /color\.needsUpdate=true/);
-  assert.match(patched, /if\(threeStyle==="galaxy"\)softenGalaxyCentralDust\(dust\)/);
   assert.match(patched, /function createGalaxyCentralBulge\(THREE,seed,glowTexture\)/);
   assert.match(patched, /count=innerWidth<720\?48:96,clearRadius=14,outerRadius=44/);
-  assert.match(patched, /radius=clearRadius\+\(outerRadius-clearRadius\)\*Math\.pow\(hashUnit\(seed\+":bulge:radius:"\+index\),1\.2\)/);
-  assert.match(patched, /positions\[index\*3\]=Math\.cos\(theta\)\*radius/);
-  assert.match(patched, /vertical\*radius\*\.42/);
-  assert.match(patched, /size:innerWidth<720\?\.9:1\.08/);
-  assert.match(patched, /opacity:\.1/);
-  assert.match(patched, /color:0xffd8aa/);
-  assert.match(patched, /color:0xffcf91/);
-  assert.match(patched, /opacity:\.12/);
-  assert.match(patched, /group\.name="galaxy-central-bulge"/);
-  assert.match(patched, /group\.userData\.decorative=true/);
-  assert.match(patched, /group\.userData\.semantic=false/);
-  assert.match(patched, /group\.userData\.particleCount=count/);
-  assert.match(patched, /group\.userData\.clearRadius=clearRadius/);
-  assert.match(patched, /threeStyle==="galaxy"\?createGalaxyCentralBulge/);
+  assert.match(patched, /const galaxyCentralMorphology=document\.body\.dataset\.mapStyle==="threejs-galaxy"/);
+  assert.match(patched, /if\(galaxyCentralMorphology\)softenGalaxyCentralDust\(dust\)/);
+  assert.match(patched, /const galaxyBulge=galaxyCentralMorphology\?createGalaxyCentralBulge/);
   assert.match(patched, /document\.body\.dataset\.galaxyCentralStructure="bulge"/);
-  assert.doesNotMatch(patched, /count=innerWidth<720\?180:360/);
-  assert.doesNotMatch(patched, /radius=44\*Math\.pow/);
   assert.equal(patchThreejsGalaxyCentralBulgeRuntime(patched), patched);
 });
 
-test("Galaxy morphology rejects stale and partial intermediate runtimes", () => {
+test("Galaxy haze postprocessor fails closed on stale, missing-canonical and partial runtimes", () => {
   const legacyV1 = fixture.replace(
     "function createSceneRuntime(THREE,graph,username){",
     "function createGalaxyDiscHaze(THREE,seed){return null;}\nfunction createSceneRuntime(THREE,graph,username){",
@@ -98,10 +82,9 @@ test("Galaxy morphology rejects stale and partial intermediate runtimes", () => 
     "function createSceneRuntime(THREE,graph,username){",
     "function createGalaxyDiscHaze(THREE,seed,armCount=4,pitch=0){return null;}\nfunction createSceneRuntime(THREE,graph,username){",
   );
-  const partial = fixture.replace(
-    "function createSceneRuntime(THREE,graph,username){",
-    "function createGalaxyCentralBulge(THREE,seed,glowTexture){return null;}\nfunction createSceneRuntime(THREE,graph,username){",
-  );
+  const fullyPatched = patchThreejsGalaxyCentralBulgeRuntime(fixture);
+  const partialHaze = fullyPatched.replace("discHazePatternFrame:", "discHazePatternFrameMissing:");
+
   assert.throws(
     () => patchThreejsGalaxyCentralBulgeRuntime(legacyV1),
     /Legacy Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source/,
@@ -111,24 +94,31 @@ test("Galaxy morphology rejects stale and partial intermediate runtimes", () => 
     /Legacy Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source/,
   );
   assert.throws(
-    () => patchThreejsGalaxyCentralBulgeRuntime(partial),
-    /Partial Galaxy morphology intermediate is unsupported; rebuild from fresh canonical source/,
+    () => patchThreejsGalaxyCentralBulgeRuntime(baseFixture),
+    /Canonical Galaxy central morphology is missing; rebuild from fresh canonical source/,
+  );
+  assert.throws(
+    () => patchThreejsGalaxyCentralBulgeRuntime(partialHaze),
+    /Partial Galaxy haze intermediate is unsupported; rebuild from fresh canonical source/,
   );
 });
 
-test("Galaxy morphology patcher no longer carries legacy upgrade branches", () => {
+test("Galaxy haze postprocessor no longer owns bulge implementation or legacy upgrades", () => {
   const source = readFileSync("scripts/apply-threejs-galaxy-central-bulge.mjs", "utf8");
+  assert.doesNotMatch(source, /const GALAXY_BULGE_HELPER/);
+  assert.doesNotMatch(source, /count=innerWidth<720\?48:96/);
   assert.doesNotMatch(source, /SCENE_WITH_MORPHOLOGY_V1/);
   assert.doesNotMatch(source, /SCENE_WITH_MORPHOLOGY_V2/);
   assert.doesNotMatch(source, /PREVIOUS_SCENE_WITH_BULGE/);
   assert.doesNotMatch(source, /DISC_TEXTURE_V1_PIXEL/);
   assert.doesNotMatch(source, /DISC_TEXTURE_V2_PIXEL/);
   assert.doesNotMatch(source, /GALAXY_MOTION_SNAPSHOT_WITH_HAZE_V1/);
-  assert.match(source, /LEGACY_DISC_TEXTURE_SIGNATURES/);
+  assert.match(source, /CANONICAL_CENTRAL_MARKERS/);
+  assert.match(source, /CURRENT_HAZE_MARKERS/);
   assert.match(source, /assertCurrentMorphologyInput/);
 });
 
-test("Galaxy central-morphology postprocessor source passes Node syntax check", () => {
+test("Galaxy haze postprocessor source passes Node syntax check", () => {
   const result = spawnSync(process.execPath, ["--check", "scripts/apply-threejs-galaxy-central-bulge.mjs"], {
     cwd: process.cwd(),
     encoding: "utf8",
