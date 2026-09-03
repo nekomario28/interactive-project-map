@@ -16,7 +16,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 | Stage | Current responsibility | Migration priority |
 |---|---|---|
-| `postprocess-public-pages.mjs` | shared viewer hardening, runtime emission, final Action pin, assorted compatibility rewrites | **P0 split/shrink** |
+| `postprocess-public-pages.mjs` | runtime emission, final Action pin, assorted compatibility rewrites; shared-viewer hardening retired | **P0 split/shrink** |
 | `apply-contributed-render-sync.mjs` | shared/Obsidian/Galaxy Contributed render parity | P1 |
 | `apply-dedicated-view-state.mjs` | dedicated viewer shared state layer | P1 |
 | `apply-dedicated-contributed-render-sync.mjs` | dedicated Contributed primary-status parity | P1 |
@@ -30,21 +30,25 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 | `apply-view-dimension-toggle.mjs` | 2D/3D navigation controls and assets | P1 |
 | `apply-threejs-style-presets.mjs` | Three.js renderer-local style controls | P2 |
 | `apply-threejs-galaxy-motion.mjs` | adopted Galaxy motion behavior | **P1 canonicalize** |
-| `apply-threejs-galaxy-central-bulge.mjs` | adopted central morphology | **P1 canonicalize** |
+| `apply-threejs-galaxy-central-bulge.mjs` | adopted central morphology and arm-haze pattern coupling | **P1 canonicalize after active Galaxy changes stabilize** |
 | `apply-threejs-local-engine.mjs` | pinned/localized Three.js engine | P2 keep until localization owner is clearer |
 | `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
 | `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
 
-## First migration cut
+## First migration cut — complete
 
-The safest high-value first cut is the shared-viewer hardening currently owned by `postprocess-public-pages.mjs`:
+The first bounded cut removed shared-viewer output mutation from `postprocess-public-pages.mjs` after moving the already-adopted behavior into canonical sources:
 
-1. style normalization for `galaxy-classic`, `galaxy-systems`, `galaxy-hybrid`, and `obsidian`;
-2. the adopted minimum zoom floor;
-3. neutral initial Obsidian viewport while preserving explicit Fit and Galaxy auto-fit;
-4. narrow-mobile toolbar/detail CSS — **canonical source moved to `scripts/public-viewer.css`; postprocess fallback is now expected to no-op**.
+1. style normalization for `galaxy-classic`, `galaxy-systems`, `galaxy-hybrid`, and `obsidian` — canonical in `scripts/public-viewer.js`;
+2. the adopted minimum zoom floor — canonical in `scripts/public-viewer.js`;
+3. neutral initial Obsidian viewport while preserving explicit Fit and Galaxy auto-fit — canonical in `scripts/public-viewer.js`;
+4. narrow-mobile toolbar/detail CSS — canonical in `scripts/public-viewer.css`.
 
-These are already production behavior. They should live directly in `scripts/public-viewer.js` / `scripts/public-viewer.css` rather than requiring generated-output string replacement. Once canonical sources emit the same result, delete only the corresponding postprocess code and retain existing behavior/evidence gates.
+The generated-output fallback for those four behaviors is retired. `postprocess-public-pages.mjs` remains in the build because it still owns unrelated runtime emission, compatibility rewrites, and the reviewed final installer Action pin.
+
+## Next bounded migrations
+
+Three.js Galaxy motion and central morphology remain high-value post-build debt, but they are renderer-semantic and currently active development surfaces. Migrate them one mechanism at a time only from a fresh main after checking for concurrent Galaxy work. Do not combine motion and central morphology in one cleanup cut.
 
 ## Rules for future changes
 
