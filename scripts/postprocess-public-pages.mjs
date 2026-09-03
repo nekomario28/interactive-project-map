@@ -55,25 +55,6 @@ function isolateRuntime(source, style) {
   return patched;
 }
 
-function tuneSystemsRuntime(source) {
-  let patched = isolateRuntime(source, "galaxy-systems");
-  patched = patched.replace(
-    "const direction = lane % 2 === 0 ? 1 : -1;",
-    "const direction = (hash(`${group.id}:orbit-direction`) & 1) === 0 ? 1 : -1;",
-  );
-  patched = patched.replace("const period = 128 + lane * 54;", "const period = 360 + lane * 180;");
-  const stepAnchor = "    if (dt <= 0 || motionMedia.matches) return false;\n    for (const target of runtime.repositories.values()) {";
-  const stepReplacement = `    if (dt <= 0 || motionMedia.matches) return false;\n    for (const category of runtime.categories.values()) {\n      category.angle += tau * dt / (1800 * 1000);\n      category.node.x = Math.cos(category.angle) * category.categoryRadius;\n      category.node.y = Math.sin(category.angle) * category.categoryRadius;\n      category.node.vx = 0;\n      category.node.vy = 0;\n    }\n    for (const target of runtime.repositories.values()) {`;
-  if (!patched.includes(stepAnchor)) throw new Error("Could not locate Galaxy Systems stepping boundary");
-  patched = patched.replace(stepAnchor, stepReplacement);
-  patched = patched.replace(
-    "Living Galaxy Systems · categories are hubs · repositories orbit their category",
-    "Galaxy Systems · slow category orbit · repositories orbit locally",
-  );
-  if (!patched.includes("360 + lane * 180") || !patched.includes("1800 * 1000")) throw new Error("Could not apply Galaxy Systems slow-motion policy");
-  return patched;
-}
-
 export function spatialCoreRuntimeSource() {
   return `"use strict";\n/* global window */\n(() => {\n  const DEFAULT_FORCE_SETTINGS = Object.freeze(${JSON.stringify(DEFAULT_FORCE_SETTINGS)});\n\n  ${hashText.toString()}\n\n  ${normalizeWeightedEdges.toString()}\n\n  ${linkForceEdges.toString()}\n\n  ${stepForceLayout.toString()}\n\n  window.ProjectMapSpatialCore = Object.freeze({\n    DEFAULT_FORCE_SETTINGS,\n    normalizeWeightedEdges,\n    linkForceEdges,\n    stepForceLayout,\n  });\n})();\n`;
 }
@@ -127,13 +108,12 @@ async function emitGalaxyRuntimes(outputDir) {
   const sourceDir = resolve(process.cwd(), "scripts");
   await copyFile(join(sourceDir, "public-galaxy-common.js"), join(outputDir, "galaxy-common.js"));
   await copyFile(join(sourceDir, "public-galaxy-hybrid.js"), join(outputDir, "galaxy-hybrid-runtime.js"));
+  await copyFile(join(sourceDir, "public-galaxy-systems.js"), join(outputDir, "galaxy-systems-runtime.js"));
   await copyFile(join(sourceDir, "public-galaxy-edge-policy.js"), join(outputDir, "galaxy-edge-policy.js"));
   await copyFile(join(sourceDir, "public-adaptive-labels.js"), join(outputDir, "adaptive-labels.js"));
 
   const classicTemplate = await readFile(join(sourceDir, "public-galaxy-classic.js"), "utf8");
-  const systemsTemplate = await readFile(join(sourceDir, "public-galaxy-systems.js"), "utf8");
   await writeFile(join(outputDir, "galaxy-classic-runtime.js"), isolateRuntime(classicTemplate, "galaxy-classic"));
-  await writeFile(join(outputDir, "galaxy-systems-runtime.js"), tuneSystemsRuntime(systemsTemplate));
 
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
