@@ -51,18 +51,6 @@ export function spatialCoreRuntimeSource() {
   return `"use strict";\n/* global window */\n(() => {\n  const DEFAULT_FORCE_SETTINGS = Object.freeze(${JSON.stringify(DEFAULT_FORCE_SETTINGS)});\n\n  ${hashText.toString()}\n\n  ${normalizeWeightedEdges.toString()}\n\n  ${linkForceEdges.toString()}\n\n  ${stepForceLayout.toString()}\n\n  window.ProjectMapSpatialCore = Object.freeze({\n    DEFAULT_FORCE_SETTINGS,\n    normalizeWeightedEdges,\n    linkForceEdges,\n    stepForceLayout,\n  });\n})();\n`;
 }
 
-export function tuneInteractionPolish(source) {
-  const start = "      const deduped = new Map();";
-  const end = "      if (semanticEdges.length) safe.semanticEdges = semanticEdges;";
-  const startIndex = source.indexOf(start);
-  const endIndex = source.indexOf(end, startIndex);
-  if (startIndex < 0 || endIndex < 0) throw new Error("Could not locate semantic relation normalization boundary");
-  const replacement = `      const spatialCore = window.ProjectMapSpatialCore;\n      if (!spatialCore) throw new Error("Spatial Core runtime must load before semantic normalization");\n      const semanticCandidates = [];\n      for (const raw of value.semanticEdges.slice(0, 2400)) {\n        if (!raw || typeof raw !== "object" || raw.type !== "semantic") continue;\n        const source = typeof raw.source === "string" ? raw.source.slice(0, 220) : "";\n        const target = typeof raw.target === "string" ? raw.target.slice(0, 220) : "";\n        semanticCandidates.push({ source, target, score: Number(raw.score) });\n      }\n      const semanticEdges = spatialCore.normalizeWeightedEdges(semanticCandidates, repositoryIds, {\n        maxInput: 2400,\n        maxOutput: 1200,\n        minScore: 0,\n        type: "semantic",\n      });\n      if (semanticEdges.length) safe.semanticEdges = semanticEdges;`;
-  const patched = `${source.slice(0, startIndex)}${replacement}${source.slice(endIndex + end.length)}`;
-  if (patched.includes("const deduped = new Map();")) throw new Error("Emitted interaction runtime still contains duplicated semantic dedupe");
-  return patched;
-}
-
 async function emitSpatialCoreRuntime(outputDir) {
   await writeFile(join(outputDir, "spatial-core-runtime.js"), spatialCoreRuntimeSource());
 }
@@ -94,8 +82,7 @@ async function emitObsidianRuntime(outputDir) {
 async function emitInteractionPolish(outputDir) {
   const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
   const emphasisSourcePath = resolve(process.cwd(), "scripts/public-search-emphasis.js");
-  const source = await readFile(sourcePath, "utf8");
-  await writeFile(join(outputDir, "interaction-polish.js"), tuneInteractionPolish(source));
+  await copyFile(sourcePath, join(outputDir, "interaction-polish.js"));
   await copyFile(emphasisSourcePath, join(outputDir, "search-emphasis.js"));
   for (const [route, viewerScript] of DEDICATED_VIEWERS) {
     const htmlPath = join(outputDir, route, "index.html");

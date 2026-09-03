@@ -371,24 +371,21 @@
       const safe = baseSanitizeGraph(value);
       if (!safe || !Array.isArray(value?.semanticEdges)) return safe;
       const repositoryIds = new Set(safe.nodes.filter((node) => node.type === "repository").map((node) => node.id));
-      const deduped = new Map();
+      const spatialCore = window.ProjectMapSpatialCore;
+      if (!spatialCore) throw new Error("Spatial Core runtime must load before semantic normalization");
+      const semanticCandidates = [];
       for (const raw of value.semanticEdges.slice(0, 2400)) {
         if (!raw || typeof raw !== "object" || raw.type !== "semantic") continue;
         const source = typeof raw.source === "string" ? raw.source.slice(0, 220) : "";
         const target = typeof raw.target === "string" ? raw.target.slice(0, 220) : "";
-        const score = Number(raw.score);
-        if (!source || !target || source === target || !repositoryIds.has(source) || !repositoryIds.has(target)) continue;
-        if (!Number.isFinite(score) || score < 0 || score > 1) continue;
-        const left = source < target ? source : target;
-        const right = source < target ? target : source;
-        const key = `${left}\u0000${right}`;
-        const edge = { source: left, target: right, type: "semantic", score: Math.round(score * 1_000_000) / 1_000_000 };
-        const existing = deduped.get(key);
-        if (!existing || edge.score > existing.score) deduped.set(key, edge);
+        semanticCandidates.push({ source, target, score: Number(raw.score) });
       }
-      const semanticEdges = [...deduped.values()]
-        .sort((a, b) => b.score - a.score || a.source.localeCompare(b.source) || a.target.localeCompare(b.target))
-        .slice(0, 1200);
+      const semanticEdges = spatialCore.normalizeWeightedEdges(semanticCandidates, repositoryIds, {
+        maxInput: 2400,
+        maxOutput: 1200,
+        minScore: 0,
+        type: "semantic",
+      });
       if (semanticEdges.length) safe.semanticEdges = semanticEdges;
       return safe;
     };
