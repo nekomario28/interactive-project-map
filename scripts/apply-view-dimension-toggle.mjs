@@ -1,6 +1,12 @@
 import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { composeThreejsGalaxyMotionRuntime } from "./public-threejs-galaxy-motion.mjs";
+import { composeThreejsGalaxyPatternCouplingRuntime } from "./public-threejs-galaxy-pattern-coupling.mjs";
+import {
+  composeThreejsStylePage,
+  composeThreejsStyleRuntime,
+} from "./public-threejs-style-presets.mjs";
 
 const SCRIPT_TAG = '<script src="../view-dimension-toggle.js" defer></script>';
 const STYLE_TAG = '<link rel="stylesheet" href="../view-dimension-toggle.css" />';
@@ -49,6 +55,15 @@ export function patchThreeDViewDimension(html) {
   return attachAssets(next);
 }
 
+function composeThreejsPresentationAfterDimension(runtime, html) {
+  const styledRuntime = composeThreejsStyleRuntime(runtime);
+  const motionRuntime = composeThreejsGalaxyMotionRuntime(styledRuntime);
+  return {
+    runtime: composeThreejsGalaxyPatternCouplingRuntime(motionRuntime),
+    html: composeThreejsStylePage(html),
+  };
+}
+
 export async function applyViewDimensionToggle({
   siteDir = join(process.cwd(), "site"),
   sourceDir = join(process.cwd(), "scripts"),
@@ -65,11 +80,20 @@ export async function applyViewDimensionToggle({
   }
 
   const threePath = join(siteDir, "three", "index.html");
-  const threeHtml = await readFile(threePath, "utf8");
-  const nextThree = patchThreeDViewDimension(threeHtml);
-  if (nextThree !== threeHtml) {
-    await writeFile(threePath, nextThree);
+  const threeRuntimePath = join(siteDir, "threejs-viewer.js");
+  const [threeHtml, threeRuntime] = await Promise.all([
+    readFile(threePath, "utf8"),
+    readFile(threeRuntimePath, "utf8"),
+  ]);
+  const dimensionHtml = patchThreeDViewDimension(threeHtml);
+  const composed = composeThreejsPresentationAfterDimension(threeRuntime, dimensionHtml);
+  if (composed.html !== threeHtml) {
+    await writeFile(threePath, composed.html);
     changed.push(threePath);
+  }
+  if (composed.runtime !== threeRuntime) {
+    await writeFile(threeRuntimePath, composed.runtime);
+    changed.push(threeRuntimePath);
   }
 
   const runtimePath = join(siteDir, "view-dimension-toggle.js");
@@ -83,7 +107,7 @@ export async function applyViewDimensionToggle({
 
 async function main() {
   const result = await applyViewDimensionToggle();
-  console.log(`Applied 2D/3D View controls to ${result.changed.length} viewer pages`);
+  console.log(`Applied 2D/3D View controls and canonical Three.js presentation to ${result.changed.length} outputs`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
