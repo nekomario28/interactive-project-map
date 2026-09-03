@@ -13,7 +13,7 @@ const TWO_D_ADAPTER = `
       for (const node of repositories) {
         if (node.relation === "contributed" || !node.groupId) continue;
         const groupId = String(node.groupId);
-        groupIds.add(groupId.startsWith("group:") ? groupId : `group:${groupId}`);
+        groupIds.add(groupId.startsWith("group:") ? groupId : \`group:\${groupId}\`);
       }
       for (const edge of state.graph?.edges || []) {
         if (edge?.type === "membership" && repositoryIds.has(edge.target)) groupIds.add(edge.source);
