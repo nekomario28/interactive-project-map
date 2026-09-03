@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
-import test from "node:test";
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
 
-import { patchThreejsStylePage, patchThreejsStyleRuntime } from "../scripts/apply-threejs-style-presets.mjs";
+import {
+  composeThreejsStylePage,
+  composeThreejsStyleRuntime,
+} from "../scripts/public-threejs-style-presets.mjs";
 
 const fixture = `
 const TAU = Math.PI * 2;
@@ -32,8 +36,8 @@ window.ProjectMapThreejsLab=Object.freeze({snapshot:()=>({renderer:"threejs-cosm
 
 const pageFixture = `<div class="controls"><button id="renderDensityToggle" type="button" data-render-density="auto" title="Adjust WebGL backing-store density without changing repository Quality evidence.">Render Auto</button>\n      <button id="fit">Fit</button></div>`;
 
-test("Three.js style patch keeps four scene themes, adds Galaxy layout, and removes the user quality switch", () => {
-  const patched = patchThreejsStyleRuntime(fixture);
+test("canonical Three.js style composer keeps four scene themes, adds Galaxy layout, and removes the user quality switch", () => {
+  const patched = composeThreejsStyleRuntime(fixture);
   assert.match(patched, /THREE_STYLE_IDS=new Set\(\["cosmic","galaxy","aurora","wireframe"\]\)/);
   assert.match(patched, /galaxy:\{background:0x01030a/);
   assert.match(patched, /function layoutGalaxyGraph\(THREE,graph\)/);
@@ -58,20 +62,30 @@ test("Three.js style patch keeps four scene themes, adds Galaxy layout, and remo
   assert.doesNotMatch(patched, /quality==="high"/);
   assert.doesNotMatch(patched, /setQuality/);
   assert.match(patched, /const mobile=width<720,ratio=mobile\?1:Math\.min\(devicePixelRatio\|\|1,1\.45\)/);
-  assert.equal(patchThreejsStyleRuntime(patched), patched);
+  assert.equal(composeThreejsStyleRuntime(patched), patched);
 });
 
-test("Three.js page removes the render-density button", () => {
-  const patched = patchThreejsStylePage(pageFixture);
+test("canonical Three.js style page composer removes the render-density button", () => {
+  const patched = composeThreejsStylePage(pageFixture);
   assert.doesNotMatch(patched, /renderDensityToggle|Render Auto/);
   assert.match(patched, /id="fit"/);
-  assert.equal(patchThreejsStylePage(patched), patched);
+  assert.equal(composeThreejsStylePage(patched), patched);
 });
 
-test("Three.js style preset patch source passes Node syntax check", () => {
-  const result = spawnSync(process.execPath, ["--check", "scripts/apply-threejs-style-presets.mjs"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  });
-  assert.equal(result.status, 0, result.stderr);
+test("post-build Three.js style stage is only a thin I/O adapter", async () => {
+  const adapter = await readFile(new URL("../scripts/apply-threejs-style-presets.mjs", import.meta.url), "utf8");
+  assert.match(adapter, /composeThreejsStyleRuntime/);
+  assert.match(adapter, /composeThreejsStylePage/);
+  assert.match(adapter, /export const patchThreejsStyleRuntime = composeThreejsStyleRuntime/);
+  assert.doesNotMatch(adapter, /THREE_STYLE_THEMES|GALAXY_LAYOUT_HELPERS|renderDensityToggle/);
+});
+
+test("Three.js style canonical composer and adapter pass Node syntax checks", () => {
+  for (const path of ["scripts/public-threejs-style-presets.mjs", "scripts/apply-threejs-style-presets.mjs"]) {
+    const result = spawnSync(process.execPath, ["--check", path], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
+  }
 });
