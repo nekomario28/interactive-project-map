@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 import { renderPagesHome, renderPagesViewer } from "./pages-app.mjs";
+import { spatialCoreRuntimeSource } from "./public-spatial-core-runtime.mjs";
 
 // Pages setup uses the same reviewed immutable inner Action release as the
 // reusable workflow and dormant Worker serializer. Do not emit a stale ref
@@ -118,6 +119,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await writeFile(join(outputDir, "tree-router.js"), routerScript);
   await writeFile(join(outputDir, "tree-nav.js"), navScript);
   await writeFile(join(outputDir, "viewer.css"), viewerCss);
+  await writeFile(join(outputDir, "spatial-core-runtime.js"), spatialCoreRuntimeSource());
   await writeFile(join(outputDir, "u", "index.html"), enhanceViewer(baseViewer, { mode: "graph" }));
   for (const mode of DEDICATED_STYLES) {
     await writeFile(join(outputDir, `${mode}-viewer.js`), await readFile(join(sourceDir, `public-${mode}-viewer.js`), "utf8"));
