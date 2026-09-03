@@ -8,10 +8,7 @@ import {
   normalizeWeightedEdges,
   stepForceLayout,
 } from "../packages/spatial-core/src/index.js";
-import {
-  spatialCoreRuntimeSource,
-  tuneInteractionPolish,
-} from "../scripts/postprocess-public-pages.mjs";
+import { spatialCoreRuntimeSource } from "../scripts/postprocess-public-pages.mjs";
 
 test("generated classic Spatial Core runtime delegates to the canonical package primitives", () => {
   const sandbox = { window: {} };
@@ -52,7 +49,7 @@ test("generated classic Spatial Core runtime delegates to the canonical package 
   );
 });
 
-test("canonical Obsidian and emitted interaction runtimes avoid duplicated Spatial Core kernels", async () => {
+test("canonical Obsidian and interaction runtimes avoid duplicated Spatial Core kernels", async () => {
   const [obsidianSource, polishSource, postprocessSource] = await Promise.all([
     readFile(new URL("../scripts/public-obsidian-runtime.js", import.meta.url), "utf8"),
     readFile(new URL("../scripts/public-interaction-polish.js", import.meta.url), "utf8"),
@@ -66,10 +63,12 @@ test("canonical Obsidian and emitted interaction runtimes avoid duplicated Spati
   assert.doesNotMatch(postprocessSource, /tuneObsidianRuntime/);
   assert.match(postprocessSource, /copyFile\(join\(sourceDir, "public-obsidian-runtime\.js"\), join\(outputDir, "obsidian-runtime\.js"\)\)/);
 
-  const polish = tuneInteractionPolish(polishSource);
-  assert.match(polish, /ProjectMapSpatialCore/);
-  assert.match(polish, /normalizeWeightedEdges/);
-  assert.doesNotMatch(polish, /const deduped = new Map\(\)/);
-  assert.match(polish, /maxInput: 2400/);
-  assert.match(polish, /maxOutput: 1200/);
+  assert.match(polishSource, /ProjectMapSpatialCore/);
+  assert.match(polishSource, /normalizeWeightedEdges/);
+  assert.match(polishSource, /semanticCandidates/);
+  assert.doesNotMatch(polishSource, /const deduped = new Map\(\)/);
+  assert.match(polishSource, /maxInput: 2400/);
+  assert.match(polishSource, /maxOutput: 1200/);
+  assert.doesNotMatch(postprocessSource, /tuneInteractionPolish/);
+  assert.match(postprocessSource, /copyFile\(sourcePath, join\(outputDir, "interaction-polish\.js"\)\)/);
 });
