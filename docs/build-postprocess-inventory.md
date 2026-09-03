@@ -16,7 +16,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 | Stage | Current responsibility | Migration priority |
 |---|---|---|
-| `postprocess-public-pages.mjs` | runtime emission, final Action pin, assorted compatibility rewrites; shared-viewer, Galaxy runtime identity/tuning, and Obsidian force-kernel rewrites retired | **P0 split/shrink** |
+| `postprocess-public-pages.mjs` | runtime emission/attachment, final Action pin, and compatibility rewrites; shared-viewer, Galaxy identity/tuning, Obsidian force-kernel, and interaction semantic rewrites retired | **P0 split/shrink** |
 | `apply-contributed-render-sync.mjs` | shared/Obsidian/Galaxy Contributed render parity | P1 |
 | `apply-dedicated-view-state.mjs` | dedicated viewer shared state layer | P1 |
 | `apply-dedicated-contributed-render-sync.mjs` | dedicated Contributed primary-status parity | P1 |
@@ -79,13 +79,26 @@ The fourth bounded cut moves the already-adopted Obsidian Spatial Core delegatio
 4. the duplicated pairwise force kernel is absent from canonical Obsidian source;
 5. `obsidian-runtime.js` is emitted by direct copy and `tuneObsidianRuntime()` is retired.
 
-The browser Spatial Core parity test remains the primitive-semantics authority, while the existing Obsidian browser tests remain the lifecycle/interaction authority. `tuneInteractionPolish()` remains deliberately separate.
+The browser Spatial Core parity test remains the primitive-semantics authority, while the existing Obsidian browser tests remain the lifecycle/interaction authority.
 
-`postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, interaction semantic normalization, compatibility rewrites, runtime attachment, and the reviewed final installer Action pin.
+## Fifth migration cut — complete
+
+The fifth bounded cut moves the already-adopted semantic-edge normalization into canonical `scripts/public-interaction-polish.js`:
+
+1. only raw `type === "semantic"` candidates are admitted;
+2. source and target strings retain the existing 220-character input bound;
+3. candidate processing remains bounded to 2400 input edges;
+4. normalization delegates directly to `ProjectMapSpatialCore.normalizeWeightedEdges` with `maxInput: 2400`, `maxOutput: 1200`, `minScore: 0`, and `type: "semantic"`;
+5. canonical source no longer contains its duplicated manual dedupe/sort kernel;
+6. `interaction-polish.js` is emitted by direct copy and `tuneInteractionPolish()` is retired.
+
+The Spatial Core primitive parity test remains the normalization-semantics authority, while existing shared/dedicated interaction and browser tests remain the rendering/search authority.
+
+`postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, script attachment, CSP compatibility rewriting, and the reviewed installer Action-ref promotion.
 
 ## Next bounded migrations
 
-The remaining postprocess-local semantic rewrite is `tuneInteractionPolish()`. Review it as a separate cut: canonicalize only the already-adopted semantic-edge normalization delegation to `ProjectMapSpatialCore.normalizeWeightedEdges`, preserve the existing 2400-input / 1200-output bounds, and retain dedicated/shared browser evidence.
+The smallest remaining high-drift rewrite inside `postprocess-public-pages.mjs` is the setup Action-ref promotion: `scripts/build-public-pages.mjs` still emits the historical builder SHA and postprocess rewrites it to the reviewed immutable Action SHA. Fresh-main reimplement only the still-valid part of stale PR #350: make the builder use `src/action-ref.ts` directly, prove `app.js` is already final before postprocess, then remove `BUILDER_ACTION_REF` and the promotion block. Do not replay #350's already-superseded serializer changes.
 
 Three.js Galaxy motion and central morphology remain high-value post-build debt, but they are renderer-semantic and currently active development surfaces. Migrate them one mechanism at a time only from a fresh main after checking for concurrent Galaxy work. Do not combine motion and central morphology in one cleanup cut.
 
