@@ -4,7 +4,7 @@
   "registry": {
     "path": "registry/ui-semantic-token-catalog.yaml",
     "schemaVersion": 1,
-    "revision": "1f211cba8c37c671a13640dd38e5111266aad13a"
+    "revision": "9157d2c7fba788bfc11ae97295442a5075fe8e63"
   },
   "consumer": {
     "project": "nekomario28/interactive-project-map",
