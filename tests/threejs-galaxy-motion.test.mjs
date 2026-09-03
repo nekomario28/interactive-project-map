@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { composeThreejsGalaxyMotionRuntime } from "../scripts/public-threejs-galaxy-motion.mjs";
@@ -58,19 +58,16 @@ test("canonical Galaxy motion composer keeps the astronomy-informed disc while u
   assert.equal(composeThreejsGalaxyMotionRuntime(patched), patched);
 });
 
-test("post-build Galaxy motion stage is only a thin I/O adapter", async () => {
-  const adapter = await readFile(new URL("../scripts/apply-threejs-galaxy-motion.mjs", import.meta.url), "utf8");
-  assert.match(adapter, /composeThreejsGalaxyMotionRuntime/);
-  assert.match(adapter, /export const patchThreejsGalaxyMotionRuntime = composeThreejsGalaxyMotionRuntime/);
-  assert.doesNotMatch(adapter, /GALAXY_LOG_PITCH_DEG|GALAXY_PATTERN_PERIOD=2400|function createGalaxyMotionModel/);
+test("retired Galaxy compatibility adapters stay absent", () => {
+  assert.equal(existsSync("scripts/apply-threejs-galaxy-motion.mjs"), false);
+  assert.equal(existsSync("scripts/apply-threejs-galaxy-central-bulge.mjs"), false);
 });
 
-test("Galaxy motion canonical composer and adapter pass Node syntax checks", () => {
-  for (const path of ["scripts/public-threejs-galaxy-motion.mjs", "scripts/apply-threejs-galaxy-motion.mjs"]) {
-    const result = spawnSync(process.execPath, ["--check", path], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
-  }
+test("Galaxy motion canonical composer passes Node syntax check", () => {
+  const path = "scripts/public-threejs-galaxy-motion.mjs";
+  const result = spawnSync(process.execPath, ["--check", path], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, `${path}: ${result.stderr}`);
 });
