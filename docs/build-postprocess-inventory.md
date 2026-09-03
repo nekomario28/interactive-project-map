@@ -34,7 +34,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 | `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
 | `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
 
-`apply-threejs-galaxy-motion.mjs` and `apply-threejs-galaxy-central-bulge.mjs` remain as compatibility/syntax-checked adapters but are no longer active `build:pages` stages.
+`apply-threejs-galaxy-motion.mjs` and `apply-threejs-galaxy-central-bulge.mjs` are fully retired. Their entries remain only in the historical mutator allowlist so the original reviewed baseline stays auditable; neither file nor build/check invocation remains active.
 
 ## First migration cut — complete
 
@@ -186,11 +186,24 @@ The twelfth bounded cut removes the second redundant Galaxy execution boundary w
 
 This cut changes invocation plumbing only. The 2/3/4-arm policy, 22° pitch, 2400 s pattern, 45.36 scaled dust reference, local `0.68` ellipse, `480 + lane * 240`, Motion Off behavior, no-persistent-lines policy, owner/contributed authority, and non-physical haze boundary are unchanged.
 
+## Thirteenth migration cut — remove retired Galaxy compatibility adapters
+
+The thirteenth bounded cut removes dead source/API surface after both Galaxy-specific build stages were already retired:
+
+1. repository-wide reference search found no production caller of `patchThreejsGalaxyMotionRuntime`, `applyThreejsGalaxyMotion`, `patchThreejsGalaxyCentralBulgeRuntime`, or `applyThreejsGalaxyCentralBulge` outside the obsolete adapters and adapter-only tests/docs;
+2. `scripts/apply-threejs-galaxy-motion.mjs` and `scripts/apply-threejs-galaxy-central-bulge.mjs` are deleted;
+3. their obsolete `check:pages` syntax-check entries are removed;
+4. canonical composer semantics, idempotence, stale/partial fail-close behavior, and syntax checks remain tested directly;
+5. an absence gate prevents the retired adapter files from silently returning;
+6. `build:pages` is byte-for-byte unchanged by this cut, so the active post-build count remains **16**.
+
+This is dead-code retirement only. Galaxy morphology, motion, pattern coupling, evidence semantics, owner/contributed authority, graph semantics, release authority, and `v1` are unchanged.
+
 ## Next bounded migrations
 
 Re-inventory the residual `postprocess-public-pages.mjs` responsibilities separately from renderer-local work. Treat CSP compatibility rewriting and runtime-script attachment as independent mechanisms and do not collapse them merely to reduce line count.
 
-For Three.js Galaxy, central morphology, disc-haze presentation, style semantics, motion semantics, and pattern coupling now all have canonical owners. No standalone Galaxy-specific semantic post-build stage remains. The remaining `apply-threejs-style-presets.mjs` stage is now a combined Three.js renderer composition/order carrier; relocate it only if a broader canonical Three.js build boundary can preserve style → motion → pattern order and all current browser evidence. Do not keep reducing stages merely for the number, and do not combine maintenance with Galaxy redesign.
+For Three.js Galaxy, central morphology, disc-haze presentation, style semantics, motion semantics, and pattern coupling now all have canonical owners. No standalone Galaxy-specific semantic post-build stage or dead Galaxy compatibility adapter remains. The remaining `apply-threejs-style-presets.mjs` stage is a combined Three.js renderer composition/order carrier; relocate it only if a broader canonical Three.js build boundary can preserve style → motion → pattern order and all current browser evidence. Do not keep reducing stages merely for the number, and do not combine maintenance with Galaxy redesign.
 
 ## Rules for future changes
 
