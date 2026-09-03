@@ -41,7 +41,7 @@ test("canonical Three.js Galaxy central morphology composition is safe and idemp
   assert.ok(THREEJS_GALAXY_CENTRAL_MORPHOLOGY_SCENE.length > 0);
 });
 
-test("Three.js builder owns the qualified Galaxy central morphology before post-build stages", async () => {
+test("Three.js builder owns qualified Galaxy central morphology and haze presentation", async () => {
   const root = await mkdtemp(join(tmpdir(), "threejs-galaxy-central-morphology-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
@@ -50,7 +50,9 @@ test("Three.js builder owns the qualified Galaxy central morphology before post-
     assert.match(runtime, /function createGalaxyCentralBulge\(THREE,seed,glowTexture\)/);
     assert.match(runtime, /const galaxyCentralMorphology=document\.body\.dataset\.mapStyle==="threejs-galaxy"/);
     assert.match(runtime, /document\.body\.dataset\.galaxyCentralStructure="bulge"/);
-    assert.doesNotMatch(runtime, /function createGalaxyDiscHaze\(/);
+    assert.match(runtime, /function createGalaxyDiscHaze\(THREE,seed,armCount=4,pitch=0,referenceRadius=42\)/);
+    assert.match(runtime, /document\.body\.dataset\.galaxyDiscTexture="procedural-haze-v2"/);
+    assert.doesNotMatch(runtime, /const galaxyPatternDelta=/);
     assert.doesNotMatch(runtime, /discHazePatternFrame:/);
   } finally {
     await rm(root, { recursive: true, force: true });
