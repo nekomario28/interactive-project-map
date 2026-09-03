@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "authority": "CONSUMER_OWNED_MAPPING",
+  "registry": {
+    "path": "registry/ui-semantic-token-catalog.yaml",
+    "schemaVersion": 1,
+    "revision": "1f211cba8c37c671a13640dd38e5111266aad13a"
+  },
+  "consumer": {
+    "project": "nekomario28/interactive-project-map",
+    "surface": "PUBLIC_2D_VIEWER",
+    "claimedModes": [
+      "default",
+      "obsidian"
+    ]
+  },
+  "scope": {
+    "mode": "EXPLICIT",
+    "roles": [
+      "color.bg.canvas",
+      "color.bg.surface",
+      "color.bg.surfaceRaised",
+      "color.text.primary",
+      "color.text.muted",
+      "color.border.subtle",
+      "color.border.focus",
+      "color.selection.selected"
+    ]
+  },
+  "mappings": [
+    {
+      "role": "color.bg.canvas",
+      "consumerToken": "--bg",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"]
+    },
+    {
+      "role": "color.bg.surface",
+      "consumerToken": "--panel",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"]
+    },
+    {
+      "role": "color.bg.surfaceRaised",
+      "consumerToken": "--panel-elevated",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"]
+    },
+    {
+      "role": "color.text.primary",
+      "consumerToken": "--text",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"]
+    },
+    {
+      "role": "color.text.muted",
+      "consumerToken": "--muted",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"]
+    },
+    {
+      "role": "color.border.subtle",
+      "consumerToken": "--border",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"]
+    },
+    {
+      "role": "color.border.focus",
+      "consumerToken": "--accent",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"],
+      "note": "The owner token is consumed by focus borders/outlines in the shared 2D viewer."
+    },
+    {
+      "role": "color.selection.selected",
+      "consumerToken": "--accent",
+      "valueSource": "scripts/public-viewer.css",
+      "resolutionAuthority": "CONSUMER",
+      "modes": ["default", "obsidian"],
+      "note": "The same owner token is consumed by committed aria-pressed selection emphasis; no token split is introduced solely for neutral mapping."
+    }
+  ],
+  "doesNotProve": [
+    "resolved visual values",
+    "final visual identity",
+    "accessibility acceptance",
+    "browser acceptance",
+    "theme acceptance",
+    "repository-wide token migration",
+    "Three.js semantic token authority",
+    "universal reusable concrete token values"
+  ]
+}
