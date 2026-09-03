@@ -1,12 +1,13 @@
 # Current roadmap
 
-Status snapshot: **2026-09-03**
+Status snapshot: **2026-09-04**
 
 This is the canonical list of work that is still worth doing. `docs/research-decision-ledger.md` records adopted / completed / rejected / dormant decisions; `docs/threejs-galaxy-astronomy.md` is the detailed physical/semantic boundary for the native Three.js Galaxy style, with `docs/threejs-galaxy-corotation.md` documenting the adopted visual corotation approximation.
 
 ## Current production/release state
 
-- Interactive Pages runtime baseline at this reconcile cut: **`4d25c52751e91b57648d3da0faf0712921720cbf`** (PR #357, Galaxy haze/scaled-dust spatial-phase alignment, on top of PR #353's haze/dust pattern phase-lock, PR #345's arm-aware procedural Galaxy disc texture, PR #342's procedural disc haze, PR #340's centre-readability refinement, PR #335's 2D-Galaxy-Hybrid-aligned local repository ellipse motion, PR #334's no-persistent-lines policy and PR #332's central stellar bulge).
+- Last Galaxy renderer-behavior-changing runtime baseline: **`4d25c52751e91b57648d3da0faf0712921720cbf`** (PR #357, Galaxy haze/scaled-dust spatial-phase alignment, on top of PR #353's haze/dust pattern phase-lock, PR #345's arm-aware procedural Galaxy disc texture, PR #342's procedural disc haze, PR #340's centre-readability refinement, PR #335's 2D-Galaxy-Hybrid-aligned local repository ellipse motion, PR #334's no-persistent-lines policy and PR #332's central stellar bulge).
+- Current Pages maintenance/deploy authority: **`43df13398e3b4d3d17b808e5024db951037a2d4a`** (PR #405). Since the last Galaxy behavior change, Galaxy style/motion/pattern presentation moved to canonical `public-*` owners, obsolete Galaxy compatibility adapters were fully retired in PR #397 and reconciled in PR #400, the repository-wide active post-build chain decreased to 14 stages, and PR #405 moved canonical runtime-asset emission into the public builder byte-for-byte. Main-push Verify, Chromium, iPhone WebKit and Pages build/deploy are GREEN at this authority cut; these maintenance changes do not supersede PR #357 as the last Galaxy visual/behavior change.
 - Stable reusable **`v1` remains `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`**. Do not move it for Pages-only viewer work.
 - Pages `main`, reusable `v1`, the outer reusable workflow and the reviewed immutable inner Action pin are independent authority/release layers.
 - The published GitHub-only setup path remains the production source of truth. The Cloudflare/GitHub App one-click installer remains dormant / not production exposed.
