@@ -36,15 +36,12 @@ test("adaptive label runtime is text-only and bounded to Systems/Hybrid", async 
   assert.doesNotMatch(source, /state\.zoom\s*=/);
 });
 
-test("public builder emits adaptive labels and postprocess attaches them after interaction polish", async () => {
+test("public builder owns adaptive-label emission and shared script ordering", async () => {
   const [builder, postprocess] = await Promise.all([
     readFile(builderPath, "utf8"),
     readFile(postprocessPath, "utf8"),
   ]);
   assert.match(builder, /public-adaptive-labels\.js/);
-  assert.match(builder, /adaptive-labels\.js/);
-  assert.doesNotMatch(postprocess, /public-adaptive-labels\.js/);
-  assert.match(postprocess, /adaptive-labels\.js/);
-  assert.match(postprocess, /POLISH_SCRIPT, OBSIDIAN_HOVER_SCRIPT, ADAPTIVE_LABELS_SCRIPT/);
-  assert.match(postprocess, /next\.includes\(ADAPTIVE_LABELS_SCRIPT\)/);
+  assert.match(builder, /"interaction-polish\.js",[\s\S]*"obsidian-hover\.js",[\s\S]*"adaptive-labels\.js",[\s\S]*"view-state\.js"/);
+  assert.doesNotMatch(postprocess, /public-adaptive-labels\.js|adaptive-labels\.js|interaction-polish\.js|obsidian-hover\.js/);
 });
