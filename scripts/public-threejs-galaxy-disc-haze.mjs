@@ -1,5 +1,3 @@
-import { THREEJS_GALAXY_CENTRAL_MORPHOLOGY_SCENE } from "./public-threejs-galaxy-central-morphology.mjs";
-
 const RUNTIME_ANCHOR = "function createSceneRuntime(THREE,graph,username){";
 const CENTRAL_BULGE_ANCHOR = "const galaxyBulge=galaxyCentralMorphology?createGalaxyCentralBulge(THREE,username,glowTexture):null;";
 
@@ -24,17 +22,10 @@ export function composeThreejsGalaxyDiscHazeRuntime(source) {
     );
   }
   if (!next.includes(THREEJS_GALAXY_DISC_HAZE_SCENE)) {
-    const sceneWithHaze = THREEJS_GALAXY_CENTRAL_MORPHOLOGY_SCENE.replace(
-      CENTRAL_BULGE_ANCHOR,
-      `${THREEJS_GALAXY_DISC_HAZE_SCENE}${CENTRAL_BULGE_ANCHOR}`,
-    );
-    if (sceneWithHaze === THREEJS_GALAXY_CENTRAL_MORPHOLOGY_SCENE) {
-      throw new Error("Could not locate Three.js Galaxy canonical bulge scene boundary");
-    }
     next = replaceRequired(
       next,
-      THREEJS_GALAXY_CENTRAL_MORPHOLOGY_SCENE,
-      sceneWithHaze,
+      CENTRAL_BULGE_ANCHOR,
+      `${THREEJS_GALAXY_DISC_HAZE_SCENE}${CENTRAL_BULGE_ANCHOR}`,
       "Three.js Galaxy canonical disc-haze scene insertion point",
     );
   }
