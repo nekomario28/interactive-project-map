@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
@@ -20,17 +20,19 @@ async function htmlFiles(dir) {
 export async function postprocessPublicPages(outputDir = resolve(process.cwd(), "site")) {
   for (const path of await htmlFiles(outputDir)) {
     const source = await readFile(path, "utf8");
-    const cleaned = source
-      .replace(/;?\s*frame-ancestors\s+'none'/g, "")
-      .replace(/style-src\s+'self'(?!\s+'unsafe-inline')/g, "style-src 'self' 'unsafe-inline'");
-    if (cleaned !== source) await writeFile(path, cleaned);
+    if (/frame-ancestors\s+'none'/.test(source)) {
+      throw new Error(`Legacy frame-ancestors CSP reached postprocess: ${path}`);
+    }
+    if (/style-src\s+'self'(?!\s+'unsafe-inline')/.test(source)) {
+      throw new Error(`Non-canonical style-src CSP reached postprocess: ${path}`);
+    }
   }
 }
 
 async function main() {
   const outputDir = resolve(process.argv[2] || join(process.cwd(), "site"));
   await postprocessPublicPages(outputDir);
-  console.log(`Postprocessed public Pages output in ${outputDir}`);
+  console.log(`Validated canonical public Pages output in ${outputDir}`);
   console.log(`Published installer Action ref: ${PUBLIC_ACTION_REF}`);
 }
 
