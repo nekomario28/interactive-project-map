@@ -2,6 +2,7 @@
 /* global state, clamp, hash, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, palette, performance, console, requestAnimationFrame */
 
 window.addEventListener("DOMContentLoaded", () => {
+  if (state.style !== "galaxy-systems") return;
   const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
   const tau = Math.PI * 2;
   const runtime = {
@@ -53,8 +54,8 @@ window.addEventListener("DOMContentLoaded", () => {
       const radius = 58 + lane * 58;
       const capacity = Math.max(4, Math.floor((tau * radius) / 84));
       const take = Math.min(capacity, members.length - cursor);
-      const direction = lane % 2 === 0 ? 1 : -1;
-      const period = 128 + lane * 54;
+      const direction = (hash(`${group.id}:orbit-direction`) & 1) === 0 ? 1 : -1;
+      const period = 360 + lane * 180;
       for (let index = 0; index < take; index += 1) {
         result.push({
           node: members[cursor + index],
@@ -72,7 +73,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function initialize() {
-    if (state.style !== "galaxy" || !state.graph || !state.nodes.length) return false;
+    if (state.style !== "galaxy-systems" || !state.graph || !state.nodes.length) return false;
     const owner = state.nodes.find((node) => node.type === "owner");
     if (!owner) return false;
 
@@ -129,7 +130,7 @@ window.addEventListener("DOMContentLoaded", () => {
     runtime.nodesRef = state.nodes;
     runtime.lastTime = performance.now();
     runtime.initialized = true;
-    if (subtitle) subtitle.textContent = "Living Galaxy Systems · categories are hubs · repositories orbit their category";
+    if (subtitle) subtitle.textContent = "Galaxy Systems · slow category orbit · repositories orbit locally";
     if (!state.selected && detailsDescription) {
       detailsDescription.textContent = motionMedia.matches
         ? "Galaxy Systems: each category is a hub and its repositories share local orbital lanes. Motion is paused by your reduced-motion preference."
@@ -146,6 +147,13 @@ window.addEventListener("DOMContentLoaded", () => {
     const dt = clamp(now - runtime.lastTime, 0, 50);
     runtime.lastTime = now;
     if (dt <= 0 || motionMedia.matches) return false;
+    for (const category of runtime.categories.values()) {
+      category.angle += tau * dt / (1800 * 1000);
+      category.node.x = Math.cos(category.angle) * category.categoryRadius;
+      category.node.y = Math.sin(category.angle) * category.categoryRadius;
+      category.node.vx = 0;
+      category.node.vy = 0;
+    }
     for (const target of runtime.repositories.values()) {
       target.phase += target.direction * tau * dt / (target.period * 1000);
       const group = target.category.node;
@@ -211,7 +219,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const baseDrawNodesAndLabels = drawNodesAndLabels;
 
   nodeRadius = function galaxySystemNodeRadius(node) {
-    if (state.style !== "galaxy") return baseNodeRadius(node);
+    if (state.style !== "galaxy-systems") return baseNodeRadius(node);
     if (node.type === "owner") return 13;
     if (node.type === "group") return 8;
     return baseNodeRadius(node);
@@ -219,7 +227,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   drawBackground = function galaxySystemsBackground(colors, width, height) {
     baseDrawBackground(colors, width, height);
-    if (state.style !== "galaxy" || !runtime.initialized) return;
+    if (state.style !== "galaxy-systems" || !runtime.initialized) return;
     drawNucleus(colors);
     drawSystems(colors);
   };
@@ -247,7 +255,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   drawEdges = function galaxySystemEdges(colors) {
-    if (state.style !== "galaxy") {
+    if (state.style !== "galaxy-systems") {
       baseDrawEdges(colors);
       return;
     }
@@ -278,7 +286,7 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   drawNodesAndLabels = function galaxySystemNodesAndLabels(colors) {
-    if (state.style !== "galaxy") {
+    if (state.style !== "galaxy-systems") {
       baseDrawNodesAndLabels(colors);
       return;
     }
@@ -371,7 +379,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function frame(now) {
     try {
-      if (state.style === "galaxy" && state.graph && state.nodes.length) {
+      if (state.style === "galaxy-systems" && state.graph && state.nodes.length) {
         if (step(now)) draw();
       } else if (runtime.initialized || runtime.nodesRef) reset();
     } catch (error) {
