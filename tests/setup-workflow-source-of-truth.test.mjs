@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { buildPublicPages } from "../scripts/build-public-pages.mjs";
 import { postprocessPublicPages } from "../scripts/postprocess-public-pages.mjs";
+import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 
 test("published setup workflow has one production source of truth", async (t) => {
   const outputDir = await mkdtemp(join(tmpdir(), "project-map-pages-"));
@@ -27,10 +28,18 @@ test("published setup workflow has one production source of truth", async (t) =>
   assert.match(canonicalSetupSource, /PROJECT_MAP_REUSABLE_REF='v1'/);
 
   await buildPublicPages(outputDir);
+  const appBeforePostprocess = await readFile(join(outputDir, "app.js"), "utf8");
+  assert.match(appBeforePostprocess, new RegExp(PROJECT_MAP_ACTION_REF));
+  assert.doesNotMatch(appBeforePostprocess, /30c33c76008b282de8990333c879ae8c1da853d7/);
+
   await postprocessPublicPages(outputDir);
 
   const home = await readFile(join(outputDir, "index.html"), "utf8");
   const app = await readFile(join(outputDir, "app.js"), "utf8");
+
+  // Postprocessing may still tune other emitted runtime files, but setup app.js
+  // must already carry the reviewed release and remain byte-identical.
+  assert.equal(app, appBeforePostprocess);
 
   assert.match(home, /<script src="\.\/app\.js" defer><\/script>/);
   assert.doesNotMatch(home, /nekomario28\/interactive-project-map@v1/);

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { PUBLIC_ACTION_REF } from "../scripts/postprocess-public-pages.mjs";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 import { STABLE_REUSABLE_REF, renderInstallWorkflow } from "../src/install.ts";
 
@@ -13,24 +14,18 @@ function requiredMatch(source, pattern, label) {
 }
 
 test("release chain treats outer reusable ref and inner Action SHA as separate release targets", async () => {
-  const [reusable, pagesPostprocess] = await Promise.all([
-    readFile(new URL("../.github/workflows/generate-project-map.yml", import.meta.url), "utf8"),
-    readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8"),
-  ]);
+  const reusable = await readFile(new URL("../.github/workflows/generate-project-map.yml", import.meta.url), "utf8");
 
   const reusableInnerRef = requiredMatch(
     reusable,
     /uses:\s+nekomario28\/interactive-project-map@([0-9a-f]{40})/,
     "reusable workflow inner Action SHA",
   );
-  const pagesInnerRef = requiredMatch(
-    pagesPostprocess,
-    /export const PUBLIC_ACTION_REF = "([0-9a-f]{40})"/,
-    "Pages inner Action SHA",
-  );
+  const pagesInnerRef = PUBLIC_ACTION_REF;
 
   assert.equal(STABLE_REUSABLE_REF, "v1");
   assert.match(reusableInnerRef, SHA_RE);
+  assert.match(pagesInnerRef, SHA_RE);
   assert.notEqual(STABLE_REUSABLE_REF, reusableInnerRef, "outer @v1 must not be mistaken for the inner immutable Action ref");
   assert.equal(reusableInnerRef, PROJECT_MAP_ACTION_REF, "Worker-generated workflows must advertise the reusable workflow's actual inner Action release");
   assert.equal(pagesInnerRef, reusableInnerRef, "Pages-generated workflows must advertise the same inner Action release");
