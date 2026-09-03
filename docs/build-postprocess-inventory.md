@@ -16,7 +16,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 | Stage | Current responsibility | Migration priority |
 |---|---|---|
-| `postprocess-public-pages.mjs` | runtime emission, final Action pin, assorted compatibility rewrites; shared-viewer, Galaxy Systems tuning, and Galaxy Classic identity isolation retired | **P0 split/shrink** |
+| `postprocess-public-pages.mjs` | runtime emission, final Action pin, assorted compatibility rewrites; shared-viewer, Galaxy runtime identity/tuning, and Obsidian force-kernel rewrites retired | **P0 split/shrink** |
 | `apply-contributed-render-sync.mjs` | shared/Obsidian/Galaxy Contributed render parity | P1 |
 | `apply-dedicated-view-state.mjs` | dedicated viewer shared state layer | P1 |
 | `apply-dedicated-contributed-render-sync.mjs` | dedicated Contributed primary-status parity | P1 |
@@ -69,11 +69,23 @@ The third bounded cut moves Galaxy Classic's runtime identity into `scripts/publ
 
 Galaxy Classic's existing Living Galaxy browser movement test remains the behavior authority. A focused source-ownership regression prevents legacy exact `"galaxy"` runtime identity or the postprocess adapter from returning.
 
-`postprocess-public-pages.mjs` remains in the build because it still owns unrelated runtime emission, compatibility rewrites, bounded Obsidian/interaction transformations, and the reviewed final installer Action pin.
+## Fourth migration cut — complete
+
+The fourth bounded cut moves the already-adopted Obsidian Spatial Core delegation into canonical `scripts/public-obsidian-runtime.js`:
+
+1. force settings come directly from `window.ProjectMapSpatialCore.DEFAULT_FORCE_SETTINGS`;
+2. linked-edge resolution delegates directly to `ProjectMapSpatialCore.linkForceEdges`;
+3. each force step delegates directly to `ProjectMapSpatialCore.stepForceLayout`, preserving the existing Obsidian `physicsRadius` and dragging-id contract;
+4. the duplicated pairwise force kernel is absent from canonical Obsidian source;
+5. `obsidian-runtime.js` is emitted by direct copy and `tuneObsidianRuntime()` is retired.
+
+The browser Spatial Core parity test remains the primitive-semantics authority, while the existing Obsidian browser tests remain the lifecycle/interaction authority. `tuneInteractionPolish()` remains deliberately separate.
+
+`postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, interaction semantic normalization, compatibility rewrites, runtime attachment, and the reviewed final installer Action pin.
 
 ## Next bounded migrations
 
-The remaining transformations inside `postprocess-public-pages.mjs` are materially larger than the retired Galaxy identity/tuning adapters. Review `tuneObsidianRuntime()` and `tuneInteractionPolish()` independently; migrate only a mechanism whose canonical owner and evidence boundary are clear. Do not combine them in one cleanup cut.
+The remaining postprocess-local semantic rewrite is `tuneInteractionPolish()`. Review it as a separate cut: canonicalize only the already-adopted semantic-edge normalization delegation to `ProjectMapSpatialCore.normalizeWeightedEdges`, preserve the existing 2400-input / 1200-output bounds, and retain dedicated/shared browser evidence.
 
 Three.js Galaxy motion and central morphology remain high-value post-build debt, but they are renderer-semantic and currently active development surfaces. Migrate them one mechanism at a time only from a fresh main after checking for concurrent Galaxy work. Do not combine motion and central morphology in one cleanup cut.
 

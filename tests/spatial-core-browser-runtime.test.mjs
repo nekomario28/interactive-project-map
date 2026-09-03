@@ -11,7 +11,6 @@ import {
 import {
   spatialCoreRuntimeSource,
   tuneInteractionPolish,
-  tuneObsidianRuntime,
 } from "../scripts/postprocess-public-pages.mjs";
 
 test("generated classic Spatial Core runtime delegates to the canonical package primitives", () => {
@@ -53,17 +52,19 @@ test("generated classic Spatial Core runtime delegates to the canonical package 
   );
 });
 
-test("Pages emission removes duplicated semantic and Obsidian force kernels", async () => {
-  const [obsidianSource, polishSource] = await Promise.all([
+test("canonical Obsidian and emitted interaction runtimes avoid duplicated Spatial Core kernels", async () => {
+  const [obsidianSource, polishSource, postprocessSource] = await Promise.all([
     readFile(new URL("../scripts/public-obsidian-runtime.js", import.meta.url), "utf8"),
     readFile(new URL("../scripts/public-interaction-polish.js", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8"),
   ]);
 
-  const obsidian = tuneObsidianRuntime(obsidianSource);
-  assert.match(obsidian, /ProjectMapSpatialCore\.DEFAULT_FORCE_SETTINGS/);
-  assert.match(obsidian, /ProjectMapSpatialCore\.linkForceEdges/);
-  assert.match(obsidian, /ProjectMapSpatialCore\.stepForceLayout/);
-  assert.doesNotMatch(obsidian, /for \(let first = 0; first < nodes\.length; first \+= 1\)/);
+  assert.match(obsidianSource, /ProjectMapSpatialCore\.DEFAULT_FORCE_SETTINGS/);
+  assert.match(obsidianSource, /ProjectMapSpatialCore\.linkForceEdges/);
+  assert.match(obsidianSource, /ProjectMapSpatialCore\.stepForceLayout/);
+  assert.doesNotMatch(obsidianSource, /for \(let first = 0; first < nodes\.length; first \+= 1\)/);
+  assert.doesNotMatch(postprocessSource, /tuneObsidianRuntime/);
+  assert.match(postprocessSource, /copyFile\(join\(sourceDir, "public-obsidian-runtime\.js"\), join\(outputDir, "obsidian-runtime\.js"\)\)/);
 
   const polish = tuneInteractionPolish(polishSource);
   assert.match(polish, /ProjectMapSpatialCore/);

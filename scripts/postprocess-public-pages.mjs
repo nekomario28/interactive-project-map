@@ -51,35 +51,6 @@ export function spatialCoreRuntimeSource() {
   return `"use strict";\n/* global window */\n(() => {\n  const DEFAULT_FORCE_SETTINGS = Object.freeze(${JSON.stringify(DEFAULT_FORCE_SETTINGS)});\n\n  ${hashText.toString()}\n\n  ${normalizeWeightedEdges.toString()}\n\n  ${linkForceEdges.toString()}\n\n  ${stepForceLayout.toString()}\n\n  window.ProjectMapSpatialCore = Object.freeze({\n    DEFAULT_FORCE_SETTINGS,\n    normalizeWeightedEdges,\n    linkForceEdges,\n    stepForceLayout,\n  });\n})();\n`;
 }
 
-export function tuneObsidianRuntime(source) {
-  let patched = source;
-  const settingsStart = "  const settings = {";
-  const settingsEnd = "  const SPAWN_ALPHA = 0.6;";
-  const settingsIndex = patched.indexOf(settingsStart);
-  const settingsEndIndex = patched.indexOf(settingsEnd, settingsIndex);
-  if (settingsIndex < 0 || settingsEndIndex < 0) throw new Error("Could not locate Obsidian force settings boundary");
-  patched = `${patched.slice(0, settingsIndex)}  const settings = window.ProjectMapSpatialCore.DEFAULT_FORCE_SETTINGS;\n${patched.slice(settingsEndIndex)}`;
-
-  const linkedStart = "  function linkedEdges(graph, nodes) {";
-  const linkedEnd = "\n\n  function compactSpawnPoint";
-  const linkedIndex = patched.indexOf(linkedStart);
-  const linkedEndIndex = patched.indexOf(linkedEnd, linkedIndex);
-  if (linkedIndex < 0 || linkedEndIndex < 0) throw new Error("Could not locate Obsidian linked-edge boundary");
-  const linkedReplacement = `  function linkedEdges(graph, nodes) {\n    return window.ProjectMapSpatialCore.linkForceEdges(graph?.edges, nodes);\n  }`;
-  patched = `${patched.slice(0, linkedIndex)}${linkedReplacement}${patched.slice(linkedEndIndex)}`;
-
-  const forceStart = "  function applyForceStep(nodes, edges, alpha, dragging = null) {";
-  const forceEnd = "\n\n  buildObsidianLayout = function";
-  const forceIndex = patched.indexOf(forceStart);
-  const forceEndIndex = patched.indexOf(forceEnd, forceIndex);
-  if (forceIndex < 0 || forceEndIndex < 0) throw new Error("Could not locate Obsidian force-step boundary");
-  const forceReplacement = `  function applyForceStep(nodes, edges, alpha, dragging = null) {\n    window.ProjectMapSpatialCore.stepForceLayout(nodes, edges, alpha, {\n      settings,\n      draggingId: dragging?.id ?? null,\n      radius: physicsRadius,\n    });\n  }`;
-  patched = `${patched.slice(0, forceIndex)}${forceReplacement}${patched.slice(forceEndIndex)}`;
-
-  if (patched.includes("for (let first = 0; first < nodes.length; first += 1)")) throw new Error("Obsidian emitted runtime still contains duplicated force kernel");
-  return patched;
-}
-
 export function tuneInteractionPolish(source) {
   const start = "      const deduped = new Map();";
   const end = "      if (semanticEdges.length) safe.semanticEdges = semanticEdges;";
@@ -116,8 +87,7 @@ async function emitGalaxyRuntimes(outputDir) {
 
 async function emitObsidianRuntime(outputDir) {
   const sourceDir = resolve(process.cwd(), "scripts");
-  const source = await readFile(join(sourceDir, "public-obsidian-runtime.js"), "utf8");
-  await writeFile(join(outputDir, "obsidian-runtime.js"), tuneObsidianRuntime(source));
+  await copyFile(join(sourceDir, "public-obsidian-runtime.js"), join(outputDir, "obsidian-runtime.js"));
   await copyFile(join(sourceDir, "public-obsidian-hover.js"), join(outputDir, "obsidian-hover.js"));
 }
 
