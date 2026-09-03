@@ -29,8 +29,8 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 | `apply-threejs-repository-labels.mjs` | bounded Three.js repository-label adapter | P2 |
 | `apply-view-dimension-toggle.mjs` | 2D/3D navigation controls and assets | P1 |
 | `apply-threejs-style-presets.mjs` | Three.js renderer-local style controls | P2 |
-| `apply-threejs-galaxy-motion.mjs` | adopted Galaxy morphology/motion primitives and node motion behavior | **P1 canonicalize** |
-| `apply-threejs-galaxy-central-bulge.mjs` | Galaxy haze/dust 2400 s pattern phase-lock plus haze motion-evidence augmentation; central bulge, nucleus dust fade, and haze object/scene attachment are canonical | **P1 shrink with motion canonicalization** |
+| `apply-threejs-galaxy-motion.mjs` | thin filesystem/order adapter invoking canonical `public-threejs-galaxy-motion.mjs`; motion semantics are no longer owned here | **P1 retire after canonical stage-order relocation** |
+| `apply-threejs-galaxy-central-bulge.mjs` | Galaxy haze/dust 2400 s pattern phase-lock plus haze motion-evidence augmentation; central bulge, nucleus dust fade, and haze object/scene attachment are canonical | **P1 shrink after motion invocation relocation** |
 | `apply-threejs-local-engine.mjs` | pinned/localized Three.js engine | P2 keep until localization owner is clearer |
 | `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
 | `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
@@ -122,11 +122,24 @@ The seventh bounded cut reduces the historical `apply-threejs-galaxy-central-bul
 
 Rendered Chromium/WebKit Galaxy evidence remains the behavior authority. The reviewed mutator budget remains **18** because this cut shrinks a stage rather than deleting it.
 
+## Eighth migration cut — Three.js Galaxy motion semantic ownership
+
+The eighth bounded cut moves the already-qualified Galaxy motion and astronomy-informed morphology transformations into `scripts/public-threejs-galaxy-motion.mjs` without changing execution order:
+
+1. the canonical composer owns the existing 2/3/4-arm policy, 22° logarithmic pitch, thin-disc geometry, `T ≈ 16r` bounded rotation model, 2400 s pattern period, visual corotation, inertial starfield, and no-persistent-line policy;
+2. it also owns the existing local `0.68` ellipse, `480 + lane * 240` period, category-shared `:hybrid-direction`, and small renderer-local vertical breathing contract;
+3. `apply-threejs-galaxy-motion.mjs` is now a thin read/compose/write compatibility adapter and contains no independent motion constants or kernel;
+4. invocation order remains `style presets → Galaxy motion → haze/pattern coupling`, guarded by `tests/threejs-galaxy-stage-order.test.mjs`;
+5. the adapter is not removable until the canonical builder/runtime composition surface can invoke the same composer after style ownership and before haze/pattern coupling with equivalent generated behavior;
+6. this is an ownership migration only: astronomy boundaries, graph semantics, release authority, `v1`, and renderer presentation are unchanged.
+
+The reviewed mutator budget remains **18** because semantic ownership moved but the execution-order adapter still exists.
+
 ## Next bounded migrations
 
 Re-inventory the residual `postprocess-public-pages.mjs` responsibilities after the Action-ref cut. Treat CSP compatibility rewriting and runtime-script attachment as separate mechanisms: canonicalize one only if its owner is clear and the generated output can be proven equivalent. Do not collapse them merely to reduce line count.
 
-For Three.js Galaxy, central morphology and haze presentation are no longer post-build-owned. The remaining high-value renderer-semantic debt is `apply-threejs-galaxy-motion.mjs` plus the small haze/dust pattern-coupling and evidence augmentation still carried by `apply-threejs-galaxy-central-bulge.mjs`. Canonicalize those only from a fresh main, preserving the existing 2/3/4-arm, 22° pitch, 2400 s pattern, 45.36 reference, Motion Off, no-persistent-lines, authority, and rendered-evidence contracts. Do not combine that maintenance with a renderer redesign.
+For Three.js Galaxy, central morphology, disc haze presentation, and motion semantics now have canonical owners. The remaining renderer-specific post-build debt is invocation/order plumbing: the thin Galaxy motion adapter and the haze/dust 2400 s phase-lock plus read-only evidence augmentation. The next safe reduction is to relocate one execution boundary while preserving `style presets → motion → haze coupling`, the 2/3/4-arm, 22°, 2400 s, 45.36 reference, Motion Off, no-persistent-lines, owner/contributed authority, and rendered-evidence contracts. Do not combine that maintenance with renderer redesign.
 
 ## Rules for future changes
 
