@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const systems = await readFile(new URL("../scripts/public-galaxy-systems.js", import.meta.url), "utf8");
+const builder = await readFile(new URL("../scripts/build-public-pages.mjs", import.meta.url), "utf8");
 const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8");
 
 test("Galaxy Systems owns its adopted runtime identity and motion policy canonically", () => {
@@ -22,11 +23,12 @@ test("Galaxy Systems owns its adopted runtime identity and motion policy canonic
   assert.doesNotMatch(systems, /Living Galaxy Systems · categories are hubs · repositories orbit their category/);
 });
 
-test("Pages postprocess emits canonical Galaxy Systems without semantic string patching", () => {
+test("public builder emits canonical Galaxy Systems without postprocess semantic or copy ownership", () => {
   assert.doesNotMatch(postprocess, /function tuneSystemsRuntime/);
   assert.doesNotMatch(postprocess, /orbit-direction/);
   assert.doesNotMatch(postprocess, /360 \+ lane \* 180/);
   assert.doesNotMatch(postprocess, /1800 \* 1000/);
   assert.doesNotMatch(postprocess, /Living Galaxy Systems · categories are hubs · repositories orbit their category/);
-  assert.match(postprocess, /copyFile\(join\(sourceDir, "public-galaxy-systems\.js"\), join\(outputDir, "galaxy-systems-runtime\.js"\)\)/);
+  assert.match(builder, /\["public-galaxy-systems\.js", "galaxy-systems-runtime\.js"\]/);
+  assert.doesNotMatch(postprocess, /public-galaxy-systems\.js/);
 });

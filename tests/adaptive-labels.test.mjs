@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const adaptivePath = new URL("../scripts/public-adaptive-labels.js", import.meta.url);
+const builderPath = new URL("../scripts/build-public-pages.mjs", import.meta.url);
 const postprocessPath = new URL("../scripts/postprocess-public-pages.mjs", import.meta.url);
 
 test("adaptive label runtime is text-only and bounded to Systems/Hybrid", async () => {
@@ -35,10 +36,15 @@ test("adaptive label runtime is text-only and bounded to Systems/Hybrid", async 
   assert.doesNotMatch(source, /state\.zoom\s*=/);
 });
 
-test("generated Galaxy page always emits adaptive labels after interaction polish", async () => {
-  const source = await readFile(postprocessPath, "utf8");
-  assert.match(source, /public-adaptive-labels\.js/);
-  assert.match(source, /adaptive-labels\.js/);
-  assert.match(source, /POLISH_SCRIPT, OBSIDIAN_HOVER_SCRIPT, ADAPTIVE_LABELS_SCRIPT/);
-  assert.match(source, /next\.includes\(ADAPTIVE_LABELS_SCRIPT\)/);
+test("public builder emits adaptive labels and postprocess attaches them after interaction polish", async () => {
+  const [builder, postprocess] = await Promise.all([
+    readFile(builderPath, "utf8"),
+    readFile(postprocessPath, "utf8"),
+  ]);
+  assert.match(builder, /public-adaptive-labels\.js/);
+  assert.match(builder, /adaptive-labels\.js/);
+  assert.doesNotMatch(postprocess, /public-adaptive-labels\.js/);
+  assert.match(postprocess, /adaptive-labels\.js/);
+  assert.match(postprocess, /POLISH_SCRIPT, OBSIDIAN_HOVER_SCRIPT, ADAPTIVE_LABELS_SCRIPT/);
+  assert.match(postprocess, /next\.includes\(ADAPTIVE_LABELS_SCRIPT\)/);
 });

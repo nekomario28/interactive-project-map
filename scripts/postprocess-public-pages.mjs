@@ -1,4 +1,4 @@
-import { copyFile, readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
@@ -40,15 +40,7 @@ async function htmlFiles(dir) {
   return found;
 }
 
-async function emitGalaxyRuntimes(outputDir) {
-  const sourceDir = resolve(process.cwd(), "scripts");
-  await copyFile(join(sourceDir, "public-galaxy-common.js"), join(outputDir, "galaxy-common.js"));
-  await copyFile(join(sourceDir, "public-galaxy-classic.js"), join(outputDir, "galaxy-classic-runtime.js"));
-  await copyFile(join(sourceDir, "public-galaxy-hybrid.js"), join(outputDir, "galaxy-hybrid-runtime.js"));
-  await copyFile(join(sourceDir, "public-galaxy-systems.js"), join(outputDir, "galaxy-systems-runtime.js"));
-  await copyFile(join(sourceDir, "public-galaxy-edge-policy.js"), join(outputDir, "galaxy-edge-policy.js"));
-  await copyFile(join(sourceDir, "public-adaptive-labels.js"), join(outputDir, "adaptive-labels.js"));
-
+async function attachGalaxyRuntimes(outputDir) {
   const htmlPath = join(outputDir, "u", "index.html");
   const html = await readFile(htmlPath, "utf8");
   if (!html.includes(VIEWER_SCRIPT)) throw new Error("Shared viewer script tag not found");
@@ -58,17 +50,7 @@ async function emitGalaxyRuntimes(outputDir) {
   if (next !== html) await writeFile(htmlPath, next);
 }
 
-async function emitObsidianRuntime(outputDir) {
-  const sourceDir = resolve(process.cwd(), "scripts");
-  await copyFile(join(sourceDir, "public-obsidian-runtime.js"), join(outputDir, "obsidian-runtime.js"));
-  await copyFile(join(sourceDir, "public-obsidian-hover.js"), join(outputDir, "obsidian-hover.js"));
-}
-
-async function emitInteractionPolish(outputDir) {
-  const sourcePath = resolve(process.cwd(), "scripts/public-interaction-polish.js");
-  const emphasisSourcePath = resolve(process.cwd(), "scripts/public-search-emphasis.js");
-  await copyFile(sourcePath, join(outputDir, "interaction-polish.js"));
-  await copyFile(emphasisSourcePath, join(outputDir, "search-emphasis.js"));
+async function attachInteractionPolish(outputDir) {
   for (const [route, viewerScript] of DEDICATED_VIEWERS) {
     const htmlPath = join(outputDir, route, "index.html");
     const html = await readFile(htmlPath, "utf8");
@@ -91,9 +73,8 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
     if (cleaned !== source) await writeFile(path, cleaned);
   }
 
-  await emitObsidianRuntime(outputDir);
-  await emitGalaxyRuntimes(outputDir);
-  await emitInteractionPolish(outputDir);
+  await attachGalaxyRuntimes(outputDir);
+  await attachInteractionPolish(outputDir);
 }
 
 async function main() {
