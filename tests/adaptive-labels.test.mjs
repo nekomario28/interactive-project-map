@@ -2,49 +2,38 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const adaptivePath = new URL("../scripts/public-adaptive-labels.js", import.meta.url);
-const builderPath = new URL("../scripts/build-public-pages.mjs", import.meta.url);
-const postprocessPath = new URL("../scripts/postprocess-public-pages.mjs", import.meta.url);
+const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8");
 
-test("adaptive label runtime is text-only and bounded to Systems/Hybrid", async () => {
-  const source = await readFile(adaptivePath, "utf8");
-  assert.doesNotThrow(() => new Function(source));
-  assert.match(source, /galaxy-systems/);
-  assert.match(source, /galaxy-hybrid/);
-  assert.match(source, /ctx\.measureText/);
-  assert.match(source, /bottom/);
-  assert.match(source, /right/);
-  assert.match(source, /top/);
-  assert.match(source, /left/);
-  assert.match(source, /baseDrawNodesAndLabels\(colors\)/);
-  assert.match(source, /ctx\.fillText = \(\) => \{\}/);
-  assert.match(source, /ctx\.strokeText = \(\) => \{\}/);
+test("postprocess keeps retired generated-runtime and script-layout ownership out of its boundary", () => {
+  for (const retiredMarker of [
+    "MOBILE_FIX",
+    "VIEWER_FIT_OLD",
+    "VIEWER_FIT_NEW",
+    "VIEWER_AUTO_FIT_OLD",
+    "VIEWER_AUTO_FIT_NEW",
+    "patchViewerStyles",
+    "hardenSharedViewer",
+    "Emitted-site mobile hardening",
+    "BUILDER_ACTION_REF",
+    "app.replaceAll",
+    "emitSpatialCoreRuntime",
+    "spatialCoreRuntimeSource",
+    "emitObsidianRuntime",
+    "emitGalaxyRuntimes",
+    "emitInteractionPolish",
+    "attachGalaxyRuntimes",
+    "attachInteractionPolish",
+    "copyFile",
+    "galaxy-common.js",
+    "spatial-core-runtime.js",
+    "interaction-polish.js",
+    "search-emphasis.js",
+  ]) {
+    assert.doesNotMatch(postprocess, new RegExp(retiredMarker.replaceAll(".", "\\.")), `${retiredMarker} must remain retired from postprocess`);
+  }
 
-  // Category labels are a stronger typographic tier, while repository labels retain the same adaptive engine.
-  assert.match(source, /function categoryFontScale\(/);
-  assert.match(source, /function categoryCountFontSize\(/);
-  assert.match(source, /categoryToRepositoryRatio/);
-  assert.match(source, /if \(node\.type === "group"\) return 700/);
-  assert.match(source, /const count = `· \$\{node\.repositoryCount \|\| 0\}`/);
-
-  // The runtime may read node geometry to place text, but must never mutate layout/view state.
-  assert.doesNotMatch(source, /node\.x\s*=/);
-  assert.doesNotMatch(source, /node\.y\s*=/);
-  assert.doesNotMatch(source, /node\.vx\s*=/);
-  assert.doesNotMatch(source, /node\.vy\s*=/);
-  assert.doesNotMatch(source, /state\.pan\.[xy]\s*=/);
-  assert.doesNotMatch(source, /state\.zoom\s*=/);
-});
-
-test("public builder emits adaptive labels and postprocess attaches them after interaction polish", async () => {
-  const [builder, postprocess] = await Promise.all([
-    readFile(builderPath, "utf8"),
-    readFile(postprocessPath, "utf8"),
-  ]);
-  assert.match(builder, /public-adaptive-labels\.js/);
-  assert.match(builder, /adaptive-labels\.js/);
-  assert.doesNotMatch(postprocess, /public-adaptive-labels\.js/);
-  assert.match(postprocess, /adaptive-labels\.js/);
-  assert.match(postprocess, /POLISH_SCRIPT, OBSIDIAN_HOVER_SCRIPT, ADAPTIVE_LABELS_SCRIPT/);
-  assert.match(postprocess, /next\.includes\(ADAPTIVE_LABELS_SCRIPT\)/);
+  assert.match(postprocess, /export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;/);
+  assert.match(postprocess, /async function htmlFiles\(dir\)/);
+  assert.match(postprocess, /frame-ancestors/);
+  assert.match(postprocess, /style-src/);
 });

@@ -2,33 +2,46 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const emphasisPath = new URL("../scripts/public-search-emphasis.js", import.meta.url);
+const adaptivePath = new URL("../scripts/public-adaptive-labels.js", import.meta.url);
 const builderPath = new URL("../scripts/build-public-pages.mjs", import.meta.url);
 const postprocessPath = new URL("../scripts/postprocess-public-pages.mjs", import.meta.url);
 
-const emphasis = await readFile(emphasisPath, "utf8");
-const builder = await readFile(builderPath, "utf8");
-const postprocess = await readFile(postprocessPath, "utf8");
+test("adaptive label runtime is text-only and bounded to Systems/Hybrid", async () => {
+  const source = await readFile(adaptivePath, "utf8");
+  assert.doesNotThrow(() => new Function(source));
+  assert.match(source, /galaxy-systems/);
+  assert.match(source, /galaxy-hybrid/);
+  assert.match(source, /ctx\.measureText/);
+  assert.match(source, /bottom/);
+  assert.match(source, /right/);
+  assert.match(source, /top/);
+  assert.match(source, /left/);
+  assert.match(source, /baseDrawNodesAndLabels\(colors\)/);
+  assert.match(source, /ctx\.fillText = \(\) => \{\}/);
+  assert.match(source, /ctx\.strokeText = \(\) => \{\}/);
 
-test("dedicated search emphasis keeps one shared visual contract", () => {
-  assert.match(emphasis, /ProjectMapSearchVisualEmphasis/);
-  assert.match(emphasis, /searchAwareAggregateRepoMatches/);
-  assert.match(emphasis, /aggregateAwareUpdateDetails/);
-  assert.match(emphasis, /searchEmphasisDraw/);
-  assert.match(emphasis, /drawMatrixTargets/);
-  assert.match(emphasis, /drawSankeyTargets/);
-  assert.match(emphasis, /directRepositoryIds/);
-  assert.doesNotThrow(() => new Function(emphasis));
+  // Category labels are a stronger typographic tier, while repository labels retain the same adaptive engine.
+  assert.match(source, /function categoryFontScale\(/);
+  assert.match(source, /function categoryCountFontSize\(/);
+  assert.match(source, /categoryToRepositoryRatio/);
+  assert.match(source, /if \(node\.type === "group"\) return 700/);
+  assert.match(source, /const count = `· \$\{node\.repositoryCount \|\| 0\}`/);
+
+  // The runtime may read node geometry to place text, but must never mutate layout/view state.
+  assert.doesNotMatch(source, /node\.x\s*=/);
+  assert.doesNotMatch(source, /node\.y\s*=/);
+  assert.doesNotMatch(source, /node\.vx\s*=/);
+  assert.doesNotMatch(source, /node\.vy\s*=/);
+  assert.doesNotMatch(source, /state\.pan\.[xy]\s*=/);
+  assert.doesNotMatch(source, /state\.zoom\s*=/);
 });
 
-test("builder emits search emphasis and postprocess attaches it after shared search semantics for every dedicated viewer", () => {
-  assert.match(builder, /public-search-emphasis\.js/);
-  assert.match(builder, /search-emphasis\.js/);
-  assert.doesNotMatch(postprocess, /public-search-emphasis\.js/);
-  assert.match(postprocess, /search-emphasis\.js/);
-  assert.match(postprocess, /SEARCH_EMPHASIS_SCRIPT/);
-  assert.match(postprocess, /POLISH_SCRIPT.*SEARCH_EMPHASIS_SCRIPT/s);
-  for (const style of ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"]) {
-    assert.match(postprocess, new RegExp(`\\[\\"${style}\\"`));
-  }
+test("public builder owns adaptive-label emission and shared script ordering", async () => {
+  const [builder, postprocess] = await Promise.all([
+    readFile(builderPath, "utf8"),
+    readFile(postprocessPath, "utf8"),
+  ]);
+  assert.match(builder, /public-adaptive-labels\.js/);
+  assert.match(builder, /"interaction-polish\.js",[\s\S]*"obsidian-hover\.js",[\s\S]*"adaptive-labels\.js",[\s\S]*"view-state\.js"/);
+  assert.doesNotMatch(postprocess, /public-adaptive-labels\.js|adaptive-labels\.js|interaction-polish\.js|obsidian-hover\.js/);
 });

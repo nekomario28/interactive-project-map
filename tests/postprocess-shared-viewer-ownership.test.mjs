@@ -2,33 +2,27 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const postprocess = await readFile(new URL("../scripts/postprocess-public-pages.mjs", import.meta.url), "utf8");
+const emphasisPath = new URL("../scripts/public-search-emphasis.js", import.meta.url);
+const builderPath = new URL("../scripts/build-public-pages.mjs", import.meta.url);
+const postprocessPath = new URL("../scripts/postprocess-public-pages.mjs", import.meta.url);
 
-test("postprocess keeps retired generated-runtime ownership out of its boundary", () => {
-  for (const retiredMarker of [
-    "MOBILE_FIX",
-    "VIEWER_FIT_OLD",
-    "VIEWER_FIT_NEW",
-    "VIEWER_AUTO_FIT_OLD",
-    "VIEWER_AUTO_FIT_NEW",
-    "patchViewerStyles",
-    "hardenSharedViewer",
-    "Emitted-site mobile hardening",
-    "BUILDER_ACTION_REF",
-    "app.replaceAll",
-    "emitSpatialCoreRuntime",
-    "spatialCoreRuntimeSource",
-    "emitObsidianRuntime",
-    "emitGalaxyRuntimes",
-    "emitInteractionPolish",
-    "copyFile",
-  ]) {
-    assert.doesNotMatch(postprocess, new RegExp(retiredMarker.replaceAll(".", "\\.")), `${retiredMarker} must remain retired from postprocess`);
-  }
+const emphasis = await readFile(emphasisPath, "utf8");
+const builder = await readFile(builderPath, "utf8");
+const postprocess = await readFile(postprocessPath, "utf8");
 
-  assert.match(postprocess, /export const PUBLIC_ACTION_REF = PROJECT_MAP_ACTION_REF;/);
-  assert.match(postprocess, /await attachGalaxyRuntimes\(outputDir\);/);
-  assert.match(postprocess, /await attachInteractionPolish\(outputDir\);/);
-  assert.match(postprocess, /frame-ancestors/);
-  assert.match(postprocess, /style-src/);
+test("dedicated search emphasis keeps one shared visual contract", () => {
+  assert.match(emphasis, /ProjectMapSearchVisualEmphasis/);
+  assert.match(emphasis, /searchAwareAggregateRepoMatches/);
+  assert.match(emphasis, /aggregateAwareUpdateDetails/);
+  assert.match(emphasis, /searchEmphasisDraw/);
+  assert.match(emphasis, /drawMatrixTargets/);
+  assert.match(emphasis, /drawSankeyTargets/);
+  assert.match(emphasis, /directRepositoryIds/);
+  assert.doesNotThrow(() => new Function(emphasis));
+});
+
+test("builder owns dedicated Spatial Core → polish → search-emphasis script ordering", () => {
+  assert.match(builder, /public-search-emphasis\.js/);
+  assert.match(builder, /const DEDICATED_SCRIPT_TAIL = Object\.freeze\(\[[\s\S]*"spatial-core-runtime\.js",[\s\S]*"interaction-polish\.js",[\s\S]*"search-emphasis\.js"/);
+  assert.doesNotMatch(postprocess, /public-search-emphasis\.js|search-emphasis\.js|interaction-polish\.js|spatial-core-runtime\.js/);
 });
