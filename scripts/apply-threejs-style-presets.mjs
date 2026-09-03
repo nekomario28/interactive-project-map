@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { composeThreejsGalaxyMotionRuntime } from "./public-threejs-galaxy-motion.mjs";
+import { composeThreejsGalaxyPatternCouplingRuntime } from "./public-threejs-galaxy-pattern-coupling.mjs";
 import {
   composeThreejsStylePage,
   composeThreejsStyleRuntime,
@@ -18,7 +19,8 @@ export async function applyThreejsStylePresets({ siteDir = join(process.cwd(), "
   const pagePath = join(siteDir, "three", "index.html");
   const [source, html] = await Promise.all([readFile(runtimePath, "utf8"), readFile(pagePath, "utf8")]);
   const styledRuntime = composeThreejsStyleRuntime(source);
-  const next = composeThreejsGalaxyMotionRuntime(styledRuntime);
+  const motionRuntime = composeThreejsGalaxyMotionRuntime(styledRuntime);
+  const next = composeThreejsGalaxyPatternCouplingRuntime(motionRuntime);
   const nextHtml = composeThreejsStylePage(html);
   await Promise.all([
     next !== source ? writeFile(runtimePath, next) : Promise.resolve(),
@@ -29,7 +31,7 @@ export async function applyThreejsStylePresets({ siteDir = join(process.cwd(), "
 
 async function main() {
   const result = await applyThreejsStylePresets();
-  console.log(`Applied Three.js style presets and Galaxy motion${result.changed ? "" : " (already present)"}`);
+  console.log(`Applied Three.js style presets, Galaxy motion, and pattern coupling${result.changed ? "" : " (already present)"}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -10,7 +10,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 - Canonical builder: `scripts/build-public-pages.mjs`
 - Reviewed historical post-build mutators: **18**
-- Active post-build mutators: **17**
+- Active post-build mutators: **16**
 - Direction: **monotonic decrease**
 - Preferred destination: canonical `public-*` runtime/template sources or shared package mechanisms
 - Migration rule: one bounded mechanism at a time, with rendered/evidence gates preserved
@@ -29,13 +29,12 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 | `apply-threejs-category-navigator.mjs` | Three.js category navigator adapter | P2 |
 | `apply-threejs-repository-labels.mjs` | bounded Three.js repository-label adapter | P2 |
 | `apply-view-dimension-toggle.mjs` | 2D/3D navigation controls and assets | P1 |
-| `apply-threejs-style-presets.mjs` | thin filesystem/order adapter invoking canonical style composition followed immediately by canonical Galaxy motion composition | **P1 relocate after remaining Three.js order dependencies are canonical** |
-| `apply-threejs-galaxy-central-bulge.mjs` | Galaxy haze/dust 2400 s pattern phase-lock plus haze motion-evidence augmentation; central bulge, disc haze, and motion semantics are canonical | **P1 canonicalize coupling** |
+| `apply-threejs-style-presets.mjs` | thin filesystem/order adapter invoking canonical Three.js style → Galaxy motion → Galaxy pattern coupling in that order | **P1 relocate only with broader Three.js composition authority** |
 | `apply-threejs-local-engine.mjs` | pinned/localized Three.js engine | P2 keep until localization owner is clearer |
 | `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
 | `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
 
-`apply-threejs-galaxy-motion.mjs` remains as a compatibility/syntax-checked adapter but is no longer an active `build:pages` stage.
+`apply-threejs-galaxy-motion.mjs` and `apply-threejs-galaxy-central-bulge.mjs` remain as compatibility/syntax-checked adapters but are no longer active `build:pages` stages.
 
 ## First migration cut — complete
 
@@ -119,7 +118,7 @@ The seventh bounded cut reduces the historical `apply-threejs-galaxy-central-bul
 2. builder-owned `scripts/public-threejs-galaxy-disc-haze.mjs` now owns the existing 128×128 procedural arm-aware haze helper and its non-semantic/non-pickable scene attachment;
 3. the haze still consumes the existing Galaxy arm count, 22° pitch, and scaled dust reference `42 × 1.08 = 45.36`; this cut introduces no second morphology or motion truth;
 4. raw `threejs-cosmic` builder output remains inert because presentation activation is gated by the final `data-map-style="threejs-galaxy"` identity;
-5. the remaining `apply-threejs-galaxy-central-bulge.mjs` responsibility is only the already-qualified 2400 s haze/dust phase lock and read-only motion evidence augmentation;
+5. the remaining generated-output responsibility was only the already-qualified 2400 s haze/dust phase lock and read-only motion evidence augmentation;
 6. stale or partial generated intermediates continue to fail closed and require rebuilding from canonical source.
 
 Rendered Chromium/WebKit Galaxy evidence remains the behavior authority. The reviewed active mutator count remained 18 at this cut because it shrank a stage rather than deleting it.
@@ -161,16 +160,42 @@ The tenth bounded cut removes one redundant execution boundary without changing 
 
 This is an invocation-plumbing reduction only. Galaxy motion parameters, style semantics, haze coupling, graph semantics, release authority, and `v1` are unchanged.
 
+## Eleventh migration cut — Galaxy pattern-coupling ownership
+
+The eleventh bounded cut moves the remaining qualified Galaxy pattern-coupling semantics into `scripts/public-threejs-galaxy-pattern-coupling.mjs` without changing the active 17-stage order:
+
+1. canonical central-morphology/disc-haze input validation is preserved;
+2. stale legacy haze signatures and partial coupling intermediates continue to fail closed;
+3. the existing 2400 s dust/haze phase lock is owned by the canonical composer;
+4. the existing read-only haze pattern-frame/rotation/reference-radius evidence augmentation is owned by the canonical composer;
+5. `apply-threejs-galaxy-central-bulge.mjs` becomes a thin read/compose/write compatibility adapter with no independent coupling kernel;
+6. central morphology, disc-haze geometry, motion/style parameters, graph semantics, release authority, and `v1` remain unchanged.
+
+This ownership-only cut leaves the active mutator count at 17.
+
+## Twelfth migration cut — retire standalone Galaxy pattern-coupling stage
+
+The twelfth bounded cut removes the second redundant Galaxy execution boundary while preserving the exact qualified composition order:
+
+1. `apply-threejs-style-presets.mjs` now performs `composeThreejsStyleRuntime(source)` → `composeThreejsGalaxyMotionRuntime(styledRuntime)` → `composeThreejsGalaxyPatternCouplingRuntime(motionRuntime)`;
+2. the former standalone pattern-coupling stage was immediately after the combined style/motion stage, so no unrelated transform crosses the boundary;
+3. `node scripts/apply-threejs-galaxy-central-bulge.mjs` is removed only from `build:pages`;
+4. both retired Galaxy compatibility adapters remain present and syntax-checked through `check:pages`;
+5. `tests/threejs-galaxy-stage-order.test.mjs` forbids standalone motion and pattern-coupling stage return and requires `style < motion < pattern` composition inside the combined adapter;
+6. active post-build mutators therefore decrease from **17 to 16**.
+
+This cut changes invocation plumbing only. The 2/3/4-arm policy, 22° pitch, 2400 s pattern, 45.36 scaled dust reference, local `0.68` ellipse, `480 + lane * 240`, Motion Off behavior, no-persistent-lines policy, owner/contributed authority, and non-physical haze boundary are unchanged.
+
 ## Next bounded migrations
 
 Re-inventory the residual `postprocess-public-pages.mjs` responsibilities separately from renderer-local work. Treat CSP compatibility rewriting and runtime-script attachment as independent mechanisms and do not collapse them merely to reduce line count.
 
-For Three.js Galaxy, central morphology, disc haze presentation, motion semantics, and style semantics now have canonical owners. The smallest remaining renderer-semantic post-build responsibility is the haze/dust 2400 s phase-lock plus read-only evidence augmentation in `apply-threejs-galaxy-central-bulge.mjs`. Move that exact mechanism into a canonical pattern-coupling composer first; retire its standalone stage only in a later cut that proves the effective `style → motion → pattern coupling` order and browser evidence remain unchanged.
+For Three.js Galaxy, central morphology, disc-haze presentation, style semantics, motion semantics, and pattern coupling now all have canonical owners. No standalone Galaxy-specific semantic post-build stage remains. The remaining `apply-threejs-style-presets.mjs` stage is now a combined Three.js renderer composition/order carrier; relocate it only if a broader canonical Three.js build boundary can preserve style → motion → pattern order and all current browser evidence. Do not keep reducing stages merely for the number, and do not combine maintenance with Galaxy redesign.
 
 ## Rules for future changes
 
 - Do not add a new `apply-*` stage merely because string replacement is faster for one feature.
 - Prefer modifying the canonical source that owns the behavior.
 - If a temporary adapter is unavoidable, add an explicit retirement condition and affected test before admitting it to the budget.
-- Removing a stage must not require changing the budget test; deletion is the expected direction.
+- Removing a stage must not require changing the historical budget test; deletion is the expected direction.
 - Do not combine cleanup with renderer-semantic redesign, release-pin movement, or dormant one-click reactivation.
