@@ -1,3 +1,5 @@
+import { composeThreejsGalaxyDiscHazeRuntime } from "./public-threejs-galaxy-disc-haze.mjs";
+
 const RUNTIME_ANCHOR = "function createSceneRuntime(THREE,graph,username){";
 const BASE_SCENE_ANCHOR = 'scene.add(farStars,midStars,nearStars,dust);';
 const STYLED_SCENE_ANCHOR = 'scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe";if(threeStyle==="galaxy"){dust.scale.setScalar(1.08);dust.material.opacity=.44;}';
@@ -31,5 +33,5 @@ export function composeThreejsGalaxyCentralMorphologyRuntime(source) {
       "Three.js Galaxy canonical central-morphology scene insertion point",
     );
   }
-  return next;
+  return composeThreejsGalaxyDiscHazeRuntime(next);
 }
