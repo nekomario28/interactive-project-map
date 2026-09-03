@@ -71,6 +71,7 @@ function externalizeBrowserScript(html, src) {
 
 function normalizePublicHtml(html) {
   return html
+    .replace(/;?\s*frame-ancestors\s+'none'/g, "")
     .replace('<input id="username"', '<input id="username" type="text"')
     .replace('<a id="openMap" class="button" target="_blank" rel="noopener">', '<a id="openMap" class="button" href="./radial/" target="_blank" rel="noopener">');
 }
@@ -130,7 +131,7 @@ function viewerBody({ mode = "graph" } = {}) {
 function enhanceViewer(html, options = {}) {
   const bodyPattern = /<body>[\s\S]*?<\/body>/;
   if (!bodyPattern.test(html)) throw new Error("Could not find viewer body");
-  return html.replace(/<style>[\s\S]*?<\/style>/, "").replace("style-src 'unsafe-inline'", "style-src 'self'").replace("</head>", '<link rel="stylesheet" href="../viewer.css">\n</head>').replace(bodyPattern, viewerBody(options));
+  return html.replace(/<style>[\s\S]*?<\/style>/, "").replace("style-src 'unsafe-inline'", "style-src 'self' 'unsafe-inline'").replace("</head>", '<link rel="stylesheet" href="../viewer.css">\n</head>').replace(bodyPattern, viewerBody(options));
 }
 
 export async function buildPublicPages(outputDir = join(process.cwd(), "site")) {

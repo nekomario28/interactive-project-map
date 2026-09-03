@@ -28,7 +28,12 @@ function scriptSources(html) {
   return [...html.matchAll(/<script src="\.\.\/([^"?]+)" defer><\/script>/g)].map((match) => match[1]);
 }
 
-test("public builder owns the final shared and dedicated runtime script order", async () => {
+function assertCanonicalCsp(html, label) {
+  assert.doesNotMatch(html, /frame-ancestors\s+'none'/, `${label} must not require postprocess CSP cleanup`);
+  assert.match(html, /style-src\s+'self'\s+'unsafe-inline'/, `${label} must emit the qualified final style-src policy`);
+}
+
+test("public builder owns final runtime script order and CSP before postprocess validation", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-runtime-script-layout-"));
   try {
     await buildPublicPages(root);
@@ -36,25 +41,25 @@ test("public builder owns the final shared and dedicated runtime script order", 
     const sharedPath = join(root, "u", "index.html");
     const sharedBefore = await readFile(sharedPath, "utf8");
     assert.deepEqual(scriptSources(sharedBefore), SHARED_SCRIPT_ORDER);
-    assert.match(sharedBefore, /frame-ancestors\s+'none'/);
+    assertCanonicalCsp(sharedBefore, "shared viewer");
 
     const dedicatedBefore = new Map();
     for (const route of DEDICATED_ROUTES) {
       const html = await readFile(join(root, route, "index.html"), "utf8");
       const expected = ["tree-nav.js", `${route}-viewer.js`, ...DEDICATED_TAIL];
       assert.deepEqual(scriptSources(html), expected, `${route} builder script order drifted`);
-      dedicatedBefore.set(route, scriptSources(html));
+      assertCanonicalCsp(html, route);
+      dedicatedBefore.set(route, html);
     }
 
     await postprocessPublicPages(root);
 
     const sharedAfter = await readFile(sharedPath, "utf8");
-    assert.deepEqual(scriptSources(sharedAfter), SHARED_SCRIPT_ORDER);
-    assert.doesNotMatch(sharedAfter, /frame-ancestors\s+'none'/);
+    assert.equal(sharedAfter, sharedBefore, "postprocess validation must not mutate the shared page");
 
     for (const route of DEDICATED_ROUTES) {
       const html = await readFile(join(root, route, "index.html"), "utf8");
-      assert.deepEqual(scriptSources(html), dedicatedBefore.get(route), `${route} postprocess must not mutate script layout`);
+      assert.equal(html, dedicatedBefore.get(route), `${route} postprocess validation must be byte-preserving`);
     }
   } finally {
     await rm(root, { recursive: true, force: true });
