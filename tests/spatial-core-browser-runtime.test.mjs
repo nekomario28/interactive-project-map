@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import vm from "node:vm";
 import {
@@ -8,7 +10,9 @@ import {
   normalizeWeightedEdges,
   stepForceLayout,
 } from "../packages/spatial-core/src/index.js";
-import { spatialCoreRuntimeSource } from "../scripts/postprocess-public-pages.mjs";
+import { buildPublicPages } from "../scripts/build-public-pages.mjs";
+import { postprocessPublicPages } from "../scripts/postprocess-public-pages.mjs";
+import { spatialCoreRuntimeSource } from "../scripts/public-spatial-core-runtime.mjs";
 
 test("generated classic Spatial Core runtime delegates to the canonical package primitives", () => {
   const sandbox = { window: {} };
@@ -49,6 +53,22 @@ test("generated classic Spatial Core runtime delegates to the canonical package 
   );
 });
 
+test("public builder owns Spatial Core runtime emission and postprocess keeps it byte-identical", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ipm-spatial-core-owner-"));
+  try {
+    await buildPublicPages(root);
+    const runtimePath = join(root, "spatial-core-runtime.js");
+    const built = await readFile(runtimePath, "utf8");
+    assert.equal(built, spatialCoreRuntimeSource());
+
+    await postprocessPublicPages(root);
+    const postprocessed = await readFile(runtimePath, "utf8");
+    assert.equal(postprocessed, built);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("canonical Obsidian and interaction runtimes avoid duplicated Spatial Core kernels", async () => {
   const [obsidianSource, polishSource, postprocessSource] = await Promise.all([
     readFile(new URL("../scripts/public-obsidian-runtime.js", import.meta.url), "utf8"),
@@ -71,4 +91,7 @@ test("canonical Obsidian and interaction runtimes avoid duplicated Spatial Core 
   assert.match(polishSource, /maxOutput: 1200/);
   assert.doesNotMatch(postprocessSource, /tuneInteractionPolish/);
   assert.match(postprocessSource, /copyFile\(sourcePath, join\(outputDir, "interaction-polish\.js"\)\)/);
+
+  assert.doesNotMatch(postprocessSource, /emitSpatialCoreRuntime|spatialCoreRuntimeSource/);
+  assert.doesNotMatch(postprocessSource, /DEFAULT_FORCE_SETTINGS|normalizeWeightedEdges|linkForceEdges|stepForceLayout/);
 });

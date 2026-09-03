@@ -2,13 +2,6 @@ import { copyFile, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
-import {
-  DEFAULT_FORCE_SETTINGS,
-  hashText,
-  linkForceEdges,
-  normalizeWeightedEdges,
-  stepForceLayout,
-} from "../packages/spatial-core/src/index.js";
 
 // Compatibility export for validators/tests that consume the emitted Pages
 // release surface. The authority lives in src/action-ref.ts.
@@ -45,14 +38,6 @@ async function htmlFiles(dir) {
     else if (entry.isFile() && entry.name.endsWith(".html")) found.push(path);
   }
   return found;
-}
-
-export function spatialCoreRuntimeSource() {
-  return `"use strict";\n/* global window */\n(() => {\n  const DEFAULT_FORCE_SETTINGS = Object.freeze(${JSON.stringify(DEFAULT_FORCE_SETTINGS)});\n\n  ${hashText.toString()}\n\n  ${normalizeWeightedEdges.toString()}\n\n  ${linkForceEdges.toString()}\n\n  ${stepForceLayout.toString()}\n\n  window.ProjectMapSpatialCore = Object.freeze({\n    DEFAULT_FORCE_SETTINGS,\n    normalizeWeightedEdges,\n    linkForceEdges,\n    stepForceLayout,\n  });\n})();\n`;
-}
-
-async function emitSpatialCoreRuntime(outputDir) {
-  await writeFile(join(outputDir, "spatial-core-runtime.js"), spatialCoreRuntimeSource());
 }
 
 async function emitGalaxyRuntimes(outputDir) {
@@ -106,7 +91,6 @@ export async function postprocessPublicPages(outputDir = resolve(process.cwd(), 
     if (cleaned !== source) await writeFile(path, cleaned);
   }
 
-  await emitSpatialCoreRuntime(outputDir);
   await emitObsidianRuntime(outputDir);
   await emitGalaxyRuntimes(outputDir);
   await emitInteractionPolish(outputDir);
