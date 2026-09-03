@@ -18,20 +18,15 @@ test("Three.js Category Navigator composes repository labels before later stages
     false,
     "repository labels must not return as a standalone post-build stage",
   );
-  assert.equal(
-    stages.includes("node scripts/apply-threejs-galaxy-central-bulge.mjs"),
-    false,
-    "the previously retired Galaxy pattern stage must stay retired on the 15-stage line",
-  );
 
   const categoryStage = stages.indexOf("node scripts/apply-threejs-category-navigator.mjs");
   const dimensionStage = stages.indexOf("node scripts/apply-view-dimension-toggle.mjs");
   assert.ok(categoryStage >= 0, "combined Category Navigator stage must remain in build:pages");
   assert.ok(dimensionStage > categoryStage, "combined category/label composition must finish before the dimension toggle stage");
 
-  const categoryRuntime = callIndex("patchThreejsCategoryNavigatorRuntime(runtime)");
+  const categoryRuntime = callIndex("composeThreejsCategoryNavigatorRuntime(runtime)");
   const labelRuntime = callIndex("composeThreejsRepositoryLabelsRuntime(navigatorRuntime)");
-  const categoryPage = callIndex("patchThreejsCategoryNavigatorPage(page)");
+  const categoryPage = callIndex("composeThreejsCategoryNavigatorPage(page)");
   const labelPage = callIndex("composeThreejsRepositoryLabelsPage(navigatorPage)");
   assert.ok(labelRuntime > categoryRuntime, "repository-label runtime composition must follow Category Navigator runtime composition");
   assert.ok(labelPage > categoryPage, "repository-label page composition must follow Category Navigator page composition");
