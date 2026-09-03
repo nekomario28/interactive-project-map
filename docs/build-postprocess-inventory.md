@@ -16,7 +16,7 @@ The public Pages build currently starts from `scripts/build-public-pages.mjs` an
 
 | Stage | Current responsibility | Migration priority |
 |---|---|---|
-| `postprocess-public-pages.mjs` | runtime emission, final Action pin, assorted compatibility rewrites; shared-viewer hardening retired | **P0 split/shrink** |
+| `postprocess-public-pages.mjs` | runtime emission, final Action pin, assorted compatibility rewrites; shared-viewer and Galaxy Systems tuning retired | **P0 split/shrink** |
 | `apply-contributed-render-sync.mjs` | shared/Obsidian/Galaxy Contributed render parity | P1 |
 | `apply-dedicated-view-state.mjs` | dedicated viewer shared state layer | P1 |
 | `apply-dedicated-contributed-render-sync.mjs` | dedicated Contributed primary-status parity | P1 |
@@ -44,9 +44,25 @@ The first bounded cut removed shared-viewer output mutation from `postprocess-pu
 3. neutral initial Obsidian viewport while preserving explicit Fit and Galaxy auto-fit — canonical in `scripts/public-viewer.js`;
 4. narrow-mobile toolbar/detail CSS — canonical in `scripts/public-viewer.css`.
 
-The generated-output fallback for those four behaviors is retired. `postprocess-public-pages.mjs` remains in the build because it still owns unrelated runtime emission, compatibility rewrites, and the reviewed final installer Action pin.
+The generated-output fallback for those four behaviors is retired.
+
+## Second migration cut — complete
+
+The second bounded cut moves the already-adopted 2D Galaxy Systems runtime from generated-output tuning into `scripts/public-galaxy-systems.js` itself:
+
+1. canonical `galaxy-systems` runtime identity and DOMContentLoaded isolation guard;
+2. deterministic category-local orbit direction from the existing group hash;
+3. repository local-orbit period `360 + lane * 180`;
+4. slow category co-rotation at `1800 * 1000` ms;
+5. the adopted `Galaxy Systems · slow category orbit · repositories orbit locally` subtitle.
+
+`postprocess-public-pages.mjs` now emits `galaxy-systems-runtime.js` by direct copy rather than applying `tuneSystemsRuntime()` string replacements. Existing runtime tests and browser movement bounds remain the behavior authority.
+
+`postprocess-public-pages.mjs` remains in the build because it still owns unrelated runtime emission, compatibility rewrites, classic-runtime isolation, bounded Obsidian/interaction transformations, and the reviewed final installer Action pin.
 
 ## Next bounded migrations
+
+The smallest remaining postprocess-local string adapter is Galaxy Classic runtime identity/isolation. Prefer canonicalizing that separately before taking on larger Obsidian or interaction-runtime transformations.
 
 Three.js Galaxy motion and central morphology remain high-value post-build debt, but they are renderer-semantic and currently active development surfaces. Migrate them one mechanism at a time only from a fresh main after checking for concurrent Galaxy work. Do not combine motion and central morphology in one cleanup cut.
 
