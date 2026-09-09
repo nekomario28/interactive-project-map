@@ -12,13 +12,15 @@ Use this page to distinguish current project authority from retained research an
 
 Live `main`, open pull requests/issues, CI, release refs, and runtime evidence override an older documentation snapshot when they differ. A dated research or maintenance document is evidence for the decision it records; its presence does not make that work active again.
 
+For build-stage counts and execution order, `package.json` plus the executable stage-order tests are the live authority. [`build-postprocess-inventory.md`](build-postprocess-inventory.md) retains the cut-by-cut migration history, so historical counts inside that document describe the state at those cuts unless explicitly marked as a current snapshot.
+
 ## Product and release boundaries
 
 - [`release-chain.md`](release-chain.md) — `main`, reusable `v1`, outer workflow, and immutable inner Action release authority.
 - [`update-policy.md`](update-policy.md) — supported update path for reusable installs.
 - [`github-only-architecture-decision.md`](github-only-architecture-decision.md) — production GitHub-only architecture.
 - [`github-app-one-click-installer.md`](github-app-one-click-installer.md) — retained dormant installer design and its activation boundary.
-- [`build-postprocess-inventory.md`](build-postprocess-inventory.md) — build/postprocess ownership inventory used during runtime-stage consolidation.
+- [`build-postprocess-inventory.md`](build-postprocess-inventory.md) — historical build/postprocess consolidation ledger; reconcile its dated snapshots against the live build before making current-state claims.
 
 ## Renderer and visual research
 
