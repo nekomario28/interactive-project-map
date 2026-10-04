@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-04T07:57:21.199Z",
+  "scope": "Verified public profile installations; a lower bound, including maintainers, not active users or total people.",
+  "searchQueries": [
+    "\"nekomario28.github.io/interactive-project-map\" filename:README.md",
+    "\"nekomario28/interactive-project-map\" path:.github/workflows"
+  ],
+  "users": [
+    {
+      "login": "nekomario28",
+      "profileRepository": "nekomario28/nekomario28",
+      "commit": "da08125479f30eb422cdd4a65771f98db81f7c6a",
+      "readmeUrl": "https://github.com/nekomario28/nekomario28/blob/da08125479f30eb422cdd4a65771f98db81f7c6a/README.md",
+      "graphUrl": "https://github.com/nekomario28/nekomario28/blob/da08125479f30eb422cdd4a65771f98db81f7c6a/project-map/graph.json",
+      "svgUrl": "https://github.com/nekomario28/nekomario28/blob/da08125479f30eb422cdd4a65771f98db81f7c6a/project-map/galaxy.svg",
+      "embeddedSvgUrl": "https://github.com/nekomario28/nekomario28/blob/da08125479f30eb422cdd4a65771f98db81f7c6a/project-map/galaxy.svg",
+      "graphGeneratedAt": "2026-10-04T07:21:49.424Z"
+    },
+    {
+      "login": "syun88",
+      "profileRepository": "syun88/syun88",
+      "commit": "2b3f69d9dc2cc0945597afbedaa58feed1e9a1cc",
+      "readmeUrl": "https://github.com/syun88/syun88/blob/2b3f69d9dc2cc0945597afbedaa58feed1e9a1cc/README.md",
+      "graphUrl": "https://github.com/syun88/syun88/blob/2b3f69d9dc2cc0945597afbedaa58feed1e9a1cc/project-map/graph.json",
+      "svgUrl": "https://github.com/syun88/syun88/blob/2b3f69d9dc2cc0945597afbedaa58feed1e9a1cc/project-map/galaxy.svg",
+      "embeddedSvgUrl": "https://github.com/syun88/syun88/blob/2b3f69d9dc2cc0945597afbedaa58feed1e9a1cc/project-map/galaxy.svg",
+      "graphGeneratedAt": "2026-10-03T09:23:26.978Z"
+    }
+  ],
+  "rejected": []
+}

@@ -19,6 +19,13 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
 </p>
 
+<!-- public-users:start -->
+<p align="center">
+  <a href="docs/public-users.md"><strong>Public users: 2 verified GitHub accounts</strong></a><br />
+  <sub>Public profile installations · includes maintainers · checked 2026-10-04 · <a href="data/public-users.json">evidence</a></sub>
+</p>
+<!-- public-users:end -->
+
 <p align="center">
   <a href="https://nekomario28.github.io/interactive-project-map/"><strong>Open generator</strong></a>
   &nbsp;·&nbsp;
