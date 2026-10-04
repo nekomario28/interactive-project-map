@@ -41,9 +41,13 @@ inputs:
     required: false
     default: "740"
   height:
-    description: SVG height (260-1000).
+    description: SVG height (auto, or 260-1000). Auto fits the Galaxy family; other styles use their native 420px layout.
     required: false
-    default: "420"
+    default: auto
+  padding:
+    description: Space around the fitted Galaxy graph in pixels (0-100), separate from its legend.
+    required: false
+    default: "24"
   output_dir:
     description: Relative directory in the caller workspace for generated files.
     required: false

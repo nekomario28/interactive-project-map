@@ -161,6 +161,21 @@ The normal reusable-workflow surface is intentionally small:
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
 | `contributed` | `false` | include bounded public contributions owned by others without changing ownership |
+| `width` | `740` | SVG width, `420`–`1600`px |
+| `height` | `auto` | Galaxy family: automatic height, or a fixed `260`–`1000`px frame; other styles default to their native `420`px layout |
+| `padding` | `24` | Space around the fitted Galaxy graph, `0`–`100`px; the legend has a separate area |
+
+Galaxy Classic, Systems and Hybrid fit their graph into the frame with padding. Animated styles include the full motion range, so planets and labels stay inside while orbiting. Auto height keeps the available width and avoids unnecessarily shrinking the map into a short rectangle. Dense Galaxy fallbacks use the same framing.
+
+You can override these defaults in the recommended reusable workflow's `with:` block:
+
+```yaml
+width: "900"
+height: auto       # Or "600" for a fixed frame that scales the graph to fit
+padding: "32"
+```
+
+The fit keeps the graph's proportions and reserves a separate area for the legend. Text bounds use a conservative allowance for system fonts; fitting prevents edge clipping but does not resolve labels overlapping within a crowded category.
 
 The reusable workflow derives the visualized username from the caller repository owner, uses `github.token` for read-only metadata access, and writes its transfer artifact under the fixed `project-map` contract.
 
@@ -168,7 +183,7 @@ Stable installs use outer channel `@v1`. Advanced users may replace `v1` with a 
 
 ### Direct Action — advanced
 
-`action.yml` is a lower-level interface used by the reusable workflow and by advanced callers. It additionally exposes `github_token`, `username`, `width`, `height`, and `output_dir`. Do not assume those lower-level inputs are configurable through the recommended reusable-workflow setup.
+`action.yml` is a lower-level interface used by the reusable workflow and by advanced callers. It additionally exposes `github_token`, `username`, and `output_dir`. Both interfaces expose `width`, `height`, and Galaxy `padding`.
 
 See [`action.yml`](action.yml) for the exact direct-Action contract.
 
