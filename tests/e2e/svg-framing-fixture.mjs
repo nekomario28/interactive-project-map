@@ -37,6 +37,7 @@ export function framingTests() {
             expect(violations, `${variant}, t=${seconds}`).toEqual([]);
           }
           expect(await page.locator('[data-galaxy-fit="true"]').count()).toBe(1);
+          expect(await page.locator("svg text").first().evaluate((element) => getComputedStyle(element).fontFamily)).toContain("system-ui");
           expect(await page.locator('[data-galaxy-orbit="contributed"]').count()).toBe(2);
           await page.locator("svg").screenshot({ path: `.tmp/playwright-visual/svg-framing/${testInfo.project.name}-${style}-${theme}-${variant}.png` });
         }
