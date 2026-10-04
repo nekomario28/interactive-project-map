@@ -1,3 +1,4 @@
+import { galaxyFrame } from "./galaxy-svg-frame.mjs";
 import {
   isContributedRepository,
   repositoryOpacity,
@@ -460,20 +461,21 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
   return `<g data-galaxy-orbit="${isContributedRepository(node) ? "contributed" : "true"}" transform="rotate(0 ${point.orbitCenterX.toFixed(1)} ${point.orbitCenterY.toFixed(1)})">${membership}${core}${label}${orbitAnimation}</g>`;
 }
 
-export function renderGalaxySvg(graph, theme, width, height, style = "galaxy") {
+export function renderGalaxySvg(graph, theme, width, height, style = "galaxy", frameOptions) {
   const mapStyle = style === "obsidian" ? "obsidian" : "galaxy";
   const colors = palette(theme, mapStyle);
   const points = layoutGraphForStyle(graph, width, height, mapStyle);
   const labels = placeLabels(points, width, height);
   const systemsMode = mapStyle === "galaxy" && points.some((point) => point.galaxyMode === "systems");
 
+  const lines = staticEdgeLines(graph, points, colors, mapStyle, systemsMode);
+  const guides = systemsMode ? galaxySystemGuides(points, colors) : "";
+  const nodes = points.map((point) => renderPoint(point, labels, colors, mapStyle, systemsMode)).join("");
+  const frame = frameOptions && mapStyle === "galaxy" ? galaxyFrame(`<g>${lines}</g><g>${guides}${nodes}</g>`, width, height, frameOptions) : null;
+  if (frame) height = frame.height;
   const background = mapStyle === "galaxy"
     ? `<defs><radialGradient id="galaxy-bg" cx="50%" cy="46%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="16" fill="url(#galaxy-bg)"/><g>${stars(graph.owner, width, height, colors.fg)}</g>`
     : `<defs><radialGradient id="obsidian-bg" cx="50%" cy="43%" r="72%"><stop offset="0%" stop-color="${colors.bg2}"/><stop offset="100%" stop-color="${colors.bg}"/></radialGradient></defs><rect width="100%" height="100%" rx="12" fill="url(#obsidian-bg)"/>`;
 
-  const lines = staticEdgeLines(graph, points, colors, mapStyle, systemsMode);
-  const guides = systemsMode ? galaxySystemGuides(points, colors) : "";
-  const nodes = points.map((point) => renderPoint(point, labels, colors, mapStyle, systemsMode)).join("");
-
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(mapStyle === "obsidian" ? "Obsidian-style" : systemsMode ? "Galaxy systems" : "Galaxy-style")} map of ${esc(graph.owner)} public GitHub repositories">\n  ${background}\n  <g>${lines}</g>\n  <g>${guides}${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(mapStyle === "obsidian" ? "Obsidian-style" : systemsMode ? "Galaxy systems" : "Galaxy-style")} map of ${esc(graph.owner)} public GitHub repositories">\n  ${background}\n  ${frame ? frame.markup : `<g>${lines}</g>\n  <g>${guides}${nodes}</g>`}\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
 }

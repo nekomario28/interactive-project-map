@@ -183,8 +183,21 @@ If the graph is missing or invalid, the viewer shows setup/recovery guidance ins
 | `archived` | `false` | include archived repositories |
 | `contributed` | `false` | include bounded public contributions to repositories owned by others; never changes repository ownership |
 | `width` | `740` | SVG width, `420`–`1600` |
-| `height` | `420` | SVG height, `260`–`1000` |
+| `height` | `auto` | Galaxy family: automatic height, or a fixed height of `260`–`1000`; other styles use their native `420`px layout by default |
+| `padding` | `24` | Space around the fitted Galaxy graph, `0`–`100`px; the legend has a separate area |
 | `output_dir` | `project-map` | relative output directory |
+
+Galaxy Classic, Systems and Hybrid fit their graph into the frame with padding. Animated styles include the full motion range, so planets and labels stay inside while orbiting. Auto height keeps the available width and avoids unnecessarily shrinking the map into a short rectangle. Dense Galaxy fallbacks use the same framing.
+
+You can override these defaults in the recommended reusable workflow's `with:` block:
+
+```yaml
+width: "900"
+height: auto       # Or "600" for a fixed frame that scales the graph to fit
+padding: "32"
+```
+
+The fit keeps the graph's proportions and reserves a separate area for the legend. Text bounds use a conservative allowance for system fonts; fitting prevents edge clipping but does not resolve labels overlapping within a crowded category.
 
 Stable installs use the reusable generator channel `@v1`. Advanced users may pin a full reviewed 40-character generator commit SHA.
 

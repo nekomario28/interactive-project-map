@@ -72,9 +72,9 @@ function contributedAssignments(repositories, minSize) {
   });
 }
 
-function denseFallback(graph, theme, width, height) {
+function denseFallback(graph, theme, width, height, frameOptions) {
   const denseGraph = { ...graph, repositoryCount: Math.max(81, graph.nodes.filter((node) => node.type === "repository").length) };
-  return renderGalaxySvg(denseGraph, theme, width, height, "galaxy")
+  return renderGalaxySvg(denseGraph, theme, width, height, "galaxy", frameOptions)
     .replace('role="img" aria-label="Galaxy-style map', 'role="img" data-galaxy-preset="hybrid-dense" aria-label="Galaxy-style map')
     .replace('>project map</text>', '>Galaxy Hybrid</text>');
 }
@@ -94,9 +94,9 @@ function spiralDust(colors, cx, cy, minSize, armCount) {
   return `<g data-hybrid-dust="true">${dots.join("")}<animateTransform attributeName="transform" type="rotate" from="0 ${cx.toFixed(1)} ${cy.toFixed(1)}" to="360 ${cx.toFixed(1)} ${cy.toFixed(1)}" dur="2400s" repeatCount="indefinite"/></g>`;
 }
 
-export function renderGalaxyHybridSvg(graph, theme, width, height) {
+export function renderGalaxyHybridSvg(graph, theme, width, height, frameOptions) {
   const repositoryCount = graph.nodes.filter((node) => node.type === "repository").length;
-  if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height);
+  if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height, frameOptions);
 
   const colors = palette(theme);
   const cx = width / 2;
@@ -160,10 +160,11 @@ export function renderGalaxyHybridSvg(graph, theme, width, height) {
     owner: graph.owner,
     width,
     height,
+    frameOptions,
     preset: "hybrid",
     ariaLabel: "Galaxy Hybrid",
-    backgroundMarkup: background(graph.owner, width, height, colors, 115),
+    backgroundMarkup: (frameHeight) => background(graph.owner, width, frameHeight, colors, 115),
     graphMarkup,
-    legendMarkup: legend(colors, width, height, "Galaxy Hybrid"),
+    legendMarkup: (frameHeight) => legend(colors, width, frameHeight, "Galaxy Hybrid"),
   });
 }

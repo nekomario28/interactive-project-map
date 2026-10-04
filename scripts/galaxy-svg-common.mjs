@@ -1,3 +1,4 @@
+import { galaxyFrame } from "./galaxy-svg-frame.mjs";
 import { TAU, clamp, hashText } from "../packages/spatial-core/src/index.js";
 import {
   CONTRIBUTED_DARK,
@@ -101,6 +102,11 @@ export function motionValuesEllipse(rx, ry, startAngle, orientation = 0, samples
   return values.join(";");
 }
 
-export function svgDocument({ owner, width, height, ariaLabel, backgroundMarkup, graphMarkup, legendMarkup, preset }) {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" data-galaxy-preset="${esc(preset)}" aria-label="${esc(ariaLabel)} map of ${esc(owner)} public GitHub repositories" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">\n  ${backgroundMarkup}\n  ${graphMarkup}\n  <g>${legendMarkup}</g>\n</svg>`;
+export function svgDocument({ owner, width, height, ariaLabel, backgroundMarkup, graphMarkup, legendMarkup, preset, frameOptions }) {
+  const frame = galaxyFrame(graphMarkup, width, height, frameOptions);
+  const backgroundSvg = typeof backgroundMarkup === "function" ? backgroundMarkup(frame.height) : backgroundMarkup;
+  const legendSvg = typeof legendMarkup === "function" ? legendMarkup(frame.height) : legendMarkup;
+  height = frame.height;
+  graphMarkup = frame.markup;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" data-galaxy-preset="${esc(preset)}" aria-label="${esc(ariaLabel)} map of ${esc(owner)} public GitHub repositories" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">\n  ${backgroundSvg}\n  ${graphMarkup}\n  <g>${legendSvg}</g>\n</svg>`;
 }
