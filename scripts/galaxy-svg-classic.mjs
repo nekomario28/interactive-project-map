@@ -68,10 +68,10 @@ function structuralLines(graph, points, colors) {
   }).join("");
 }
 
-export function renderGalaxyClassicSvg(graph, theme, width, height) {
+export function renderGalaxyClassicSvg(graph, theme, width, height, frameOptions) {
   const repositories = graph.nodes.filter((node) => node.type === "repository");
   if (repositories.length > DENSE_LIMIT) {
-    return renderGalaxySvg(graph, theme, width, height, "galaxy")
+    return renderGalaxySvg(graph, theme, width, height, "galaxy", frameOptions)
       .replace('role="img" aria-label="Galaxy-style map', 'role="img" data-galaxy-preset="classic" aria-label="Galaxy-style map')
       .replace('>project map</text>', '>Galaxy Classic</text>');
   }
@@ -103,10 +103,11 @@ export function renderGalaxyClassicSvg(graph, theme, width, height) {
     owner: graph.owner,
     width,
     height,
+    frameOptions,
     preset: "classic",
     ariaLabel: "Galaxy-style",
-    backgroundMarkup: background(graph.owner, width, height, colors, 100),
+    backgroundMarkup: (frameHeight) => background(graph.owner, width, frameHeight, colors, 100),
     graphMarkup: `<g data-galaxy-motion="classic-static">${groupGuides}<g>${structuralLines(graph, allPoints, colors)}</g>${nucleus}${ownedMarkup}<g data-galaxy-external="true">${externalMarkup}</g></g>`,
-    legendMarkup: legend(colors, width, height, "Galaxy Classic"),
+    legendMarkup: (frameHeight) => legend(colors, width, frameHeight, "Galaxy Classic"),
   });
 }

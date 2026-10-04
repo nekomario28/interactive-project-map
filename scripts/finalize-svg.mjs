@@ -1,4 +1,5 @@
 function fitGalaxyGraphToViewport(svg) {
+  if (svg.includes('data-galaxy-fit="true"')) return svg;
   if (!svg.includes('aria-label="Galaxy-style map')) return svg;
 
   const root = svg.match(/<svg[^>]*\bwidth="([\d.]+)"[^>]*\bheight="([\d.]+)"[^>]*\bviewBox="0 0 ([\d.]+) ([\d.]+)"/u);

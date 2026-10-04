@@ -88,16 +88,16 @@ function contributedAssignments(repositories, minSize, categoryRadius, maxSystem
   });
 }
 
-function denseFallback(graph, theme, width, height) {
+function denseFallback(graph, theme, width, height, frameOptions) {
   const denseGraph = { ...graph, repositoryCount: Math.max(81, graph.nodes.filter((node) => node.type === "repository").length) };
-  return renderGalaxySvg(denseGraph, theme, width, height, "galaxy")
+  return renderGalaxySvg(denseGraph, theme, width, height, "galaxy", frameOptions)
     .replace('role="img" aria-label="Galaxy-style map', 'role="img" data-galaxy-preset="systems-dense" aria-label="Galaxy-style map')
     .replace('>project map</text>', '>Galaxy Systems</text>');
 }
 
-export function renderGalaxySystemsSvg(graph, theme, width, height) {
+export function renderGalaxySystemsSvg(graph, theme, width, height, frameOptions) {
   const repositoryCount = graph.nodes.filter((node) => node.type === "repository").length;
-  if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height);
+  if (repositoryCount > ANIMATED_LIMIT) return denseFallback(graph, theme, width, height, frameOptions);
 
   const colors = palette(theme);
   const cx = width / 2;
@@ -155,10 +155,11 @@ export function renderGalaxySystemsSvg(graph, theme, width, height) {
     owner: graph.owner,
     width,
     height,
+    frameOptions,
     preset: "systems",
     ariaLabel: "Galaxy Systems",
-    backgroundMarkup: background(graph.owner, width, height, colors, 100),
+    backgroundMarkup: (frameHeight) => background(graph.owner, width, frameHeight, colors, 100),
     graphMarkup,
-    legendMarkup: legend(colors, width, height, "Galaxy Systems"),
+    legendMarkup: (frameHeight) => legend(colors, width, frameHeight, "Galaxy Systems"),
   });
 }
