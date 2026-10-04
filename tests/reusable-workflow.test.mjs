@@ -15,4 +15,7 @@ test("reusable generator is read-only and keeps external execution pinned", asyn
   assert.match(workflow, /uses: nekomario28\/interactive-project-map@[0-9a-f]{40}/);
   assert.match(workflow, /username: \$\{\{ github\.repository_owner \}\}/);
   assert.match(workflow, /name: project-map-generated/);
+  for (const name of ["width", "height", "padding"]) {
+    assert.match(workflow, new RegExp(`${name}: \\$\\{\\{ inputs\\.${name} \\}\\}`));
+  }
 });

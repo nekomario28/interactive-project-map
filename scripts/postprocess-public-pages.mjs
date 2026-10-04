@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Contributed world-coherence F passed Verify #968 and exact real-profile Action proof #199.
-export const PUBLIC_ACTION_REF = "37500d3e3b231452b7281a78374f32d04c6445ea";
+// Automatic SVG framing on the current production Action; exact caller proof precedes v1 promotion.
+export const PUBLIC_ACTION_REF = "f1688ba0811ea17455edbd9e51dd82c5e67a0f4a";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `

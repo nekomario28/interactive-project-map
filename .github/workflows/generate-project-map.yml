@@ -28,6 +28,21 @@ on:
         required: false
         default: false
         type: boolean
+      width:
+        description: SVG width in pixels
+        required: false
+        default: "740"
+        type: string
+      height:
+        description: SVG height (auto, or a fixed pixel height)
+        required: false
+        default: auto
+        type: string
+      padding:
+        description: Padding around the fitted Galaxy graph in pixels
+        required: false
+        default: "24"
+        type: string
 
 permissions:
   contents: read
@@ -38,10 +53,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Contributed world-coherence release candidate: Action F 37500d3e3b231452b7281a78374f32d04c6445ea.
-# F passed Verify #968: full verify, twelve-preset rendering, Chromium and iPhone WebKit.
-# Exact real-profile Action proof #199 passed with shared external halo and no fake owned membership.
-# Move stable v1 only after this reusable-workflow release commit passes exact caller proof.
+# Automatic SVG framing candidate: Action F f1688ba0811ea17455edbd9e51dd82c5e67a0f4a.
+# This implementation retains the current production Action taxonomy fixes.
+# Promote stable v1 only after the exact reusable caller validates the real profile.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -52,7 +66,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@37500d3e3b231452b7281a78374f32d04c6445ea
+        uses: nekomario28/interactive-project-map@f1688ba0811ea17455edbd9e51dd82c5e67a0f4a
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
@@ -62,6 +76,9 @@ jobs:
           forks: ${{ inputs.forks }}
           archived: ${{ inputs.archived }}
           contributed: ${{ inputs.contributed }}
+          width: ${{ inputs.width }}
+          height: ${{ inputs.height }}
+          padding: ${{ inputs.padding }}
           output_dir: project-map
 
       - name: Transfer generated files to publish job
