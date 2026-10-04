@@ -14,6 +14,9 @@ jobs:
       forks: true
       archived: true
       contributed: true
+      width: "900"
+      height: "600"
+      padding: "32"
   verify:
     needs: generate
     runs-on: ubuntu-latest
@@ -95,11 +98,17 @@ jobs:
           visit(graph);
           console.log(`Direct native IPM profile validated: ${graph.repositoryCount} owned + ${contributed.length} Contributed; native background + shared external halo + inherited sans font`);
           const dimensions = svg.match(/width="(\d+)" height="(\d+)"/);
-          if (!dimensions || Number(dimensions[1]) !== 740 || Number(dimensions[2]) <= 420) throw new Error('Default auto height did not grow to fit the live profile');
+          if (!dimensions || Number(dimensions[1]) !== 900 || Number(dimensions[2]) !== 600) throw new Error('Custom width/height did not reach the Action');
           if (!svg.includes('data-galaxy-fit="true"')) throw new Error('Automatic graph fit is absent');
           const ownedMarkers = (svg.match(/data-galaxy-orbit="repository"/g) || []).length;
           if (ownedMarkers !== graph.repositoryCount) throw new Error('Owned repository planets were lost during fitting');
           console.log(`AUTO_FRAME_RELEASE_PASS width=${dimensions[1]} height=${dimensions[2]}`);
+          (async () => {
+            const { renderGalaxySystemsSvg } = await import('./scripts/galaxy-svg-systems.mjs');
+            const expected = renderGalaxySystemsSvg(graph, 'dark', 900, 600, { height: 600, padding: 32 });
+            if (svg !== expected) throw new Error('Custom padding or frame dimensions were not forwarded exactly');
+            console.log('CUSTOM_FRAME_INPUTS_PASS width=900 height=600 padding=32');
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
           NODE
       - run: npm ci --ignore-scripts
       - run: npm run verify
