@@ -22,7 +22,8 @@ async function githubApi(endpoint, accept = "application/vnd.github+json") {
     }));
   } catch (error) {
     if (/\(HTTP 404\)/.test(error.stderr || "")) return null;
-    throw new Error(`GitHub request failed for ${endpoint}. Check gh authentication, rate limits and connectivity.`, { cause: error });
+    const status = /\(HTTP (\d{3})\)/.exec(error.stderr || "")?.[1];
+    throw new Error(`GitHub request failed${status ? ` (HTTP ${status})` : ""} for ${endpoint}. Check gh authentication, rate limits and connectivity.`, { cause: error });
   }
   return accept === "application/vnd.github.html+json" ? stdout : JSON.parse(stdout);
 }
