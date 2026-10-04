@@ -10,8 +10,8 @@ import {
 } from "../packages/spatial-core/src/index.js";
 
 // Keep generated consumer workflows on the reviewed immutable Action release.
-// Taxonomy artifact-identity F passed Verify #1054 and exact real-profile Action proof #203.
-export const PUBLIC_ACTION_REF = "9d018370d7b22d82d8974ae1ac018de5589dd85a";
+// Automatic SVG framing implementation; exact caller proof is required before v1 promotion.
+export const PUBLIC_ACTION_REF = "ab2e33dd18a49f9be2c93a6059a0bda181712b9e";
 const BUILDER_ACTION_REF = "30c33c76008b282de8990333c879ae8c1da853d7";
 
 const MOBILE_FIX = `

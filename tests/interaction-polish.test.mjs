@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { PROJECT_MAP_ACTION_REF } from "../src/action-ref.ts";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,7 +11,7 @@ import { PUBLIC_ACTION_REF, postprocessPublicPages } from "../scripts/postproces
 const dedicatedRoutes = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 
 test("three Galaxy runtimes and Obsidian stay isolated while interaction polish reaches every preset", async () => {
-  assert.equal(PUBLIC_ACTION_REF, "9d018370d7b22d82d8974ae1ac018de5589dd85a");
+  assert.equal(PUBLIC_ACTION_REF, PROJECT_MAP_ACTION_REF);
 
   const dir = await mkdtemp(join(tmpdir(), "project-map-galaxy-family-"));
   try {
