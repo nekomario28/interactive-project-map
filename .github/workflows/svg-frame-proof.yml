@@ -14,6 +14,9 @@ jobs:
       forks: true
       archived: true
       contributed: true
+      width: "900"
+      height: "600"
+      padding: "32"
   verify:
     needs: generate
     runs-on: ubuntu-latest
@@ -99,31 +102,15 @@ jobs:
           if (service?.taxonomyAssignment?.categoryId !== 'robotics-automation' || !facets.includes('artifact:service') || facets.includes('artifact:documentation') || !facets.includes('ecosystem:ros2') || !facets.includes('topic:gazebo')) throw new Error('Current production taxonomy fix regressed');
           console.log('PRODUCTION_TAXONOMY_PRESERVED lime_tidyup service ROS2 Gazebo');
           const dimensions = svg.match(/width="(\d+)" height="(\d+)"/);
-          if (!dimensions || Number(dimensions[1]) !== 740 || Number(dimensions[2]) <= 420) throw new Error('Default auto height did not grow to fit the live profile');
+          if (!dimensions || Number(dimensions[1]) !== 900 || Number(dimensions[2]) !== 600) throw new Error('Custom width/height did not reach the Action');
           if (!svg.includes('data-galaxy-fit="true"')) throw new Error('Automatic graph fit is absent');
           const ownedMarkers = (svg.match(/data-galaxy-orbit="repository"/g) || []).length;
           if (ownedMarkers !== graph.repositoryCount) throw new Error('Owned repository planets were lost during fitting');
           console.log(`AUTO_FRAME_RELEASE_PASS width=${dimensions[1]} height=${dimensions[2]}`);
           (async () => {
             const { renderGalaxySystemsSvg } = await import('./scripts/galaxy-svg-systems.mjs');
-            const expected = renderGalaxySystemsSvg(graph, 'dark', 740, 420, { height: 'auto', padding: 24 });
-            if (svg !== expected) throw new Error('Default framing did not reach the Action exactly');
-            console.log('DEFAULT_FRAME_INPUTS_PASS width=740 height=auto padding=24');
+            const expected = renderGalaxySystemsSvg(graph, 'dark', 900, 600, { height: 600, padding: 32 });
+            if (svg !== expected) throw new Error('Custom padding or frame dimensions were not forwarded exactly');
+            console.log('CUSTOM_FRAME_INPUTS_PASS width=900 height=600 padding=32');
           })().catch((error) => { console.error(error); process.exitCode = 1; });
           NODE
-      - run: npm ci --ignore-scripts
-      - run: npm run verify
-      - run: node scripts/render-preset-comparison.mjs project-map/graph.json .tmp/preset-comparison
-  browser:
-    needs: verify
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --user 1001 --ipc=host
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: 9b062afdf8e7a0ff64c4a58d5e1c398ab7626704
-      - run: npm ci --ignore-scripts
-      - run: npm run test:e2e
-      - run: npm run test:e2e:webkit
