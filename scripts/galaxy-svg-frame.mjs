@@ -1,4 +1,4 @@
-// Bounds for the controlled circle/ellipse/line/text markup emitted by the
+// Bounds for the controlled circle/ellipse/rect/line/text markup emitted by the
 // Galaxy renderers. Animated translations replace the base transform; their
 // keyframe extrema bound every linearly interpolated position, including
 // nested category and repository motion.
@@ -43,6 +43,8 @@ function primitive(node) {
   if (node.name === "circle" || node.name === "ellipse") {
     const rx = Number(a.r ?? a.rx), ry = Number(a.r ?? a.ry);
     box = [x - rx, y - ry, x + rx, y + ry];
+  } else if (node.name === "rect") {
+    box = [x, y, x + Number(a.width), y + Number(a.height)];
   } else if (node.name === "line") {
     box = [Math.min(Number(a.x1), Number(a.x2)), Math.min(Number(a.y1), Number(a.y2)), Math.max(Number(a.x1), Number(a.x2)), Math.max(Number(a.y1), Number(a.y2))];
   } else if (node.name === "text") {

@@ -9,6 +9,10 @@ test("frame includes nested motion, replaces base translation, and decodes escap
   assert.deepEqual(galaxyGraphBounds('<text x="0" y="0" font-size="10">A&amp;B</text>'), [-2, -14, 32, 6]);
 });
 
+test("rectangular graph decoration participates in framing", () => {
+  assert.deepEqual(galaxyGraphBounds('<rect x="500" y="30" width="190" height="340"/>'), [498, 28, 692, 372]);
+});
+
 test("auto height keeps width-fit scale while fixed height fits the complete orbit", () => {
   const markup = '<g><circle cx="0" cy="0" r="10"/><animateTransform type="translate" values="0 -300;0 300"/></g>';
   const auto = galaxyFrame(markup, 740, 420, { height: "auto", padding: 24 });
