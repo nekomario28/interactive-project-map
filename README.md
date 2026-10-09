@@ -21,8 +21,8 @@
 
 <!-- public-users:start -->
 <p align="center">
-  <a href="docs/public-users.md"><strong>Public users: 2 verified GitHub accounts</strong></a><br />
-  <sub>Public profile installations · includes maintainers · checked 2026-10-08 · <a href="data/public-users.json">evidence</a></sub>
+  <a href="docs/public-users.md"><strong>Public users: 4 verified GitHub accounts</strong></a><br />
+  <sub>Public profile installations · includes maintainers · checked 2026-10-09 · <a href="data/public-users.json">evidence</a></sub>
 </p>
 <!-- public-users:end -->
 
