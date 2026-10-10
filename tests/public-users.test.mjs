@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { updatePublicUsers } from "../scripts/update-public-users.mjs";
+import { censusRetryDelay, retryCensusRequest, updatePublicUsers } from "../scripts/update-public-users.mjs";
 
 const sha = "a".repeat(40);
 const checkedAt = "2026-10-04T10:00:00.000Z";
@@ -153,4 +153,50 @@ test("rejects broken SVG references and pins evidence to the image's actual comm
   assert.equal(snapshot.users[0].commit, sha);
   assert.equal(snapshot.users[0].embeddedSvgUrl, `https://github.com/pinned/pinned/blob/${"b".repeat(40)}/project-map/galaxy.svg`);
   assert.deepEqual(snapshot.rejected.map((user) => user.login), ["missingref", "noref", "wrongcase"]);
+});
+
+function ghFailure(status) {
+  return Object.assign(new Error("Command failed: gh api"), {
+    stderr: `gh: GitHub API error (HTTP ${status})\n{"message":"Error","status":"${status}"}\n`,
+  });
+}
+
+test("retries a rate-limited census request and keeps the eventual result", async () => {
+  const delays = [];
+  let calls = 0;
+  const result = await retryCensusRequest(async () => {
+    calls += 1;
+    if (calls <= 2) throw ghFailure(429);
+    return { total_count: 0, incomplete_results: false, items: [] };
+  }, { sleep: async (ms) => { delays.push(ms); } });
+  assert.equal(calls, 3);
+  assert.deepEqual(delays, [1000, 2000]);
+  assert.equal(result.incomplete_results, false);
+});
+
+test("does not retry an authorization failure and preserves the fail-closed error", async () => {
+  let calls = 0;
+  const failure = ghFailure(403);
+  await assert.rejects(
+    retryCensusRequest(async () => { calls += 1; throw failure; }, { sleep: async () => {} }),
+    (error) => error === failure,
+  );
+  assert.equal(calls, 1);
+});
+
+test("gives up after the attempt budget instead of retrying a permanent limit", async () => {
+  const delays = [];
+  let calls = 0;
+  const failure = ghFailure(429);
+  await assert.rejects(
+    retryCensusRequest(async () => { calls += 1; throw failure; }, { sleep: async (ms) => { delays.push(ms); } }),
+    (error) => error === failure,
+  );
+  assert.equal(calls, 4);
+  assert.deepEqual(delays, [1000, 2000, 4000]);
+});
+
+test("caps the census backoff so a daily run cannot stall the job", () => {
+  assert.equal(censusRetryDelay(0), 1000);
+  assert.equal(censusRetryDelay(30), 120_000);
 });
