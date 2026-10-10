@@ -14,12 +14,38 @@ const SEARCH_QUERIES = [
   '"nekomario28/interactive-project-map" path:.github/workflows',
 ];
 
+const RETRY_STATUS_RE = /\(HTTP (429|50[0234])\)/;
+const MAX_CENSUS_DELAY_MS = 120_000;
+
+export function censusRetryDelay(attempt) {
+  return Math.min(2 ** attempt * 1_000, MAX_CENSUS_DELAY_MS);
+}
+
+export async function retryCensusRequest(request, {
+  attempts = 4,
+  maxDelayMs = MAX_CENSUS_DELAY_MS,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+} = {}) {
+  for (let attempt = 0; ; attempt += 1) {
+    let error;
+    try {
+      return await request();
+    } catch (failure) {
+      error = failure;
+    }
+    const stderr = error?.stderr ?? "";
+    const transient = RETRY_STATUS_RE.test(stderr) || /timed out|ECONNRESET|ETIMEDOUT|socket hang up/i.test(String(error?.message ?? ""));
+    if (!transient || attempt + 1 >= attempts) throw error;
+    await sleep(Math.min(censusRetryDelay(attempt), maxDelayMs));
+  }
+}
+
 async function githubApi(endpoint, accept = "application/vnd.github+json") {
   let stdout;
   try {
-    ({ stdout } = await run("gh", ["api", "--hostname", "github.com", "-H", `Accept: ${accept}`, endpoint], {
+    ({ stdout } = await retryCensusRequest(() => run("gh", ["api", "--hostname", "github.com", "-H", `Accept: ${accept}`, endpoint], {
       timeout: 30_000, maxBuffer: 2 * 1024 * 1024,
-    }));
+    })));
   } catch (error) {
     if (/\(HTTP 404\)/.test(error.stderr || "")) return null;
     const status = /\(HTTP (\d{3})\)/.exec(error.stderr || "")?.[1];
