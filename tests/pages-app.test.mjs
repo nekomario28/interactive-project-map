@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { renderPagesHome, renderPagesViewer } from "../scripts/pages-app.mjs";
 import { buildPublicPages, PUBLIC_ACTION_REF } from "../scripts/build-public-pages.mjs";
+import { renderThreejsLabPage } from "../scripts/build-threejs-lab.mjs";
 
 const styles = ["radial", "galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
 const dedicated = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
@@ -23,6 +24,16 @@ test("Pages home render source is shell-only and delegates setup to app.js", () 
   assert.doesNotMatch(html, /api\.github\.com/);
 });
 
+test("Three.js exposes the same project source link in its footer", () => {
+  const html = renderThreejsLabPage();
+  const links = [...html.matchAll(/<a class="project-source-link"[^>]*>GitHub<\/a>/g)];
+  assert.equal(links.length, 1);
+  assert.match(links[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
+  assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);
+  assert.ok(html.indexOf(links[0][0]) > html.indexOf("<footer>"));
+  assert.ok(html.indexOf(links[0][0]) < html.indexOf("</footer>"));
+});
+
 test("legacy viewer render source remains static-only before public shell replacement", () => {
   const html = renderPagesViewer();
   assert.match(html, /raw\.githubusercontent\.com/); assert.match(html, /HEAD\/project-map\/graph\.json/); assert.doesNotMatch(html, /\/api\/graph/); assert.doesNotMatch(html, /api\.github\.com/);
@@ -34,6 +45,7 @@ test("public Pages build emits twelve map presets and explicit default-off Contr
     await buildPublicPages(dir);
     const read = (name) => readFile(join(dir, name), "utf8");
     const home = await read("index.html"); const shared = await read("u/index.html"); const appJs = await read("app.js"); const routerJs = await read("tree-router.js"); const navJs = await read("tree-nav.js"); const presetCss = await read("presets.css"); const noJekyll = await read(".nojekyll");
+    assert.equal(await read("LICENSE"), await readFile(new URL("../LICENSE", import.meta.url), "utf8"));
     assert.match(home, /Radial Tree \(Classic\)/); assert.match(home, />Galaxy Classic</); assert.match(home, />Galaxy Systems</); assert.match(home, />Galaxy Hybrid</); assert.match(home, />Matrix \/ Heatmap</); assert.match(home, />Sankey</);
     assert.match(home, /<input id="contributed" type="checkbox" \/> Include Contributed/);
     assert.match(home, /<script src="\.\/app\.js" defer><\/script>/);
@@ -42,6 +54,16 @@ test("public Pages build emits twelve map presets and explicit default-off Contr
     for (const style of styles) assert.match(home, new RegExp(`data-style-preset="${style}"`));
     for (const style of styles) assert.match(shared, new RegExp(`value="${style}"`));
     assert.match(shared, /tree-router\.js/); assert.match(shared, /viewer\.js/); assert.match(shared, /data-map-style="galaxy-systems"/);
+    for (const route of ["u", ...dedicated]) {
+      const html = await read(`${route}/index.html`);
+      const links = [...html.matchAll(/<a class="project-source-link"[^>]*>GitHub<\/a>/g)];
+      assert.equal(links.length, 1, `${route} must expose one project source link`);
+      assert.match(links[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
+      assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);
+      assert.match(links[0][0], /aria-label="Interactive Project Map source on GitHub \(opens in a new tab\)"/);
+      assert.ok(html.indexOf(links[0][0]) > html.indexOf("<footer>"));
+      assert.ok(html.indexOf(links[0][0]) < html.indexOf("</footer>"));
+    }
     for (const style of dedicated) {
       const html = await read(`${style}/index.html`); const script = await read(`${style}-viewer.js`);
       assert.match(html, new RegExp(`data-map-style="${style}"`)); assert.match(html, new RegExp(`value="${style}" selected`)); assert.match(html, /tree-nav\.js/); assert.match(html, new RegExp(`${style}-viewer\\.js`)); assert.match(script, /raw\.githubusercontent\.com/); assert.doesNotMatch(script, /\/api\/graph|api\.github\.com/);
