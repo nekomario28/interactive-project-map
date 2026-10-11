@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
 import { applyThreejsLocalGraph } from "../scripts/apply-threejs-local-graph.mjs";
+import { patchThreejsLocalGraphPage, patchThreejsLocalGraphRuntime } from "../scripts/public-threejs-local-graph.mjs";
 
 test("Three.js Local Graph adapter uses the shared projection and remains idempotent", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-local-graph-"));
@@ -44,10 +45,31 @@ test("Three.js Local Graph adapter uses the shared projection and remains idempo
   }
 });
 
-test("Three.js Local Graph postprocessor passes Node syntax check", () => {
-  const result = spawnSync(process.execPath, ["--check", "scripts/apply-threejs-local-graph.mjs"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  });
-  assert.equal(result.status, 0, result.stderr);
+test("canonical Local Graph composer owns semantics while apply stage stays I/O-only", async () => {
+  const [canonical, adapter] = await Promise.all([
+    readFile(new URL("../scripts/public-threejs-local-graph.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/apply-threejs-local-graph.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(canonical, /IPM_THREEJS_LOCAL_GRAPH_P2/);
+  assert.match(canonical, /projectLocalGraph/);
+  assert.match(canonical, /ProjectMapThreejsLocalGraph/);
+  assert.match(canonical, /patchThreejsLocalGraphRuntime/);
+  assert.match(canonical, /patchThreejsLocalGraphPage/);
+  assert.doesNotMatch(adapter, /IPM_THREEJS_LOCAL_GRAPH_P2/);
+  assert.doesNotMatch(adapter, /projectLocalGraph/);
+  assert.match(adapter, /patchThreejsLocalGraphRuntime/);
+  assert.match(adapter, /patchThreejsLocalGraphPage/);
+
+  assert.throws(() => patchThreejsLocalGraphRuntime("drift"), /Local Graph controls|P1 visibility adapter/);
+  assert.throws(() => patchThreejsLocalGraphPage("drift"), /toolbar motion control/);
+});
+
+test("Three.js Local Graph canonical composer and I/O adapter pass Node syntax checks", () => {
+  for (const path of ["scripts/public-threejs-local-graph.mjs", "scripts/apply-threejs-local-graph.mjs"]) {
+    const result = spawnSync(process.execPath, ["--check", path], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
+  }
 });

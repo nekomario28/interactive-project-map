@@ -2,6 +2,7 @@ import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { patchThreejsLocalGraphPage, patchThreejsLocalGraphRuntime } from "./public-threejs-local-graph.mjs";
 import {
   composeThreejsCategoryNavigatorPage,
   composeThreejsCategoryNavigatorRuntime,
@@ -57,10 +58,12 @@ export async function applyThreejsSearchContext({
     readFile(runtimePath, "utf8"),
     readFile(pagePath, "utf8"),
   ]);
-  const searchRuntime = patchThreejsSearchContextRuntime(runtime);
+  const localRuntime = patchThreejsLocalGraphRuntime(runtime);
+  const searchRuntime = patchThreejsSearchContextRuntime(localRuntime);
   const navigatorRuntime = composeThreejsCategoryNavigatorRuntime(searchRuntime);
   const nextRuntime = composeThreejsRepositoryLabelsRuntime(navigatorRuntime);
-  const navigatorPage = composeThreejsCategoryNavigatorPage(page);
+  const localPage = patchThreejsLocalGraphPage(page);
+  const navigatorPage = composeThreejsCategoryNavigatorPage(localPage);
   const nextPage = composeThreejsRepositoryLabelsPage(navigatorPage);
   if (nextRuntime !== runtime) await writeFile(runtimePath, nextRuntime);
   if (nextPage !== page) await writeFile(pagePath, nextPage);
@@ -79,7 +82,7 @@ export async function applyThreejsSearchContext({
 
 async function main() {
   const result = await applyThreejsSearchContext();
-  console.log(`Applied shared search, Category Navigator, and repository labels to ${result.runtimePath}`);
+  console.log(`Applied Local Graph, shared search, Category Navigator, and repository labels to ${result.runtimePath}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
