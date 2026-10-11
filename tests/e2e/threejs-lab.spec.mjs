@@ -80,7 +80,7 @@ function querySnapshot(href) {
 test("isolated Three.js lab route fails closed without a username and exposes no quality switch", async ({ page }) => {
   await page.goto("/three/");
 
-  await expect(page.locator("body")).toHaveAttribute("data-map-style", "threejs-cosmic");
+  await expect(page.locator("body")).toHaveAttribute("data-map-style", "threejs-galaxy");
   await expect(page.locator("#error")).toHaveClass(/visible/);
   await expect(page.locator("#errorText")).toContainText("Add ?username=YOUR_GITHUB_USERNAME");
   await expect(page.locator("#fallbackLink")).toHaveAttribute("href", "../u/");
@@ -132,7 +132,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await expect(page.locator('[data-status-filter="archived"]')).toBeDisabled();
 
   const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
-  expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-cosmic", style: "cosmic", experimental: true });
+  expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-galaxy", style: "galaxy", experimental: true });
   const backingStore = await page.locator("#galaxy3d").evaluate((canvas) => ({
     width: canvas.width,
     height: canvas.height,
@@ -237,7 +237,7 @@ test.describe("mobile project source link", () => {
       if (name === "2D") await expect(page.locator("#status")).toBeHidden();
       else if (browserName === "webkit") await expect(page.locator("#error")).toHaveClass(/visible/);
       else await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
-      const link = page.locator("footer .project-source-link");
+      const link = page.locator("header .project-source-link");
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute("href", "https://github.com/nekomario28/interactive-project-map");
       await expect(link).toHaveAttribute("rel", "noopener noreferrer");
@@ -248,9 +248,9 @@ test.describe("mobile project source link", () => {
       expect(metrics.x).toBeGreaterThan(0);
       expect(metrics.right).toBeGreaterThan(metrics.width - 24);
       expect(metrics.right).toBeLessThanOrEqual(metrics.width);
-      expect(metrics.bottom).toBeGreaterThan(metrics.viewportHeight - 50);
+      expect(metrics.bottom).toBeLessThanOrEqual(100);
       expect(metrics.bottom).toBeLessThanOrEqual(metrics.viewportHeight);
-      expect(metrics.height).toBeGreaterThanOrEqual(24);
+      expect(metrics.height).toBeGreaterThanOrEqual(44);
       expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.width);
       await mkdir(".tmp/playwright-visual/project-source", { recursive: true });
       await page.screenshot({ path: `.tmp/playwright-visual/project-source/mobile-${name.toLowerCase()}-${browserName}.png`, fullPage: true });

@@ -65,6 +65,12 @@ select {
   height: 100vh;
 }
 
+@supports (height: 100dvh) {
+  .app {
+    height: 100dvh;
+  }
+}
+
 .toolbar {
   z-index: 5;
   display: flex;
@@ -507,6 +513,11 @@ footer a {
   white-space: nowrap;
 }
 
+.toolbar .project-source-link,
+.mobile-controls-toggle {
+  display: none;
+}
+
 .project-source-link:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -528,18 +539,81 @@ kbd {
   font: inherit;
 }
 
-@media (max-width: 820px) {
+@media (max-width: 820px), (max-height: 500px) and (pointer: coarse) {
   .toolbar {
     align-items: stretch;
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    max-height: calc(100vh - 100px);
     padding: 9px 10px;
+    padding-top: calc(9px + env(safe-area-inset-top));
+    padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right));
+  }
+
+  @supports (height: 100dvh) {
+    .toolbar {
+      max-height: calc(100dvh - 100px);
+    }
+  }
+
+  .toolbar > .title-block,
+  .toolbar > .category-navigator-primary {
+    flex: 0 0 auto;
+  }
+
+  .toolbar .title-block {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title title" "subtitle source";
+    gap: 3px 8px;
+  }
+
+  .category-navigator-primary > .title-block {
+    flex: 1;
+  }
+
+  .toolbar h1 {
+    grid-area: title;
+  }
+
+  .toolbar p {
+    grid-area: subtitle;
+    align-self: center;
+    margin: 0;
+  }
+
+  .toolbar .project-source-link {
+    display: inline-flex;
+    grid-area: source;
+    min-width: 88px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .mobile-controls-toggle {
+    display: inline-flex;
+    grid-area: subtitle;
+    align-self: center;
+    justify-self: start;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 88px;
+  }
+
+  .toolbar[data-controls-open] p,
+  .toolbar[data-controls-open="false"] .controls,
+  footer .project-source-link {
+    display: none;
   }
 
   .controls {
     align-items: stretch;
     flex-wrap: wrap;
+    min-height: 0;
+    overflow-y: auto;
+    padding-block: 4px;
   }
 
   .control-cluster {
@@ -584,6 +658,7 @@ kbd {
 
   footer {
     padding: 6px 10px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
   }
 
   footer .shortcuts {

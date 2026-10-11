@@ -63,17 +63,18 @@ export function renderThreejsLabPage() {
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="description" content="Experimental Three.js depth view for Interactive Project Map." />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' ${THREE_CDN_ORIGIN}; style-src 'self'; connect-src https://raw.githubusercontent.com ${THREE_CDN_ORIGIN}; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'" />
-<title>Three.js Cosmic Lab · Interactive Project Map</title>
+<title>Three.js Galaxy Lab · Interactive Project Map</title>
 <link rel="stylesheet" href="../viewer.css" />
 <link rel="stylesheet" href="../threejs-viewer.css" />
 </head>
-<body data-map-style="threejs-cosmic">
+<body data-map-style="threejs-galaxy">
 <main class="app three-app">
   <header class="toolbar three-toolbar">
     <div class="title-block">
       <div class="three-title-row"><span class="lab-badge">3D LAB</span><span class="engine-badge">Three.js · WebGL</span></div>
       <h1 id="title">Interactive Project Map</h1>
       <p id="subtitle">Loading a depth-aware project galaxy…</p>
+      ${renderProjectSourceLink("toolbar")}
     </div>
     <div class="controls three-controls">
       <label class="field three-search"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off" /></label>

@@ -37,7 +37,7 @@
   function current3DStyle() {
     const params = new URL(location.href).searchParams;
     const datasetStyle = String(document.body.dataset.mapStyle || "").replace(/^threejs-/, "");
-    return valid3DStyle(params.get("style3d")) || valid3DStyle(datasetStyle) || "cosmic";
+    return valid3DStyle(params.get("style3d")) || valid3DStyle(datasetStyle) || "galaxy";
   }
 
   function copyTransferableFallback(source, target) {
@@ -94,15 +94,39 @@
     if (!select) return;
     select.value = current3DStyle();
     select.addEventListener("change", () => {
-      const style = valid3DStyle(select.value) || "cosmic";
+      const style = valid3DStyle(select.value) || "galaxy";
       const url = new URL(location.href);
-      if (style === "cosmic") url.searchParams.delete("style3d");
-      else url.searchParams.set("style3d", style);
+      url.searchParams.set("style3d", style);
       location.assign(url.toString());
     });
   }
 
+  function initMobileToolbar() {
+    const header = document.querySelector("header.toolbar");
+    const controls = header?.querySelector(".controls");
+    const title = header?.querySelector(".title-block");
+    if (!controls || !title) return;
+    controls.id ||= "mobile-toolbar-controls";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mobile-controls-toggle";
+    button.textContent = "Controls";
+    button.setAttribute("aria-controls", controls.id);
+    title.append(button);
+    const mobile = matchMedia("(max-width: 820px), (max-height: 500px) and (pointer: coarse)");
+    let expanded = false;
+    function sync() {
+      header.dataset.controlsOpen = String(expanded);
+      button.setAttribute("aria-expanded", String(!mobile.matches || expanded));
+      window.dispatchEvent(new Event("resize"));
+    }
+    button.addEventListener("click", () => { expanded = !expanded; sync(); });
+    mobile.addEventListener("change", sync);
+    sync();
+  }
+
   function init() {
+    initMobileToolbar();
     syncLinks();
     initThreeStyle();
     document.addEventListener("click", (event) => {

@@ -40,8 +40,9 @@ export function patchTwoDViewDimension(html) {
 export function patchThreeDViewDimension(html) {
   let next = html;
   if (!next.includes('data-view-dimension="3d"')) {
-    if (!next.includes('<body data-map-style="threejs-cosmic">')) throw new Error("Could not locate Three.js body map-style attribute");
-    next = next.replace('<body data-map-style="threejs-cosmic">', '<body data-view-dimension="3d" data-map-style="threejs-cosmic">');
+    const body = /<body data-map-style="threejs-(?:cosmic|galaxy|aurora|wireframe)">/;
+    if (!body.test(next)) throw new Error("Could not locate Three.js body map-style attribute");
+    next = next.replace(body, (tag) => tag.replace("<body ", '<body data-view-dimension="3d" '));
   }
   if (!next.includes('class="control-cluster view-mode-cluster"')) {
     const oldLink = '<a id="twoDLink" class="three-link-button" href="../u/">2D Map</a>';
