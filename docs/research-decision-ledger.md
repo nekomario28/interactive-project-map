@@ -20,7 +20,7 @@ Use together with `docs/current-roadmap.md`. For Three.js Galaxy morphology/moti
 
 Keep canonical/generated graph semantics, immutable inner Action pin, outer reusable workflow, stable reusable `v1`, and interactive Pages `main` independent. Pages viewer work does not imply an Action or `v1` release.
 
-Stable reusable `v1`: `72ead19e8c49354af2bcbfa9144404c7a8d6ff9f`.
+Stable reusable `v1`: `9b062afdf8e7a0ff64c4a58d5e1c398ab7626704` (Automatic SVG framing, promoted 2026-10-04 on `svg-frame-proof.yml` runs #3–#4; the inner Action pin it carries is `f1688ba0811ea17455edbd9e51dd82c5e67a0f4a`).
 
 ### Published GitHub-only setup — ADOPTED
 
