@@ -192,8 +192,9 @@ test("gives up after the attempt budget instead of retrying a permanent limit", 
     retryCensusRequest(async () => { calls += 1; throw failure; }, { sleep: async (ms) => { delays.push(ms); } }),
     (error) => error === failure,
   );
-  assert.equal(calls, 4);
-  assert.deepEqual(delays, [1000, 2000, 4000]);
+  assert.equal(calls, 7);
+  assert.deepEqual(delays, [1000, 2000, 4000, 8000, 16000, 32000]);
+  assert.ok(delays.reduce((total, ms) => total + ms, 0) >= 60_000, "budget must outlast the measured code_search window");
 });
 
 test("caps the census backoff so a daily run cannot stall the job", () => {

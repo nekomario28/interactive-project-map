@@ -22,7 +22,8 @@ export function censusRetryDelay(attempt) {
 }
 
 export async function retryCensusRequest(request, {
-  attempts = 4,
+  // Seven attempts wait 1+2+4+8+16+32=63s, past the 60s code_search window measured on the failing run.
+  attempts = 7,
   maxDelayMs = MAX_CENSUS_DELAY_MS,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 } = {}) {
