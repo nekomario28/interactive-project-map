@@ -19,7 +19,7 @@ test("Three.js lab consumes shared semantic and transferable state runtimes", as
       readFile(join(root, "threejs-viewer.css"), "utf8"),
     ]);
 
-    assert.match(html, /data-map-style="threejs-cosmic"/);
+    assert.match(html, /data-map-style="threejs-galaxy"/);
     assert.match(html, /script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
     assert.match(html, /<script src="\.\.\/project-map-view-state\.js"><\/script>\s*<script src="\.\.\/project-map-view-model\.js"><\/script>\s*<script type="module" src="\.\.\/threejs-viewer\.js"><\/script>/);
     assert.match(html, /href="\.\.\/viewer\.css"/);

@@ -80,7 +80,7 @@ function querySnapshot(href) {
 test("isolated Three.js lab route fails closed without a username and exposes no quality switch", async ({ page }) => {
   await page.goto("/three/");
 
-  await expect(page.locator("body")).toHaveAttribute("data-map-style", "threejs-cosmic");
+  await expect(page.locator("body")).toHaveAttribute("data-map-style", "threejs-galaxy");
   await expect(page.locator("#error")).toHaveClass(/visible/);
   await expect(page.locator("#errorText")).toContainText("Add ?username=YOUR_GITHUB_USERNAME");
   await expect(page.locator("#fallbackLink")).toHaveAttribute("href", "../u/");
@@ -132,7 +132,7 @@ test("Three.js lab renders the happy-path scene and emits Chromium evidence", as
   await expect(page.locator('[data-status-filter="archived"]')).toBeDisabled();
 
   const snapshot = await page.evaluate(() => window.ProjectMapThreejsLab?.snapshot());
-  expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-cosmic", style: "cosmic", experimental: true });
+  expect(snapshot).toEqual({ username: "example", repositories: 2, groups: 1, renderer: "threejs-galaxy", style: "galaxy", experimental: true });
   const backingStore = await page.locator("#galaxy3d").evaluate((canvas) => ({
     width: canvas.width,
     height: canvas.height,

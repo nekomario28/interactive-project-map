@@ -80,6 +80,14 @@ test("View is a separate 2D/3D axis, exposes real 3D styles, and restores the pr
   await expect(page.locator("#threeStyle")).toBeVisible();
   await expect(page.locator("#threeStyle option")).toHaveCount(4);
   expect(await page.locator("#threeStyle").evaluate((select) => [...select.options].map((option) => option.value))).toEqual(["cosmic", "galaxy", "aurora", "wireframe"]);
+  await expect(page.locator("#threeStyle")).toHaveValue("galaxy");
+  await expect(page.locator('body[data-map-style="threejs-galaxy"]')).toHaveCount(1);
+  expect((await page.evaluate(() => window.ProjectMapThreejsLab.snapshot())).style).toBe("galaxy");
+  await Promise.all([
+    page.waitForURL(/style3d=cosmic/),
+    page.locator("#threeStyle").selectOption("cosmic"),
+  ]);
+  await waitForThreeReady(page);
   await expect(page.locator("#threeStyle")).toHaveValue("cosmic");
   await expect(page.locator('body[data-map-style="threejs-cosmic"]')).toHaveCount(1);
   const cosmicCanvas = await page.locator("#galaxy3d").screenshot();

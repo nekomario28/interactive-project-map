@@ -37,7 +37,7 @@
   function current3DStyle() {
     const params = new URL(location.href).searchParams;
     const datasetStyle = String(document.body.dataset.mapStyle || "").replace(/^threejs-/, "");
-    return valid3DStyle(params.get("style3d")) || valid3DStyle(datasetStyle) || "cosmic";
+    return valid3DStyle(params.get("style3d")) || valid3DStyle(datasetStyle) || "galaxy";
   }
 
   function copyTransferableFallback(source, target) {
@@ -94,10 +94,9 @@
     if (!select) return;
     select.value = current3DStyle();
     select.addEventListener("change", () => {
-      const style = valid3DStyle(select.value) || "cosmic";
+      const style = valid3DStyle(select.value) || "galaxy";
       const url = new URL(location.href);
-      if (style === "cosmic") url.searchParams.delete("style3d");
-      else url.searchParams.set("style3d", style);
+      url.searchParams.set("style3d", style);
       location.assign(url.toString());
     });
   }

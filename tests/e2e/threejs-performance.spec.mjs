@@ -114,7 +114,8 @@ async function measureScenario(page, repositoryCount) {
   });
 
   const readyStartedAt = performance.now();
-  await page.goto("/three/?username=example");
+  // Keep the measured layout fixed when the product default changes.
+  await page.goto("/three/?username=example&style3d=cosmic");
   await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
   const readyMs = performance.now() - readyStartedAt;
 
