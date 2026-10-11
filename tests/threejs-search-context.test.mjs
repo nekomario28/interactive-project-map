@@ -6,10 +6,8 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
-import {
-  applyThreejsSearchContext,
-  patchThreejsSearchContextRuntime,
-} from "../scripts/apply-threejs-search-context.mjs";
+import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
+import { patchThreejsSearchContextRuntime } from "../scripts/public-threejs-search-context.mjs";
 
 test("Three.js search stage composes Local Graph, search, Category Navigator and repository labels idempotently", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-search-context-"));
@@ -66,6 +64,20 @@ test("pure shared-search patch still fails closed without canonical Local Graph 
   );
 });
 
+test("canonical Search Context owns semantics while the apply stage stays composition I/O", async () => {
+  const [canonical, adapter] = await Promise.all([
+    readFile(new URL("../scripts/public-threejs-search-context.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/apply-threejs-search-context.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(canonical, /IPM_THREEJS_SHARED_SEARCH_P2/);
+  assert.match(canonical, /function replaceRequired/);
+  assert.match(canonical, /ProjectMapSearchContext=Object\.freeze/);
+  assert.match(canonical, /navigateDirectSearch/);
+  assert.doesNotMatch(adapter, /const MARKER = "\/\* IPM_THREEJS_SHARED_SEARCH_P2 \*\/"/);
+  assert.doesNotMatch(adapter, /function replaceRequired/);
+  assert.match(adapter, /patchThreejsSearchContextRuntime\(localRuntime\)/);
+});
+
 test("build order retires standalone Local Graph while preserving Local Graph before search inside the combined stage", async () => {
   const [packageSource, searchStage] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -85,10 +97,12 @@ test("build order retires standalone Local Graph while preserving Local Graph be
   );
 });
 
-test("combined Three.js search stage passes Node syntax check", () => {
-  const result = spawnSync(process.execPath, ["--check", "scripts/apply-threejs-search-context.mjs"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  });
-  assert.equal(result.status, 0, result.stderr);
+test("canonical and combined Three.js search sources pass Node syntax checks", () => {
+  for (const path of ["scripts/public-threejs-search-context.mjs", "scripts/apply-threejs-search-context.mjs"]) {
+    const result = spawnSync(process.execPath, ["--check", path], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
+  }
 });
