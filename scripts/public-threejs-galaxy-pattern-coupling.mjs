@@ -7,8 +7,8 @@ const LEGACY_DISC_TEXTURE_SIGNATURES = [
 ];
 const GALAXY_PATTERN_ANIMATE = 'dust.rotation.y+=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);';
 const GALAXY_PATTERN_ANIMATE_WITH_HAZE = 'const galaxyPatternDelta=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);dust.rotation.y+=galaxyPatternDelta;if(threeStyle==="galaxy"&&galaxyDiscHaze)galaxyDiscHaze.rotation.z+=galaxyPatternDelta;';
-const GALAXY_MOTION_SNAPSHOT = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0})});';
-const GALAXY_MOTION_SNAPSHOT_WITH_HAZE = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0,discHazePatternFrame:galaxyDiscHaze?"co-rotating-arm-pattern":"none",dustPatternRotationY:dust.rotation.y,hazePatternRotationY:galaxyDiscHaze?galaxyDiscHaze.rotation.z:null,dustPatternReferenceRadius:42*dust.scale.x,hazePatternReferenceRadius:galaxyDiscHaze?galaxyDiscHaze.userData.referenceRadius:null})});';
+const GALAXY_MOTION_SNAPSHOT = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),armPlane:"galactic-disc",armPlaneTilt:dust.rotation.x,persistentEdgeObjects:edgeLines?1:0})});';
+const GALAXY_MOTION_SNAPSHOT_WITH_HAZE = 'window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),armPlane:"galactic-disc",armPlaneTilt:dust.rotation.x,persistentEdgeObjects:edgeLines?1:0,discHazePatternFrame:galaxyDiscHaze?"co-rotating-arm-pattern":"none",dustPatternRotationY:dust.rotation.y,hazePatternRotationY:galaxyDiscHaze?galaxyDiscHaze.rotation.z:null,dustPatternReferenceRadius:42*dust.scale.x,hazePatternReferenceRadius:galaxyDiscHaze?galaxyDiscHaze.userData.referenceRadius:null})});';
 const CANONICAL_GALAXY_PRESENTATION_MARKERS = [
   "function softenGalaxyCentralDust(dust){",
   CURRENT_BULGE_SIGNATURE,
