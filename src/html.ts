@@ -8,8 +8,9 @@ function esc(value: string): string {
   }[char] ?? char));
 }
 
-export function renderProjectSourceLink(): string {
-  return '<a class="project-source-link" href="https://github.com/nekomario28/interactive-project-map" target="_blank" rel="noopener noreferrer" aria-label="Interactive Project Map source on GitHub (opens in a new tab)">Source on GitHub ↗</a>';
+export function renderProjectSourceLink(placement: "footer" | "toolbar" = "footer"): string {
+  const label = placement === "toolbar" ? "Source ↗" : "Source on GitHub ↗";
+  return `<a class="project-source-link" href="https://github.com/nekomario28/interactive-project-map" target="_blank" rel="noopener noreferrer" title="Interactive Project Map source on GitHub" aria-label="Interactive Project Map source on GitHub (opens in a new tab)">${label}</a>`;
 }
 
 export function renderHome(origin: string): string {

@@ -74,6 +74,7 @@ export function renderThreejsLabPage() {
       <div class="three-title-row"><span class="lab-badge">3D LAB</span><span class="engine-badge">Three.js · WebGL</span></div>
       <h1 id="title">Interactive Project Map</h1>
       <p id="subtitle">Loading a depth-aware project galaxy…</p>
+      ${renderProjectSourceLink("toolbar")}
     </div>
     <div class="controls three-controls">
       <label class="field three-search"><span>Search</span><input id="search" type="search" placeholder="Project, category, language or topic" autocomplete="off" /></label>

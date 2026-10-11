@@ -64,7 +64,7 @@ test("project source link stays inside intermediate and narrow viewports", async
       await page.goto(path);
       if (name === "three") await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
       else await expect(page.locator("#status")).toBeHidden();
-      const link = page.locator("footer .project-source-link");
+      const link = page.locator(".project-source-link:visible");
       await expect(link).toBeInViewport({ ratio: 1 });
       const box = await link.boundingBox();
       expect(box.x + box.width, `${name} at ${width}px`).toBeLessThanOrEqual(width);
@@ -92,6 +92,80 @@ test("project source link opens an isolated tab without changing the map", async
   expect(await popup.evaluate(() => window.opener)).toBeNull();
   expect(page.url()).toBe(originalUrl);
   await popup.close();
+});
+
+test.describe("touch source navigation", () => {
+  test.use({ viewport: { width: 393, height: 851 }, isMobile: true, hasTouch: true });
+
+  test("source stays reachable in the toolbar across portrait, reduced height and landscape", async ({ page }) => {
+    for (const [width, height] of [[393, 851], [393, 420], [851, 393], [320, 568], [375, 667]]) {
+      await page.setViewportSize({ width, height });
+      for (const [name, path] of [
+        ["radial", "/radial/?username=example&style=radial&motion=off"],
+        ["shared", "/u/?username=example&style=galaxy-systems&motion=off"],
+        ["three", "/three/?username=example&style3d=cosmic&motion=off"],
+      ]) {
+        await page.goto(path);
+        const link = page.locator("header .project-source-link");
+        await expect(link).toBeVisible();
+        await expect(link).toHaveText("Source ↗");
+        await expect(link).toBeInViewport({ ratio: 1 });
+        await expect(page.getByRole("link", { name: "Interactive Project Map source on GitHub (opens in a new tab)", exact: true })).toHaveCount(1);
+        const box = await link.boundingBox();
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y + box.height).toBeLessThanOrEqual(100);
+        const heading = await page.locator("#title").boundingBox();
+        const titleBlock = await page.locator(".title-block").boundingBox();
+        expect(heading.width + 1, `${name} must not reserve source-button width inside the title`).toBeGreaterThanOrEqual(titleBlock.width);
+        expect(await link.evaluate((element) => {
+          const r = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return hit === element || element.contains(hit);
+        })).toBe(true);
+        await mkdir(".tmp/playwright-visual/mobile-source", { recursive: true });
+        await page.screenshot({ path: `.tmp/playwright-visual/mobile-source/${name}-${width}x${height}.png` });
+      }
+    }
+  });
+
+  test("short-height controls can scroll to Copy link without hiding Source or the graph", async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 420 });
+    await page.goto("/u/?username=example&style=galaxy-systems&motion=off");
+    await expect(page.locator("#status")).toBeHidden();
+    const source = page.locator("header .project-source-link");
+    const before = await source.boundingBox();
+    const workspace = await page.locator(".workspace").boundingBox();
+    expect(workspace.height).toBeGreaterThanOrEqual(50);
+    const copy = page.locator("#shareView");
+    await copy.scrollIntoViewIfNeeded();
+    await expect(copy).toBeInViewport({ ratio: 1 });
+    expect(await copy.evaluate((element) => {
+      const r = element.getBoundingClientRect();
+      return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === element;
+    })).toBe(true);
+    await expect(source).toBeInViewport({ ratio: 1 });
+    expect((await source.boundingBox()).y).toBe(before.y);
+    await page.screenshot({ path: ".tmp/playwright-visual/mobile-source/shared-scrolled-393x420.png" });
+  });
+
+  test("toolbar source opens an isolated tab by touch even when the graph cannot load", async ({ page, context }) => {
+    const url = "https://github.com/nekomario28/interactive-project-map";
+    await context.route(url, (route) => route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Source fixture</title>" }));
+    await page.route("https://raw.githubusercontent.com/example/example/HEAD/project-map/graph.json", (route) => route.fulfill({ status: 404, body: "Missing graph fixture" }));
+    for (const path of ["/radial/?username=example", "/u/?username=example", "/three/?username=example"]) {
+      await page.goto(path);
+      const originalUrl = page.url();
+      const link = page.getByRole("link", { name: "Interactive Project Map source on GitHub (opens in a new tab)", exact: true });
+      await expect(link).toHaveCount(1);
+      const [popup] = await Promise.all([page.waitForEvent("popup"), link.tap()]);
+      await popup.waitForLoadState();
+      expect(popup.url()).toBe(url);
+      expect(await popup.evaluate(() => window.opener)).toBeNull();
+      expect(page.url()).toBe(originalUrl);
+      await popup.close();
+    }
+  });
 });
 
 test("project source link has a visible keyboard focus indicator", async ({ page }) => {

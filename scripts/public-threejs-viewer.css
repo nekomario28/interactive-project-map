@@ -272,6 +272,17 @@ body[data-map-style="threejs-cosmic"] footer {
   }
 }
 
+@media (max-width: 820px), (max-height: 500px) and (pointer: coarse) {
+  .three-toolbar .title-block {
+    grid-template-areas: "badge source" "title title" "subtitle subtitle";
+  }
+
+  .three-title-row {
+    grid-area: badge;
+    margin-bottom: 0;
+  }
+}
+
 @media (max-width: 860px) {
   .three-toolbar { align-items: stretch; }
   .three-controls { width: 100%; }
@@ -280,8 +291,11 @@ body[data-map-style="threejs-cosmic"] footer {
 }
 
 @media (max-width: 620px) {
-  .three-toolbar { padding: 10px 11px; }
-  .three-title-row { margin-bottom: 4px; }
+  .three-toolbar {
+    padding: 10px 11px;
+    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-inline: max(11px, env(safe-area-inset-left)) max(11px, env(safe-area-inset-right));
+  }
   .engine-badge { display: none; }
   .three-controls { gap: 5px; }
   .status-cluster { flex: 1 1 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }

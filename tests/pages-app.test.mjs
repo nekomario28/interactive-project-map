@@ -24,7 +24,7 @@ test("Pages home render source is shell-only and delegates setup to app.js", () 
   assert.doesNotMatch(html, /api\.github\.com/);
 });
 
-test("Three.js exposes the same project source link in its footer", () => {
+test("Three.js exposes desktop footer and compact toolbar project source links", () => {
   const html = renderThreejsLabPage();
   const links = [...html.matchAll(/<a class="project-source-link"[^>]*>Source on GitHub ↗<\/a>/g)];
   assert.equal(links.length, 1);
@@ -32,6 +32,11 @@ test("Three.js exposes the same project source link in its footer", () => {
   assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);
   assert.ok(html.indexOf(links[0][0]) > html.indexOf("<footer>"));
   assert.ok(html.indexOf(links[0][0]) < html.indexOf("</footer>"));
+  const toolbarLinks = [...html.matchAll(/<a class="project-source-link"[^>]*>Source ↗<\/a>/g)];
+  assert.equal(toolbarLinks.length, 1);
+  assert.match(toolbarLinks[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
+  assert.ok(html.indexOf(toolbarLinks[0][0]) > html.indexOf("<header "));
+  assert.ok(html.indexOf(toolbarLinks[0][0]) < html.indexOf("</header>"));
 });
 
 test("legacy viewer render source remains static-only before public shell replacement", () => {
@@ -57,12 +62,17 @@ test("public Pages build emits twelve map presets and explicit default-off Contr
     for (const route of ["u", ...dedicated]) {
       const html = await read(`${route}/index.html`);
       const links = [...html.matchAll(/<a class="project-source-link"[^>]*>Source on GitHub ↗<\/a>/g)];
-      assert.equal(links.length, 1, `${route} must expose one project source link`);
+      assert.equal(links.length, 1, `${route} must expose one desktop footer project source link`);
       assert.match(links[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
       assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);
       assert.match(links[0][0], /aria-label="Interactive Project Map source on GitHub \(opens in a new tab\)"/);
       assert.ok(html.indexOf(links[0][0]) > html.indexOf("<footer>"));
       assert.ok(html.indexOf(links[0][0]) < html.indexOf("</footer>"));
+      const toolbarLinks = [...html.matchAll(/<a class="project-source-link"[^>]*>Source ↗<\/a>/g)];
+      assert.equal(toolbarLinks.length, 1, `${route} must expose one compact toolbar source link`);
+      assert.match(toolbarLinks[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
+      assert.ok(html.indexOf(toolbarLinks[0][0]) > html.indexOf("<header "));
+      assert.ok(html.indexOf(toolbarLinks[0][0]) < html.indexOf("</header>"));
     }
     for (const style of dedicated) {
       const html = await read(`${style}/index.html`); const script = await read(`${style}-viewer.js`);
