@@ -1,6 +1,6 @@
 # Three.js style preset ownership
 
-Status: maintenance boundary, 2026-09-03.
+Status: current maintenance authority snapshot, 2026-09-10.
 
 ## Canonical owner
 
@@ -13,26 +13,33 @@ The canonical module owns both:
 - `composeThreejsStyleRuntime(source)` — Cosmic/Galaxy/Aurora/Wireframe theme state, Galaxy layout selection, Galaxy camera/fit defaults, wireframe material policy, style-aware renderer evidence/title, and automatic render-density policy;
 - `composeThreejsStylePage(html)` — removal of the obsolete user-facing render-density button.
 
-`scripts/apply-threejs-style-presets.mjs` remains only a filesystem adapter while invocation is still post-build. Style constants, Galaxy layout helpers, and render-density policy must not return to that adapter.
+Style constants, Galaxy layout helpers, and render-density policy belong in this canonical module.
 
-## Dependency on Galaxy motion
+## Current invocation order
 
-The current qualified order remains:
+The active build no longer invokes `scripts/apply-threejs-style-presets.mjs` as a standalone post-build stage. PR #421 retired that execution boundary.
 
-`style composer`
-→ `Galaxy motion composer`
-→ `arm haze / pattern coupling`
+The qualified active path is now owned by `scripts/apply-view-dimension-toggle.mjs`:
 
-Galaxy motion consumes the `threeStyle === "galaxy"` state and `layoutGalaxyGraph` surface created by the style composer. This ordering is executable in `tests/threejs-galaxy-stage-order.test.mjs` while the adapters remain explicit build stages.
+`patchThreeDViewDimension(threeHtml)`
+→ `composeThreejsStyleRuntime(threeRuntime)`
+→ `composeThreejsGalaxyMotionRuntime(styledRuntime)`
+→ `composeThreejsGalaxyPatternCouplingRuntime(motionRuntime)`
 
-## Retirement condition
+`composeThreejsStylePage(dimensionHtml)` is applied to the already-established Three.js dimension page in the same stage. `tests/threejs-galaxy-stage-order.test.mjs` makes this order executable.
 
-The style adapter can be removed from `build:pages` only when:
+`scripts/apply-threejs-style-presets.mjs` remains only as an inactive, syntax-checked compatibility surface for focused tests. It is not part of `build:pages` and repository search currently shows no production caller of its exported apply/patch aliases.
 
-1. the canonical Three.js builder invokes `composeThreejsStyleRuntime` and `composeThreejsStylePage` at the same effective point;
-2. Galaxy motion is composed after the resulting style runtime;
-3. generated `threejs-viewer.js` and `three/index.html` remain equivalent to the currently qualified outputs;
-4. the later arm-haze/pattern stage still observes the same Galaxy motion contract;
-5. full Verify, twelve-preset comparison, Chromium style/motion evidence, and iPhone WebKit remain GREEN.
+## Standalone-stage retirement — complete
 
-This ownership move does not redesign the four styles, change the graph model, alter release authority, or move `v1`.
+PR #421 completed the former build-stage retirement conditions:
+
+1. style page/runtime composition moved to the existing adjacent dimension stage;
+2. Galaxy motion still runs after style composition;
+3. Galaxy pattern coupling still observes the final Galaxy motion contract;
+4. the active stage-order tests prohibit the standalone style stage from returning;
+5. the qualified browser and preset evidence for that migration was preserved at the time of retirement.
+
+Removing the inactive compatibility source file itself is a separate dead-surface cleanup decision. It requires a fresh repository-wide reference check and retargeting any compatibility-only tests/check entries to the canonical composer before deletion.
+
+This ownership boundary does not redesign the four styles, change the graph model, alter release authority, or move `v1`.
