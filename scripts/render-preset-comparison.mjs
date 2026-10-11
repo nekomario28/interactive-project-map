@@ -35,9 +35,9 @@ const STYLES = [
 
 function rawRender(style, graph, theme) {
   if (style === "radial") return renderRadialTreeSvg(graph, theme, WIDTH, HEIGHT);
-  if (style === "galaxy-classic") return renderGalaxyClassicSvg(graph, theme, WIDTH, HEIGHT);
-  if (style === "galaxy-systems") return renderGalaxySystemsSvg(graph, theme, WIDTH, HEIGHT);
-  if (style === "galaxy-hybrid") return renderGalaxyHybridSvg(graph, theme, WIDTH, HEIGHT);
+  if (style === "galaxy-classic") return renderGalaxyClassicSvg(graph, theme, WIDTH, HEIGHT, { height: "auto", padding: 24 });
+  if (style === "galaxy-systems") return renderGalaxySystemsSvg(graph, theme, WIDTH, HEIGHT, { height: "auto", padding: 24 });
+  if (style === "galaxy-hybrid") return renderGalaxyHybridSvg(graph, theme, WIDTH, HEIGHT, { height: "auto", padding: 24 });
   if (style === "obsidian") return renderGalaxySvg(graph, theme, WIDTH, HEIGHT, "obsidian");
   if (style === "tree") return renderTreeSvg(graph, theme, WIDTH, HEIGHT);
   if (style === "treemap") return renderTreemapSvg(graph, theme, WIDTH, HEIGHT);

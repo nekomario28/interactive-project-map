@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { renderProjectSourceLink } from "../src/html.ts";
 
 import { projectMapViewModelRuntimeSource } from "./project-map-view-model-runtime.mjs";
 import { projectMapViewStateRuntimeSource } from "./project-map-view-state-runtime.mjs";
@@ -113,7 +114,7 @@ export function renderThreejsLabPage() {
     </div>
     <div class="three-depth-markers" aria-hidden="true"><span>NEAR</span><span>MID</span><span>DEEP SPACE</span></div>
   </section>
-  <footer><span>Experimental renderer · canonical graph remains unchanged</span><span class="shortcuts"><kbd>drag</kbd> Orbit · <kbd>wheel</kbd> Dolly · <kbd>0</kbd> Fit · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span></footer>
+  <footer><span>Experimental renderer · canonical graph remains unchanged</span><span class="shortcuts"><kbd>drag</kbd> Orbit · <kbd>wheel</kbd> Dolly · <kbd>0</kbd> Fit · <kbd>Enter</kbd> Open · <kbd>Esc</kbd> Close</span>${renderProjectSourceLink()}</footer>
 </main>
 <script src="../project-map-view-state.js"></script>
 <script src="../project-map-view-model.js"></script>

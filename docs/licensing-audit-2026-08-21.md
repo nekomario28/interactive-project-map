@@ -1,6 +1,8 @@
 # Licensing audit — 2026-08-21
 
-This document records the current licensing boundary of `interactive-project-map` after the Obsidian-like fidelity work, semantic label LOD research, and Spatial Core extraction. It is an engineering compliance note, not legal advice.
+This document records the **2026-08-21 historical snapshot** of `interactive-project-map` after the Obsidian-like fidelity work, semantic label LOD research, and Spatial Core extraction. It is an engineering compliance note, not legal advice.
+
+**Current distribution:** Pages now bundles pinned Three.js runtime files with the complete upstream MIT notice from [`THIRD_PARTY_NOTICES`](../THIRD_PARTY_NOTICES), also emitted as `vendor/THREE-LICENSE.txt`. A committed `package-lock.json` now records the dependency set. The no-bundled-runtime and no-lockfile conclusions below describe the earlier snapshot, not the current build. The project license remains [MIT](../LICENSE).
 
 ## Project license
 

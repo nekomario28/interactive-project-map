@@ -8,6 +8,7 @@ export const THREE_SOURCE_URL = `https://raw.githubusercontent.com/mrdoob/three.
 export const THREE_CORE_SOURCE_URL = `https://raw.githubusercontent.com/mrdoob/three.js/${THREE_SOURCE_COMMIT}/build/three.core.min.js`;
 export const THREE_LOCAL_FILENAME = `three-${THREE_VERSION}.module.min.js`;
 export const THREE_CORE_LOCAL_FILENAME = "three.core.min.js";
+export const THREE_LICENSE_LOCAL_FILENAME = "THREE-LICENSE.txt";
 export const THREE_LOCAL_SPECIFIER = `./vendor/${THREE_LOCAL_FILENAME}`;
 
 const THREE_CDN_SPECIFIER = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.min.js`;
@@ -68,11 +69,17 @@ export async function applyThreejsLocalEngine({
     throw new Error("Pinned Three.js module no longer imports ./three.core.min.js as expected");
   }
 
+  const licenseSource = await readFile(new URL("../THIRD_PARTY_NOTICES", import.meta.url), "utf8");
+  if (!licenseSource.includes(`Three.js ${THREE_VERSION}`) || !licenseSource.includes(THREE_SOURCE_COMMIT)) {
+    throw new Error("Three.js license notice must match the pinned engine version and source commit");
+  }
+
   const runtimePath = join(siteDir, "threejs-viewer.js");
   const htmlPath = join(siteDir, "three", "index.html");
   const vendorDir = join(siteDir, "vendor");
   const vendorPath = join(vendorDir, THREE_LOCAL_FILENAME);
   const coreVendorPath = join(vendorDir, THREE_CORE_LOCAL_FILENAME);
+  const licensePath = join(vendorDir, THREE_LICENSE_LOCAL_FILENAME);
 
   const [runtime, html] = await Promise.all([
     readFile(runtimePath, "utf8"),
@@ -87,6 +94,7 @@ export async function applyThreejsLocalEngine({
     writeFile(htmlPath, patchedHtml),
     writeFile(vendorPath, engineSource),
     writeFile(coreVendorPath, coreSource),
+    writeFile(licensePath, licenseSource),
   ]);
 
   return {
@@ -98,6 +106,7 @@ export async function applyThreejsLocalEngine({
     htmlPath,
     vendorPath,
     coreVendorPath,
+    licensePath,
     bytes: engineSource.length,
     coreBytes: coreSource.length,
   };
