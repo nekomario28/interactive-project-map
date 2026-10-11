@@ -101,7 +101,32 @@
     });
   }
 
+  function initMobileToolbar() {
+    const header = document.querySelector("header.toolbar");
+    const controls = header?.querySelector(".controls");
+    const title = header?.querySelector(".title-block");
+    if (!controls || !title) return;
+    controls.id ||= "mobile-toolbar-controls";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mobile-controls-toggle";
+    button.textContent = "Controls";
+    button.setAttribute("aria-controls", controls.id);
+    title.append(button);
+    const mobile = matchMedia("(max-width: 820px), (max-height: 500px) and (pointer: coarse)");
+    let expanded = false;
+    function sync() {
+      header.dataset.controlsOpen = String(expanded);
+      button.setAttribute("aria-expanded", String(!mobile.matches || expanded));
+      window.dispatchEvent(new Event("resize"));
+    }
+    button.addEventListener("click", () => { expanded = !expanded; sync(); });
+    mobile.addEventListener("change", sync);
+    sync();
+  }
+
   function init() {
+    initMobileToolbar();
     syncLinks();
     initThreeStyle();
     document.addEventListener("click", (event) => {

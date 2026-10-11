@@ -513,7 +513,8 @@ footer a {
   white-space: nowrap;
 }
 
-.toolbar .project-source-link {
+.toolbar .project-source-link,
+.mobile-controls-toggle {
   display: none;
 }
 
@@ -568,6 +569,10 @@ kbd {
     gap: 3px 8px;
   }
 
+  .category-navigator-primary > .title-block {
+    flex: 1;
+  }
+
   .toolbar h1 {
     grid-area: title;
   }
@@ -586,6 +591,19 @@ kbd {
     justify-content: center;
   }
 
+  .mobile-controls-toggle {
+    display: inline-flex;
+    grid-area: subtitle;
+    align-self: center;
+    justify-self: start;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 88px;
+  }
+
+  .toolbar[data-controls-open] p,
+  .toolbar[data-controls-open="false"] .controls,
   footer .project-source-link {
     display: none;
   }

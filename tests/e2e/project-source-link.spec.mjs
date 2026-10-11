@@ -106,6 +106,17 @@ test.describe("touch source navigation", () => {
         ["three", "/three/?username=example&style3d=cosmic&motion=off"],
       ]) {
         await page.goto(path);
+        await expect(page.locator("header .controls")).toBeHidden();
+        const workspace = await page.locator(".workspace").boundingBox();
+        expect(workspace.height, `${name} must leave most of the mobile screen for the map`).toBeGreaterThanOrEqual(height * 0.55);
+        if (name !== "three") {
+          await expect(page.locator("#status")).toBeHidden();
+          await expect.poll(() => page.locator("canvas").evaluate((canvas) => {
+            const r = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            return Math.max(Math.abs(canvas.width / dpr - r.width), Math.abs(canvas.height / dpr - r.height));
+          })).toBeLessThanOrEqual(1);
+        }
         const link = page.locator("header .project-source-link");
         await expect(link).toBeVisible();
         await expect(link).toHaveText("Source ↗");
@@ -137,6 +148,10 @@ test.describe("touch source navigation", () => {
     const before = await source.boundingBox();
     const workspace = await page.locator(".workspace").boundingBox();
     expect(workspace.height).toBeGreaterThanOrEqual(50);
+    const toggle = page.getByRole("button", { name: "Controls", exact: true });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
     const copy = page.locator("#shareView");
     await copy.scrollIntoViewIfNeeded();
     await expect(copy).toBeInViewport({ ratio: 1 });
@@ -147,6 +162,9 @@ test.describe("touch source navigation", () => {
     await expect(source).toBeInViewport({ ratio: 1 });
     expect((await source.boundingBox()).y).toBe(before.y);
     await page.screenshot({ path: ".tmp/playwright-visual/mobile-source/shared-scrolled-393x420.png" });
+    await toggle.tap();
+    await expect(page.locator("header .controls")).toBeHidden();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
   test("toolbar source opens an isolated tab by touch even when the graph cannot load", async ({ page, context }) => {
