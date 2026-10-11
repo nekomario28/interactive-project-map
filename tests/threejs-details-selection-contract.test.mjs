@@ -10,4 +10,7 @@ test("Three.js details reuse the canonical has-selection contract", () => {
   assert.match(threeJsRuntime, /ui\.details\.classList\.remove\("has-selection"\)/);
   assert.doesNotMatch(threeJsRuntime, /ui\.details\.classList\.(?:add|remove)\("selected"\)/);
   assert.match(sharedCss, /\.details:not\(\.has-selection\)\s*\{\s*display:\s*none;/s);
+  assert.match(sharedCss, /\.details\.is-dismissed\s*\{\s*display:\s*none;/s);
+  assert.match(threeJsRuntime, /ui\.details\.classList\.add\("is-dismissed"\)/);
+  assert.match(threeJsRuntime, /ui\.details\.classList\.remove\("is-dismissed"\)/);
 });
