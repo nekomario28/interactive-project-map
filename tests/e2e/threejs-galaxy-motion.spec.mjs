@@ -101,6 +101,8 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   expect(before.edgePolicy).toBe("no-persistent-lines");
   expect(before.persistentEdgeObjects).toBe(0);
   expect(before.starfieldFrame).toBe("inertial");
+  expect(before.armPlane).toBe("galactic-disc");
+  expect(Math.abs(before.armPlaneTilt)).toBeLessThan(1e-7);
   expect(before.localOrbitModel).toBe("2d-galaxy-hybrid-ellipse");
   expect(before.localOrbitAxisRatio).toBeCloseTo(0.68, 8);
   expect(before.localOrbitPeriodModel).toBe("480+lane*240");
@@ -153,6 +155,7 @@ test("Galaxy keeps astronomy-informed galactocentric motion while local reposito
   const externalAfter = after.external.find((repo) => repo.id === before.external[0].id);
 
   expect(after.persistentEdgeObjects).toBe(0);
+  expect(Math.abs(after.armPlaneTilt)).toBeLessThan(1e-7);
   expect(distance(inner, innerAfter)).toBeGreaterThan(0.08);
   expect(distance(repoBefore, repoAfter)).toBeGreaterThan(0.08);
   expect(distance(before.external[0], externalAfter)).toBeGreaterThan(0.08);
@@ -185,6 +188,7 @@ test("Galaxy Motion Off freezes category, repository, Contributed, and arm-haze 
   expect(before.persistentEdgeObjects).toBe(0);
   expect(after.persistentEdgeObjects).toBe(0);
   expect(after.elapsed).toBe(before.elapsed);
+  expect(Math.abs(after.armPlaneTilt)).toBeLessThan(1e-7);
   expect(distance(before.systems[0], after.systems[0])).toBeLessThan(1e-7);
   expect(distance(before.systems[0].repositories[0], after.systems[0].repositories[0])).toBeLessThan(1e-7);
   expect(distance(before.external[0], after.external[0])).toBeLessThan(1e-7);

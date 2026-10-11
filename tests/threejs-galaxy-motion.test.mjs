@@ -7,7 +7,7 @@ import { composeThreejsGalaxyMotionRuntime } from "../scripts/public-threejs-gal
 
 const fixture = `
 function layoutGalaxyGraph(THREE,graph){const count=2,armCount=count<=3?1:count<=8?2:3,angle=-Math.PI/2+arm*TAU/armCount+tier*.62+(hashUnit(group.id+":galaxy-angle")-.5)*.1,radius=baseRadius+tier*tierGap,y=(hashUnit(group.id+":galaxy-y")-.5)*14,thickness=(hashUnit(repo.id+":galaxy-thickness")-.5)*(10+ring*2.6);positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-loose-y")-.5)*24,0));positions.set(repo.id,new THREE.Vector3(0,(hashUnit(repo.id+":galaxy-external-y")-.5)*34,0));}
-function createSpiralDust(THREE,seed){const count=1800,positions=new Float32Array(count*3),colors=new Float32Array(count*3),blue=new THREE.Color(0x6387ff),violet=new THREE.Color(0xa86cff);for(let index=0;index<count;index+=1){const arm=index%4,t=hashUnit(\`${"${seed}"}:dust:t:${"${index}"}\`),radius=42+t*230,jitter=(hashUnit(\`${"${seed}"}:dust:j:${"${index}"}\`)-.5)*30,angle=arm*TAU/4+t*TAU*2.1+jitter*.008;positions[index*3]=Math.cos(angle)*(radius+jitter);}return new THREE.Points();}
+function createSpiralDust(THREE,seed){const count=1800,positions=new Float32Array(count*3),colors=new Float32Array(count*3),blue=new THREE.Color(0x6387ff),violet=new THREE.Color(0xa86cff);for(let index=0;index<count;index+=1){const arm=index%4,t=hashUnit(\`${"${seed}"}:dust:t:${"${index}"}\`),radius=42+t*230,jitter=(hashUnit(\`${"${seed}"}:dust:j:${"${index}"}\`)-.5)*30,angle=arm*TAU/4+t*TAU*2.1+jitter*.008;positions[index*3]=Math.cos(angle)*(radius+jitter);}const points=new THREE.Points();points.rotation.x=-.11;return points;}
 function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy";
 const positions=layoutGalaxyGraph(THREE,graph),nodeMeshes=new Map();
@@ -18,7 +18,7 @@ function animate(now){const delta=.016;if(motionEnabled){farStars.rotation.y+=de
 }
 `;
 
-test("canonical Galaxy motion composer keeps the astronomy-informed disc while using 2D-Hybrid-like local ellipses and no persistent graph lines", () => {
+test("canonical Galaxy motion composer keeps the co-planar astronomy-informed disc while using 2D-Hybrid-like local ellipses and no persistent graph lines", () => {
   const patched = composeThreejsGalaxyMotionRuntime(fixture);
   assert.match(patched, /GALAXY_LOG_PITCH_DEG=22/);
   assert.match(patched, /GALAXY_PATTERN_PERIOD=2400/);
@@ -39,6 +39,8 @@ test("canonical Galaxy motion composer keeps the astronomy-informed disc while u
   assert.match(patched, /pitch>0\?Math\.log\(Math\.max\(1,radius\/42\)\)\/Math\.tan\(pitch\):t\*TAU\*winding/);
   assert.match(patched, /threeStyle==="galaxy"\?galaxyArmCount\(graph\):4/);
   assert.match(patched, /threeStyle==="galaxy"\?GALAXY_LOG_PITCH:0/);
+  assert.match(patched, /if\(threeStyle==="galaxy"\)dust\.rotation\.x=0/);
+  assert.match(patched, /armPlane:"galactic-disc",armPlaneTilt:dust\.rotation\.x/);
   assert.match(patched, /model:"flat-curve-inspired",direction:"co-rotating",armCount:galaxyArmCount\(graph\),spiralModel:"logarithmic",pitchAngleDeg:GALAXY_LOG_PITCH_DEG,patternModel:"rigid-density-wave-inspired",patternPeriod:GALAXY_PATTERN_PERIOD,corotationRadius:GALAXY_COROTATION_RADIUS,edgePolicy:"no-persistent-lines",starfieldFrame:"inertial",localOrbitModel:"2d-galaxy-hybrid-ellipse",localOrbitAxisRatio:GALAXY_LOCAL_AXIS_RATIO,localOrbitPeriodModel:"480\+lane\*240"/);
   assert.match(patched, /rotationPeriod=\(radius\)=>clamp\(radius\*16,1200,4200\)/);
   assert.match(patched, /direction=\(hash\(group\.id\+":hybrid-direction"\)&1\)===0\?1:-1/);
