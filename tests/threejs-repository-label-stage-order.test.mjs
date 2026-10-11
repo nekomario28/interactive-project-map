@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -50,6 +50,15 @@ test("Three.js search stage composes Local Graph, Category Navigator and reposit
   assert.match(searchAdapter, /public-threejs-category-navigator\.js/);
   assert.match(searchAdapter, /public-threejs-repository-labels\.css/);
   assert.match(packageJson.scripts["check:pages"], /apply-threejs-local-graph\.mjs/);
-  assert.match(packageJson.scripts["check:pages"], /apply-threejs-category-navigator\.mjs/);
-  assert.match(packageJson.scripts["check:pages"], /apply-threejs-repository-labels\.mjs/);
+  assert.doesNotMatch(packageJson.scripts["check:pages"], /apply-threejs-category-navigator\.mjs/);
+  assert.doesNotMatch(packageJson.scripts["check:pages"], /apply-threejs-repository-labels\.mjs/);
+});
+
+test("retired Category Navigator and repository-label compatibility adapters stay absent", async () => {
+  for (const path of [
+    "../scripts/apply-threejs-category-navigator.mjs",
+    "../scripts/apply-threejs-repository-labels.mjs",
+  ]) {
+    await assert.rejects(() => access(new URL(path, import.meta.url)), { code: "ENOENT" });
+  }
 });

@@ -8,10 +8,9 @@ import { spawnSync } from "node:child_process";
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
 import { applyThreejsLocalGraph } from "../scripts/apply-threejs-local-graph.mjs";
 import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
-import { applyThreejsCategoryNavigator } from "../scripts/apply-threejs-category-navigator.mjs";
-import { applyThreejsRepositoryLabels } from "../scripts/apply-threejs-repository-labels.mjs";
 import {
   composeThreejsRepositoryLabelsPage,
+  composeThreejsRepositoryLabelsRuntime,
   DIRECT_SEARCH_LABEL_BUDGET,
 } from "../scripts/public-threejs-repository-labels.mjs";
 
@@ -25,10 +24,6 @@ test("bounded Three.js repository labels attach with shared search and remain la
     await applyThreejsLocalGraph({ siteDir: root });
     const combined = await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     assert.equal(combined.injected, true);
-    const navigatorCompatibility = await applyThreejsCategoryNavigator({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    assert.equal(navigatorCompatibility.injected, false);
-    const labelCompatibility = await applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    assert.equal(labelCompatibility.injected, false);
 
     const [runtime, page, style] = await Promise.all([
       readFile(join(root, "threejs-viewer.js"), "utf8"),
@@ -58,7 +53,7 @@ test("bounded Three.js repository labels attach with shared search and remain la
     const syntax = spawnSync(process.execPath, ["--check", join(root, "threejs-viewer.js")], { encoding: "utf8" });
     assert.equal(syntax.status, 0, syntax.stderr);
 
-    const second = await applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    const second = await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     assert.equal(second.injected, false);
     const twice = await readFile(join(root, "threejs-viewer.js"), "utf8");
     assert.equal((twice.match(/IPM_THREEJS_BOUNDED_REPOSITORY_LABELS_P2/g) || []).length, 1);
@@ -72,8 +67,9 @@ test("bounded repository labels fail closed when Category Navigator has not run"
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     await applyThreejsLocalGraph({ siteDir: root });
-    await assert.rejects(
-      () => applyThreejsRepositoryLabels({ siteDir: root, sourceDir: join(process.cwd(), "scripts") }),
+    const runtime = await readFile(join(root, "threejs-viewer.js"), "utf8");
+    assert.throws(
+      () => composeThreejsRepositoryLabelsRuntime(runtime),
       /Category Navigator adapter must run before bounded repository labels/,
     );
   } finally {
@@ -88,20 +84,15 @@ test("canonical repository label stylesheet attachment is idempotent", () => {
   assert.equal(composeThreejsRepositoryLabelsPage(once), once);
 });
 
-test("canonical repository-label composer owns the explicit small search budget while the adapter stays thin", async () => {
+test("canonical repository-label composer owns the explicit small search budget", async () => {
   assert.equal(DIRECT_SEARCH_LABEL_BUDGET, 8);
-  const [canonical, adapter] = await Promise.all([
-    readFile(new URL("../scripts/public-threejs-repository-labels.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../scripts/apply-threejs-repository-labels.mjs", import.meta.url), "utf8"),
-  ]);
+  const canonical = await readFile(new URL("../scripts/public-threejs-repository-labels.mjs", import.meta.url), "utf8");
   assert.match(canonical, /directCount>=DIRECT_SEARCH_LABEL_BUDGET/);
   assert.match(canonical, /if\(selectedId\)ids\.push\(selectedId\)/);
-  assert.match(adapter, /composeThreejsRepositoryLabelsRuntime/);
-  assert.match(adapter, /composeThreejsRepositoryLabelsPage/);
-  assert.doesNotMatch(adapter, /desiredRepositoryLabelIds|projectRepositoryLabels|IPM_THREEJS_BOUNDED_REPOSITORY_LABELS_P2/);
 
-  for (const path of ["scripts/public-threejs-repository-labels.mjs", "scripts/apply-threejs-repository-labels.mjs"]) {
-    const syntax = spawnSync(process.execPath, ["--check", path], { cwd: process.cwd(), encoding: "utf8" });
-    assert.equal(syntax.status, 0, `${path}: ${syntax.stderr}`);
-  }
+  const syntax = spawnSync(process.execPath, ["--check", "scripts/public-threejs-repository-labels.mjs"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(syntax.status, 0, syntax.stderr);
 });
