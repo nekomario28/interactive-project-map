@@ -13,7 +13,7 @@ function galaxyArmCount(){return 3;}
 function createSceneRuntime(THREE,graph,username){
 const threeStyle="galaxy",glowTexture={};
 scene.add(farStars,midStars,nearStars,dust);dust.visible=threeStyle!=="wireframe";if(threeStyle==="galaxy"){dust.scale.setScalar(1.08);dust.material.opacity=.44;}
-const galaxyMotion={snapshot:()=>({})};let edgeLines=null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),persistentEdgeObjects:edgeLines?1:0})});
+const galaxyMotion={snapshot:()=>({})};let edgeLines=null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),armPlane:"galactic-disc",armPlaneTilt:dust.rotation.x,persistentEdgeObjects:edgeLines?1:0})});
 function animate(){const delta=.016;if(motionEnabled){dust.rotation.y+=delta*(threeStyle==="galaxy"?TAU/GALAXY_PATTERN_PERIOD:.0035);}}
 }
 `;
