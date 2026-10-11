@@ -1,247 +1,33 @@
-# Pages post-build mutation inventory
+# Pages build ownership
 
-Status: maintenance boundary, 2026-09-03.
+## Maintenance principle
 
-The public Pages build currently starts from `scripts/build-public-pages.mjs` and then runs a reviewed set of post-build mutation stages. These stages are historical implementation debt, not an extension point. New `apply-*` stages should not be added by default.
+Pages post-build mutation is implementation debt, not a feature extension point. Prefer emitting the required page or runtime from its canonical source rather than generating an incomplete asset and repairing it later.
 
-`tests/build-postprocess-budget.test.mjs` makes that rule executable: the reviewed historical set is an upper bound, removals are allowed, and any previously unreviewed mutator fails CI until it receives explicit maintenance review.
+The active pipeline lives in [`package.json`](../package.json), under `build:pages`. The reviewed historical mutator set lives in [`tests/build-postprocess-budget.test.mjs`](../tests/build-postprocess-budget.test.mjs). That set is an upper bound: removals are allowed, while introducing a new mutator requires explicit maintenance review. Historical entries do not require retaining obsolete source files or commands.
 
-## Current budget
+## Ownership boundaries
 
-- Canonical builder: `scripts/build-public-pages.mjs`
-- Reviewed historical post-build mutators: **18**
-- Active post-build mutators: **15**
-- Direction: **monotonic decrease**
-- Preferred destination: canonical `public-*` runtime/template sources or shared package mechanisms
-- Migration rule: one bounded mechanism at a time, with rendered/evidence gates preserved
+- [`build-public-pages.mjs`](../scripts/build-public-pages.mjs) owns base Pages markup, runtime assets, initial script order and CSP. A page's required controls and dependencies should be emitted together.
+- Canonical `public-*` sources own browser behavior. Shared Project Map semantics belong above renderer-specific drawing, in the existing view-model and adapters. Dedicated renderers directly own status selection, colour, opacity, archive-decoration precedence and aggregate composition. External relation remains primary, while source fork/archive flags remain metadata rather than a later build correction.
+- Dedicated status controls and projection attachment belong to page generation. See [dedicated status projection](dedicated-status-projection.md) for the filtering and layout boundary.
+- [`public-dedicated-graph.js`](../scripts/public-dedicated-graph.js) owns dedicated repository URL validation and metadata normalization, strict external admission, temporary external layout projection and contribution details rows. The builder copies this shared browser runtime and places it before the dedicated renderer; renderers call it directly at their admission/layout/details boundaries. Owner/group admission, duplicate IDs, edges and date projection remain renderer-specific. No renderer source is rewritten to install these behaviors. Radial's geometry remains in the Radial renderer.
+- [`postprocess-public-pages.mjs`](../scripts/postprocess-public-pages.mjs) validates CSP without rewriting output. Validation and mutation are distinct responsibilities.
 
-| Stage | Current responsibility | Migration priority |
-|---|---|---|
-| `postprocess-public-pages.mjs` | Spatial Core runtime emission, script attachment, and CSP compatibility rewriting; shared-viewer, Galaxy, Obsidian, interaction semantic, and Action-ref rewrites retired | **P0 split/shrink** |
-| `apply-contributed-render-sync.mjs` | shared/Obsidian/Galaxy Contributed render parity | P1 |
-| `apply-dedicated-view-state.mjs` | dedicated viewer shared state layer | P1 |
-| `apply-dedicated-contributed-render-sync.mjs` | dedicated Contributed primary-status parity | P1 |
-| `apply-category-navigator.mjs` | category navigator and Contributed emphasis attachment | P1 |
-| `apply-reactive-cosmic-background.mjs` | camera/cosmic presentation attachment | P1 |
-| `apply-quality-view.mjs` | Quality presentation bootstrap and shared model wiring | P1 |
-| `apply-threejs-local-graph.mjs` | Three.js Local Graph adapter | P2 |
-| `apply-threejs-search-context.mjs` | Three.js shared search adapter | P2 |
-| `apply-threejs-category-navigator.mjs` | thin filesystem/order carrier invoking canonical Three.js Category Navigator → bounded repository labels and copying their assets | P2 |
-| `apply-view-dimension-toggle.mjs` | 2D/3D navigation controls and assets | P1 |
-| `apply-threejs-style-presets.mjs` | thin filesystem/order adapter invoking canonical Three.js style → Galaxy motion → Galaxy pattern coupling in that order | **P1 relocate only with broader Three.js composition authority** |
-| `apply-threejs-local-engine.mjs` | pinned/localized Three.js engine | P2 keep until localization owner is clearer |
-| `apply-renderer-snapshot.mjs` | common renderer evidence snapshot contract | P2 |
-| `apply-2d-runtime-bootstrap-gate.mjs` | final 2D bootstrap ordering gate | P2 |
+## Order is a behavioral contract where consumers depend on it
 
-`apply-threejs-repository-labels.mjs` remains a compatibility/syntax-checked adapter but is no longer an active `build:pages` stage. `apply-threejs-galaxy-motion.mjs` and `apply-threejs-galaxy-central-bulge.mjs` are fully retired: neither source file nor build/check invocation remains active. Their names stay only in the historical mutator allowlist so the original reviewed baseline remains auditable.
+The dedicated status projection must load before its renderer reads the graph. Deferred shared runtime patches must be installed before asynchronous graph loading begins; the final bootstrap gate protects that runtime lifecycle.
 
-## First migration cut — complete
+Three.js presentation composes dimension state, style, Galaxy motion, and pattern coupling in that order. Reducing filesystem stages must preserve that composition contract. Do not merge unrelated mechanisms merely to lower the command count.
 
-The first bounded cut removed shared-viewer output mutation from `postprocess-public-pages.mjs` after moving the already-adopted behavior into canonical sources:
+## Migration and verification
 
-1. style normalization for `galaxy-classic`, `galaxy-systems`, `galaxy-hybrid`, and `obsidian` — canonical in `scripts/public-viewer.js`;
-2. the adopted minimum zoom floor — canonical in `scripts/public-viewer.js`;
-3. neutral initial Obsidian viewport while preserving explicit Fit and Galaxy auto-fit — canonical in `scripts/public-viewer.js`;
-4. narrow-mobile toolbar/detail CSS — canonical in `scripts/public-viewer.css`.
+Move one coherent responsibility into its natural owner, route consumers directly to it, and delete the obsolete path in the same change. Do not leave a compatibility wrapper whose only purpose is preserving an internal build step.
 
-The generated-output fallback for those four behaviors is retired.
+For behavior-preserving migrations, compare complete generated output against the same base revision and inputs. Test the required output through the builder, then run the affected browser gates. Source syntax or byte equality alone does not establish interactive correctness.
 
-## Second migration cut — complete
+Do not pin unrelated tests to the total number of stages or to an incomplete intermediate output. Assert the dependency or consumer behavior that actually matters.
 
-The second bounded cut moves the already-adopted 2D Galaxy Systems runtime from generated-output tuning into `scripts/public-galaxy-systems.js` itself:
+## Non-goals
 
-1. canonical `galaxy-systems` runtime identity and DOMContentLoaded isolation guard;
-2. deterministic category-local orbit direction from the existing group hash;
-3. repository local-orbit period `360 + lane * 180`;
-4. slow category co-rotation at `1800 * 1000` ms;
-5. the adopted `Galaxy Systems · slow category orbit · repositories orbit locally` subtitle.
-
-`postprocess-public-pages.mjs` now emits `galaxy-systems-runtime.js` by direct copy rather than applying `tuneSystemsRuntime()` string replacements. Existing runtime tests and browser movement bounds remain the behavior authority.
-
-## Third migration cut — complete
-
-The third bounded cut moves Galaxy Classic's runtime identity into `scripts/public-galaxy-classic.js` without changing its motion or drawing semantics:
-
-1. canonical `galaxy-classic` DOMContentLoaded isolation guard;
-2. all Classic style checks now use the final runtime identity directly;
-3. `galaxy-classic-runtime.js` is emitted by direct copy;
-4. the generic `isolateRuntime()` string-replacement adapter is retired because it has no remaining consumer.
-
-Galaxy Classic's existing Living Galaxy browser movement test remains the behavior authority. A focused source-ownership regression prevents legacy exact `"galaxy"` runtime identity or the postprocess adapter from returning.
-
-## Fourth migration cut — complete
-
-The fourth bounded cut moves the already-adopted Obsidian Spatial Core delegation into canonical `scripts/public-obsidian-runtime.js`:
-
-1. force settings come directly from `window.ProjectMapSpatialCore.DEFAULT_FORCE_SETTINGS`;
-2. linked-edge resolution delegates directly to `ProjectMapSpatialCore.linkForceEdges`;
-3. each force step delegates directly to `ProjectMapSpatialCore.stepForceLayout`, preserving the existing Obsidian `physicsRadius` and dragging-id contract;
-4. the duplicated pairwise force kernel is absent from canonical Obsidian source;
-5. `obsidian-runtime.js` is emitted by direct copy and `tuneObsidianRuntime()` is retired.
-
-The browser Spatial Core parity test remains the primitive-semantics authority, while the existing Obsidian browser tests remain the lifecycle/interaction authority.
-
-## Fifth migration cut — complete
-
-The fifth bounded cut moves the already-adopted semantic-edge normalization into canonical `scripts/public-interaction-polish.js`:
-
-1. only raw `type === "semantic"` candidates are admitted;
-2. source and target strings retain the existing 220-character input bound;
-3. candidate processing remains bounded to 2400 input edges;
-4. normalization delegates directly to `ProjectMapSpatialCore.normalizeWeightedEdges` with `maxInput: 2400`, `maxOutput: 1200`, `minScore: 0`, and `type: "semantic"`;
-5. canonical source no longer contains its duplicated manual dedupe/sort kernel;
-6. `interaction-polish.js` is emitted by direct copy and `tuneInteractionPolish()` is retired.
-
-The Spatial Core primitive parity test remains the normalization-semantics authority, while existing shared/dedicated interaction and browser tests remain the rendering/search authority.
-
-## Sixth migration cut — complete
-
-The sixth bounded cut removes the setup Action-ref build-then-rewrite path without moving release authority:
-
-1. `scripts/build-public-pages.mjs` imports the reviewed inner Action ref from `src/action-ref.ts` and emits it directly into `app.js`;
-2. `PUBLIC_ACTION_REF` remains a compatibility export backed by the same canonical authority;
-3. the historical builder SHA is no longer emitted;
-4. `BUILDER_ACTION_REF` and the final `app.js` string-promotion block are retired from `postprocess-public-pages.mjs`;
-5. the setup source-of-truth test proves the built `app.js` already contains `PROJECT_MAP_ACTION_REF` and remains byte-identical through postprocess;
-6. the release-chain test continues to prove the outer reusable `@v1` channel and immutable inner Action SHA are separate release targets.
-
-This is the still-valid maintenance residue from stale PR #350. Its already-superseded serializer changes are intentionally not replayed.
-
-`postprocess-public-pages.mjs` remains in the build because it still owns Spatial Core runtime emission, shared/dedicated script attachment, and CSP compatibility rewriting.
-
-## Seventh migration cut — Three.js Galaxy presentation source
-
-The seventh bounded cut reduces the historical `apply-threejs-galaxy-central-bulge.mjs` stage without changing the qualified Galaxy render:
-
-1. PR #368 already moved the sparse 96/48 central bulge and nucleus-only `r = 30..64` dust-colour fade into builder-owned `scripts/public-threejs-galaxy-central-morphology.mjs`;
-2. builder-owned `scripts/public-threejs-galaxy-disc-haze.mjs` now owns the existing 128×128 procedural arm-aware haze helper and its non-semantic/non-pickable scene attachment;
-3. the haze still consumes the existing Galaxy arm count, 22° pitch, and scaled dust reference `42 × 1.08 = 45.36`; this cut introduces no second morphology or motion truth;
-4. raw `threejs-cosmic` builder output remains inert because presentation activation is gated by the final `data-map-style="threejs-galaxy"` identity;
-5. the remaining generated-output responsibility was only the already-qualified 2400 s haze/dust phase lock and read-only motion evidence augmentation;
-6. stale or partial generated intermediates continue to fail closed and require rebuilding from canonical source.
-
-Rendered Chromium/WebKit Galaxy evidence remains the behavior authority. The reviewed active mutator count remained 18 at this cut because it shrank a stage rather than deleting it.
-
-## Eighth migration cut — Three.js Galaxy motion semantic ownership
-
-The eighth bounded cut moves the already-qualified Galaxy motion and astronomy-informed morphology transformations into `scripts/public-threejs-galaxy-motion.mjs` without changing execution order:
-
-1. the canonical composer owns the existing 2/3/4-arm policy, 22° logarithmic pitch, thin-disc geometry, `T ≈ 16r` bounded rotation model, 2400 s pattern period, visual corotation, inertial starfield, and no-persistent-line policy;
-2. it also owns the existing local `0.68` ellipse, `480 + lane * 240` period, category-shared `:hybrid-direction`, and small renderer-local vertical breathing contract;
-3. `apply-threejs-galaxy-motion.mjs` became a thin read/compose/write compatibility adapter and contains no independent motion constants or kernel;
-4. the qualified order remained `style presets → Galaxy motion → haze/pattern coupling`;
-5. this was an ownership migration only: astronomy boundaries, graph semantics, release authority, `v1`, and renderer presentation were unchanged.
-
-The active mutator count remained 18 at this cut because semantic ownership moved but the execution-order adapter still existed.
-
-## Ninth migration cut — Three.js style semantic ownership
-
-The ninth bounded cut moves the already-adopted Three.js renderer-local style semantics into `scripts/public-threejs-style-presets.mjs`:
-
-1. Cosmic/Galaxy/Aurora/Wireframe theme state and labels are canonical;
-2. Galaxy layout selection and camera/fit defaults are canonical;
-3. wireframe material behavior and style-aware renderer/title evidence are canonical;
-4. automatic render-density policy and removal of the obsolete user render-density control are canonical;
-5. `apply-threejs-style-presets.mjs` becomes a thin read/compose/write compatibility adapter.
-
-The active mutator count remained 18 at this ownership-only cut.
-
-## Tenth migration cut — retire standalone Galaxy motion stage
-
-The tenth bounded cut removes one redundant execution boundary without changing effective ordering:
-
-1. `apply-threejs-style-presets.mjs` invokes `composeThreejsStyleRuntime(source)` and then immediately `composeThreejsGalaxyMotionRuntime(styledRuntime)`;
-2. those were already adjacent stages, so no other transform moves across the style/motion boundary;
-3. the standalone `node scripts/apply-threejs-galaxy-motion.mjs` invocation is removed from `build:pages`;
-4. the compatibility adapter remains present and syntax-checked through `check:pages`;
-5. `tests/threejs-galaxy-stage-order.test.mjs` requires combined style→motion composition before haze/pattern coupling and forbids standalone motion-stage return;
-6. the active post-build mutation count therefore decreases from **18 to 17**.
-
-This is an invocation-plumbing reduction only. Galaxy motion parameters, style semantics, haze coupling, graph semantics, release authority, and `v1` are unchanged.
-
-## Eleventh migration cut — Galaxy pattern-coupling ownership
-
-The eleventh bounded cut moves the remaining qualified Galaxy pattern-coupling semantics into `scripts/public-threejs-galaxy-pattern-coupling.mjs` without changing the active 17-stage order:
-
-1. canonical central-morphology/disc-haze input validation is preserved;
-2. stale legacy haze signatures and partial coupling intermediates continue to fail closed;
-3. the existing 2400 s dust/haze phase lock is owned by the canonical composer;
-4. the existing read-only haze pattern-frame/rotation/reference-radius evidence augmentation is owned by the canonical composer;
-5. `apply-threejs-galaxy-central-bulge.mjs` becomes a thin read/compose/write compatibility adapter with no independent coupling kernel;
-6. central morphology, disc-haze geometry, motion/style parameters, graph semantics, release authority, and `v1` remain unchanged.
-
-This ownership-only cut leaves the active mutator count at 17.
-
-## Twelfth migration cut — retire standalone Galaxy pattern-coupling stage
-
-The twelfth bounded cut removes the second redundant Galaxy execution boundary while preserving the exact qualified composition order:
-
-1. `apply-threejs-style-presets.mjs` now performs `composeThreejsStyleRuntime(source)` → `composeThreejsGalaxyMotionRuntime(styledRuntime)` → `composeThreejsGalaxyPatternCouplingRuntime(motionRuntime)`;
-2. the former standalone pattern-coupling stage was immediately after the combined style/motion stage, so no unrelated transform crosses the boundary;
-3. `node scripts/apply-threejs-galaxy-central-bulge.mjs` is removed only from `build:pages`;
-4. both retired Galaxy compatibility adapters remain present and syntax-checked through `check:pages`;
-5. `tests/threejs-galaxy-stage-order.test.mjs` forbids standalone motion and pattern-coupling stage return and requires `style < motion < pattern` composition inside the combined adapter;
-6. active post-build mutators therefore decrease from **17 to 16**.
-
-This cut changes invocation plumbing only. The 2/3/4-arm policy, 22° pitch, 2400 s pattern, 45.36 scaled dust reference, local `0.68` ellipse, `480 + lane * 240`, Motion Off behavior, no-persistent-lines policy, owner/contributed authority, and non-physical haze boundary are unchanged.
-
-## Thirteenth migration cut — Three.js repository-label semantic ownership
-
-PR #390 moves the bounded Three.js repository-label semantics into `scripts/public-threejs-repository-labels.mjs` without changing the then-active 16-stage execution order:
-
-1. selected/direct-search lazy label behavior and its existing budgets remain canonical;
-2. Category Navigator remains the required semantic prerequisite;
-3. `apply-threejs-repository-labels.mjs` becomes a thin filesystem compatibility adapter;
-4. label/search/category semantics, CSS presentation, graph semantics and release authority are unchanged.
-
-This ownership-only cut leaves the active mutator count at 16.
-
-## Fourteenth migration cut — retire standalone repository-label stage
-
-PR #393 removes the redundant repository-label execution boundary while preserving Category Navigator → repository-label order:
-
-1. `apply-threejs-category-navigator.mjs` composes Category Navigator runtime/page state and then canonical repository-label runtime/page state;
-2. the combined stage copies both Category Navigator assets and the repository-label stylesheet;
-3. standalone `node scripts/apply-threejs-repository-labels.mjs` is removed from `build:pages` but the adapter remains syntax-checked for compatibility;
-4. executable order tests prevent the standalone label stage from returning;
-5. the repository-wide active post-build count decreases from **16 to 15**.
-
-No repository-label budget, search/category semantic, Galaxy semantic, graph authority, or `v1` behavior changes in this cut.
-
-## Fifteenth migration cut — Three.js Category Navigator semantic ownership
-
-PR #396 moves the already-qualified Category Navigator transformation into `scripts/public-threejs-category-navigator.mjs`:
-
-1. canonical runtime/page composers own the existing navigator marker, selection/clear/visibility change notifications, navigator adapter export, and page attachments;
-2. `apply-threejs-category-navigator.mjs` becomes a thin filesystem/order carrier;
-3. the same active stage continues to compose canonical Category Navigator → repository labels in the qualified order;
-4. fail-close, idempotence and source-ownership tests remain executable.
-
-This ownership-only cut leaves the active mutator count at 15.
-
-## Sixteenth migration cut — remove retired Galaxy compatibility adapters
-
-PR #397 removes dead source/API surface after both Galaxy-specific execution stages were already retired:
-
-1. repository-wide reference search found no production caller of `patchThreejsGalaxyMotionRuntime`, `applyThreejsGalaxyMotion`, `patchThreejsGalaxyCentralBulgeRuntime`, or `applyThreejsGalaxyCentralBulge` outside the obsolete adapters and adapter-only tests/docs/check list;
-2. `scripts/apply-threejs-galaxy-motion.mjs` and `scripts/apply-threejs-galaxy-central-bulge.mjs` are deleted;
-3. their obsolete `check:pages` syntax-check entries are removed;
-4. canonical motion and pattern-coupling semantics, idempotence, stale/partial fail-close behavior and syntax checks remain tested directly;
-5. an explicit absence gate prevents the retired adapter files from silently returning;
-6. `build:pages` is unchanged by PR #397, so the active post-build count remains **15**.
-
-This is dead-code retirement only. Galaxy morphology, motion, pattern coupling, evidence semantics, owner/contributed authority, graph semantics, release authority and `v1` are unchanged.
-
-## Next bounded migrations
-
-Re-inventory the residual `postprocess-public-pages.mjs` responsibilities separately from renderer-local work. Treat CSP compatibility rewriting and runtime-script attachment as independent mechanisms and do not collapse them merely to reduce line count.
-
-For Three.js Galaxy, central morphology, disc-haze presentation, style semantics, motion semantics and pattern coupling now all have canonical owners. No standalone Galaxy-specific semantic post-build stage or dead Galaxy compatibility adapter remains. The remaining `apply-threejs-style-presets.mjs` stage is a broader Three.js renderer composition/order carrier; relocate it only if a broader canonical Three.js build boundary can preserve style → motion → pattern order and all current browser evidence. Do not keep reducing stages merely for the number, and do not combine maintenance with Galaxy redesign.
-
-## Rules for future changes
-
-- Do not add a new `apply-*` stage merely because string replacement is faster for one feature.
-- Prefer modifying the canonical source that owns the behavior.
-- If a temporary adapter is unavoidable, add an explicit retirement condition and affected test before admitting it to the budget.
-- Removing a stage must not require changing the historical budget test; deletion is the expected direction.
-- Do not combine cleanup with renderer-semantic redesign, release-pin movement, or dormant one-click reactivation.
+Build cleanup does not authorize renderer redesign, release-pin movement, a new graph model, or dormant one-click installer reactivation. Existing product, graph-authority and browser-verification boundaries remain intact.

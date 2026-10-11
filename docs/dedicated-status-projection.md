@@ -12,6 +12,18 @@ The dedicated renderer remains the authority for Tree, Radial, Treemap, Timeline
 
 Status changes update the existing shareable `status=` URL state and reload the same static viewer. This intentionally rebuilds aggregate/dedicated layouts from the selected repository set instead of trying to mutate eight different internal state machines. It adds one static `graph.json` reload per explicit filter change, but no GitHub REST request and no owner-side service load.
 
+## Build ownership
+
+[`build-public-pages.mjs`](../scripts/build-public-pages.mjs) emits the status controls, copies the shared projection runtime, and places it before each dedicated renderer. These prerequisites belong to page generation: attaching them later creates an incomplete intermediate page and an unnecessary ordering dependency.
+
+Dedicated renderer sources directly own Contributed status precedence, palette and aggregate composition. They call [`public-dedicated-graph.js`](../scripts/public-dedicated-graph.js) directly for repository URL validation and metadata normalization, strict external admission, category-only layout projection without graph ownership mutation, and contribution details. The builder emits this runtime as a shared dependency before each dedicated renderer instead of inserting code into renderer sources.
+
+Owned URLs may canonicalize extra GitHub path segments; external URLs require exactly an owner/repository path. That distinction must survive reuse of the URL parser. Owned and external topic limits also remain distinct. Owner/group admission, duplicate-ID handling, edges and dates remain renderer projections, not switches in a universal graph sanitizer.
+
+Radial owns its external-ring geometry; category-only renderers explicitly request the temporary external layout projection. The shared runtime's evidence snapshot reads the current admitted graph through a renderer-provided callback rather than owning a second graph state.
+
+Dedicated admission currently rejects external repository URLs with extra path segments, while the shared view-model canonicalizes those URLs. The returned node and graph shapes also differ. Replacing admission wholesale therefore requires explicit behavioral reconciliation, not merely a shared function call.
+
 ## Why this is minimal
 
 - one browser adapter, not eight renderer patches;

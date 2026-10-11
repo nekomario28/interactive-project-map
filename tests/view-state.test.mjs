@@ -21,7 +21,11 @@ test("shared exploratory viewer emits one reusable view-state layer", async () =
     assert.ok(html.includes('id="shareView"'));
     assert.ok(html.includes('id="focusButton"'));
     assert.ok(html.indexOf('../viewer.js') < html.indexOf('../view-state.js'));
-    assert.ok(!dedicated.includes('data-status-filter="original"'));
+    assert.ok(dedicated.includes('src="../dedicated-view-state.js"'));
+    assert.ok(!dedicated.includes('src="../view-state.js"'));
+    for (const control of ["motionToggle", "activityToggle", "shareView", "focusButton"]) {
+      assert.ok(!dedicated.includes(`id="${control}"`), `${control} remains shared-viewer-only`);
+    }
     assert.doesNotThrow(() => new Function(runtime));
   } finally {
     await rm(outputDir, { recursive: true, force: true });

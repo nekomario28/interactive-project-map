@@ -46,7 +46,7 @@ test("public builder owns final runtime script order and CSP before postprocess 
     const dedicatedBefore = new Map();
     for (const route of DEDICATED_ROUTES) {
       const html = await readFile(join(root, route, "index.html"), "utf8");
-      const expected = ["tree-nav.js", `${route}-viewer.js`, ...DEDICATED_TAIL];
+      const expected = ["tree-nav.js", "dedicated-view-state.js", "dedicated-graph.js", `${route}-viewer.js`, ...DEDICATED_TAIL];
       assert.deepEqual(scriptSources(html), expected, `${route} builder script order drifted`);
       assertCanonicalCsp(html, route);
       dedicatedBefore.set(route, html);

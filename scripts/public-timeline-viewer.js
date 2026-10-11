@@ -49,16 +49,6 @@ function normalizeUsername(value) {
   if (!USERNAME_RE.test(normalized)) throw new Error("Invalid GitHub username");
   return normalized;
 }
-function safeRepoUrl(value, name) {
-  if (typeof value !== "string") return null;
-  try {
-    const url = new URL(value);
-    const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
-    if (url.protocol !== "https:" || url.hostname !== "github.com" || parts.length < 2) return null;
-    if (parts[0].toLowerCase() !== username || parts[1].toLowerCase() !== name.toLowerCase()) return null;
-    return `https://github.com/${encodeURIComponent(username)}/${encodeURIComponent(name)}`;
-  } catch { return null; }
-}
 function sanitizeGraph(value) {
   if (!value || typeof value !== "object" || String(value.owner || "").toLowerCase() !== username || !Array.isArray(value.nodes) || value.nodes.length > 520) return null;
   const nodes = [];
@@ -71,29 +61,22 @@ function sanitizeGraph(value) {
       nodes.push({ id, label, type: "group", repositoryCount: Number.isFinite(raw.repositoryCount) ? Math.max(0, Math.floor(raw.repositoryCount)) : 0 });
       continue;
     }
-    if (!/^[A-Za-z0-9._-]{1,100}$/.test(label)) continue;
-    const url = safeRepoUrl(raw.url, label);
-    if (!url) continue;
+    const metadata = window.ProjectMapDedicatedGraph.ownedRepositoryMetadata(raw, username, label);
+    if (!metadata) continue;
     const updatedAt = safeDate(raw.updatedAt);
     const createdAt = safeDate(raw.createdAt) || updatedAt;
     nodes.push({
-      id, label, type: "repository", url,
-      description: cleanText(raw.description, 2000),
-      language: typeof raw.language === "string" ? raw.language.slice(0, 100) : null,
-      topics: Array.isArray(raw.topics) ? raw.topics.filter((item) => typeof item === "string").slice(0, 40).map((item) => item.slice(0, 80)) : [],
-      stars: Number.isFinite(raw.stars) ? Math.max(0, Math.floor(raw.stars)) : 0,
-      forks: Number.isFinite(raw.forks) ? Math.max(0, Math.floor(raw.forks)) : 0,
-      fork: raw.fork === true,
-      archived: raw.archived === true,
+      id, label, type: "repository",
+      ...metadata,
       createdAt,
       updatedAt,
       groupId: cleanText(raw.groupId, 120),
       groupLabel: cleanText(raw.groupLabel, 120),
     });
   }
-  return { owner: username, nodes };
+  return window.ProjectMapDedicatedGraph.completeGraph(value, { owner: username, nodes });
 }
-function statusOf(repo) { return repo.archived ? "archived" : repo.fork ? "fork" : "original"; }
+function statusOf(repo) { return repo?.relation === "contributed" ? "contributed" : repo.archived ? "archived" : repo.fork ? "fork" : "original"; }
 function dateMs(repo) {
   const value = Date.parse(repo.createdAt || repo.updatedAt || "");
   return Number.isFinite(value) ? value : 0;
@@ -103,6 +86,7 @@ function groupMembers(group, repos) {
   return repos.filter((repo) => repo.groupId === key || group.id === `group:${repo.groupId}`);
 }
 function buildLayout(graph) {
+  graph = window.ProjectMapDedicatedGraph.projectLayout(graph);
   const groups = graph.nodes.filter((node) => node.type === "group");
   const repos = graph.nodes.filter((node) => node.type === "repository" && dateMs(node) > 0);
   const now = Date.now();
@@ -123,7 +107,7 @@ function buildLayout(graph) {
   return { groups, nodes, min, max };
 }
 function palette() {
-  return { background: "#070a12", text: "#e8edf7", muted: "#9aa7bd", grid: "#29364c", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", selection: "#ffffff" };
+  return { background: "#070a12", text: "#e8edf7", muted: "#9aa7bd", grid: "#29364c", original: "#57d17a", fork: "#b59aff", archived: "#d9847b", contributed: "#E69F00", selection: "#ffffff" };
 }
 function canvasSize() {
   const rect = canvas.getBoundingClientRect();
@@ -206,14 +190,14 @@ function draw() {
   for (const repo of state.nodes) {
     const point = worldToScreen(repo.x, repo.y);
     const selected = repo === state.selected || repo === state.hovered;
-    const opacity = matches(repo) ? (repo.archived ? 0.72 : repo.fork ? 0.82 : 0.96) : 0.10;
+    const opacity = matches(repo) ? (repo.relation === "contributed" ? 0.96 : repo.archived ? 0.72 : repo.fork ? 0.82 : 0.96) : 0.10;
     const radius = selected ? 7 : 5;
     ctx.globalAlpha = opacity;
     ctx.fillStyle = colors[statusOf(repo)];
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    if (repo.archived) {
+    if (repo.archived && repo.relation !== "contributed") {
       ctx.strokeStyle = colors.archived;
       ctx.setLineDash([2, 2]);
       ctx.stroke();
@@ -290,6 +274,7 @@ function updateDetails(repo) {
   detailsLink.hidden = false;
   detailsLink.textContent = "Open repository ↗";
   draw();
+  window.ProjectMapDedicatedGraph.appendDetails(repo, detailsMeta, state.graph);
 }
 function pointDistance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function pointerPair() {
@@ -387,6 +372,8 @@ resetButton.addEventListener("click", () => { searchInput.value = ""; state.quer
 detailsClose.addEventListener("click", () => { updateDetails(null); canvas.focus({ preventScroll: true }); });
 window.addEventListener("resize", resize);
 window.visualViewport?.addEventListener("resize", resize, { passive: true });
+window.ProjectMapDedicatedGraph.installSnapshot("timeline", () => state.graph);
+
 function showError(message) { status.hidden = true; errorText.textContent = message; errorBox.classList.add("visible"); }
 try {
   username = normalizeUsername(query.get("username"));
