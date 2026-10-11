@@ -53,6 +53,33 @@ for (const [name, path] of views) {
   });
 }
 
+test("project source link stays inside intermediate and narrow viewports", async ({ page }) => {
+  for (const [width, height] of [[830, 600], [844, 390], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    for (const [name, path] of [
+      ["radial", "/radial/?username=example&style=radial&motion=off"],
+      ["shared", "/u/?username=example&style=galaxy-systems&motion=off"],
+      ["three", "/three/?username=example&style3d=cosmic&motion=off"],
+    ]) {
+      await page.goto(path);
+      if (name === "three") await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+      else await expect(page.locator("#status")).toBeHidden();
+      const link = page.locator("footer .project-source-link");
+      await expect(link).toBeInViewport({ ratio: 1 });
+      const box = await link.boundingBox();
+      expect(box.x + box.width, `${name} at ${width}px`).toBeLessThanOrEqual(width);
+      expect(box.y + box.height, `${name} at ${width}px`).toBeLessThanOrEqual(height);
+      expect(await link.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return hit === element || element.contains(hit);
+      })).toBe(true);
+      await mkdir(".tmp/playwright-visual/project-source-responsive", { recursive: true });
+      await page.screenshot({ path: `.tmp/playwright-visual/project-source-responsive/${name}-${width}x${height}.png` });
+    }
+  }
+});
+
 test("project source link opens an isolated tab without changing the map", async ({ page, context }) => {
   const url = "https://github.com/nekomario28/interactive-project-map";
   await context.route(url, (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Source fixture</title><p>Project source fixture</p>" }));
