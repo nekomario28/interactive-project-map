@@ -19,6 +19,13 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
 </p>
 
+<!-- public-users:start -->
+<p align="center">
+  <a href="docs/public-users.md"><strong>Public users: 4 verified GitHub accounts</strong></a><br />
+  <sub>Public profile installations · includes maintainers · checked 2026-10-10 · <a href="data/public-users.json">evidence</a></sub>
+</p>
+<!-- public-users:end -->
+
 <p align="center">
   <a href="https://nekomario28.github.io/interactive-project-map/"><strong>Open generator</strong></a>
   &nbsp;·&nbsp;
@@ -31,6 +38,8 @@
   <a href="CONTRIBUTING.md">Development</a>
   &nbsp;·&nbsp;
   <a href="docs/current-roadmap.md">Roadmap</a>
+  &nbsp;·&nbsp;
+  <a href="#license">License</a>
 </p>
 
 ---
@@ -51,24 +60,37 @@ Repository status remains explicit: **Original**, **Fork**, **Archived**, and op
 
 ## Quick start
 
-1. Open the **[public generator](https://nekomario28.github.io/interactive-project-map/)**.
-2. Enter your GitHub username and choose a theme, visual preset, and repository filters.
-3. If `USERNAME/USERNAME` does not exist yet, use **Step 0** to create the public GitHub profile repository.
-4. Use **Step 1** to copy the generated workflow and open GitHub's editor for `.github/workflows/project-map.yml`.
-5. Commit the workflow, then use **Step 2** to run **Update project map** once.
-6. Add the generated SVG snippet to your profile README.
+You need a GitHub account and a **public profile repository** named `USERNAME/USERNAME`. No local installation or personal access token is required.
 
-No personal access token is required for the normal setup. The generated workflow uses the profile repository's GitHub token for read-only metadata generation, then a separate publish job receives the narrow write permission needed to commit the two generated files.
+### 1. Generate your setup
 
-### Embed the generated map
+Open the **[public generator](https://nekomario28.github.io/interactive-project-map/)**, enter your GitHub username, and choose a visual preset and repository filters. The theme applies to the static README image. The default preset is **Radial Tree**; Contributed is opt-in.
+
+If your profile repository does not exist, use the generator's **Step 0** to create it.
+
+### 2. Save and run the workflow
+
+Use **Step 1** to copy the complete workflow and open GitHub's editor for `.github/workflows/project-map.yml` in your profile repository. Paste the workflow and commit it, then use **Step 2** to run **Update project map** once.
+
+Wait for the run to finish successfully. It commits `project-map/galaxy.svg` and `project-map/graph.json` to your profile repository, then refreshes them on the workflow's schedule. A first-time map is unavailable until those files exist; check the run's logs if generation fails.
+
+The workflow uses GitHub's built-in token: generation has read-only metadata access, and a separate publish job has the narrow write permission needed to commit the generated files.
+
+### 3. Add the map to your README
+
+Copy the generator's README snippet into `USERNAME/USERNAME`'s `README.md`. It links the static image to the interactive viewer for your selected preset.
+
+For the default Radial Tree preset, you can also use this snippet after replacing `USERNAME`:
 
 ```html
 <p align="center">
-  <a href="https://nekomario28.github.io/interactive-project-map/u/?username=USERNAME&style=galaxy-systems">
-    <img width="740" src="https://raw.githubusercontent.com/USERNAME/USERNAME/HEAD/project-map/galaxy.svg" alt="USERNAME project map" />
+  <a href="https://nekomario28.github.io/interactive-project-map/radial/?username=USERNAME">
+    <img width="740" src="project-map/galaxy.svg" alt="USERNAME project map" />
   </a>
 </p>
 ```
+
+Click the image to explore the interactive map. For another preset, use the generator's matching snippet; the output filename remains `galaxy.svg`.
 
 ## Visual presets
 
@@ -154,6 +176,21 @@ The normal reusable-workflow surface is intentionally small:
 | `forks` | `true` | include forks |
 | `archived` | `false` | include archived repositories |
 | `contributed` | `false` | include bounded public contributions owned by others without changing ownership |
+| `width` | `740` | SVG width, `420`–`1600`px |
+| `height` | `auto` | Galaxy family: automatic height, or a fixed `260`–`1000`px frame; other styles default to their native `420`px layout |
+| `padding` | `24` | Space around the fitted Galaxy graph, `0`–`100`px; the legend has a separate area |
+
+Galaxy Classic, Systems and Hybrid fit their graph into the frame with padding. Animated styles include the full motion range, so planets and labels stay inside while orbiting. Auto height keeps the available width and avoids unnecessarily shrinking the map into a short rectangle. Dense Galaxy fallbacks use the same framing.
+
+You can override these defaults in the recommended reusable workflow's `with:` block:
+
+```yaml
+width: "900"
+height: auto       # Or "600" for a fixed frame that scales the graph to fit
+padding: "32"
+```
+
+The fit keeps the graph's proportions and reserves a separate area for the legend. Text bounds use a conservative allowance for system fonts; fitting prevents edge clipping but does not resolve labels overlapping within a crowded category.
 
 The reusable workflow derives the visualized username from the caller repository owner, uses `github.token` for read-only metadata access, and writes its transfer artifact under the fixed `project-map` contract.
 
@@ -161,7 +198,7 @@ Stable installs use outer channel `@v1`. Advanced users may replace `v1` with a 
 
 ### Direct Action — advanced
 
-`action.yml` is a lower-level interface used by the reusable workflow and by advanced callers. It additionally exposes `github_token`, `username`, `width`, `height`, and `output_dir`. Do not assume those lower-level inputs are configurable through the recommended reusable-workflow setup.
+`action.yml` is a lower-level interface used by the reusable workflow and by advanced callers. It additionally exposes `github_token`, `username`, and `output_dir`. Both interfaces expose `width`, `height`, and Galaxy `padding`.
 
 See [`action.yml`](action.yml) for the exact direct-Action contract.
 
@@ -210,8 +247,12 @@ CI runs those suites in the pinned Playwright container. See [`CONTRIBUTING.md`]
 
 Project maintainers/contributors include [Yuu / nekomario28](https://github.com/nekomario28) and [SYUN / syun88](https://github.com/syun88). GitHub's Contributors view remains commit-authorship-driven.
 
-Public projects and papers that informed implementation choices are research references, not automatically bundled dependencies or Git co-authors. Detailed adoption and licensing boundaries are recorded in [`docs/licensing-audit-2026-08-21.md`](docs/licensing-audit-2026-08-21.md) and the corresponding research notes.
+Public projects and papers that informed implementation choices are research references, not automatically bundled dependencies or Git co-authors. The [historical licensing audit](docs/licensing-audit-2026-08-21.md) and corresponding research notes record those adoption boundaries. Current bundled-code notices are listed below.
 
 ## License
 
-MIT — copyright held collectively by the `interactive-project-map` contributors.
+Project code is licensed under the **[MIT License](LICENSE)**, with the copyright notice `Copyright (c) 2026 interactive-project-map contributors`. The Pages distribution includes the same license as `LICENSE`.
+
+The 3D viewer bundles **[Three.js](https://github.com/mrdoob/three.js)** under its own MIT license. [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES) preserves the upstream copyright and complete license text; the Pages build includes it at `vendor/THREE-LICENSE.txt` beside the pinned engine files. Development tools are not bundled into the viewer.
+
+Repositories displayed in a map retain their own licenses and ownership. This project's MIT license does not relicense those repositories or their content.

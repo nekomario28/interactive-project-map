@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 import {
   THREE_CORE_LOCAL_FILENAME,
@@ -45,7 +46,7 @@ test("local Three.js module stays inside a GitHub Pages project subpath", () => 
   assert.equal(engineUrl.pathname, "/interactive-project-map/vendor/three-0.185.1.module.min.js");
 });
 
-test("build localization writes the pinned Three.js module and its core dependency", async () => {
+test("build localization writes pinned Three.js modules with their complete license notice", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-local-"));
   try {
     await mkdir(join(root, "three"), { recursive: true });
@@ -77,6 +78,17 @@ test("build localization writes the pinned Three.js module and its core dependen
     assert.equal(result.sourceCommit, THREE_SOURCE_COMMIT);
     assert.equal(vendor, fakeEngine);
     assert.equal(coreVendor, fakeCore);
+    const license = await readFile(join(root, "vendor", "THREE-LICENSE.txt"), "utf8");
+    assert.equal(license, await readFile(new URL("../THIRD_PARTY_NOTICES", import.meta.url), "utf8"));
+    assert.match(license, /Three\.js 0\.185\.1/);
+    assert.ok(license.includes(THREE_SOURCE_COMMIT));
+    assert.match(license, /Copyright © 2010-2026 three\.js authors/);
+    assert.match(license, /Permission is hereby granted, free of charge/);
+    assert.match(license, /all copies or substantial portions of the Software/);
+    assert.match(license, /THE SOFTWARE IS PROVIDED "AS IS"/);
+    const upstreamLicense = license.slice(license.indexOf("The MIT License\n"));
+    const upstreamBlob = createHash("sha1").update(`blob ${Buffer.byteLength(upstreamLicense)}\0`).update(upstreamLicense).digest("hex");
+    assert.equal(upstreamBlob, "8ada2a5f982916b0ba4b7a0aa7de347587e745d7", "License text must match the pinned upstream Git blob byte-for-byte");
     assert.match(runtime, /\.\/vendor\/three-0\.185\.1\.module\.min\.js/);
     assert.doesNotMatch(runtime, /\.\.\/vendor\/three-0\.185\.1\.module\.min\.js/);
     assert.doesNotMatch(runtime, /cdn\.jsdelivr\.net/);

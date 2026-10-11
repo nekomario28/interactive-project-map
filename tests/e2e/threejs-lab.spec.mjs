@@ -221,6 +221,44 @@ test("Three.js shared admission fails closed on incomplete Contributed provenanc
   await expect(page.locator("#errorText")).toContainText("static project graph is missing or did not pass validation");
 });
 
+test.describe("mobile project source link", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  for (const [name, path] of [["2D", "/u/?username=example&style=galaxy-hybrid&motion=off"], ["3D", "/three/?username=example&style3d=galaxy&motion=off"]]) {
+    test(`${name} phone view keeps its project source link visible without overflow`, async ({ page, browserName }) => {
+      await installGraph(page);
+      if (name === "3D" && browserName === "webkit") await page.route("**/vendor/three-*.module.min.js", (route) => route.abort("failed"));
+      await page.goto(path);
+      if (name === "2D") await expect(page.locator("#status")).toBeHidden();
+      else if (browserName === "webkit") await expect(page.locator("#error")).toHaveClass(/visible/);
+      else await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+      const link = page.locator("footer .project-source-link");
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute("href", "https://github.com/nekomario28/interactive-project-map");
+      await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      const metrics = await link.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, right: rect.right, bottom: rect.bottom, height: rect.height, width: innerWidth, viewportHeight: innerHeight, scrollWidth: document.documentElement.scrollWidth };
+      });
+      expect(metrics.x).toBeGreaterThan(0);
+      expect(metrics.right).toBeGreaterThan(metrics.width - 24);
+      expect(metrics.right).toBeLessThanOrEqual(metrics.width);
+      expect(metrics.bottom).toBeGreaterThan(metrics.viewportHeight - 50);
+      expect(metrics.bottom).toBeLessThanOrEqual(metrics.viewportHeight);
+      expect(metrics.height).toBeGreaterThanOrEqual(24);
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.width);
+      await mkdir(".tmp/playwright-visual/project-source", { recursive: true });
+      await page.screenshot({ path: `.tmp/playwright-visual/project-source/mobile-${name.toLowerCase()}-${browserName}.png`, fullPage: true });
+    });
+  }
+
+});
+
 test.describe("mobile Three.js happy-path evidence", () => {
   test.use({
     viewport: { width: 390, height: 844 },
