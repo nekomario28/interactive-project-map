@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { buildPublicPages } from "../scripts/build-public-pages.mjs";
 import { postprocessPublicPages } from "../scripts/postprocess-public-pages.mjs";
-import { applyDedicatedViewState } from "../scripts/apply-dedicated-view-state.mjs";
 import { applyCategoryNavigator } from "../scripts/apply-category-navigator.mjs";
 import { applyUiContractFixes } from "../scripts/apply-ui-contract-fixes.mjs";
 
@@ -16,7 +15,6 @@ test("final Pages build keeps setup copy, legend semantics and Sunburst dense LO
   try {
     await buildPublicPages(dir);
     await postprocessPublicPages(dir);
-    await applyDedicatedViewState(dir);
     await applyCategoryNavigator(dir);
     await applyUiContractFixes(dir); // Explicit second pass proves final fixer is idempotent.
 

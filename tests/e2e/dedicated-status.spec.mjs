@@ -181,6 +181,32 @@ test("all dedicated viewers retain strict external identity without owned catego
   }
 });
 
+test("Matrix and Sankey expose Contributed as a separate aggregate rather than Fork or Archived", async ({ page }) => {
+  await installFixture(page);
+  for (const style of ["matrix", "sankey"]) {
+    await page.goto(`/${style}/?username=example&style=${style}`);
+    await expect(page.locator("#status")).toBeHidden();
+    const point = await page.evaluate((styleName) => {
+      if (styleName === "matrix") {
+        const cell = state.cells.find((item) => item.repos.some((repo) => repo.relation === "contributed"));
+        const geometry = gridGeometry();
+        return worldToScreen(
+          geometry.left + (cell.columnIndex + 0.5) * geometry.colW,
+          geometry.top + (cell.rowIndex + 0.5) * geometry.rowH,
+        );
+      }
+      const group = state.groups.find((item) => item.group.relation === "contributed");
+      return worldToScreen(group.x + group.w / 2, group.y + group.h / 2);
+    }, style);
+    await page.locator("#galaxy").click({ position: point });
+    await expect(page.locator("#detailsTitle")).toContainText("External contributions");
+    await expect.poll(() => page.locator("#detailsMeta").evaluate((element) =>
+      Object.fromEntries([...element.querySelectorAll("dt")].map((label) => [label.textContent, label.nextElementSibling.textContent])),
+    )).toEqual({ Repositories: "1", Original: "0", Fork: "0", Archived: "0", Contributed: "1" });
+    await expect(page.locator("#detailsLink")).toHaveAttribute("href", "https://github.com/octocat/Hello-World");
+  }
+});
+
 test("dedicated status chips update the shareable URL and reload through the same four-status projection", async ({ page }) => {
   await installFixture(page);
   await page.goto("/tree/?username=example&style=tree");
@@ -215,7 +241,8 @@ test("dedicated viewers disable a status that is absent from the generated graph
   };
   await installFixture(page, noArchived);
   await page.goto("/matrix/?username=example&style=matrix");
-  const archived = page.getByRole("button", { name: /Archived repositories: 0/ });
+  // Empty status chips are hidden on narrow screens but remain disabled in the DOM.
+  const archived = page.locator('[data-status-filter="archived"]');
   await expect(archived).toBeDisabled();
   await expect(archived).toHaveText("Archived 0");
   await expect(page.getByRole("button", { name: /Contributed repositories: 1/ })).toHaveText("Contributed 1");

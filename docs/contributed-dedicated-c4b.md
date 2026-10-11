@@ -52,7 +52,7 @@ A renderer may use a presentation-only fallback bucket for unassigned repositori
 ## Minimal implementation order
 
 1. Extend the common dedicated projection adapter to `original,fork,archived,contributed` with alias `c`; derive Contributed before source flags and keep zero-count/default URL behavior unchanged.
-2. Add the fourth generated status control in `apply-dedicated-view-state.mjs`.
+2. Generate the four status controls and the shared projection script through `build-public-pages.mjs`; see [dedicated status projection](dedicated-status-projection.md).
 3. Extend dedicated viewer sanitizers so C2-valid external `owner/repo` identity and canonical external URL survive browser validation.
 4. Extend each viewer's display-status helper/palette/details only where the existing renderer directly consumes status.
 5. For aggregate views, add a fourth composition bucket and explicitly test unassigned Contributed repositories.
