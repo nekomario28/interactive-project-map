@@ -458,6 +458,7 @@ body[data-map-style="obsidian"] .legend {
 footer {
   z-index: 5;
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -491,16 +492,20 @@ footer a {
   align-items: center;
   min-height: 24px;
   margin-inline-start: auto;
-  padding: 2px 4px;
-  border-radius: 3px;
-  color: var(--muted);
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-elevated);
+  color: var(--text);
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .project-source-link:hover {
-  color: var(--text);
-  text-decoration: underline;
+  border-color: var(--accent);
+  color: var(--accent);
+  text-decoration: none;
 }
 
 .project-source-link:focus-visible {
