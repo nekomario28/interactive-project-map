@@ -15,6 +15,10 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 2
+    ignore:
+      # The immutable inner Action pin is a reviewed release artifact that only
+      # moves through the declared release-chain proof, never via dependency bumps.
+      - dependency-name: "nekomario28/interactive-project-map"
     groups:
       actions-maintenance:
         patterns:
