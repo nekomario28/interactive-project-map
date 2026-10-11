@@ -354,6 +354,10 @@ body[data-map-style="obsidian"] .legend {
   text-decoration: underline;
 }
 
+.details.is-dismissed {
+  display: none;
+}
+
 .details:not(.has-selection) .details-close {
   opacity: 0.55;
 }

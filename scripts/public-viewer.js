@@ -564,6 +564,7 @@ function hitTest(screenX, screenY) {
 function updateDetails(node) {
   state.selected = node;
   details.classList.toggle("has-selection", Boolean(node));
+  if (node) details.classList.remove("is-dismissed");
   if (!node) {
     detailsTitle.textContent = "Project map";
     detailsDescription.textContent = state.style === "obsidian"
@@ -729,6 +730,7 @@ canvas.addEventListener("keydown", (event) => {
     window.open(state.selected.url, "_blank", "noopener");
   } else if (event.key === "Escape") {
     updateDetails(null);
+    details.classList.add("is-dismissed");
   }
 });
 
@@ -749,10 +751,12 @@ resetButton.addEventListener("click", () => {
   searchInput.value = "";
   state.query = "";
   updateDetails(null);
+  details.classList.add("is-dismissed");
   rebuildLayout({ fit: true });
 });
 detailsClose.addEventListener("click", () => {
   updateDetails(null);
+  details.classList.add("is-dismissed");
   canvas.focus({ preventScroll: true });
 });
 window.addEventListener("resize", resize);
