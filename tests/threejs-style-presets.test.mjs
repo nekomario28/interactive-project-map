@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -72,20 +72,17 @@ test("canonical Three.js style page composer removes the render-density button",
   assert.equal(composeThreejsStylePage(patched), patched);
 });
 
-test("post-build Three.js style stage is only a thin I/O adapter", async () => {
-  const adapter = await readFile(new URL("../scripts/apply-threejs-style-presets.mjs", import.meta.url), "utf8");
-  assert.match(adapter, /composeThreejsStyleRuntime/);
-  assert.match(adapter, /composeThreejsStylePage/);
-  assert.match(adapter, /export const patchThreejsStyleRuntime = composeThreejsStyleRuntime/);
-  assert.doesNotMatch(adapter, /THREE_STYLE_THEMES|GALAXY_LAYOUT_HELPERS|renderDensityToggle/);
+test("retired Three.js style compatibility adapter stays absent", async () => {
+  await assert.rejects(
+    () => access(new URL("../scripts/apply-threejs-style-presets.mjs", import.meta.url)),
+    { code: "ENOENT" },
+  );
 });
 
-test("Three.js style canonical composer and adapter pass Node syntax checks", () => {
-  for (const path of ["scripts/public-threejs-style-presets.mjs", "scripts/apply-threejs-style-presets.mjs"]) {
-    const result = spawnSync(process.execPath, ["--check", path], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    assert.equal(result.status, 0, `${path}: ${result.stderr}`);
-  }
+test("Three.js style canonical composer passes Node syntax check", () => {
+  const result = spawnSync(process.execPath, ["--check", "scripts/public-threejs-style-presets.mjs"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
 });

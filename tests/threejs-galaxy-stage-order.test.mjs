@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -36,6 +36,12 @@ test("Three.js dimension → style → motion → pattern composition remains ex
   assert.ok(motionCall > styleCall, "Galaxy motion must compose after the style runtime surface is established");
   assert.ok(patternCall > motionCall, "Galaxy pattern coupling must compose after the final Galaxy motion contract");
 
-  // Keep the old style adapter available for focused compatibility tests, not active execution.
-  assert.match(packageJson.scripts?.["check:pages"] || "", /node --check scripts\/apply-threejs-style-presets\.mjs/);
+  assert.doesNotMatch(packageJson.scripts?.["check:pages"] || "", /node --check scripts\/apply-threejs-style-presets\.mjs/);
+});
+
+test("retired Three.js style compatibility adapter stays absent", async () => {
+  await assert.rejects(
+    () => access(new URL("../scripts/apply-threejs-style-presets.mjs", import.meta.url)),
+    { code: "ENOENT" },
+  );
 });
