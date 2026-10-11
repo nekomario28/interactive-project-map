@@ -26,7 +26,7 @@ test("Pages home render source is shell-only and delegates setup to app.js", () 
 
 test("Three.js exposes the same project source link in its footer", () => {
   const html = renderThreejsLabPage();
-  const links = [...html.matchAll(/<a class="project-source-link"[^>]*>GitHub<\/a>/g)];
+  const links = [...html.matchAll(/<a class="project-source-link"[^>]*>Source on GitHub ↗<\/a>/g)];
   assert.equal(links.length, 1);
   assert.match(links[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
   assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);
@@ -56,7 +56,7 @@ test("public Pages build emits twelve map presets and explicit default-off Contr
     assert.match(shared, /tree-router\.js/); assert.match(shared, /viewer\.js/); assert.match(shared, /data-map-style="galaxy-systems"/);
     for (const route of ["u", ...dedicated]) {
       const html = await read(`${route}/index.html`);
-      const links = [...html.matchAll(/<a class="project-source-link"[^>]*>GitHub<\/a>/g)];
+      const links = [...html.matchAll(/<a class="project-source-link"[^>]*>Source on GitHub ↗<\/a>/g)];
       assert.equal(links.length, 1, `${route} must expose one project source link`);
       assert.match(links[0][0], /href="https:\/\/github\.com\/nekomario28\/interactive-project-map"/);
       assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);

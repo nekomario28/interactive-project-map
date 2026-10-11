@@ -9,7 +9,7 @@ function esc(value: string): string {
 }
 
 export function renderProjectSourceLink(): string {
-  return '<a class="project-source-link" href="https://github.com/nekomario28/interactive-project-map" target="_blank" rel="noopener noreferrer" aria-label="Interactive Project Map source on GitHub (opens in a new tab)">GitHub</a>';
+  return '<a class="project-source-link" href="https://github.com/nekomario28/interactive-project-map" target="_blank" rel="noopener noreferrer" aria-label="Interactive Project Map source on GitHub (opens in a new tab)">Source on GitHub ↗</a>';
 }
 
 export function renderHome(origin: string): string {

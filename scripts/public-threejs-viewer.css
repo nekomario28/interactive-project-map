@@ -258,6 +258,12 @@ body[data-map-style="threejs-cosmic"] footer {
   background: rgba(3, 6, 14, 0.92);
 }
 
+.project-source-link {
+  border-color: rgba(119, 150, 211, 0.3);
+  background: linear-gradient(180deg, rgba(21, 30, 52, 0.74), rgba(10, 16, 31, 0.82));
+  color: #dce8ff;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .three-controls button:hover,
   .three-link-button:hover {
