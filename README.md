@@ -214,6 +214,8 @@ The retained Cloudflare Worker can support development/legacy hosted paths, whil
 
 See [`docs/current-roadmap.md`](docs/current-roadmap.md), [`docs/github-only-architecture-decision.md`](docs/github-only-architecture-decision.md), and [`docs/github-app-one-click-installer.md`](docs/github-app-one-click-installer.md).
 
+The source import dependency graph is also checked with the pinned [gxkit inspection gate](docs/gxkit-source-inspection.md); it is separate from portfolio graph semantics and browser visual tests.
+
 ## Development
 
 Node.js **24 is recommended** and matches CI; `package.json` currently supports Node.js `>=22.18.0`.
