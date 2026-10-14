@@ -280,6 +280,9 @@ window.addEventListener("DOMContentLoaded", () => {
         }
       }
       if (!chosen && forced) {
+        // Do not pin categories whose actual nodes have left the viewport
+        // onto the border: doing so crowds out legitimate repository text.
+        if (candidate.point.x < 0 || candidate.point.x > width || candidate.point.y < 0 || candidate.point.y > height) continue;
         const candidates = order.map((index) => fitBoxInside(boxes[index], width, height)).filter(Boolean);
         // Prefer a fully visible anchor with the least overlap; no longer
         // draw the first offscreen anchor when all ordinary choices fail.
