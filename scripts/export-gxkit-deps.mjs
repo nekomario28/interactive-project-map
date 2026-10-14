@@ -30,10 +30,10 @@ function importsOf(source, filename) {
   // TypeScript 7's native compiler intentionally no longer exposes createSourceFile.
   // Node strips TS-only syntax; espree (already present for ESLint) parses the
   // resulting JavaScript. Preserve declared type-only import/export edges first.
-  const isTypeScript = /\\.[cm]?tsx?$/.test(filename);
+  const isTypeScript = /\.[cm]?tsx?$/.test(filename);
   const prepared = isTypeScript
     ? stripTypeScriptTypes(
-        source.replace(/(^|[\\r\\n])(\\s*)(import|export)\\s+type(?=\\s*(?:\\{|\\*|[\\w$]+\\s+from\\s*["']))/g, "$1$2$3"),
+        source.replace(/(^|[\r\n])(\s*)(import|export)\s+type(?=\s*(?:\{|\*|[\w$]+\s+from\s*["']))/g, "$1$2$3"),
         { mode: "strip" },
       )
     : source;
