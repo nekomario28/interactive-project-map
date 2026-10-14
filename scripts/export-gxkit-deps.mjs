@@ -1,13 +1,14 @@
 /** Export IPM's *source-code* imports to the depsgx ModuleGraph contract.
  *
  * This is intentionally not the user-facing repository/ownership graph.
- * Parsing uses the TypeScript compiler already required by the IPM build;
+ * Parsing reuses espree and Node's built-in TypeScript type stripping;
  * gxkit remains a separate, optional inspection gate.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import { stripTypeScriptTypes } from "node:module";
+import * as espree from "espree";
 
 const ROOTS = ["src", "packages", "scripts"];
 const EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
@@ -26,26 +27,40 @@ function walk(root, folder, output) {
 }
 
 function importsOf(source, filename) {
-  const kind = /\.[cm]?tsx?$/.test(filename) ? ts.ScriptKind.TS : ts.ScriptKind.JS;
-  const file = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, kind);
-  if (file.parseDiagnostics.length) {
-    const error = file.parseDiagnostics[0];
-    throw new Error(`Cannot parse ${filename}: ${ts.flattenDiagnosticMessageText(error.messageText, " ")}`);
+  // TypeScript 7's native compiler intentionally no longer exposes createSourceFile.
+  // Node strips TS-only syntax; espree (already present for ESLint) parses the
+  // resulting JavaScript. Preserve declared type-only import/export edges first.
+  const isTypeScript = /\\.[cm]?tsx?$/.test(filename);
+  const prepared = isTypeScript
+    ? stripTypeScriptTypes(
+        source.replace(/(^|[\\r\\n])(\\s*)(import|export)\\s+type(?=\\s*(?:\\{|\\*|[\\w$]+\\s+from\\s*["']))/g, "$1$2$3"),
+        { mode: "strip" },
+      )
+    : source;
+  let ast;
+  try {
+    ast = espree.parse(prepared, { ecmaVersion: "latest", sourceType: filename.endsWith(".cjs") ? "script" : "module" });
+  } catch (error) {
+    throw new Error(`Cannot parse ${filename}: ${error.message}`, { cause: error });
   }
   const imports = new Set();
   const capture = (node) => {
-    if (node && ts.isStringLiteralLike(node) && node.text.startsWith(".")) imports.add(node.text);
+    if (node?.type === "Literal" && typeof node.value === "string" && node.value.startsWith(".")) imports.add(node.value);
   };
   const visit = (node) => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) capture(node.moduleSpecifier);
-    if (ts.isCallExpression(node) && node.arguments.length === 1) {
-      const callee = node.expression;
-      if (callee.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(callee) && callee.text === "require")) capture(node.arguments[0]);
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
     }
-    if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) capture(node.argument.literal);
-    ts.forEachChild(node, visit);
+    if (["ImportDeclaration", "ExportNamedDeclaration", "ExportAllDeclaration"].includes(node.type)) capture(node.source);
+    if (node.type === "ImportExpression") capture(node.source);
+    if (node.type === "CallExpression" && node.callee?.type === "Identifier" && node.callee.name === "require" && node.arguments.length === 1) capture(node.arguments[0]);
+    for (const [key, child] of Object.entries(node)) {
+      if (key !== "loc" && key !== "range" && key !== "start" && key !== "end" && key !== "parent") visit(child);
+    }
   };
-  visit(file);
+  visit(ast);
   return [...imports].sort();
 }
 
