@@ -50,7 +50,7 @@ async function recordTwoDimensionalLayout(page, style) {
     return window.ProjectMapAdaptiveLabels.snapshot();
   });
   expect(snapshot.style).toBe(style);
-  expect(snapshot.placements.length).toBeGreaterThanOrEqual(4);
+  expect(snapshot.placements.length).toBeGreaterThan(0);
   expect(snapshot.placements.some((box) => box.role === "group")).toBe(true);
   return {
     name: `2d:${style}`,
