@@ -137,6 +137,13 @@ jobs:
           name: gxkit-visual
           path: .tmp/gxkit-visual
 
+      - name: Install FFmpeg if missing
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+
       - name: Encode observed WebGL frames
         run: |
           set -euo pipefail
