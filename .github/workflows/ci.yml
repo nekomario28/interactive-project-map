@@ -101,6 +101,15 @@ jobs:
       - name: iPhone WebKit smoke
         run: npm run test:e2e:webkit
 
+      - name: Upload gxkit visual evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gxkit-visual
+          path: .tmp/gxkit-visual
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Upload browser E2E evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -112,3 +121,46 @@ jobs:
             test-results
           if-no-files-found: warn
           retention-days: 3
+
+  visual-gxkit:
+    needs: browser-e2e
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout visual checker
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download browser-rendered geometry and frames
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: gxkit-visual
+          path: .tmp/gxkit-visual
+
+      - name: Encode observed WebGL frames
+        run: |
+          set -euo pipefail
+          command -v ffmpeg
+          for index in 00 01 02 03 04; do
+            test -s ".tmp/gxkit-visual/frames/galaxy-$index.png"
+          done
+          ffmpeg -hide_banner -loglevel error -y -framerate 2 \
+            -i .tmp/gxkit-visual/frames/galaxy-%02d.png \
+            -c:v libvpx -b:v 1M .tmp/gxkit-visual/galaxy3d-motion.webm
+          test -s .tmp/gxkit-visual/galaxy3d-motion.webm
+          printf 'PATH = "galaxy3d-motion.webm"\nFROZEN_SECONDS = 1.0\nSAMPLE_FPS = 2.0\n' > .tmp/gxkit-visual/galaxy3d-motion.py
+
+      - name: Inspect rendered Galaxy video with gxkit framegx
+        uses: nekomario28/gxkit@3f89316641dbd13857a2baf272e6be9c8d5d90ab
+        with:
+          tool: framegx
+          path: .tmp/gxkit-visual/galaxy3d-motion.py
+          args: --json --no-storyboard
+
+      - name: Check observed Canvas and DOM label geometry with gxcore
+        run: |
+          set -euo pipefail
+          GX_PYTHON="$(uv tool dir)/framegx/bin/python"
+          test -x "$GX_PYTHON"
+          "$GX_PYTHON" scripts/inspect-gxkit-visual.py --self-test
+          "$GX_PYTHON" scripts/inspect-gxkit-visual.py .tmp/gxkit-visual/layout.json
