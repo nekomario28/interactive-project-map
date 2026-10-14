@@ -116,7 +116,7 @@ export function pythonArtifact(model) {
     "",
     "graph = ModuleGraph(",
     `    modules=${JSON.stringify(model.modules, null, 2)},`,
-    `    depends=${JSON.stringify(model.depends, null, 2)},`,
+    `    depends=[tuple(pair) for pair in ${JSON.stringify(model.depends, null, 2)}],`,
     '    name="Interactive Project Map source imports",',
     ")",
     "",
