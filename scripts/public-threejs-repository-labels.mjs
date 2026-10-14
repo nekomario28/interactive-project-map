@@ -40,7 +40,16 @@ export function composeThreejsRepositoryLabelsRuntime(source) {
     for(const item of [...selected,...groupLabels,...rest]){
       const element=item.element;
       if(element.hidden)continue;
-      const box=element.getBoundingClientRect();
+      // Repository labels are important when selected or searched. Keep
+      // them in the view before considering collision suppression.
+      element.style.left="0px";element.style.top="0px";
+      let box=element.getBoundingClientRect();
+      if(element.classList.contains("three-label-repository")&&box.width>0&&box.height>0){
+        const dx=Math.max(0,viewport.left+4-box.left)-Math.max(0,box.right-(viewport.right-4));
+        const dy=Math.max(0,viewport.top+4-box.top)-Math.max(0,box.bottom-(viewport.bottom-4));
+        element.style.left=dx+"px";element.style.top=dy+"px";
+        box=element.getBoundingClientRect();
+      }
       if(box.width<=0||box.height<=0||box.left<viewport.left+2||box.right>viewport.right-2||box.top<viewport.top+2||box.bottom>viewport.bottom-2){element.hidden=true;continue;}
       let collision=false;
       for(const other of accepted){
