@@ -114,7 +114,7 @@ test("gxkit visual audit captures actual 2D canvas placements, projected 3D DOM 
     // camera zoom as well so framegx audits visible input responsiveness at
     // its coarse 96x54 grayscale sample size without mistaking slow orbits
     // (periods of several minutes) for frozen rendering.
-    await page.mouse.wheel(0, index % 2 ? -220 : 220);
+    await page.mouse.wheel(0, -105);
     await page.waitForTimeout(800);
     await page.locator("#galaxy3d").screenshot({
       path: resolve(dir, `frames/galaxy-${String(index).padStart(2, "0")}.png`),
