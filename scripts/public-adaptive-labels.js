@@ -35,6 +35,26 @@ window.addEventListener("DOMContentLoaded", () => {
     return box.left >= margin && box.top >= margin && box.right <= width - margin && box.bottom <= height - margin;
   }
 
+  // Forced labels (owner/category/search/selection) still need an on-canvas
+  // fallback when every ideal anchor lies beyond the viewport.
+  function fitBoxInside(box, width, height, margin = 5) {
+    const w = box.right - box.left, h = box.bottom - box.top;
+    if (w > width - 2 * margin || h > height - 2 * margin) return null;
+    const left = clamp(box.left, margin, width - margin - w);
+    const top = clamp(box.top, margin, height - margin - h);
+    const right = left + w, bottom = top + h;
+    return {
+      ...box, left, right, top, bottom, y: top,
+      x: box.align === "left" ? left : box.align === "right" ? right : left + w / 2,
+    };
+  }
+
+  function overlapArea(box, others) {
+    return others.reduce((total, other) => total +
+      Math.max(0, Math.min(box.right, other.right) - Math.max(box.left, other.left)) *
+      Math.max(0, Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top)), 0);
+  }
+
   function smoothstep(edge0, edge1, value) {
     const t = clamp((value - edge0) / Math.max(0.0001, edge1 - edge0), 0, 1);
     return t * t * (3 - 2 * t);
@@ -259,7 +279,13 @@ window.addEventListener("DOMContentLoaded", () => {
           break;
         }
       }
-      if (!chosen && forced) chosen = boxes.find((box) => visibleBox(box, width, height)) || boxes[0];
+      if (!chosen && forced) {
+        const candidates = order.map((index) => fitBoxInside(boxes[index], width, height)).filter(Boolean);
+        // Prefer a fully visible anchor with the least overlap; no longer
+        // draw the first offscreen anchor when all ordinary choices fail.
+        candidates.sort((a, b) => overlapArea(a, occupied) - overlapArea(b, occupied));
+        chosen = candidates[0] || null;
+      }
       if (!chosen) continue;
 
       occupied.push({
