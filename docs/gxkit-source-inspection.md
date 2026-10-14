@@ -51,9 +51,12 @@ after Chromium and iPhone WebKit have passed.
   `docgx` is *not* used to pretend an arbitrary web page is a static slide:
   its independent text wrapping model would not reflect DOM or Canvas pixels.
 - Five actual WebGL canvas screenshots are collected over approximately
-  three seconds of native 3D motion, then encoded into a video. The pinned
+  three seconds with motion enabled and bounded camera-wheel interaction,
+  then encoded into a video. The pinned
   `framegx` tool checks that encoded video for decodable frames, all-black
-  output and frozen sequences. The separate Three.js motion-state tests verify
+  output and frozen sequences. This checks visible renderer responsiveness
+  rather than imposing a high visual-speed floor on very slow Galaxy orbits.
+  The separate Three.js motion-state tests verify
   semantic orbit motion and Motion Off without confusing intentional freezing
   with a fault.
 
