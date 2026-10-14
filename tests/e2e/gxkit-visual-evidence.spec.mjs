@@ -108,7 +108,13 @@ test("gxkit visual audit captures actual 2D canvas placements, projected 3D DOM 
   await page.locator("#galaxy3d").screenshot({ path: resolve(dir, "frames/galaxy-00.png") });
   const before = await page.evaluate(() => window.ProjectMapThreejsGalaxyMotion?.snapshot());
   expect(before?.systems?.length).toBeGreaterThan(0);
+  await page.locator("#galaxy3d").hover();
   for (let index = 1; index < 5; index += 1) {
+    // The orbit-state assertions independently prove autonomous motion. Drive
+    // camera zoom as well so framegx audits visible input responsiveness at
+    // its coarse 96x54 grayscale sample size without mistaking slow orbits
+    // (periods of several minutes) for frozen rendering.
+    await page.mouse.wheel(0, index % 2 ? -220 : 220);
     await page.waitForTimeout(800);
     await page.locator("#galaxy3d").screenshot({
       path: resolve(dir, `frames/galaxy-${String(index).padStart(2, "0")}.png`),
