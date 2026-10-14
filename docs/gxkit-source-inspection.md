@@ -4,9 +4,9 @@ This is a **source-code integrity gate**, not a check on the GitHub portfolio
 graph or the visual correctness of any of the twelve IPM renderers.
 
 `scripts/export-gxkit-deps.mjs` parses the checked-in JavaScript/TypeScript
-source under `src/`, `scripts/`, and `packages/` with the TypeScript AST.
-It records static relative imports, re-exports, string-literal dynamic imports,
-string-literal `require()` calls, and `import("...")` types. A declared module
+source under `src/`, `scripts/`, and `packages/` using Node.js TypeScript type stripping and the Espree JavaScript AST.
+It records static relative imports, re-exports, declared type-only imports, string-literal dynamic imports,
+and string-literal `require()` calls. Type-expression `import("...")` references are not currently extracted. A declared module
 that cannot be resolved is intentionally left dangling. Existing non-source
 assets and external packages are outside this specific model.
 
