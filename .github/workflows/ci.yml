@@ -28,6 +28,17 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      # Export the *source import graph*, not the public owner/category/repository graph.
+      - name: Export source imports for gxkit
+        run: node scripts/export-gxkit-deps.mjs --python .tmp/gxkit-source-deps.py
+
+      - name: Inspect source dependencies with gxkit
+        uses: nekomario28/gxkit@3f89316641dbd13857a2baf272e6be9c8d5d90ab
+        with:
+          tool: depsgx
+          path: .tmp/gxkit-source-deps.py
+          args: --json --no-storyboard
+
       - name: Smoke test local project-map action default
         uses: ./
         with:
