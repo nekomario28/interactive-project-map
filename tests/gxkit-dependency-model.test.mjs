@@ -60,6 +60,7 @@ test("module cycles and deterministic output are preserved as edges", () => fixt
   assert.deepEqual(result, collectSourceDependencies(root));
   const python = pythonArtifact(result);
   assert.match(python, /from depsgx import ModuleGraph/);
+  assert.match(python, /depends=\[tuple\(pair\) for pair in /);
   assert.match(python, /packages\/x\/src\/a\.js/);
   assert.equal(python.includes("undefined"), false);
 }));
