@@ -16,6 +16,7 @@ window.addEventListener("DOMContentLoaded", () => {
     anchors: {},
     placedRepositoryIds: [],
     eligibleRepositoryIds: [],
+    placements: [],
     zoom: 1,
     viewport: { width: 0, height: 0 },
     typography: {
@@ -261,7 +262,14 @@ window.addEventListener("DOMContentLoaded", () => {
       if (!chosen && forced) chosen = boxes.find((box) => visibleBox(box, width, height)) || boxes[0];
       if (!chosen) continue;
 
-      occupied.push(chosen);
+      occupied.push({
+        ...chosen,
+        id: candidate.node.id,
+        role: candidate.node.type,
+        text: candidate.presentation.title + (candidate.presentation.count ? " " + candidate.presentation.count : ""),
+        fontSize: candidate.fontSize,
+        forced,
+      });
       anchorCounts[chosen.anchor] = (anchorCounts[chosen.anchor] || 0) + 1;
       if (candidate.node.type === "repository") {
         repoLabels += 1;
@@ -285,6 +293,7 @@ window.addEventListener("DOMContentLoaded", () => {
       anchors: { ...anchorCounts },
       placedRepositoryIds: [...placedRepositoryIds],
       eligibleRepositoryIds: [...eligibleRepositoryIds].sort(),
+      placements: occupied.map(({ id, role, text, fontSize, forced, left, top, right, bottom }) => ({ id, role, text, fontSize, forced, bbox: [left, top, right, bottom] })),
       zoom: state.zoom,
       viewport: { width, height },
       typography: {
@@ -326,6 +335,7 @@ window.addEventListener("DOMContentLoaded", () => {
         anchors: { ...lastSnapshot.anchors },
         placedRepositoryIds: [...lastSnapshot.placedRepositoryIds],
         eligibleRepositoryIds: [...lastSnapshot.eligibleRepositoryIds],
+        placements: lastSnapshot.placements.map((placement) => ({ ...placement, bbox: [...placement.bbox] })),
         viewport: { ...lastSnapshot.viewport },
         typography: { ...lastSnapshot.typography },
       };
