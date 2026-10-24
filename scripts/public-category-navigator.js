@@ -36,20 +36,25 @@
   panel.id = "categoryNavigator";
   panel.className = "category-navigator";
   panel.setAttribute("aria-label", "Category navigator");
-  panel.innerHTML = `
-    <div class="category-navigator-head">
-      <div>
-        <strong>Categories</strong>
-        <span id="categoryNavigatorSummary">Loading…</span>
-      </div>
-      <button id="categoryNavigatorClear" type="button">Clear focus</button>
-    </div>
-    <div id="categoryNavigatorList" class="category-navigator-list"></div>`;
+  const head = document.createElement("div");
+  head.className = "category-navigator-head";
+  const headCopy = document.createElement("div");
+  const headTitle = document.createElement("strong");
+  headTitle.textContent = "Categories";
+  const summary = document.createElement("span");
+  summary.id = "categoryNavigatorSummary";
+  summary.textContent = "Loading…";
+  headCopy.append(headTitle, summary);
+  const clearButton = document.createElement("button");
+  clearButton.id = "categoryNavigatorClear";
+  clearButton.type = "button";
+  clearButton.textContent = "Clear focus";
+  head.append(headCopy, clearButton);
+  const list = document.createElement("div");
+  list.id = "categoryNavigatorList";
+  list.className = "category-navigator-list";
+  panel.append(head, list);
   workspace.append(panel);
-
-  const summary = panel.querySelector("#categoryNavigatorSummary");
-  const list = panel.querySelector("#categoryNavigatorList");
-  const clearButton = panel.querySelector("#categoryNavigatorClear");
 
   function normalizedText(value) {
     return String(value || "").normalize("NFKC").toLocaleLowerCase("en-US").trim();
@@ -191,6 +196,14 @@
     focusNode(id);
   }
 
+  function fillCategoryText(element, label, detail) {
+    const span = document.createElement("span");
+    span.textContent = label;
+    const small = document.createElement("small");
+    small.textContent = detail;
+    element.replaceChildren(span, small);
+  }
+
   function createGroupEntry(group, repositories, query) {
     const groupId = normalizedGroupId(group.id);
     const activeId = activeFocusId();
@@ -212,7 +225,7 @@
     focus.dataset.categoryId = group.id;
     focus.setAttribute("aria-label", group.label);
     focus.setAttribute("aria-pressed", String(activeId === group.id));
-    focus.innerHTML = `<span>${group.label}</span><small>${repositories.length}</small>`;
+    fillCategoryText(focus, group.label, repositories.length);
     focus.addEventListener("click", () => toggleFocusNode(group.id));
 
     const disclosure = document.createElement("button");
@@ -245,7 +258,7 @@
       if (query && match) button.classList.add("is-search-match");
       if (query && !match) button.classList.add("is-search-muted");
       const status = repo.archived ? "Archived" : repo.fork ? "Fork" : "Original";
-      button.innerHTML = `<span>${repo.label}</span><small>${repo.language || status}</small>`;
+      fillCategoryText(button, repo.label, repo.language || status);
       button.addEventListener("click", () => toggleFocusNode(repo.id));
       repoList.append(button);
     }
@@ -275,7 +288,7 @@
     heading.setAttribute("role", "heading");
     heading.setAttribute("aria-level", "3");
     heading.title = "External contributions are shown separately and are not part of an owned category.";
-    heading.innerHTML = `<span>External contributions</span><small>${repositories.length} · not owned</small>`;
+    fillCategoryText(heading, "External contributions", `${repositories.length} · not owned`);
 
     const disclosure = document.createElement("button");
     disclosure.type = "button";
@@ -305,7 +318,7 @@
       button.setAttribute("aria-pressed", String(activeId === repo.id));
       if (query && match) button.classList.add("is-search-match");
       if (query && !match) button.classList.add("is-search-muted");
-      button.innerHTML = `<span>${repo.label}</span><small>${repo.language || "External"}</small>`;
+      fillCategoryText(button, repo.label, repo.language || "External");
       button.addEventListener("click", () => toggleFocusNode(repo.id));
       repoList.append(button);
     }

@@ -99,6 +99,14 @@
     toggle?.setAttribute("aria-expanded", String(panelOpen));
   }
 
+  function fillCategoryText(element, label, detail) {
+    const span = document.createElement("span");
+    span.textContent = label;
+    const small = document.createElement("small");
+    small.textContent = detail;
+    element.replaceChildren(span, small);
+  }
+
   function createRepositoryButton(repo, query) {
     const button = document.createElement("button");
     button.type = "button";
@@ -108,7 +116,7 @@
     button.setAttribute("aria-pressed", String(selectedId() === repo.id));
     applySearchPresentation(button, repo, query);
     const fallbackStatus = repo.archived ? "Archived" : repo.fork ? "Fork" : repo.relation === "contributed" ? "External" : "Original";
-    button.innerHTML = `<span>${repo.label}</span><small>${repo.language || fallbackStatus}</small>`;
+    fillCategoryText(button, repo.label, repo.language || fallbackStatus);
     button.addEventListener("click", () => toggleSelection(repo.id));
     return button;
   }
@@ -135,7 +143,7 @@
     focus.setAttribute("aria-label", group.label);
     focus.setAttribute("aria-pressed", String(activeId === group.id));
     applySearchPresentation(focus, group, query);
-    focus.innerHTML = `<span>${group.label}</span><small>${repositories.length}</small>`;
+    fillCategoryText(focus, group.label, repositories.length);
     focus.addEventListener("click", () => toggleSelection(group.id));
 
     const disclosure = document.createElement("button");
@@ -179,7 +187,7 @@
     heading.setAttribute("role", "heading");
     heading.setAttribute("aria-level", "3");
     heading.title = "External contributions are shown separately and are not part of an owned category.";
-    heading.innerHTML = `<span>External contributions</span><small>${repositories.length} · not owned</small>`;
+    fillCategoryText(heading, "External contributions", `${repositories.length} · not owned`);
 
     const disclosure = document.createElement("button");
     disclosure.type = "button";
@@ -269,15 +277,24 @@
     panel.id = "categoryNavigator";
     panel.className = "category-navigator";
     panel.setAttribute("aria-label", "Category navigator");
-    panel.innerHTML = `
-      <div class="category-navigator-head">
-        <div>
-          <strong>Categories</strong>
-          <span id="categoryNavigatorSummary">Loading…</span>
-        </div>
-        <button id="categoryNavigatorClear" type="button">Clear focus</button>
-      </div>
-      <div id="categoryNavigatorList" class="category-navigator-list"></div>`;
+    const head = document.createElement("div");
+    head.className = "category-navigator-head";
+    const headCopy = document.createElement("div");
+    const headTitle = document.createElement("strong");
+    headTitle.textContent = "Categories";
+    const summary = document.createElement("span");
+    summary.id = "categoryNavigatorSummary";
+    summary.textContent = "Loading…";
+    headCopy.append(headTitle, summary);
+    const clearButton = document.createElement("button");
+    clearButton.id = "categoryNavigatorClear";
+    clearButton.type = "button";
+    clearButton.textContent = "Clear focus";
+    head.append(headCopy, clearButton);
+    const list = document.createElement("div");
+    list.id = "categoryNavigatorList";
+    list.className = "category-navigator-list";
+    panel.append(head, list);
     workspace.append(panel);
 
     toggle.addEventListener("click", () => {
