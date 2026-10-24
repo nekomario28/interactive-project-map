@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { censusRetryDelay, retryCensusRequest, updatePublicUsers } from "../scripts/update-public-users.mjs";
+import { censusRetryDelay, codeSearchGapMs, formatCensusHttpError, retryCensusRequest, updatePublicUsers } from "../scripts/update-public-users.mjs";
 
 const sha = "a".repeat(40);
 const checkedAt = "2026-10-04T10:00:00.000Z";
@@ -168,7 +168,7 @@ test("retries a rate-limited census request and keeps the eventual result", asyn
     calls += 1;
     if (calls <= 2) throw ghFailure(429);
     return { total_count: 0, incomplete_results: false, items: [] };
-  }, { sleep: async (ms) => { delays.push(ms); } });
+  }, { sleep: async (ms) => { delays.push(ms); }, random: () => 0 });
   assert.equal(calls, 3);
   assert.deepEqual(delays, [1000, 2000]);
   assert.equal(result.incomplete_results, false);
@@ -189,7 +189,7 @@ test("gives up after the attempt budget instead of retrying a permanent limit", 
   let calls = 0;
   const failure = ghFailure(429);
   await assert.rejects(
-    retryCensusRequest(async () => { calls += 1; throw failure; }, { sleep: async (ms) => { delays.push(ms); } }),
+    retryCensusRequest(async () => { calls += 1; throw failure; }, { sleep: async (ms) => { delays.push(ms); }, random: () => 0 }),
     (error) => error === failure,
   );
   assert.equal(calls, 7);
@@ -200,4 +200,38 @@ test("gives up after the attempt budget instead of retrying a permanent limit", 
 test("caps the census backoff so a daily run cannot stall the job", () => {
   assert.equal(censusRetryDelay(0), 1000);
   assert.equal(censusRetryDelay(30), 120_000);
+});
+
+test("census backoff honors Retry-After, rate-limit reset, and jitter", () => {
+  assert.equal(censusRetryDelay(1, { retryAfter: "12", random: () => 0 }), 12_000);
+  assert.equal(censusRetryDelay(4, { rateLimitReset: "1000", now: 990_000, random: () => 0 }), 10_000);
+  assert.equal(censusRetryDelay(0, { retryAfter: "4", rateLimitReset: "999999", now: 0, random: () => 0 }), 4_000);
+  assert.equal(censusRetryDelay(0, { retryAfter: "Thu, 01 Jan 1970 00:00:05 GMT", now: 0, random: () => 0 }), 5_000);
+  assert.equal(censusRetryDelay(0, { retryAfter: "3", random: () => 0.4 }), 3_400);
+  assert.equal(censusRetryDelay(0, { retryAfter: "9999", random: () => 0.9 }), 120_000);
+  assert.equal(codeSearchGapMs(() => 0), 7_000);
+  assert.equal(codeSearchGapMs(() => 0.5), 7_500);
+});
+
+test("a rate-limited census response waits for Retry-After before the next attempt", async () => {
+  const delays = [];
+  let calls = 0;
+  const failure = Object.assign(ghFailure(429), {
+    status: 429,
+    headers: new Map([["retry-after", "15"], ["x-ratelimit-reset", "999999"]]),
+  });
+  const result = await retryCensusRequest(async () => {
+    calls += 1;
+    if (calls === 1) throw failure;
+    return { ok: true };
+  }, { sleep: async (ms) => { delays.push(ms); }, random: () => 0 });
+  assert.equal(result.ok, true);
+  assert.deepEqual(delays, [15_000]);
+});
+
+test("a persistent search rate limit says the public-user count was not updated", () => {
+  const message = formatCensusHttpError("search/code?q=example&page=1", 429);
+  assert.match(message, /HTTP 429/);
+  assert.match(message, /public-user count was not updated/);
+  assert.match(formatCensusHttpError("repos/example/example", 500), /HTTP 500/);
 });

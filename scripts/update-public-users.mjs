@@ -16,16 +16,61 @@ const SEARCH_QUERIES = [
 
 const RETRY_STATUS_RE = /\(HTTP (429|50[0234])\)/;
 const MAX_CENSUS_DELAY_MS = 120_000;
+const CODE_SEARCH_GAP_MS = 7_000;
+const CENSUS_JITTER_MS = 1_000;
 
-export function censusRetryDelay(attempt) {
-  return Math.min(2 ** attempt * 1_000, MAX_CENSUS_DELAY_MS);
+function clampUnit(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(1, Math.max(0, number));
+}
+
+function headerDelayMs(retryAfter, rateLimitReset, now) {
+  if (retryAfter != null && String(retryAfter).trim() !== "") {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+    const date = Date.parse(String(retryAfter));
+    if (Number.isFinite(date)) return Math.max(0, date - now);
+  }
+  if (rateLimitReset != null && String(rateLimitReset).trim() !== "") {
+    const epochSeconds = Number(rateLimitReset);
+    if (Number.isFinite(epochSeconds)) return Math.max(0, epochSeconds * 1000 - now);
+  }
+  return null;
+}
+
+export function censusRetryDelay(attempt, {
+  retryAfter,
+  rateLimitReset,
+  now = Date.now(),
+  random = () => 0,
+  maxDelayMs = MAX_CENSUS_DELAY_MS,
+} = {}) {
+  const hinted = headerDelayMs(retryAfter, rateLimitReset, now);
+  const base = hinted == null ? Math.min(2 ** attempt * 1_000, maxDelayMs) : hinted;
+  const jitter = Math.floor(clampUnit(random()) * CENSUS_JITTER_MS);
+  return Math.min(Math.max(0, base) + jitter, maxDelayMs);
+}
+
+export function codeSearchGapMs(random = Math.random) {
+  return CODE_SEARCH_GAP_MS + Math.floor(clampUnit(random()) * CENSUS_JITTER_MS);
+}
+
+export function formatCensusHttpError(endpoint, status) {
+  if (String(status) === "429") {
+    return `GitHub request stayed rate-limited (HTTP 429) for ${endpoint} after bounded retries. The public-user count was not updated.`;
+  }
+  return `GitHub request failed${status ? ` (HTTP ${status})` : ""} for ${endpoint}. Check gh authentication, rate limits and connectivity.`;
 }
 
 export async function retryCensusRequest(request, {
-  // Seven attempts wait 1+2+4+8+16+32=63s, past the 60s code_search window measured on the failing run.
+  // Seven attempts. Without a server hint the waits are 1+2+4+8+16+32=63s, past the measured code_search window.
+  // A Retry-After or x-ratelimit-reset hint replaces that step and is still capped at 120s.
   attempts = 7,
   maxDelayMs = MAX_CENSUS_DELAY_MS,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  now = () => Date.now(),
+  random = Math.random,
 } = {}) {
   for (let attempt = 0; ; attempt += 1) {
     let error;
@@ -34,25 +79,63 @@ export async function retryCensusRequest(request, {
     } catch (failure) {
       error = failure;
     }
-    const stderr = error?.stderr ?? "";
+    const stderr = String(error?.stderr ?? "");
     const transient = RETRY_STATUS_RE.test(stderr) || /timed out|ECONNRESET|ETIMEDOUT|socket hang up/i.test(String(error?.message ?? ""));
     if (!transient || attempt + 1 >= attempts) throw error;
-    await sleep(Math.min(censusRetryDelay(attempt), maxDelayMs));
+    const status = Number(error?.status) || Number(/\((?:HTTP )?(\d{3})\)/.exec(stderr)?.[1]);
+    const headers = error?.headers;
+    await sleep(censusRetryDelay(attempt, {
+      retryAfter: headers?.get?.("retry-after"),
+      rateLimitReset: status === 429 ? headers?.get?.("x-ratelimit-reset") : undefined,
+      now: now(),
+      random,
+      maxDelayMs,
+    }));
   }
 }
 
+function splitIncludedHttp(stdout) {
+  const text = Buffer.isBuffer(stdout) ? stdout.toString("utf8") : String(stdout ?? "");
+  if (!text.startsWith("HTTP/")) return { status: null, headers: new Map(), body: text };
+  const separator = text.includes("\r\n\r\n") ? "\r\n\r\n" : "\n\n";
+  const splitAt = text.indexOf(separator);
+  if (splitAt < 0) return { status: null, headers: new Map(), body: text };
+  const lines = text.slice(0, splitAt).split(/\r?\n/);
+  const status = Number(/^HTTP\/\d+(?:\.\d+)?\s+(\d{3})/.exec(lines[0] || "")?.[1]);
+  const headers = new Map();
+  for (const line of lines.slice(1)) {
+    const index = line.indexOf(":");
+    if (index > 0) headers.set(line.slice(0, index).trim().toLowerCase(), line.slice(index + 1).trim());
+  }
+  return { status: Number.isFinite(status) ? status : null, headers, body: text.slice(splitAt + separator.length) };
+}
+
+let nextCodeSearchAt = 0;
+
 async function githubApi(endpoint, accept = "application/vnd.github+json") {
+  if (endpoint.startsWith("search/code?")) {
+    const wait = Math.max(0, nextCodeSearchAt - Date.now());
+    if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+    nextCodeSearchAt = Date.now() + codeSearchGapMs();
+  }
   let stdout;
   try {
-    ({ stdout } = await retryCensusRequest(() => run("gh", ["api", "--hostname", "github.com", "-H", `Accept: ${accept}`, endpoint], {
+    ({ stdout } = await retryCensusRequest(() => run("gh", ["api", "--hostname", "github.com", "-i", "-H", `Accept: ${accept}`, endpoint], {
       timeout: 30_000, maxBuffer: 2 * 1024 * 1024,
+    }).catch((error) => {
+      const parsed = splitIncludedHttp(error.stdout);
+      error.headers = parsed.headers;
+      if (parsed.status) error.status = parsed.status;
+      throw error;
     })));
   } catch (error) {
-    if (/\(HTTP 404\)/.test(error.stderr || "")) return null;
-    const status = /\(HTTP (\d{3})\)/.exec(error.stderr || "")?.[1];
-    throw new Error(`GitHub request failed${status ? ` (HTTP ${status})` : ""} for ${endpoint}. Check gh authentication, rate limits and connectivity.`, { cause: error });
+    if (/\(HTTP 404\)/.test(String(error.stderr || ""))) return null;
+    const status = error.status || /\(HTTP (\d{3})\)/.exec(String(error.stderr || ""))?.[1];
+    throw new Error(formatCensusHttpError(endpoint, status), { cause: error });
   }
-  return accept === "application/vnd.github.html+json" ? stdout : JSON.parse(stdout);
+  const message = splitIncludedHttp(stdout);
+  if (message.status && message.status >= 400) throw new Error(formatCensusHttpError(endpoint, message.status));
+  return accept === "application/vnd.github.html+json" ? message.body : JSON.parse(message.body);
 }
 
 function decodeFile(file) {
