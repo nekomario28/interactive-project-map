@@ -3,17 +3,20 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 2
     groups:
       npm-maintenance:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 2
     ignore:
       # The immutable inner Action pin is a reviewed release artifact that only
@@ -23,3 +26,6 @@ updates:
       actions-maintenance:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
