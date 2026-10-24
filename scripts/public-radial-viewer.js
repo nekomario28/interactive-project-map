@@ -603,13 +603,51 @@ styleSelect.value = "radial";
 subtitle.textContent = "Radial Tree · Classic compact hierarchy";
 resize();
 
+// 8MB: the live profile graph.json was 111871 bytes, and this viewer already rejects more than 520 nodes.
+async function readBoundedGraph(response) {
+  const maxBytes = 8_000_000;
+  const declared = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new Error("graph.json is larger than the 8 MB limit (" + declared + " bytes)");
+  }
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) throw new Error("graph.json is larger than the 8 MB limit");
+    return JSON.parse(text);
+  }
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        text += decoder.decode();
+        break;
+      }
+      if (!value) continue;
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error("graph.json is larger than the 8 MB limit");
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => undefined);
+    throw error;
+  }
+  return JSON.parse(text);
+}
+
 if (username) {
   const owner = encodeURIComponent(username);
   const graphUrl = `https://raw.githubusercontent.com/${owner}/${owner}/HEAD/project-map/graph.json`;
   fetch(graphUrl, { cache: "no-cache" })
     .then((response) => {
       if (!response.ok) throw new Error(`graph.json returned ${response.status}`);
-      return response.json();
+      return readBoundedGraph(response);
     })
     .then((value) => {
       const clean = sanitizeGraph(value);
