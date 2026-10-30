@@ -183,6 +183,10 @@ npm run verify
 - [`docs/research-decision-ledger.md`](docs/research-decision-ledger.md) — 採用・完了・却下・休眠の意思決定台帳
 - [`SECURITY.md`](SECURITY.md) — 権限境界、シークレット管理方針、脆弱性報告窓口
 
+## 開発参加と Issue（Contributing）
+
+不具合報告や機能提案、プルリクエストを歓迎します。大きな仕様変更や新しいプリセットの追加を提案される際は、静的ファースト・決定論的レイアウト・後方互換性の原則を維持するため、事前に [`CONTRIBUTING.md`](CONTRIBUTING.md) をご確認ください。
+
 ## コントリビューター・ライセンス
 
 メンテナーおよびコントリビューターには [Yuu / nekomario28](https://github.com/nekomario28) と [SYUN / syun88](https://github.com/syun88) が含まれます。実装判断の参考にした公開プロジェクトや論文の境界については [ライセンス監査記録](docs/licensing-audit-2026-08-21.md) を参照してください。

@@ -184,6 +184,10 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local toolchain requirements (Node.
 - [`docs/research-decision-ledger.md`](docs/research-decision-ledger.md) — adopted, completed, rejected, and dormant decisions.
 - [`SECURITY.md`](SECURITY.md) — permission boundaries, secrets policy, and vulnerability reporting.
 
+## Contributing and issues
+
+Issues and pull requests are welcome. Before proposing larger changes or new presets, please review [`CONTRIBUTING.md`](CONTRIBUTING.md) to preserve the static-first architecture, layout determinism, and backwards compatibility.
+
 ## Contributors and license
 
 Maintainers and contributors include [Yuu / nekomario28](https://github.com/nekomario28) and [SYUN / syun88](https://github.com/syun88). Public projects and papers that informed implementation choices are recorded in the [historical licensing audit](docs/licensing-audit-2026-08-21.md).
