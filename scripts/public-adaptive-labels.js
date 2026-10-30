@@ -16,6 +16,7 @@ window.addEventListener("DOMContentLoaded", () => {
     anchors: {},
     placedRepositoryIds: [],
     eligibleRepositoryIds: [],
+    placements: [],
     zoom: 1,
     viewport: { width: 0, height: 0 },
     typography: {
@@ -32,6 +33,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function visibleBox(box, width, height, margin = 5) {
     return box.left >= margin && box.top >= margin && box.right <= width - margin && box.bottom <= height - margin;
+  }
+
+  // Forced labels (owner/category/search/selection) still need an on-canvas
+  // fallback when every ideal anchor lies beyond the viewport.
+  function fitBoxInside(box, width, height, margin = 5) {
+    const w = box.right - box.left, h = box.bottom - box.top;
+    if (w > width - 2 * margin || h > height - 2 * margin) return null;
+    const left = clamp(box.left, margin, width - margin - w);
+    const top = clamp(box.top, margin, height - margin - h);
+    const right = left + w, bottom = top + h;
+    return {
+      ...box, left, right, top, bottom, y: top,
+      x: box.align === "left" ? left : box.align === "right" ? right : left + w / 2,
+    };
+  }
+
+  function overlapArea(box, others) {
+    return others.reduce((total, other) => total +
+      Math.max(0, Math.min(box.right, other.right) - Math.max(box.left, other.left)) *
+      Math.max(0, Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top)), 0);
   }
 
   function smoothstep(edge0, edge1, value) {
@@ -258,10 +279,28 @@ window.addEventListener("DOMContentLoaded", () => {
           break;
         }
       }
-      if (!chosen && forced) chosen = boxes.find((box) => visibleBox(box, width, height)) || boxes[0];
+      if (!chosen && forced) {
+        // Categories only render when an actual anchor fits. Clamping them
+        // against the border would hide repository text at medium zoom.
+        // Search/selected repository labels retain the edge-fitting fallback.
+        if (candidate.node.type === "group") continue;
+        if (candidate.point.x < 0 || candidate.point.x > width || candidate.point.y < 0 || candidate.point.y > height) continue;
+        const candidates = order.map((index) => fitBoxInside(boxes[index], width, height)).filter(Boolean);
+        // Prefer a fully visible anchor with the least overlap; no longer
+        // draw the first offscreen anchor when all ordinary choices fail.
+        candidates.sort((a, b) => overlapArea(a, occupied) - overlapArea(b, occupied));
+        chosen = candidates[0] || null;
+      }
       if (!chosen) continue;
 
-      occupied.push(chosen);
+      occupied.push({
+        ...chosen,
+        id: candidate.node.id,
+        role: candidate.node.type,
+        text: candidate.presentation.title + (candidate.presentation.count ? " " + candidate.presentation.count : ""),
+        fontSize: candidate.fontSize,
+        forced,
+      });
       anchorCounts[chosen.anchor] = (anchorCounts[chosen.anchor] || 0) + 1;
       if (candidate.node.type === "repository") {
         repoLabels += 1;
@@ -285,6 +324,7 @@ window.addEventListener("DOMContentLoaded", () => {
       anchors: { ...anchorCounts },
       placedRepositoryIds: [...placedRepositoryIds],
       eligibleRepositoryIds: [...eligibleRepositoryIds].sort(),
+      placements: occupied.map(({ id, role, text, fontSize, forced, left, top, right, bottom }) => ({ id, role, text, fontSize, forced, bbox: [left, top, right, bottom] })),
       zoom: state.zoom,
       viewport: { width, height },
       typography: {
@@ -326,6 +366,7 @@ window.addEventListener("DOMContentLoaded", () => {
         anchors: { ...lastSnapshot.anchors },
         placedRepositoryIds: [...lastSnapshot.placedRepositoryIds],
         eligibleRepositoryIds: [...lastSnapshot.eligibleRepositoryIds],
+        placements: lastSnapshot.placements.map((placement) => ({ ...placement, bbox: [...placement.bbox] })),
         viewport: { ...lastSnapshot.viewport },
         typography: { ...lastSnapshot.typography },
       };
