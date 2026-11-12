@@ -20,7 +20,14 @@ const cssRules = {
 async function lintCss(code, label) { const result = await stylelint.lint({ code, config: { rules: cssRules }, formatter: "string" }); if (result.errored) throw new Error(`${label} failed Stylelint:\n${result.report}`); }
 async function validateEmbeddedCss(filePath) { const html = await readFile(filePath, "utf8"); const blocks = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gi)]; if (!blocks.length) throw new Error(`${filePath}: expected at least one <style> block`); for (let index = 0; index < blocks.length; index += 1) await lintCss(blocks[index][1], `${filePath} <style> #${index + 1}`); }
 async function validateExternalCss(filePath) { await lintCss(await readFile(filePath, "utf8"), filePath); }
-function requireStyles(html, name) { let cursor = -1; for (const style of STYLES) { const next = html.indexOf(`value="${style}"`, cursor + 1); if (next < 0) throw new Error(`${name} is missing ${style} style option`); cursor = next; } }
+function requireStyles(html, name) {
+  // Grouping styles by navigation purpose may reorder options; every supported
+  // style must still be available exactly once.
+  for (const style of STYLES) {
+    const occurrences = html.split(`value="${style}"`).length - 1;
+    if (occurrences !== 1) throw new Error(`${name} must expose ${style} exactly once (found ${occurrences})`);
+  }
+}
 async function validateDynamicMarkup() {
   const home = await readFile(join(siteDir, "index.html"), "utf8");
   const pages = [["viewer", await readFile(join(siteDir, "u", "index.html"), "utf8")]];
