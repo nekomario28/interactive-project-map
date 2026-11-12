@@ -28,4 +28,10 @@
   document.addEventListener("pointerdown", (event) => {
     if (menu.open && !menu.contains(event.target)) menu.open = false;
   });
+  // Keyboard navigation and scripted focus (e.g. search) do not generate a
+  // pointerdown. Closing on focus departure prevents the menu overlay from
+  // blocking canvas details and other view actions.
+  document.addEventListener("focusin", (event) => {
+    if (menu.open && !menu.contains(event.target)) menu.open = false;
+  });
 })();

@@ -152,6 +152,10 @@ body[data-map-style="obsidian"] .legend {
   border-color: var(--accent);
 }
 
+.view-options-menu:not([open]) > .view-options-panel {
+  display: none;
+}
+
 .view-options-panel {
   position: absolute;
   z-index: 20;
