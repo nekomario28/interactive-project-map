@@ -7,13 +7,14 @@ window.addEventListener("DOMContentLoaded", () => {
   const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
   const runtime = { initialized: false, nodesRef: null, owner: null, categories: new Map(), repositories: new Map(), globalRotation: 0, lastTime: performance.now(), armCount: 1 };
 
-  const dust = Array.from({ length: 220 }, (_, index) => ({
+  const dust = Array.from({ length: 320 }, (_, index) => ({
     arm: hash(`hybrid:dust:arm:${index}`) % 3,
     t: (hash(`hybrid:dust:t:${index}`) % 10000) / 10000,
-    offset: ((hash(`hybrid:dust:o:${index}`) % 1000) / 1000 - 0.5) * 0.44,
-    radial: ((hash(`hybrid:dust:r:${index}`) % 1000) / 1000 - 0.5) * 36,
-    size: 0.45 + (hash(`hybrid:dust:s:${index}`) % 90) / 100,
-    alpha: 0.045 + (hash(`hybrid:dust:a:${index}`) % 105) / 1000,
+    offset: ((hash(`hybrid:dust:o:${index}`) % 1000) / 1000 - 0.5) * 0.48,
+    radial: ((hash(`hybrid:dust:r:${index}`) % 1000) / 1000 - 0.5) * 42,
+    size: 0.5 + (hash(`hybrid:dust:s:${index}`) % 115) / 100,
+    alpha: 0.065 + (hash(`hybrid:dust:a:${index}`) % 155) / 1000,
+    tone: index % 4 === 0 ? "owner" : index % 4 === 1 ? "fork" : "group",
   }));
 
   function orbitAssignments(group, members) {
@@ -126,11 +127,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const owner = runtime.owner;
     if (!owner) return;
     const point = worldToScreen(owner.x, owner.y);
-    const radius = clamp(145 * state.zoom, 58, 210);
+    const radius = clamp(165 * state.zoom, 68, 240);
     const gradient = ctx.createRadialGradient(point.x, point.y, 2, point.x, point.y, radius);
-    gradient.addColorStop(0, rgba(colors.owner, 0.18));
-    gradient.addColorStop(0.22, rgba(colors.owner, 0.07));
-    gradient.addColorStop(0.7, rgba(colors.owner, 0.015));
+    gradient.addColorStop(0, rgba(colors.owner, 0.24));
+    gradient.addColorStop(0.25, rgba(colors.owner, 0.095));
+    gradient.addColorStop(0.68, rgba(colors.group, 0.024));
     gradient.addColorStop(1, rgba(colors.owner, 0));
     ctx.fillStyle = gradient;
     ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, TAU); ctx.fill();
@@ -148,9 +149,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const { minRadius, maxRadius } = spiralRange();
     for (let arm = 0; arm < runtime.armCount; arm += 1) {
       const points = [];
-      for (let index = 0; index <= 44; index += 1) {
-        const t = index / 44;
-        const radius = minRadius + t * (maxRadius + 105 - minRadius);
+      for (let index = 0; index <= 48; index += 1) {
+        const t = index / 48;
+        const radius = minRadius + t * (maxRadius + 115 - minRadius);
         const angle = -Math.PI / 2 + arm * TAU / runtime.armCount + t * 1.72 + runtime.globalRotation;
         points.push(worldToScreen(Math.cos(angle) * radius, Math.sin(angle) * radius));
       }
@@ -159,11 +160,14 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.lineJoin = "round";
       ctx.beginPath();
       points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-      ctx.strokeStyle = rgba(colors.group, 0.028);
-      ctx.lineWidth = 20;
+      ctx.strokeStyle = rgba(colors.group, 0.036);
+      ctx.lineWidth = clamp(52 * state.zoom, 18, 64);
       ctx.stroke();
-      ctx.strokeStyle = rgba(colors.group, 0.065);
-      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = rgba(colors.owner, 0.055);
+      ctx.lineWidth = clamp(18 * state.zoom, 8, 24);
+      ctx.stroke();
+      ctx.strokeStyle = rgba(colors.group, 0.14);
+      ctx.lineWidth = 1.6;
       ctx.stroke();
       ctx.restore();
     }
@@ -174,12 +178,12 @@ window.addEventListener("DOMContentLoaded", () => {
     const { minRadius, maxRadius } = spiralRange();
     for (const particle of dust) {
       const arm = particle.arm % runtime.armCount;
-      const radius = minRadius + particle.t * (maxRadius + 115 - minRadius) + particle.radial;
+      const radius = minRadius + particle.t * (maxRadius + 125 - minRadius) + particle.radial;
       const angle = -Math.PI / 2 + arm * TAU / runtime.armCount + particle.t * 1.72 + runtime.globalRotation + particle.offset;
       const point = worldToScreen(Math.cos(angle) * radius, Math.sin(angle) * radius);
       if (point.x < -8 || point.y < -8 || point.x > width + 8 || point.y > height + 8) continue;
       ctx.globalAlpha = particle.alpha;
-      ctx.fillStyle = colors.group;
+      ctx.fillStyle = colors[particle.tone] || colors.group;
       ctx.beginPath(); ctx.arc(point.x, point.y, particle.size, 0, TAU); ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -189,16 +193,17 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const category of runtime.categories.values()) {
       const center = worldToScreen(category.node.x, category.node.y);
       const focus = state.selected === category.node || state.hovered === category.node || category.members.includes(state.selected) || category.members.includes(state.hovered);
-      const outer = Math.max(24, (category.systemRadius + 30) * state.zoom);
+      const outer = Math.max(28, (category.systemRadius + 36) * state.zoom);
       const gradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, outer);
-      gradient.addColorStop(0, rgba(colors.group, focus ? 0.10 : 0.055));
+      gradient.addColorStop(0, rgba(colors.group, focus ? 0.14 : 0.075));
+      gradient.addColorStop(0.55, rgba(colors.group, focus ? 0.055 : 0.026));
       gradient.addColorStop(1, rgba(colors.group, 0));
       ctx.fillStyle = gradient;
       ctx.beginPath(); ctx.arc(center.x, center.y, outer, 0, TAU); ctx.fill();
 
       const orientation = category.angle + Math.PI / 2;
       ctx.save(); ctx.translate(center.x, center.y); ctx.rotate(orientation);
-      ctx.strokeStyle = rgba(colors.group, focus ? 0.31 : 0.13); ctx.lineWidth = focus ? 0.9 : 0.6;
+      ctx.strokeStyle = rgba(colors.group, focus ? 0.36 : 0.16); ctx.lineWidth = focus ? 1.05 : 0.72;
       const lanes = new Map();
       for (const target of category.assignments) if (!lanes.has(target.lane)) lanes.set(target.lane, target);
       for (const target of lanes.values()) { ctx.beginPath(); ctx.ellipse(0, 0, target.semiMajor * state.zoom, target.semiMinor * state.zoom, 0, 0, TAU); ctx.stroke(); }

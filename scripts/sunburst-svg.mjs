@@ -89,16 +89,19 @@ export function renderSunburstSvg(graph, theme, width, height) {
     groupLabels.push({ start, end, label: bundle.group.label, count: bundle.members.length, external: bundle.group.external === true });
 
     const repoSpan = span / bundle.members.length;
+    const minRepoOuter = repoInner + (repoOuter - repoInner) * 0.62;
     bundle.members.forEach((repo, index) => {
       const rStart = start + index * repoSpan + Math.min(0.009, repoSpan * 0.08);
       const rEnd = start + (index + 1) * repoSpan - Math.min(0.009, repoSpan * 0.08);
       const status = repositoryStatus(repo);
       const color = colors[status];
       const opacity = repositoryOpacity(repo, { archived: 0.68, fork: 0.80, contributed: 0.92 });
-      pieces.push(`<g><title>${esc(repo.label)} · ${status}</title><path d="${ringPath(cx, cy, repoInner, repoOuter, rStart, rEnd)}" fill="${color}" fill-opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ` stroke="${colors.bg}" stroke-width="0.8"`}/>`);
+      const starWeight = Math.min(1, Math.log2((repo.stars ?? 0) + 1) / 5.5);
+      const dynamicOuter = minRepoOuter + (repoOuter - minRepoOuter) * (0.35 + starWeight * 0.65);
+      pieces.push(`<g><title>${esc(repo.label)} · ${status}</title><path d="${ringPath(cx, cy, repoInner, dynamicOuter, rStart, rEnd)}" fill="${color}" fill-opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ` stroke="${colors.bg}" stroke-width="0.8"`}/>`);
       if (repoSpan >= 0.16 || isContributedRepository(repo)) {
         const repoMid = (rStart + rEnd) / 2;
-        const [rx, ry] = polar(cx, cy, (repoInner + repoOuter) / 2, repoMid);
+        const [rx, ry] = polar(cx, cy, (repoInner + dynamicOuter) / 2, repoMid);
         const label = repo.label.length > 11 ? `${repo.label.slice(0, 10)}…` : repo.label;
         pieces.push(`<text x="${rx.toFixed(1)}" y="${(ry + 3).toFixed(1)}" text-anchor="middle" fill="${colors.bg}" font-size="7.8" font-weight="600">${esc(label)}</text>`);
       }

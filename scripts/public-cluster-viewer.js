@@ -90,15 +90,36 @@ function buildLayout(graph) {
     const cy = groups.length === 1 ? 0 : Math.sin(angle) * orbitY;
     const members = groupMembers(group, repos).sort((a, b) => (b.stars || 0) - (a.stars || 0) || a.label.localeCompare(b.label));
     const radius = clamp(58 + Math.sqrt(Math.max(1, members.length)) * 17, 70, 155);
-    clusters.push({ ...group, cx, cy, radius });
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    members.forEach((repo, repoIndex) => {
-      const fraction = Math.sqrt((repoIndex + 0.7) / Math.max(1, members.length + 0.4));
-      const localRadius = Math.max(0, radius - 22) * fraction;
-      const localAngle = repoIndex * golden;
-      nodes.push({ ...repo, x: cx + Math.cos(localAngle) * localRadius, y: cy + Math.sin(localAngle) * localRadius, radius: nodeRadius(repo) });
-    });
+    clusters.push({ ...group, cx, cy, radius, members });
   });
+  for (let pass = 0; pass < 18; pass += 1) {
+    for (let i = 0; i < clusters.length; i += 1) {
+      for (let j = i + 1; j < clusters.length; j += 1) {
+        const a = clusters[i];
+        const b = clusters[j];
+        const dx = b.cx - a.cx;
+        const dy = b.cy - a.cy;
+        const dist = Math.hypot(dx, dy) || 1;
+        const minDist = a.radius + b.radius + 26;
+        if (dist < minDist) {
+          const push = ((minDist - dist) / dist) * 0.5;
+          a.cx -= dx * push;
+          a.cy -= dy * push;
+          b.cx += dx * push;
+          b.cy += dy * push;
+        }
+      }
+    }
+  }
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (const cluster of clusters) {
+    cluster.members.forEach((repo, repoIndex) => {
+      const fraction = Math.sqrt((repoIndex + 0.7) / Math.max(1, cluster.members.length + 0.4));
+      const localRadius = Math.max(0, cluster.radius - 22) * fraction;
+      const localAngle = repoIndex * golden;
+      nodes.push({ ...repo, x: cluster.cx + Math.cos(localAngle) * localRadius, y: cluster.cy + Math.sin(localAngle) * localRadius, radius: nodeRadius(repo) });
+    });
+  }
   return { clusters, nodes };
 }
 function palette() {
@@ -140,14 +161,25 @@ function draw() {
   for (const cluster of state.clusters) {
     const center = worldToScreen(cluster.cx, cluster.cy);
     const radius = cluster.radius * state.zoom;
-    ctx.fillStyle = "rgba(106,167,255,.055)";
-    ctx.strokeStyle = "rgba(106,167,255,.55)";
+    const isContributed = cluster.relation === "contributed";
+    const grad = ctx.createRadialGradient(center.x, center.y, radius * 0.1, center.x, center.y, radius);
+    grad.addColorStop(0, isContributed ? "rgba(230,159,0,.11)" : "rgba(106,167,255,.10)");
+    grad.addColorStop(1, isContributed ? "rgba(230,159,0,.02)" : "rgba(106,167,255,.02)");
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = isContributed ? "rgba(230,159,0,.62)" : "rgba(106,167,255,.55)";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = colors.muted;
+    ctx.strokeStyle = isContributed ? "rgba(230,159,0,.22)" : "rgba(106,167,255,.20)";
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, radius * 0.65, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = isContributed ? colors.contributed : colors.muted;
     ctx.font = `650 ${clamp(11 * Math.sqrt(state.zoom), 9, 14)}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
@@ -158,10 +190,14 @@ function draw() {
   for (const repo of state.nodes) {
     const point = worldToScreen(repo.x, repo.y);
     const selected = repo === state.selected || repo === state.hovered;
-    const radius = Math.max(3.5, repo.radius * state.zoom * (selected ? 1.15 : 1));
+    const radius = Math.max(4, repo.radius * state.zoom * (selected ? 1.15 : 1));
     const opacity = matches(repo) ? (repo.relation === "contributed" ? 0.96 : repo.archived ? 0.70 : repo.fork ? 0.82 : 0.96) : 0.10;
-    ctx.globalAlpha = opacity;
     ctx.fillStyle = colors[statusOf(repo)];
+    ctx.globalAlpha = opacity * (selected ? 0.24 : 0.14);
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius * 1.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = opacity;
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();

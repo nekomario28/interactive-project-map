@@ -206,11 +206,19 @@ export function renderRadialTreeSvg(graph, theme, width, height) {
       ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
       : "";
     const ownerRing = node.type === "owner"
-      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
-      : "";
+      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.28"/>`
+      : node.type === "group"
+        ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.2).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.24"/>`
+        : "";
+    const core = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.62 : 0.45}"/>`;
     const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
-    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${ownerRing}${archivedRing}${label}</g>`;
+    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${core}${ownerRing}${archivedRing}${label}</g>`;
   }).join("");
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Radial Tree classic map of ${esc(graph.owner)} public GitHub repositories">\n  <rect width="100%" height="100%" rx="16" fill="${colors.bg}"/>\n  <g>${lines}</g>\n  <g>${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
+  const cx = (width / 2).toFixed(1);
+  const cy = (height / 2 - 4).toFixed(1);
+  const minSize = Math.min(width, height);
+  const guides = `<circle cx="${cx}" cy="${cy}" r="${(minSize * 0.27).toFixed(1)}" fill="none" stroke="${colors.group}" stroke-width="0.75" stroke-dasharray="3 5" opacity="0.18"/><circle cx="${cx}" cy="${cy}" r="${(minSize * 0.40).toFixed(1)}" fill="none" stroke="${colors.edge}" stroke-width="0.7" opacity="0.16"/>`;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Radial Tree classic map of ${esc(graph.owner)} public GitHub repositories">\n  <rect width="100%" height="100%" rx="16" fill="${colors.bg}"/>\n  <g>${guides}</g>\n  <g>${lines}</g>\n  <g>${nodes}</g>\n  <g>${legend(colors, width, height)}</g>\n</svg>`;
 }

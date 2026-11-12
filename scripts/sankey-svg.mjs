@@ -74,15 +74,21 @@ export function renderSankeySvg(graph, theme, width, height) {
   const statusWidth = 13;
   const pieces = [];
 
+  const defs = [
+    `<linearGradient id="sankey-flow-owner-group" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${colors.owner}"/><stop offset="100%" stop-color="${colors.group}"/></linearGradient>`,
+    ...["original", "fork", "archived", "contributed"].map((st) => `<linearGradient id="sankey-flow-${st}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${colors.group}" stop-opacity="0.78"/><stop offset="100%" stop-color="${colors[st]}"/></linearGradient>`),
+  ];
+  pieces.push(`<defs>${defs.join("")}</defs>`);
+
   let ownerCursor = layout.top;
   for (const group of layout.groupNodes) {
     const flowH = group.total * layout.unit;
     const external = group.group.external === true;
-    const flowColor = external ? colors.contributed : colors.group;
+    const flowFill = external ? colors.contributed : "url(#sankey-flow-owner-group)";
     const title = external
       ? `External contribution context → ${group.group.label}: ${group.total}`
       : `${graph.owner} → ${group.group.label}: ${group.total}`;
-    pieces.push(`<path d="${bandPath(layout.ownerX + ownerWidth, ownerCursor, ownerCursor + flowH, layout.groupX, group.y, group.y + group.h)}" fill="${flowColor}" opacity="${external ? 0.24 : 0.16}"><title>${esc(title)}</title></path>`);
+    pieces.push(`<path d="${bandPath(layout.ownerX + ownerWidth, ownerCursor, ownerCursor + flowH, layout.groupX, group.y, group.y + group.h)}" fill="${flowFill}" opacity="${external ? 0.26 : 0.22}"><title>${esc(title)}</title></path>`);
     ownerCursor += flowH;
   }
 
@@ -94,7 +100,8 @@ export function renderSankeySvg(graph, theme, width, height) {
       if (!count) continue;
       const sourceH = group.h * count / group.total;
       const targetH = statusNode.total ? statusNode.h * count / statusNode.total : 0;
-      pieces.push(`<path d="${bandPath(layout.groupX + groupWidth, groupCursor, groupCursor + sourceH, layout.statusX, statusCursor[statusNode.status], statusCursor[statusNode.status] + targetH)}" fill="${colors[statusNode.status]}" opacity="0.38"><title>${esc(group.group.label)} → ${statusNode.status}: ${count}</title></path>`);
+      const bandFill = group.group.external ? colors[statusNode.status] : `url(#sankey-flow-${statusNode.status})`;
+      pieces.push(`<path d="${bandPath(layout.groupX + groupWidth, groupCursor, groupCursor + sourceH, layout.statusX, statusCursor[statusNode.status], statusCursor[statusNode.status] + targetH)}" fill="${bandFill}" opacity="0.44"><title>${esc(group.group.label)} → ${statusNode.status}: ${count}</title></path>`);
       groupCursor += sourceH;
       statusCursor[statusNode.status] += targetH;
     }

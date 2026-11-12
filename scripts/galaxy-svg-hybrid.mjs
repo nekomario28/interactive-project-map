@@ -81,15 +81,17 @@ function denseFallback(graph, theme, width, height, frameOptions) {
 
 function spiralDust(colors, cx, cy, minSize, armCount) {
   const dots = [];
-  for (let index = 0; index < 110; index += 1) {
+  for (let index = 0; index < 160; index += 1) {
     const arm = index % armCount;
-    const t = index / 109;
-    const radius = minSize * (0.10 + t * 0.34) + ((hash(`hybrid-svg:dust:r:${index}`) % 17) - 8);
+    const t = index / 159;
+    const radius = minSize * (0.09 + t * 0.35) + ((hash(`hybrid-svg:dust:r:${index}`) % 19) - 9);
     const angle = -Math.PI / 2 + arm * TAU / armCount + t * 1.72 + ((hash(`hybrid-svg:dust:a:${index}`) % 1000) / 1000 - 0.5) * 0.24;
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
-    const opacity = 0.035 + (hash(`hybrid-svg:dust:o:${index}`) % 80) / 1000;
-    dots.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="0.8" fill="${colors.group}" opacity="${opacity.toFixed(3)}"/>`);
+    const opacity = 0.08 + (hash(`hybrid-svg:dust:o:${index}`) % 140) / 1000;
+    const r = (0.7 + (hash(`hybrid-svg:dust:s:${index}`) % 9) / 10).toFixed(1);
+    const fill = t < 0.28 ? colors.owner : t > 0.78 ? colors.fork : colors.group;
+    dots.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${fill}" opacity="${opacity.toFixed(3)}"/>`);
   }
   return `<g data-hybrid-dust="true">${dots.join("")}<animateTransform attributeName="transform" type="rotate" from="0 ${cx.toFixed(1)} ${cy.toFixed(1)}" to="360 ${cx.toFixed(1)} ${cy.toFixed(1)}" dur="2400s" repeatCount="indefinite"/></g>`;
 }

@@ -45,7 +45,31 @@ function clusterLayout(graph, width, height) {
     const members = [...bundle.members].sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0) || a.label.localeCompare(b.label));
     const radius = clamp(38 + Math.sqrt(Math.max(1, members.length)) * 13, 48, Math.min(width, height) * 0.21);
     clusters.push({ group, members, cx, cy, radius });
-    const golden = Math.PI * (3 - Math.sqrt(5));
+  });
+  for (let pass = 0; pass < 18; pass += 1) {
+    for (let i = 0; i < clusters.length; i += 1) {
+      for (let j = i + 1; j < clusters.length; j += 1) {
+        const a = clusters[i];
+        const b = clusters[j];
+        const dx = b.cx - a.cx;
+        const dy = b.cy - a.cy;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const minDist = a.radius + b.radius + 14;
+        if (dist < minDist) {
+          const push = (minDist - dist) * 0.35;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          a.cx = clamp(a.cx - nx * push, a.radius + 16, width - a.radius - 16);
+          a.cy = clamp(a.cy - ny * push, a.radius + 26, height - a.radius - 34);
+          b.cx = clamp(b.cx + nx * push, b.radius + 16, width - b.radius - 16);
+          b.cy = clamp(b.cy + ny * push, b.radius + 26, height - b.radius - 34);
+        }
+      }
+    }
+  }
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (const cluster of clusters) {
+    const { members, cx, cy, radius } = cluster;
     members.forEach((repo, repoIndex) => {
       const nodeRadius = clamp(4.4 + Math.log2((repo.stars ?? 0) + 1) * 1.2, 4.4, 10.5);
       const fraction = Math.sqrt((repoIndex + 0.7) / Math.max(1, members.length + 0.4));
@@ -53,7 +77,7 @@ function clusterLayout(graph, width, height) {
       const localAngle = repoIndex * golden;
       nodes.push({ repo, x: cx + Math.cos(localAngle) * localRadius, y: cy + Math.sin(localAngle) * localRadius, radius: nodeRadius });
     });
-  });
+  }
   return { clusters, nodes };
 }
 
@@ -63,7 +87,8 @@ export function renderClusterSvg(graph, theme, width, height) {
   const pieces = [];
   for (const cluster of clusters) {
     const external = cluster.group.external === true;
-    pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${cluster.radius.toFixed(1)}" fill="${colors.clusterFill}" fill-opacity="0.58" stroke="${external ? colors.contributed : colors.cluster}" stroke-width="1.25" stroke-opacity="0.72"${external ? ' stroke-dasharray="5 4"' : ""}/>`);
+    pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${cluster.radius.toFixed(1)}" fill="${colors.clusterFill}" fill-opacity="0.62" stroke="${external ? colors.contributed : colors.cluster}" stroke-width="1.25" stroke-opacity="0.72"${external ? ' stroke-dasharray="5 4"' : ""}/>`);
+    pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${(cluster.radius * 0.72).toFixed(1)}" fill="none" stroke="${external ? colors.contributed : colors.cluster}" stroke-width="0.6" stroke-dasharray="2 4" stroke-opacity="0.28"/>`);
     const title = cluster.group.label.length > 22 ? `${cluster.group.label.slice(0, 21)}…` : cluster.group.label;
     const labelY = cluster.cy - cluster.radius - 9;
     pieces.push(`<text x="${cluster.cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle" fill="${external ? colors.contributed : colors.fg}" font-size="10" font-weight="700">${esc(title)}</text>`);
@@ -75,7 +100,8 @@ export function renderClusterSvg(graph, theme, width, height) {
     const status = repositoryStatus(repo);
     const color = colors[status];
     const opacity = repositoryOpacity(repo, { archived: 0.70, fork: 0.82, contributed: 0.96 });
-    pieces.push(`<g><title>${esc(repo.label)} · ${status}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${color}" opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ""}/>`);
+    const core = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="0.48"/>`;
+    pieces.push(`<g><title>${esc(repo.label)} · ${status}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${color}" opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ""}/>${core}`);
     if ((repo.stars ?? 0) > 0 || nodes.length <= 36 || isContributedRepository(repo)) {
       const label = repo.label.length > 18 ? `${repo.label.slice(0, 17)}…` : repo.label;
       const fontSize = 8.8;

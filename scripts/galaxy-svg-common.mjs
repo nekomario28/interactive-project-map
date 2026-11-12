@@ -75,7 +75,11 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
   const archived = shouldDecorateArchived(node) ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
-  return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${archived}${label}</g>`;
+  const halo = (node.type === "owner" || node.type === "group" || (node.type === "repository" && status !== "contributed" && (node.stars ?? 0) >= 3))
+    ? `<circle cx="${x}" cy="${y}" r="${(radius * 1.65).toFixed(1)}" fill="${fill}" opacity="${node.type === "owner" ? 0.14 : node.type === "group" ? 0.12 : 0.10}"/>`
+    : "";
+  const core = `<circle cx="${x}" cy="${y}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.65 : 0.48}"/>`;
+  return `<g><title>${esc(node.label)}</title>${halo}<circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${core}${archived}${label}</g>`;
 }
 
 export function motionValuesCircle(radius, startAngle, samples = 12) {
