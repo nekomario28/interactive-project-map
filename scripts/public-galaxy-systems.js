@@ -370,6 +370,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.strokeText(text, candidate.point.x, box.top + 2);
       ctx.fillStyle = candidate.node.type === "group" ? colors.group : colors.text;
       ctx.fillText(text, candidate.point.x, box.top + 2);
+      drawOwnerStatsSecondaryLabel(candidate, box, colors);
     }
     ctx.globalAlpha = 1;
   };

@@ -590,6 +590,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.strokeText(displayLabel(candidate.node), candidate.point.x, box.top + 2);
       ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
       ctx.fillText(displayLabel(candidate.node), candidate.point.x, box.top + 2);
+      drawOwnerStatsSecondaryLabel(candidate, box, colors);
     }
     ctx.globalAlpha = 1;
   };

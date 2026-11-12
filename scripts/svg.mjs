@@ -436,6 +436,9 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
   const baseLabel = placement
     ? `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="${placement.anchor}" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${placement.fontSize}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 600 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${mapStyle === "galaxy" ? 2.5 : 1.8}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`
     : "";
+  const ownerSummary = node.type === "owner" && node.profileStats
+    ? `<text x="${x.toFixed(1)}" y="${(y + radius + 30).toFixed(1)}" text-anchor="middle" fill="${colors.muted}" font-size="9">F${node.profileStats.followers ?? "—"} · R${node.profileStats.originalRepositories} · C${node.profileStats.contributedRepositories}</text>`
+    : "";
   const archivedRing = shouldDecorateArchived(node)
     ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
     : "";
@@ -454,7 +457,7 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
   const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}${node.type === "owner" && node.profileStats ? ` · ★${node.profileStats.ownedStars} shown original stars · ${node.profileStats.originalRepositories} originals · ${node.profileStats.followers ?? "unknown"} followers` : ""}`)}</title>${halo}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${innerCore}${ownerRing}${archivedRing}`;
 
   if (!systemsMode || node.type !== "repository" || !Number.isFinite(point.orbitCenterX) || !Number.isFinite(point.orbitCenterY)) {
-    return `<g${isContributedRepository(node) ? ' data-galaxy-orbit="contributed"' : ""}>${core}${baseLabel}</g>`;
+    return `<g${isContributedRepository(node) ? ' data-galaxy-orbit="contributed"' : ""}>${core}${baseLabel}${ownerSummary}</g>`;
   }
 
   const direction = point.orbitDirection < 0 ? -1 : 1;

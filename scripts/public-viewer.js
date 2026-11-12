@@ -484,10 +484,29 @@ function boxesOverlap(a, b, padding = 3) {
   return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
 }
 
+function ownerStatsShortLabel(node) {
+  const s = node?.profileStats;
+  if (!s) return "";
+  return `★${s.ownedStars} · F${s.followers ?? "—"} · R${s.originalRepositories} · C${s.contributedRepositories}`;
+}
+
+function drawOwnerStatsSecondaryLabel(candidate, box, colors) {
+  const line = candidate.node.type === "owner" ? ownerStatsShortLabel(candidate.node) : "";
+  if (!line) return;
+  const fontSize = Math.max(9, candidate.fontSize * 0.8);
+  ctx.font = `600 ${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+  ctx.strokeStyle = colors.background;
+  ctx.lineWidth = 2.4;
+  ctx.strokeText(line, candidate.point.x, box.top + candidate.fontSize + 5);
+  ctx.fillStyle = colors.muted;
+  ctx.fillText(line, candidate.point.x, box.top + candidate.fontSize + 5);
+}
+
 function labelBox(node, point, radius, fontSize) {
   const text = displayLabel(node);
-  const width = clamp(text.length * fontSize * 0.58 + 10, 38, 215);
-  const height = fontSize + 8;
+  const summary = node.type === "owner" ? ownerStatsShortLabel(node) : "";
+  const width = clamp(Math.max(text.length * fontSize * 0.58, summary.length * fontSize * 0.45) + 10, 38, 245);
+  const height = fontSize + 8 + (summary ? fontSize + 3 : 0);
   const top = point.y + radius + 7;
   return { left: point.x - width / 2, right: point.x + width / 2, top, bottom: top + height, width, height, text };
 }
@@ -570,6 +589,7 @@ function drawNodesAndLabels(colors) {
     ctx.strokeText(box.text, candidate.point.x, box.top + 2);
     ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
     ctx.fillText(box.text, candidate.point.x, box.top + 2);
+    drawOwnerStatsSecondaryLabel(candidate, box, colors);
   }
   ctx.globalAlpha = 1;
 }
