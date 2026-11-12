@@ -205,7 +205,10 @@ for (const repositoryCount of [120, 480]) {
   test(`Three.js lab records ${repositoryCount}-repository performance evidence`, async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "Performance evidence is Chromium-only; WebKit remains a compatibility/fallback gate.");
     // This is a harness budget for collecting evidence, not a product performance threshold.
-    test.setTimeout(repositoryCount >= 400 ? 75_000 : 45_000);
+    // CI containers often render Three.js through software WebGL; keep the same 5s
+    // frame-sampling windows and assertions, but allow the browser enough wall-clock
+    // headroom to finish even while GPU/CPU scheduling is contended.
+    test.setTimeout(repositoryCount >= 400 ? 150_000 : 90_000);
     await mkdir(".tmp/playwright-visual", { recursive: true });
 
     const evidence = await measureScenario(page, repositoryCount);
