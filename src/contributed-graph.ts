@@ -20,6 +20,7 @@ export interface ContributedRepositoryRecord {
   commitsTruncated?: boolean;
   pullRequestsTruncated?: boolean;
   classification?: RepositoryClassification;
+  forkUrl?: string;
 }
 
 function nonNegativeInteger(value: unknown): number {
@@ -73,6 +74,7 @@ export function attachContributedRepositories(
       archived: repository.archived === true,
       ...(validIso(repository.createdAt) ? { createdAt: repository.createdAt } : {}),
       ...(validIso(repository.updatedAt) ? { updatedAt: repository.updatedAt } : {}),
+      ...(repository.forkUrl ? { forkUrl: repository.forkUrl } : {}),
       contribution: {
         commits,
         pullRequests,
