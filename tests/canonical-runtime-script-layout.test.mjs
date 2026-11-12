@@ -20,9 +20,10 @@ const SHARED_SCRIPT_ORDER = [
   "obsidian-hover.js",
   "adaptive-labels.js",
   "view-state.js",
+  "2d-toolbar.js",
 ];
 const DEDICATED_ROUTES = ["radial", "tree", "treemap", "timeline", "cluster", "sunburst", "matrix", "sankey"];
-const DEDICATED_TAIL = ["spatial-core-runtime.js", "interaction-polish.js", "search-emphasis.js"];
+const DEDICATED_TAIL = ["spatial-core-runtime.js", "interaction-polish.js", "search-emphasis.js", "2d-toolbar.js"];
 
 function scriptSources(html) {
   return [...html.matchAll(/<script src="\.\.\/([^"?]+)" defer><\/script>/g)].map((match) => match[1]);

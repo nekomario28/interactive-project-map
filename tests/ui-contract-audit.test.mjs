@@ -29,8 +29,8 @@ test("final Pages build keeps setup copy, legend semantics and Sunburst dense LO
     assert.doesNotMatch(home, /<strong>1 · Copy workflow<\/strong>/);
 
     const app = await readFile(join(dir, "app.js"), "utf8");
-    assert.match(app, /Checking the currently published SVG/);
-    assert.match(app, /may reflect previous settings until Step 2 runs/);
+    assert.match(app, /Loading the currently published SVG/);
+    assert.match(app, /It may use an older style or theme/);
     assert.doesNotMatch(app, /Existing static SVG found in the profile repository/);
 
     const presetCss = await readFile(join(dir, "presets.css"), "utf8");

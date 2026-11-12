@@ -54,17 +54,17 @@ async function publicWorkflowFor(options) {
 for (const scenario of [
   {
     name: "stable default",
-    browser: { theme: "dark", style: "radial", maxRepos: 100, forks: true, archived: false, contributed: false, generatorRef: "v1" },
+    browser: { username: "octocat", theme: "dark", style: "radial", maxRepos: 100, forks: true, archived: false, contributed: false, generatorRef: "v1" },
     worker: { username: "octocat", theme: "dark", style: "radial", maxRepos: 100, includeForks: true, includeArchived: false, includeContributed: false, generatorRef: "v1" },
   },
   {
     name: "stable contributed galaxy",
-    browser: { theme: "light", style: "galaxy-systems", maxRepos: 300, forks: false, archived: true, contributed: true, generatorRef: "v1" },
+    browser: { username: "octocat", theme: "light", style: "galaxy-systems", maxRepos: 300, forks: false, archived: true, contributed: true, generatorRef: "v1" },
     worker: { username: "octocat", theme: "light", style: "galaxy-systems", maxRepos: 300, includeForks: false, includeArchived: true, includeContributed: true, generatorRef: "v1" },
   },
   {
     name: "pinned generator",
-    browser: { theme: "dark", style: "matrix", maxRepos: 42, forks: true, archived: true, contributed: false, generatorRef: PINNED_REF },
+    browser: { username: "octocat", theme: "dark", style: "matrix", maxRepos: 42, forks: true, archived: true, contributed: false, generatorRef: PINNED_REF },
     worker: { username: "octocat", theme: "dark", style: "matrix", maxRepos: 42, includeForks: true, includeArchived: true, includeContributed: false, generatorRef: PINNED_REF },
   },
 ]) {

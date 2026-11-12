@@ -65,6 +65,15 @@ export function staticAssetUrls(origin: string, options: InstallOptions) {
   };
 }
 
+// Keep the dormant serializer byte-compatible with the public Pages workflow.
+function scheduleFor(username: string): string {
+  let hash = 2166136261;
+  for (const char of username.toLowerCase()) {
+    hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
+  }
+  return (hash % 60) + " " + ((hash >>> 6) % 24) + " * * *";
+}
+
 export function renderInstallWorkflow(options: InstallOptions): string {
   const generatorRef = normalizeGeneratorRef(options.generatorRef);
   const style = normalizeStyle(options.style);
@@ -77,7 +86,7 @@ export function renderInstallWorkflow(options: InstallOptions): string {
 on:
   workflow_dispatch:
   schedule:
-    - cron: "37 3 * * *"
+    - cron: "${scheduleFor(options.username)}"
 
 permissions:
   contents: read
