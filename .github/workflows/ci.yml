@@ -87,14 +87,39 @@ jobs:
       - name: Chromium browser E2E
         run: npm run test:e2e
 
-      - name: iPhone WebKit smoke
-        run: npm run test:e2e:webkit
-
       - name: Upload browser E2E evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: browser-e2e
+          path: |
+            .tmp/playwright-visual
+            .tmp/playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 3
+
+  browser-webkit:
+    needs: verify
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --user 1001 --ipc=host
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: iPhone WebKit smoke
+        run: npm run test:e2e:webkit
+
+      - name: Upload WebKit browser evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-webkit
           path: |
             .tmp/playwright-visual
             .tmp/playwright-report

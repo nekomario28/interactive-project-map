@@ -107,3 +107,18 @@ test("malformed Contributed diagnostics fail closed", () => {
   value.externalContributions.includedRepositories = 0;
   assert.equal(ProjectMapViewModel.sanitizeGraph(value, "example"), null);
 });
+
+test("owner stats survive sanitized graph projection without treating missing followers as zero", () => {
+  const source = fixture();
+  const owner = source.nodes.find((node) => node.type === "owner");
+  owner.profileStats = { ownedStars: 12, originalRepositories: 3, followers: null, contributedRepositories: 1,
+    mergedPullRequests: 2, commits: 4, limitedRepositories: false, limitedContributions: true };
+  const contributed = source.nodes.find((node) => node.relation === "contributed");
+  contributed.forkUrl = "https://github.com/example/beta";
+  const clean = ProjectMapViewModel.sanitizeGraph(source, "example");
+  assert.equal(clean.nodes.find((node) => node.type === "owner").profileStats.ownedStars, 12);
+  assert.equal(clean.nodes.find((node) => node.type === "owner").profileStats.followers, null);
+  assert.equal(clean.nodes.find((node) => node.relation === "contributed").forkUrl, contributed.forkUrl);
+  owner.profileStats.ownedStars = -1;
+  assert.equal(ProjectMapViewModel.sanitizeGraph(source, "example"), null);
+});

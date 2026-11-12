@@ -36,7 +36,7 @@ export function statusOf(node) {
 }
 
 export function nodeRadius(node) {
-  if (node.type === "owner") return 18;
+  if (node.type === "owner") return node.profileStats ? 18 * (1 + Math.min(.4, .06 * Math.log2(1 + node.profileStats.ownedStars))) : 18;
   if (node.type === "group") return 7.5;
   return clamp(4.8 + Math.log2((node.stars ?? 0) + 1) * 1.25, 4.8, 10.5);
 }
@@ -74,8 +74,17 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
+  const ownerSummary = node.type === "owner" && node.profileStats
+    ? `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12) + 12}" text-anchor="middle" fill="${colors.muted}" font-size="8.4">F${esc(node.profileStats.followers ?? "—")} · R${esc(node.profileStats.originalRepositories)} · C${esc(node.profileStats.contributedRepositories)}</text>`
+    : "";
   const archived = shouldDecorateArchived(node) ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
-  return `<g><title>${esc(node.label)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${archived}${label}</g>`;
+  const core = node.type === "owner" && node.profileStats
+    ? `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" font-weight="700" fill="${colors.bg}">★${esc(node.profileStats.ownedStars)}</text>`
+    : "";
+  const statsTitle = node.type === "owner" && node.profileStats
+    ? ` · ★${esc(node.profileStats.ownedStars)} shown original stars · ${esc(node.profileStats.originalRepositories)} shown originals · ${node.profileStats.followers ?? "unknown"} followers · ${esc(node.profileStats.contributedRepositories)} featured external projects`
+    : "";
+  return `<g><title>${esc(node.label + statsTitle)}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${core}${archived}${label}${ownerSummary}</g>`;
 }
 
 export function motionValuesCircle(radius, startAngle, samples = 12) {

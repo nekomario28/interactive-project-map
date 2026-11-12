@@ -98,3 +98,15 @@ test("C4a Contributed status CSS is warm-orange and idempotent", () => {
   assert.match(patched, /#E69F00/);
   assert.equal(patchViewerCss(patched), patched);
 });
+
+test("C4a contribution runtime preserves verified fork URL as a clickable details link", () => {
+  const source = '"use strict";\nfunction sanitizeGraph(value) { return value; }\n'
+    + 'function nodeStatus(node) {\n  if (node.type !== "repository") return node.type;\n  if (node.archived) return "archived";\n  return node.fork ? "fork" : "original";\n}\n'
+    + 'function palette() {\n  if (state.style === "obsidian") {\n    return {\n      archived: "#b97a7a",\n      selection: "#ffffff",\n    };\n  }\n  return {\n    archived: "#d9847b",\n    selection: "#ffffff",\n  };\n}\n'
+    + 'function drawEdges() {}\nfunction updateDetails() {}\n'
+    + 'try {\n  username = normalizeUsername(query.get("username"));';
+  const patched = patchSharedViewerRuntime(source);
+  assert.match(patched, /node\.forkUrl = raw\.forkUrl/);
+  assert.match(patched, /appendDetailRow\("Your verified fork", node\.forkUrl\)/);
+  assert.match(patched, /link\.textContent = "Open your fork"/);
+});

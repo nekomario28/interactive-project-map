@@ -404,7 +404,8 @@
         reheat(0.55);
       }
       clearGesture();
-      if (!cancelled && moved < 6) updateDetails(hitTest(point.x, point.y));
+      // Use the pointer-down target: physics may move it before pointer-up.
+      if (!cancelled && moved < 6) updateDetails(dragged || hitTest(point.x, point.y));
     }
 
     event.preventDefault();

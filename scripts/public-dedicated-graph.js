@@ -6,6 +6,20 @@
   const OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
   const REPO_RE = /^[A-Za-z0-9._-]{1,100}$/;
 
+  function safeOwnerProfileStats(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"];
+  if (keys.some((key) => !Number.isSafeInteger(raw[key]) || raw[key] < 0 || raw[key] > 1_000_000_000)) return null;
+  if (raw.followers != null && (!Number.isSafeInteger(raw.followers) || raw.followers < 0 || raw.followers > 1_000_000_000)) return null;
+  if (typeof raw.limitedRepositories !== "boolean" || typeof raw.limitedContributions !== "boolean") return null;
+  return {
+    ...Object.fromEntries(keys.map((key) => [key, raw[key]])),
+    followers: raw.followers == null ? null : raw.followers,
+    limitedRepositories: raw.limitedRepositories,
+    limitedContributions: raw.limitedContributions,
+  };
+}
+
   function cleanText(value, max) {
     return typeof value === "string" ? value.slice(0, max) : "";
   }
@@ -108,10 +122,21 @@
     };
     if (validContributedIso(raw.createdAt)) node.createdAt = raw.createdAt;
     if (validContributedIso(raw.updatedAt)) node.updatedAt = raw.updatedAt;
+    if (typeof raw.forkUrl === "string") {
+      const part = raw.forkUrl.split("/").pop();
+      if (part && safeGithubRepositoryUrl(raw.forkUrl, projectOwner, part) === raw.forkUrl) node.forkUrl = raw.forkUrl;
+    }
     return node;
   }
 
   function completeGraph(value, safe) {
+    const rawOwner = value.nodes.find((node) => node?.type === "owner");
+    if (rawOwner?.profileStats != null) {
+      const stats = safeOwnerProfileStats(rawOwner.profileStats);
+      if (!stats) return null;
+      const owner = safe.nodes.find((node) => node?.type === "owner");
+      if (owner) owner.profileStats = stats;
+    }
     const rawContributed = value.nodes.filter((node) => node?.type === "repository" && node?.relation === "contributed");
     if (!rawContributed.length) return safe;
     if (rawContributed.length > MAX_CONTRIBUTED_REPOSITORIES) return null;
@@ -156,13 +181,29 @@
       if (text == null || text === "") return;
       const existing = [...detailsMeta.querySelectorAll("dt")].find((item) => item.textContent === key);
       if (existing) {
-        if (existing.nextElementSibling) existing.nextElementSibling.textContent = String(text);
+        if (existing.nextElementSibling) {
+          const dd = existing.nextElementSibling;
+          if (key === "Your verified fork" && typeof text === "string") {
+            dd.replaceChildren();
+            const link = document.createElement("a");
+            link.href = text;
+            link.textContent = "Open your fork";
+            link.rel = "noopener noreferrer";
+            dd.append(link);
+          } else dd.textContent = String(text);
+        }
         return;
       }
       const dt = document.createElement("dt");
       const dd = document.createElement("dd");
       dt.textContent = key;
-      dd.textContent = String(text);
+      if (key === "Your verified fork" && typeof text === "string") {
+        const link = document.createElement("a");
+        link.href = text;
+        link.textContent = "Open your fork";
+        link.rel = "noopener noreferrer";
+        dd.append(link);
+      } else dd.textContent = String(text);
       detailsMeta.append(dt, dd);
     }
     if (value?.type === "repository" && value?.relation === "contributed") {
@@ -172,12 +213,23 @@
       appendRow("Commits", String(value.contribution?.commits ?? 0) + (value.contribution?.commitsTruncated ? "+" : ""));
       appendRow("Pull requests", String(value.contribution?.pullRequests ?? 0) + (value.contribution?.pullRequestsTruncated ? "+" : ""));
       appendRow("Merged PRs", value.contribution?.mergedPullRequests ?? 0);
+      if (value.forkUrl) appendRow("Your verified fork", value.forkUrl);
       const sourceFlags = [value.fork ? "fork" : "", value.archived ? "archived" : ""].filter(Boolean).join(" · ");
       if (sourceFlags) appendRow("Source flags", sourceFlags);
       const windowValue = graph?.externalContributions?.window;
       if (validContributedIso(windowValue?.from) && validContributedIso(windowValue?.to)) {
         appendRow("Contribution window", windowValue.from.slice(0, 10) + " → " + windowValue.to.slice(0, 10));
       }
+      detailsMeta.hidden = false;
+    } else if (value?.type === "owner" && value.profileStats) {
+      const stats = value.profileStats;
+      appendRow("Stars (shown originals)", stats.ownedStars);
+      appendRow("Followers", stats.followers ?? "Unavailable");
+      appendRow("Original repos (shown)", stats.originalRepositories);
+      appendRow("Featured external projects (365d)", stats.contributedRepositories);
+      appendRow("Merged PRs (featured, 365d)", stats.mergedPullRequests);
+      appendRow("Commits (featured, 365d)", stats.commits);
+      if (stats.limitedRepositories || stats.limitedContributions) appendRow("Coverage", "Partial");
       detailsMeta.hidden = false;
     } else if (value?.counts && Number.isFinite(value.counts.contributed)) {
       appendRow("Contributed", value.counts.contributed);

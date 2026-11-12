@@ -56,3 +56,30 @@ for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsid
     await expect.poll(() => page.evaluate(() => state.selected?.id || null)).toBe("repository:beta");
   });
 }
+
+test("Obsidian preserves a pointer-down selection if the node moves before pointer-up", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await installGraph(page);
+  await page.goto("/u/?username=example&style=obsidian");
+  await expect(page.locator("#status")).toBeHidden();
+  const point = await page.evaluate(() => {
+    const node = state.nodes.find((item) => item.id === "repository:alpha");
+    const p = worldToScreen(node.x, node.y);
+    const rect = document.getElementById("galaxy").getBoundingClientRect();
+    return { x: rect.left + p.x, y: rect.top + p.y, canvasX: p.x, canvasY: p.y };
+  });
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await expect.poll(() => page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot().draggingId))
+    .toBe("repository:alpha");
+  const afterMoveHit = await page.evaluate(({ canvasX, canvasY }) => {
+    const node = state.nodes.find((item) => item.id === "repository:alpha");
+    node.x += 250;
+    node.y += 250;
+    return hitTest(canvasX, canvasY)?.id || null;
+  }, point);
+  expect(afterMoveHit).not.toBe("repository:alpha");
+  await page.mouse.up();
+  await expect(page.locator("#detailsTitle")).toHaveText("alpha");
+  await expect.poll(() => page.evaluate(() => state.selected?.id || null)).toBe("repository:alpha");
+});

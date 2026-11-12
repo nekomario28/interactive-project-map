@@ -243,6 +243,18 @@ function mergeEnrichedByName(repos, replacements) {
   return repos.map((repo) => byName.get(String(repo.name).toLowerCase()) ?? repo);
 }
 
+export async function fetchPublicFollowerCount(username, token, options = {}) {
+  try {
+    const response = await (options.fetchImpl ?? fetch)(`${API}/users/${encodeURIComponent(username)}`, {
+      headers: githubHeaders(token, "application/vnd.github+json"),
+    });
+    if (!response.ok) return null;
+    const profile = await response.json();
+    if (typeof profile.login !== "string" || profile.login.toLowerCase() !== username.toLowerCase()) return null;
+    return Number.isSafeInteger(profile.followers) && profile.followers >= 0 ? profile.followers : null;
+  } catch { return null; }
+}
+
 export async function fetchPublicRepos(username, token, maxRepos, options = {}) {
   const repos = [];
   const includeForks = options.includeForks ?? true;

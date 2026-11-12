@@ -443,7 +443,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   nodeRadius = function galaxyNodeRadius(node) {
     if (state.style !== "galaxy-classic") return baseNodeRadius(node);
-    if (node.type === "owner") return 7;
+    if (node.type === "owner") return 7 * ownerPlanetScale(node.profileStats);
     if (node.type === "group") return 2.2;
     return baseNodeRadius(node);
   };
@@ -532,9 +532,12 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.globalAlpha = opacity;
       const colorsByStatus = node.type === "owner" ? colors.owner : node.type === "group" ? colors.group : node.archived ? colors.archived : node.fork ? colors.fork : colors.original;
       ctx.fillStyle = colorsByStatus;
+
       ctx.beginPath();
+
       ctx.arc(point.x, point.y, radius, 0, tau);
       ctx.fill();
+      drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
       if (node.type === "repository" && node.archived) {
         ctx.strokeStyle = colors.archived;
         ctx.lineWidth = 1.2;
@@ -585,6 +588,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.strokeText(displayLabel(candidate.node), candidate.point.x, box.top + 2);
       ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
       ctx.fillText(displayLabel(candidate.node), candidate.point.x, box.top + 2);
+      drawOwnerStatsSecondaryLabel(candidate, box, colors);
     }
     ctx.globalAlpha = 1;
   };

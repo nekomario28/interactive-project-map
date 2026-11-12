@@ -113,3 +113,67 @@ test("unchanged repository data preserves generatedAt so scheduled runs are comm
     await generateStaticMap(config, { cwd, token: "read-token", fetchRepos }); const second = JSON.parse(await readFile(graphPath, "utf8")); assert.equal(second.generatedAt, "2026-01-01T00:00:00.000Z");
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
+
+// Verified Fork/Contributed identity collapse is source-grounded, not a label comparison.
+test("generation suppresses an exact upstream fork, preserves linked-fork evidence, and emits owner stats", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "project-map-owner-stats-"));
+  try {
+    const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_CONTRIBUTED: "true", INPUT_STYLE: "galaxy-systems", INPUT_OUTPUT_DIR: "project-map" });
+    const fetchedRepos = async () => [
+      repo(1, "ruff", { fork: true, stargazers_count: 999 }),
+      repo(2, "my-original", { fork: false, stargazers_count: 7 }),
+    ];
+    const fetchContributions = async () => ({
+      window: { from: "2025-11-01T00:00:00.000Z", to: "2026-11-01T00:00:00.000Z" },
+      repositories: [{
+        nameWithOwner: "astral-sh/ruff", owner: "astral-sh", name: "ruff",
+        url: "https://github.com/astral-sh/ruff", description: "", language: "Rust",
+        commits: 4, pullRequests: 2, mergedPullRequests: 1, stars: 9999,
+      }],
+      diagnostics: { truncatedRepositories: 0 },
+    });
+    const forkFetchImpl = async (url) => {
+      assert.equal(url, "https://api.github.com/repos/example/ruff");
+      return { ok: true, json: async () => ({ fork: true, parent: { full_name: "astral-sh/ruff" } }) };
+    };
+    const result = await generateStaticMap(config, {
+      cwd, token: "read-token", fetchRepos: fetchedRepos, fetchFollowers: async () => 42,
+      contributionOptions: { fetchContributions, forkFetchImpl },
+    });
+    const graph = JSON.parse(await readFile(join(cwd, result.graphPath), "utf8"));
+    assert.deepEqual(graph.nodes.filter((n) => n.type === "repository").map((n) => n.label).sort(), ["astral-sh/ruff", "my-original"]);
+    assert.equal(graph.repositoryCount, 1);
+    assert.equal(graph.contributedRepositoryCount, 1);
+    assert.equal(graph.nodes.find((n) => n.relation === "contributed").forkUrl, "https://github.com/example/ruff");
+    assert.deepEqual(graph.nodes.find((n) => n.type === "owner").profileStats, {
+      ownedStars: 7, originalRepositories: 1, followers: 42, contributedRepositories: 1,
+      mergedPullRequests: 1, commits: 4, limitedRepositories: false, limitedContributions: false,
+    });
+    const svg = await readFile(join(cwd, result.svgPath), "utf8");
+    assert.match(svg, /★7/);
+    assert.match(svg, /42 followers/);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
+
+test("generation never collapses an unrelated same-name fork", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "project-map-nonmatch-"));
+  try {
+    const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_CONTRIBUTED: "true", INPUT_STYLE: "radial", INPUT_OUTPUT_DIR: "project-map" });
+    const result = await generateStaticMap(config, {
+      cwd, token: "read-token",
+      fetchRepos: async () => [repo(1, "ruff", { fork: true })],
+      contributionOptions: {
+        fetchContributions: async () => ({
+          window: { from: "2025-11-01T00:00:00.000Z", to: "2026-11-01T00:00:00.000Z" },
+          repositories: [{ nameWithOwner: "astral-sh/ruff", owner: "astral-sh", name: "ruff",
+            url: "https://github.com/astral-sh/ruff", commits: 1, pullRequests: 0, mergedPullRequests: 0 }],
+          diagnostics: { truncatedRepositories: 0 },
+        }),
+        forkFetchImpl: async () => ({ ok: true, json: async () => ({ fork: true, parent: { full_name: "other/ruff" } }) }),
+      },
+    });
+    const graph = JSON.parse(await readFile(join(cwd, result.graphPath), "utf8"));
+    assert.equal(graph.nodes.filter((n) => n.type === "repository").length, 2);
+    assert.equal(graph.nodes.find((n) => n.relation === "contributed").forkUrl, undefined);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});

@@ -90,12 +90,18 @@ export interface ExternalContributionDiagnostics {
   truncatedRepositories: number;
 }
 
+export interface OwnerProfileStats {
+  ownedStars: number; originalRepositories: number; followers: number | null;
+  contributedRepositories: number; mergedPullRequests: number; commits: number;
+  limitedRepositories: boolean; limitedContributions: boolean;
+}
+
 export type GalaxyNodeType = "owner" | "group" | "repository";
 export type RepositoryRelation = "contributed";
 export interface GalaxyNode {
   id: string; label: string; type: GalaxyNodeType; url?: string; description?: string; language?: string | null; topics?: string[]; stars?: number; forks?: number;
   fork?: boolean; archived?: boolean; createdAt?: string; updatedAt?: string; groupId?: string; groupLabel?: string; repositoryCount?: number; classification?: RepositoryClassification;
-  taxonomyAssignment?: RepositoryTaxonomyAssignment;
+  taxonomyAssignment?: RepositoryTaxonomyAssignment; profileStats?: OwnerProfileStats; forkUrl?: string;
   relation?: RepositoryRelation; repositoryOwner?: string; repositoryName?: string; contribution?: ContributionSummary;
 }
 export interface GalaxyEdge { source: string; target: string; type: "ownership" | "membership" | "contribution"; }
