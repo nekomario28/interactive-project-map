@@ -220,7 +220,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   nodeRadius = function galaxySystemNodeRadius(node) {
     if (state.style !== "galaxy-systems") return baseNodeRadius(node);
-    if (node.type === "owner") return 14;
+    if (node.type === "owner") return 14 * ownerPlanetScale(node.profileStats);
     if (node.type === "group") return clamp(7.5 + Math.log2((node.repositoryCount || 1) + 1) * 1.15, 8, 12.5);
     return baseNodeRadius(node);
   };

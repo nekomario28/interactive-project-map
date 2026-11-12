@@ -491,7 +491,7 @@ function ownerStatsShortLabel(node) {
 }
 
 function drawOwnerPlanetCoreStats(node, point, radius, opacity, colors) {
-  if (node.type !== "owner" || !node.profileStats || radius < 12) return;
+  if (node.type !== "owner" || !node.profileStats || radius < 9) return;
   ctx.save();
   ctx.fillStyle = colors.background;
   ctx.globalAlpha = opacity;
