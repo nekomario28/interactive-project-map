@@ -47,6 +47,8 @@ test("Three.js lab consumes shared semantic and transferable state runtimes", as
     assert.match(runtime, /ui\.canvas\.__ipmRenderer/);
     assert.match(runtime, /activePointers=new Map\(\)/);
     assert.match(runtime, /event\.shiftKey/);
+    assert.match(runtime, /function updateFocusLines\(\)/);
+    assert.match(runtime, /zoomLod=clamp\(Math\.pow\(distance\/220,\.46\),\.8,1\.78\)/);
     assert.doesNotMatch(runtime, /api\.github\.com/);
     assert.doesNotMatch(runtime, /Quality Auto/);
     assert.match(css, /perspective: 1200px/);

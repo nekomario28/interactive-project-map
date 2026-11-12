@@ -42,7 +42,8 @@ test("canonical Three.js style composer keeps four scene themes, adds Galaxy lay
   assert.match(patched, /galaxy:\{background:0x01030a/);
   assert.match(patched, /function layoutGalaxyGraph\(THREE,graph\)/);
   assert.match(patched, /armCount=count<=3\?1:count<=8\?2:3/);
-  assert.match(patched, /externalBase=Math\.max\(210,outerOwnedRadius\+64\)/);
+  assert.match(patched, /externalBase=Math\.max\(142,outerOwnedRadius\+14\)/);
+  assert.match(patched, /extClusters=new Map\(\)/);
   assert.match(patched, /threeStyle==="galaxy"\?layoutGalaxyGraph\(THREE,graph\):layoutGraph\(THREE,graph\)/);
   assert.match(patched, /threeStyle==="galaxy"\?\(graph\.nodes\.some/);
   assert.match(patched, /pitch=threeStyle==="galaxy"\?\.66:\.34/);
