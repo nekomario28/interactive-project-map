@@ -181,13 +181,29 @@
       if (text == null || text === "") return;
       const existing = [...detailsMeta.querySelectorAll("dt")].find((item) => item.textContent === key);
       if (existing) {
-        if (existing.nextElementSibling) existing.nextElementSibling.textContent = String(text);
+        if (existing.nextElementSibling) {
+          const dd = existing.nextElementSibling;
+          if (key === "Your verified fork" && typeof text === "string") {
+            dd.replaceChildren();
+            const link = document.createElement("a");
+            link.href = text;
+            link.textContent = "Open your fork";
+            link.rel = "noopener noreferrer";
+            dd.append(link);
+          } else dd.textContent = String(text);
+        }
         return;
       }
       const dt = document.createElement("dt");
       const dd = document.createElement("dd");
       dt.textContent = key;
-      dd.textContent = String(text);
+      if (key === "Your verified fork" && typeof text === "string") {
+        const link = document.createElement("a");
+        link.href = text;
+        link.textContent = "Open your fork";
+        link.rel = "noopener noreferrer";
+        dd.append(link);
+      } else dd.textContent = String(text);
       detailsMeta.append(dt, dd);
     }
     if (value?.type === "repository" && value?.relation === "contributed") {

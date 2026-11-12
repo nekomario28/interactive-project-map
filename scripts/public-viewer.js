@@ -668,7 +668,13 @@ function updateDetails(node) {
     const dt = document.createElement("dt");
     dt.textContent = key;
     const dd = document.createElement("dd");
-    dd.textContent = value;
+    if (key === "Your verified fork" && typeof value === "string") {
+      const link = document.createElement("a");
+      link.href = value;
+      link.textContent = "Open your fork";
+      link.rel = "noopener noreferrer";
+      dd.append(link);
+    } else dd.textContent = value;
     detailsMeta.append(dt, dd);
   }
   detailsMeta.hidden = rows.length === 0;

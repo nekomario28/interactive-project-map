@@ -143,7 +143,7 @@ function safeContributedRepository(node: GalaxyNode, username: string): Contribu
     ...(typeof node.forkUrl === "string" && (() => {
       try {
         const path = new URL(node.forkUrl).pathname.split("/").filter(Boolean);
-        return path.length === 2 && REPO_NAME_RE.test(path[1]) && validatedRepositoryUrl(node.forkUrl, username, path[1]);
+        return path.length === 2 && REPO_NAME_RE.test(path[1]) && validatedRepositoryUrl(node.forkUrl, username, path[1]) === node.forkUrl;
       } catch { return false; }
     })() ? { forkUrl: node.forkUrl } : {}),
     ...(classification ? { classification } : {}),
