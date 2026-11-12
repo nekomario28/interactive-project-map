@@ -36,7 +36,7 @@ export function statusOf(node) {
 }
 
 export function nodeRadius(node) {
-  if (node.type === "owner") return 18;
+  if (node.type === "owner") return node.profileStats ? 18 * (1 + Math.min(.4, .06 * Math.log2(1 + node.profileStats.ownedStars))) : 18;
   if (node.type === "group") return 7.5;
   return clamp(4.8 + Math.log2((node.stars ?? 0) + 1) * 1.25, 4.8, 10.5);
 }
@@ -78,8 +78,13 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const halo = (node.type === "owner" || node.type === "group" || (node.type === "repository" && status !== "contributed" && (node.stars ?? 0) >= 3))
     ? `<circle cx="${x}" cy="${y}" r="${(radius * 1.65).toFixed(1)}" fill="${fill}" opacity="${node.type === "owner" ? 0.14 : node.type === "group" ? 0.12 : 0.10}"/>`
     : "";
-  const core = `<circle cx="${x}" cy="${y}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.65 : 0.48}"/>`;
-  return `<g><title>${esc(node.label)}</title>${halo}<circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${core}${archived}${label}</g>`;
+  const core = node.type === "owner" && node.profileStats
+    ? `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" font-weight="700" fill="${colors.bg}">★${node.profileStats.ownedStars}</text>`
+    : `<circle cx="${x}" cy="${y}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.65 : 0.48}"/>`;
+  const statsTitle = node.type === "owner" && node.profileStats
+    ? ` · ★${node.profileStats.ownedStars} shown original stars · ${node.profileStats.originalRepositories} shown originals · ${node.profileStats.followers ?? "unknown"} followers · ${node.profileStats.contributedRepositories} featured external projects`
+    : "";
+  return `<g><title>${esc(node.label + statsTitle)}</title>${halo}<circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${core}${archived}${label}</g>`;
 }
 
 export function motionValuesCircle(radius, startAngle, samples = 12) {

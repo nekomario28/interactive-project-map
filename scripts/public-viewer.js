@@ -126,6 +126,7 @@ function sanitizeGraph(value) {
       node = {
         ...node,
         url,
+        ...(typeof raw.forkUrl === "string" && raw.forkUrl.startsWith(`https://github.com/${encodeURIComponent(username)}/`) && !/[?#]/.test(raw.forkUrl) ? { forkUrl: raw.forkUrl } : {}),
         description: cleanText(raw.description, 2000),
         language: typeof raw.language === "string" ? raw.language.slice(0, 100) : null,
         topics: Array.isArray(raw.topics) ? raw.topics.filter((item) => typeof item === "string").slice(0, 40).map((item) => item.slice(0, 80)) : [],
@@ -212,6 +213,10 @@ function displayLabel(node) {
 function estimateLabelWidth(node) {
   const multiplier = node.type === "repository" ? 6.2 : 6.8;
   return clamp(18 + displayLabel(node).length * multiplier, 52, 205);
+}
+
+function ownerPlanetScale(stats) {
+  return stats ? 1 + Math.min(0.4, 0.06 * Math.log2(1 + stats.ownedStars)) : 1;
 }
 
 function nodeRadius(node) {
@@ -513,6 +518,16 @@ function drawNodesAndLabels(colors) {
       ctx.stroke();
       ctx.globalAlpha = opacity;
     }
+    if (node.type === "owner" && node.profileStats && radius >= 12) {
+      ctx.save();
+      ctx.fillStyle = colors.background;
+      ctx.globalAlpha = opacity;
+      ctx.font = `700 ${Math.min(11, Math.max(8, radius * 0.42))}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`★${node.profileStats.ownedStars}`, point.x, point.y, radius * 1.7);
+      ctx.restore();
+    }
     if (node.type === "repository" && node.archived) {
       ctx.strokeStyle = colors.archived;
       ctx.lineWidth = 1.4;
@@ -629,6 +644,16 @@ function updateDetails(node) {
   detailsTitle.textContent = node.label;
   detailsDescription.textContent = node.description || (node.type === "group" ? `${node.repositoryCount || 0} repositories` : node.type === "owner" ? `GitHub profile @${username}` : "No description provided.");
   const rows = [];
+  if (node.type === "owner" && node.profileStats) {
+    const stats = node.profileStats;
+    rows.push(["Stars (shown originals)", String(stats.ownedStars)]);
+    rows.push(["Followers", stats.followers == null ? "Unavailable" : String(stats.followers)]);
+    rows.push(["Original repos (shown)", String(stats.originalRepositories)]);
+    rows.push(["Featured external projects (365d)", String(stats.contributedRepositories)]);
+    rows.push(["Merged PRs (featured, 365d)", String(stats.mergedPullRequests)]);
+    rows.push(["Commits (featured, 365d)", String(stats.commits)]);
+    if (stats.limitedRepositories || stats.limitedContributions) rows.push(["Coverage", "Partial: generation or contribution limits apply"]);
+  }
   if (node.type === "repository") {
     rows.push(["Kind", node.archived ? "Archived" : node.fork ? "Fork" : "Original"]);
     if (node.language) rows.push(["Language", node.language]);
@@ -636,6 +661,7 @@ function updateDetails(node) {
     rows.push(["Forks", String(node.forks || 0)]);
     if (node.groupLabel) rows.push(["Category", node.groupLabel]);
     if (node.updatedAt) rows.push(["Updated", node.updatedAt.slice(0, 10)]);
+    if (node.forkUrl) rows.push(["Your verified fork", node.forkUrl]);
   }
   detailsMeta.replaceChildren();
   for (const [key, value] of rows) {

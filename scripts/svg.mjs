@@ -36,7 +36,7 @@ function labelWidth(node, fontSize = 10) {
 }
 
 function nodeRadius(node) {
-  if (node.type === "owner") return 25;
+  if (node.type === "owner") return node.profileStats ? 25 * (1 + Math.min(.4, .06 * Math.log2(1 + node.profileStats.ownedStars))) : 25;
   if (node.type === "group") return 7.5;
   return clamp(5 + Math.log2((node.stars ?? 0) + 1) * 1.35, 5, 11.5);
 }
@@ -447,9 +447,11 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
   const halo = (node.type === "owner" || node.type === "group" || (node.type === "repository" && status !== "contributed" && (node.stars ?? 0) >= 3))
     ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius * 1.65).toFixed(1)}" fill="${fill}" opacity="0.11"/>`
     : "";
-  const innerCore = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.65 : 0.45}"/>`;
+  const innerCore = node.type === "owner" && node.profileStats
+    ? `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" fill="${colors.bg}" font-size="11" font-weight="700">★${node.profileStats.ownedStars}</text>`
+    : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.65 : 0.45}"/>`;
   const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
-  const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title>${halo}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${innerCore}${ownerRing}${archivedRing}`;
+  const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}${node.type === "owner" && node.profileStats ? ` · ★${node.profileStats.ownedStars} shown original stars · ${node.profileStats.originalRepositories} originals · ${node.profileStats.followers ?? "unknown"} followers` : ""}`)}</title>${halo}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${innerCore}${ownerRing}${archivedRing}`;
 
   if (!systemsMode || node.type !== "repository" || !Number.isFinite(point.orbitCenterX) || !Number.isFinite(point.orbitCenterY)) {
     return `<g${isContributedRepository(node) ? ' data-galaxy-orbit="contributed"' : ""}>${core}${baseLabel}</g>`;
