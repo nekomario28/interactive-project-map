@@ -167,7 +167,7 @@ function buildRadialLayout(graph) {
   });
   const contributed = result
     .filter((node) => node.type === "repository" && node.relation === "contributed")
-    .sort((a, b) => String(a.externalOwner || "").localeCompare(String(b.externalOwner || "")) || a.label.localeCompare(b.label));
+    .sort((a, b) => a.label.localeCompare(b.label));
   if (contributed.length) {
     const ownedRepositories = result.filter((node) => node.type === "repository" && node.relation !== "contributed");
     const maxOwnedRadius = ownedRepositories.reduce(
@@ -175,24 +175,10 @@ function buildRadialLayout(graph) {
       292,
     );
     const externalRadius = Math.max(390, maxOwnedRadius + 86);
-    const ownerBuckets = new Map();
-    for (const node of contributed) {
-      const key = String(node.externalOwner || "external").toLowerCase();
-      if (!ownerBuckets.has(key)) ownerBuckets.set(key, []);
-      ownerBuckets.get(key).push(node);
-    }
-    const bucketList = [...ownerBuckets.values()];
-    bucketList.forEach((bucket, bucketIndex) => {
-      const centerAngle = (Math.PI * 2 * bucketIndex) / Math.max(1, bucketList.length);
-      const spread = Math.min(0.42, (Math.PI * 1.4) / Math.max(2, contributed.length) * bucket.length);
-      bucket.forEach((node, localIndex) => {
-        const localOffset = bucket.length <= 1 ? 0 : (localIndex / (bucket.length - 1) - 0.5) * spread;
-        const radialOffset = (localIndex % 2) * 26;
-        const angle = centerAngle + localOffset;
-        const radius = externalRadius + radialOffset;
-        node.x = Math.cos(angle) * radius;
-        node.y = Math.sin(angle) * radius;
-      });
+    contributed.forEach((node, index) => {
+      const angle = Math.PI * 2 * index / contributed.length;
+      node.x = Math.cos(angle) * externalRadius;
+      node.y = Math.sin(angle) * externalRadius;
     });
   }
   return result;
@@ -263,23 +249,14 @@ function drawBackground(colors) {
   ctx.fillStyle = colors.background;
   ctx.fillRect(0, 0, width, height);
   const center = worldToScreen(0, 0);
-  const coreGlow = ctx.createRadialGradient(center.x, center.y, 4, center.x, center.y, 165 * state.zoom);
-  coreGlow.addColorStop(0, "rgba(100,210,255,.12)");
-  coreGlow.addColorStop(1, "rgba(100,210,255,0)");
-  ctx.fillStyle = coreGlow;
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, 165 * state.zoom, 0, TAU);
-  ctx.fill();
-  for (const radius of [175, 292, 364, 412]) {
-    ctx.strokeStyle = radius === 175 ? colors.group : colors.edge;
-    ctx.globalAlpha = radius === 175 ? 0.18 : 0.12;
+  for (const radius of [175, 292, 364]) {
+    ctx.strokeStyle = colors.edge;
+    ctx.globalAlpha = 0.12;
     ctx.lineWidth = 1;
-    ctx.setLineDash(radius === 175 ? [5, 5] : []);
     ctx.beginPath();
     ctx.arc(center.x, center.y, radius * state.zoom, 0, TAU);
     ctx.stroke();
   }
-  ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 }
 
@@ -290,7 +267,7 @@ function drawEdges(colors) {
     if (!a || !b) continue;
     const source = worldToScreen(a.x, a.y);
     const target = worldToScreen(b.x, b.y);
-    let opacity = edge.type === "relation" ? 0.72 : 0.44;
+    let opacity = edge.type === "relation" ? 0.72 : 0.52;
     if (state.query && !(matchesQuery(a) || matchesQuery(b))) opacity *= 0.15;
     if (state.selected && a !== state.selected && b !== state.selected) opacity *= 0.16;
     ctx.strokeStyle = edge.type === "relation" ? colors.relation : colors.edge;

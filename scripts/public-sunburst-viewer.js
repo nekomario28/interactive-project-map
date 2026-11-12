@@ -193,20 +193,14 @@ function drawGroupLabels(colors, origin, outer, size) {
   }
 }
 
-function repoOuterRadius(repo, outer) {
-  const starBoost = Math.min(20, Math.log2((repo.stars || 0) + 1) * 4.2) * state.zoom;
-  return (150 * state.zoom) + starBoost;
-}
-
 function drawRepoLabels(colors, origin, outer, repoInner) {
   const total = state.segments.length;
+  const labelRadius = repoInner + (outer - repoInner) * 0.58;
   for (const repo of state.segments) {
     const highlighted = repo === state.selected || repo === state.hovered;
     const span = repo.end - repo.start;
     if (!highlighted && total > 36 && span < 0.17) continue;
     const mid = (repo.start + repo.end) / 2;
-    const dynamicOuter = repoOuterRadius(repo, outer);
-    const labelRadius = repoInner + (dynamicOuter - repoInner) * 0.56;
     const x = origin.x + Math.cos(mid) * labelRadius;
     const y = origin.y + Math.sin(mid) * labelRadius;
     const maxChars = highlighted ? 30 : total <= 18 ? 18 : total <= 36 ? 13 : 10;
@@ -244,23 +238,14 @@ function draw() {
   ctx.fillRect(0, 0, size.width, size.height);
   if (!state.graph) return;
 
-  const bgGlow = ctx.createRadialGradient(origin.x, origin.y, ownerRadius * 0.4, origin.x, origin.y, outer * 1.15);
-  bgGlow.addColorStop(0, "rgba(100,210,255,.14)");
-  bgGlow.addColorStop(1, "rgba(100,210,255,0)");
-  ctx.fillStyle = bgGlow;
-  ctx.beginPath();
-  ctx.arc(origin.x, origin.y, outer * 1.15, 0, Math.PI * 2);
-  ctx.fill();
-
   for (const group of state.groups) {
-    const isContributed = group.group?.relation === "contributed";
     ctx.beginPath();
     ctx.arc(origin.x, origin.y, groupOuter, group.start, group.end);
     ctx.arc(origin.x, origin.y, groupInner, group.end, group.start, true);
     ctx.closePath();
-    ctx.fillStyle = isContributed ? "rgba(230,159,0,.20)" : "rgba(106,167,255,.18)";
+    ctx.fillStyle = "rgba(106,167,255,.16)";
     ctx.fill();
-    ctx.strokeStyle = isContributed ? "rgba(230,159,0,.72)" : "rgba(106,167,255,.68)";
+    ctx.strokeStyle = "rgba(106,167,255,.66)";
     ctx.lineWidth = 1;
     ctx.stroke();
   }
@@ -268,10 +253,9 @@ function draw() {
   for (const repo of state.segments) {
     const highlighted = repo === state.selected || repo === state.hovered;
     const opacity = matches(repo) ? (repo.relation === "contributed" ? 0.96 : repo.archived ? 0.70 : repo.fork ? 0.82 : 0.94) : 0.08;
-    const dynamicOuter = repoOuterRadius(repo, outer);
     ctx.globalAlpha = opacity;
     ctx.beginPath();
-    ctx.arc(origin.x, origin.y, dynamicOuter, repo.start + 0.005, repo.end - 0.005);
+    ctx.arc(origin.x, origin.y, outer, repo.start + 0.005, repo.end - 0.005);
     ctx.arc(origin.x, origin.y, repoInner, repo.end - 0.005, repo.start + 0.005, true);
     ctx.closePath();
     ctx.fillStyle = colors[statusOf(repo)];

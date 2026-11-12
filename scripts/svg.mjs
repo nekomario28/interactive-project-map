@@ -440,7 +440,7 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
     ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
     : "";
   const ownerRing = node.type === "owner"
-    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.28"/>`
+    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
     : "";
   const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
   const core = `<title>${esc(`${node.label}${node.type === "repository" ? ` · ${status}` : ""}`)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${ownerRing}${archivedRing}`;
