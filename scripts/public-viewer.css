@@ -765,3 +765,19 @@ kbd {
     white-space: nowrap;
   }
 }
+
+/* On narrow viewports, secondary controls expand within the scrollable
+   toolbar instead of clipping an absolutely-positioned dropdown. */
+@media (max-width: 820px), (max-height: 500px) and (pointer: coarse) {
+  .view-options-menu {
+    align-self: stretch;
+    flex: 1 1 100%;
+  }
+
+  .view-options-panel {
+    position: static;
+    width: 100%;
+    margin-top: 6px;
+    box-shadow: none;
+  }
+}
