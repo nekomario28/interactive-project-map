@@ -297,15 +297,11 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const node of state.nodes) {
       const point = worldToScreen(node.x, node.y);
       const highlighted = node === state.selected || node === state.hovered;
-      const radius = Math.max(4, nodeRadius(node) * state.zoom * (highlighted ? 1.14 : 1));
+      const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.14 : 1));
       let opacity = node.archived ? 0.72 : 1;
       if (state.query && !matchesQuery(node)) opacity *= 0.12;
       if (state.selected && !connectedToFocus(node, state.selected)) opacity *= 0.2;
-      ctx.globalAlpha = opacity * (highlighted ? 0.24 : 0.14);
-      ctx.fillStyle = node.type === "owner" ? colors.owner : node.type === "group" ? colors.group : node.relation === "contributed" && colors.contributed ? colors.contributed : node.archived ? colors.archived : node.fork ? colors.fork : colors.original;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius * 1.9, 0, tau);
-      ctx.fill();
+
       ctx.globalAlpha = opacity;
       ctx.fillStyle = node.type === "owner" ? colors.owner : node.type === "group" ? colors.group : node.archived ? colors.archived : node.fork ? colors.fork : colors.original;
       ctx.beginPath();
@@ -314,8 +310,8 @@ window.addEventListener("DOMContentLoaded", () => {
       drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
 
       if (node.type === "owner" || node.type === "group") {
-        ctx.strokeStyle = node.type === "owner" ? rgba(colors.owner, 0.45) : rgba(colors.group, 0.48);
-        ctx.lineWidth = 1.1;
+        ctx.strokeStyle = node.type === "owner" ? rgba(colors.owner, 0.42) : rgba(colors.group, 0.46);
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(point.x, point.y, radius + (node.type === "owner" ? 7 : 5), 0, tau);
         ctx.stroke();

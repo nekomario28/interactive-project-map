@@ -524,7 +524,7 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const node of state.nodes) {
       const point = worldToScreen(node.x, node.y);
       const highlighted = node === state.selected || node === state.hovered;
-      const radius = Math.max(4, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
+      const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
       let opacity = node.archived ? 0.72 : 1;
       if (state.query && !matchesQuery(node)) opacity *= 0.12;
       if (state.selected && !connectedToFocus(node, state.selected)) opacity *= 0.22;
@@ -532,12 +532,9 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.globalAlpha = opacity;
       const colorsByStatus = node.type === "owner" ? colors.owner : node.type === "group" ? colors.group : node.archived ? colors.archived : node.fork ? colors.fork : colors.original;
       ctx.fillStyle = colorsByStatus;
-      ctx.globalAlpha = opacity * (highlighted ? 0.24 : 0.14);
+
       ctx.beginPath();
-      ctx.arc(point.x, point.y, radius * 1.9, 0, tau);
-      ctx.fill();
-      ctx.globalAlpha = opacity;
-      ctx.beginPath();
+
       ctx.arc(point.x, point.y, radius, 0, tau);
       ctx.fill();
       drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);

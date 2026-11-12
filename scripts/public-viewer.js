@@ -528,27 +528,16 @@ function drawNodesAndLabels(colors) {
   for (const node of state.nodes) {
     const point = worldToScreen(node.x, node.y);
     const highlighted = node === state.selected || node === state.hovered;
-    const radius = Math.max(4, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
+    const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
     const opacity = nodeOpacity(node);
-    ctx.fillStyle = nodeColor(node, colors);
-    ctx.globalAlpha = opacity * (highlighted ? 0.24 : 0.14);
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, radius * 1.85, 0, TAU);
-    ctx.fill();
+
     ctx.globalAlpha = opacity;
+    ctx.fillStyle = nodeColor(node, colors);
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, TAU);
     ctx.fill();
 
-    if (node.type === "owner" || node.type === "group") {
-      ctx.strokeStyle = nodeColor(node, colors);
-      ctx.globalAlpha = opacity * 0.42;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius + (node.type === "owner" ? 6 : 4), 0, TAU);
-      ctx.stroke();
-      ctx.globalAlpha = opacity;
-    }
+
     drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
     if (node.type === "repository" && node.archived) {
       ctx.strokeStyle = colors.archived;
