@@ -23,7 +23,7 @@ export default defineConfig({
     },
     {
       name: "webkit",
-      testMatch: /(?:mobile-webkit|threejs-lab)\.spec\.mjs/,
+      testMatch: /(?:mobile-webkit|threejs-lab|owner-profile-stats)\.spec\.mjs/,
       use: { ...devices["iPhone 13"] },
     },
   ],
