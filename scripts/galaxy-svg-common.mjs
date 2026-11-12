@@ -75,17 +75,17 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
   const ownerSummary = node.type === "owner" && node.profileStats
-    ? `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12) + 12}" text-anchor="middle" fill="${colors.muted}" font-size="8.4">F${node.profileStats.followers ?? "—"} · R${node.profileStats.originalRepositories} · C${node.profileStats.contributedRepositories}</text>`
+    ? `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12) + 12}" text-anchor="middle" fill="${colors.muted}" font-size="8.4">F${esc(node.profileStats.followers ?? "—")} · R${esc(node.profileStats.originalRepositories)} · C${esc(node.profileStats.contributedRepositories)}</text>`
     : "";
   const archived = shouldDecorateArchived(node) ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
   const halo = (node.type === "owner" || node.type === "group" || (node.type === "repository" && status !== "contributed" && (node.stars ?? 0) >= 3))
     ? `<circle cx="${x}" cy="${y}" r="${(radius * 1.65).toFixed(1)}" fill="${fill}" opacity="${node.type === "owner" ? 0.14 : node.type === "group" ? 0.12 : 0.10}"/>`
     : "";
   const core = node.type === "owner" && node.profileStats
-    ? `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" font-weight="700" fill="${colors.bg}">★${node.profileStats.ownedStars}</text>`
+    ? `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" font-weight="700" fill="${colors.bg}">★${esc(node.profileStats.ownedStars)}</text>`
     : `<circle cx="${x}" cy="${y}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.65 : 0.48}"/>`;
   const statsTitle = node.type === "owner" && node.profileStats
-    ? ` · ★${node.profileStats.ownedStars} shown original stars · ${node.profileStats.originalRepositories} shown originals · ${node.profileStats.followers ?? "unknown"} followers · ${node.profileStats.contributedRepositories} featured external projects`
+    ? ` · ★${esc(node.profileStats.ownedStars)} shown original stars · ${esc(node.profileStats.originalRepositories)} shown originals · ${node.profileStats.followers ?? "unknown"} followers · ${esc(node.profileStats.contributedRepositories)} featured external projects`
     : "";
   return `<g><title>${esc(node.label + statsTitle)}</title>${halo}<circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" opacity="${opacity}"/>${core}${archived}${label}${ownerSummary}</g>`;
 }
