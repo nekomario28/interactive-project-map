@@ -443,8 +443,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
   nodeRadius = function galaxyNodeRadius(node) {
     if (state.style !== "galaxy-classic") return baseNodeRadius(node);
-    if (node.type === "owner") return 8.5 * ownerPlanetScale(node.profileStats);
-    if (node.type === "group") return clamp(3.4 + Math.log2((node.repositoryCount || 1) + 1) * 0.65, 3.8, 6.2);
+    if (node.type === "owner") return 7 * ownerPlanetScale(node.profileStats);
+    if (node.type === "group") return 2.2;
     return baseNodeRadius(node);
   };
 

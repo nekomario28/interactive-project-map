@@ -90,36 +90,15 @@ function buildLayout(graph) {
     const cy = groups.length === 1 ? 0 : Math.sin(angle) * orbitY;
     const members = groupMembers(group, repos).sort((a, b) => (b.stars || 0) - (a.stars || 0) || a.label.localeCompare(b.label));
     const radius = clamp(58 + Math.sqrt(Math.max(1, members.length)) * 17, 70, 155);
-    clusters.push({ ...group, cx, cy, radius, members });
-  });
-  for (let pass = 0; pass < 18; pass += 1) {
-    for (let i = 0; i < clusters.length; i += 1) {
-      for (let j = i + 1; j < clusters.length; j += 1) {
-        const a = clusters[i];
-        const b = clusters[j];
-        const dx = b.cx - a.cx;
-        const dy = b.cy - a.cy;
-        const dist = Math.hypot(dx, dy) || 1;
-        const minDist = a.radius + b.radius + 26;
-        if (dist < minDist) {
-          const push = ((minDist - dist) / dist) * 0.5;
-          a.cx -= dx * push;
-          a.cy -= dy * push;
-          b.cx += dx * push;
-          b.cy += dy * push;
-        }
-      }
-    }
-  }
-  const golden = Math.PI * (3 - Math.sqrt(5));
-  for (const cluster of clusters) {
-    cluster.members.forEach((repo, repoIndex) => {
-      const fraction = Math.sqrt((repoIndex + 0.7) / Math.max(1, cluster.members.length + 0.4));
-      const localRadius = Math.max(0, cluster.radius - 22) * fraction;
+    clusters.push({ ...group, cx, cy, radius });
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    members.forEach((repo, repoIndex) => {
+      const fraction = Math.sqrt((repoIndex + 0.7) / Math.max(1, members.length + 0.4));
+      const localRadius = Math.max(0, radius - 22) * fraction;
       const localAngle = repoIndex * golden;
-      nodes.push({ ...repo, x: cluster.cx + Math.cos(localAngle) * localRadius, y: cluster.cy + Math.sin(localAngle) * localRadius, radius: nodeRadius(repo) });
+      nodes.push({ ...repo, x: cx + Math.cos(localAngle) * localRadius, y: cy + Math.sin(localAngle) * localRadius, radius: nodeRadius(repo) });
     });
-  }
+  });
   return { clusters, nodes };
 }
 function palette() {
@@ -161,18 +140,14 @@ function draw() {
   for (const cluster of state.clusters) {
     const center = worldToScreen(cluster.cx, cluster.cy);
     const radius = cluster.radius * state.zoom;
-    const isContributed = cluster.relation === "contributed";
-    const grad = ctx.createRadialGradient(center.x, center.y, radius * 0.1, center.x, center.y, radius);
-    grad.addColorStop(0, isContributed ? "rgba(230,159,0,.11)" : "rgba(106,167,255,.10)");
-    grad.addColorStop(1, isContributed ? "rgba(230,159,0,.02)" : "rgba(106,167,255,.02)");
-    ctx.fillStyle = grad;
-    ctx.strokeStyle = isContributed ? "rgba(230,159,0,.62)" : "rgba(106,167,255,.55)";
+    ctx.fillStyle = "rgba(106,167,255,.055)";
+    ctx.strokeStyle = "rgba(106,167,255,.55)";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = isContributed ? colors.contributed : colors.muted;
+    ctx.fillStyle = colors.muted;
     ctx.font = `650 ${clamp(11 * Math.sqrt(state.zoom), 9, 14)}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";

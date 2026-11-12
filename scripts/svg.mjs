@@ -443,7 +443,7 @@ function renderPoint(point, labels, colors, mapStyle, systemsMode) {
     ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.5).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.9"/>`
     : "";
   const ownerRing = node.type === "owner"
-    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.28"/>`
+    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.25"/>`
     : "";
   const innerCore = node.type === "owner" && node.profileStats
     ? `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" fill="${colors.bg}" font-size="11" font-weight="700">★${esc(node.profileStats.ownedStars)}</text>`

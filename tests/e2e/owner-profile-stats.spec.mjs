@@ -44,8 +44,8 @@ test("Galaxy owner planet exposes bounded star-based size and explicit portfolio
     return { ownedStars: owner.profileStats?.ownedStars, radius: nodeRadius(owner) };
   });
   expect(scaleEvidence.ownedStars).toBe(63);
-  expect(scaleEvidence.radius).toBeGreaterThan(14);
-  expect(scaleEvidence.radius).toBeLessThanOrEqual(14 * 1.4);
+  expect(scaleEvidence.radius).toBeGreaterThan(13);
+  expect(scaleEvidence.radius).toBeLessThanOrEqual(13 * 1.4);
   await page.evaluate(() => updateDetails(state.nodes.find((node) => node.type === "owner")));
   await expect(page.locator("#detailsMeta")).toContainText("Stars (shown originals)");
   await expect(page.locator("#detailsMeta")).toContainText("Followers");
@@ -76,7 +76,7 @@ test("Galaxy Classic and Hybrid preserve their renderer-local owner radius while
       return { radius: nodeRadius(owner), scale: ownerPlanetScale(owner.profileStats) };
     }));
   }
-  expect(values[0].radius).toBeCloseTo(8.5 * values[0].scale, 4);
+  expect(values[0].radius).toBeCloseTo(7 * values[0].scale, 4);
   expect(values[1].radius).toBeCloseTo(24 * values[1].scale, 4);
   expect(values[2].radius).toBeCloseTo(18 * values[2].scale, 4);
   expect(values[0].scale).toBeGreaterThan(1);

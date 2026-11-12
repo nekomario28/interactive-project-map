@@ -104,33 +104,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function externalOrbitTargets(external, sweepRadius) {
     const baseRadius = Math.max(345, sweepRadius + 125);
-    const byOwner = new Map();
-    for (const node of external) {
-      const extOwner = String(node.repositoryOwner || String(node.label || "").split("/")[0] || "external").toLowerCase();
-      if (!byOwner.has(extOwner)) byOwner.set(extOwner, []);
-      byOwner.get(extOwner).push(node);
-    }
-    const clusters = [...byOwner.entries()];
-    const clusterCount = Math.max(1, clusters.length);
-    const targets = [];
-    clusters.forEach(([extOwner, members], clusterIndex) => {
-      const clusterSeed = (hashText(`cluster:${extOwner}:contributed-orbit`) % 10000) / 10000;
-      const clusterAngle = -Math.PI / 2 + TAU * (clusterIndex + (clusterSeed - 0.5) * 0.34) / clusterCount;
-      const clusterRadialOffset = ((hashText(`cluster:${extOwner}:radial`) % 65) - 22);
-      const direction = (hashText(`${extOwner}:contributed-direction`) & 1) === 0 ? 1 : -1;
+    const perLane = 6;
+    return external.map((node, index) => {
+      const lane = Math.floor(index / perLane);
+      const inLane = index % perLane;
+      const laneCount = Math.min(perLane, external.length - lane * perLane);
+      const seed = (hashText(`${node.id}:contributed-orbit`) % 10000) / 10000;
+      const phase = -Math.PI / 2 + TAU * (inLane + seed * 0.28) / Math.max(1, laneCount);
+      const radius = baseRadius + lane * 86 + ((hashText(`${node.id}:contributed-radius`) % 31) - 15);
       const stylePeriod = state.style === "galaxy-classic" ? 520 : state.style === "galaxy-systems" ? 1180 : 980;
-      members.forEach((node, memberIndex) => {
-        const lane = Math.floor(memberIndex / 4);
-        const inCluster = memberIndex % 4;
-        const spread = Math.min(0.32, Math.max(0.08, members.length * 0.075));
-        const localOffset = members.length <= 1 ? 0 : (inCluster / Math.max(1, Math.min(3, members.length - 1)) - 0.5) * spread;
-        const seed = (hashText(`${node.id}:contributed-orbit`) % 10000) / 10000;
-        const phase = clusterAngle + localOffset + (seed - 0.5) * 0.06;
-        const radius = baseRadius + clusterRadialOffset + lane * 54 + ((hashText(`${node.id}:contributed-radius`) % 27) - 13);
-        targets.push({ node, placement: "external-orbit", lane, phase, radius, period: stylePeriod + lane * 120, direction });
-      });
+      const direction = (hashText(`${node.id}:contributed-direction`) & 1) === 0 ? 1 : -1;
+      return { node, placement: "external-orbit", lane, phase, radius, period: stylePeriod + lane * 120, direction };
     });
-    return targets;
   }
 
   function initialize() {
