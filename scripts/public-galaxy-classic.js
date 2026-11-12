@@ -540,6 +540,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius, 0, tau);
       ctx.fill();
+      drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
       if (node.type === "repository" && node.archived) {
         ctx.strokeStyle = colors.archived;
         ctx.lineWidth = 1.2;

@@ -490,6 +490,18 @@ function ownerStatsShortLabel(node) {
   return `★${s.ownedStars} · F${s.followers ?? "—"} · R${s.originalRepositories} · C${s.contributedRepositories}`;
 }
 
+function drawOwnerPlanetCoreStats(node, point, radius, opacity, colors) {
+  if (node.type !== "owner" || !node.profileStats || radius < 12) return;
+  ctx.save();
+  ctx.fillStyle = colors.background;
+  ctx.globalAlpha = opacity;
+  ctx.font = `700 ${Math.min(11, Math.max(8, radius * 0.42))}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`★${node.profileStats.ownedStars}`, point.x, point.y, radius * 1.7);
+  ctx.restore();
+}
+
 function drawOwnerStatsSecondaryLabel(candidate, box, colors) {
   const line = candidate.node.type === "owner" ? ownerStatsShortLabel(candidate.node) : "";
   if (!line) return;
@@ -537,16 +549,7 @@ function drawNodesAndLabels(colors) {
       ctx.stroke();
       ctx.globalAlpha = opacity;
     }
-    if (node.type === "owner" && node.profileStats && radius >= 12) {
-      ctx.save();
-      ctx.fillStyle = colors.background;
-      ctx.globalAlpha = opacity;
-      ctx.font = `700 ${Math.min(11, Math.max(8, radius * 0.42))}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(`★${node.profileStats.ownedStars}`, point.x, point.y, radius * 1.7);
-      ctx.restore();
-    }
+    drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
     if (node.type === "repository" && node.archived) {
       ctx.strokeStyle = colors.archived;
       ctx.lineWidth = 1.4;

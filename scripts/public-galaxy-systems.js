@@ -311,6 +311,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius, 0, tau);
       ctx.fill();
+      drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
 
       if (node.type === "owner" || node.type === "group") {
         ctx.strokeStyle = node.type === "owner" ? rgba(colors.owner, 0.45) : rgba(colors.group, 0.48);
