@@ -88,7 +88,6 @@ export function renderClusterSvg(graph, theme, width, height) {
   for (const cluster of clusters) {
     const external = cluster.group.external === true;
     pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${cluster.radius.toFixed(1)}" fill="${colors.clusterFill}" fill-opacity="0.62" stroke="${external ? colors.contributed : colors.cluster}" stroke-width="1.25" stroke-opacity="0.72"${external ? ' stroke-dasharray="5 4"' : ""}/>`);
-    pieces.push(`<circle cx="${cluster.cx.toFixed(1)}" cy="${cluster.cy.toFixed(1)}" r="${(cluster.radius * 0.72).toFixed(1)}" fill="none" stroke="${external ? colors.contributed : colors.cluster}" stroke-width="0.6" stroke-dasharray="2 4" stroke-opacity="0.28"/>`);
     const title = cluster.group.label.length > 22 ? `${cluster.group.label.slice(0, 21)}…` : cluster.group.label;
     const labelY = cluster.cy - cluster.radius - 9;
     pieces.push(`<text x="${cluster.cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle" fill="${external ? colors.contributed : colors.fg}" font-size="10" font-weight="700">${esc(title)}</text>`);
@@ -100,8 +99,7 @@ export function renderClusterSvg(graph, theme, width, height) {
     const status = repositoryStatus(repo);
     const color = colors[status];
     const opacity = repositoryOpacity(repo, { archived: 0.70, fork: 0.82, contributed: 0.96 });
-    const core = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="0.48"/>`;
-    pieces.push(`<g><title>${esc(repo.label)} · ${status}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${color}" opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ""}/>${core}`);
+    pieces.push(`<g><title>${esc(repo.label)} · ${status}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${color}" opacity="${opacity}"${shouldDecorateArchived(repo) ? ` stroke="${color}" stroke-width="1.1" stroke-dasharray="2 2"` : ""}/>`);
     if ((repo.stars ?? 0) > 0 || nodes.length <= 36 || isContributedRepository(repo)) {
       const label = repo.label.length > 18 ? `${repo.label.slice(0, 17)}…` : repo.label;
       const fontSize = 8.8;
