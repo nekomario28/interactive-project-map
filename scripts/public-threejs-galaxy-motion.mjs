@@ -14,8 +14,8 @@ const GALAXY_EXTERNAL_THICKNESS = '(hashUnit(repo.id+":galaxy-external-y")-.5)*3
 const ASTRONOMY_EXTERNAL_THICKNESS = '(hashUnit(repo.id+":galaxy-external-y")-.5)*14';
 const DUST_FUNCTION = "function createSpiralDust(THREE,seed){";
 const DUST_FUNCTION_WITH_ARMS = "function createSpiralDust(THREE,seed,armCount=4,winding=2.1,pitch=0){armCount=clamp(Math.floor(armCount)||4,1,4);";
-const DUST_ARM = "const arm=index%4,";
-const DUST_ARM_DYNAMIC = "const arm=index%armCount,";
+const DUST_ARM = "for(let index=0;index<count;index+=1){const arm=index%4,";
+const DUST_ARM_DYNAMIC = "for(let index=0;index<count;index+=1){const arm=index%armCount,";
 const DUST_ANGLE = "angle=arm*TAU/4+t*TAU*2.1+jitter*.008;";
 const DUST_ANGLE_DYNAMIC = "angle=arm*TAU/armCount+(pitch>0?Math.log(Math.max(1,radius/42))/Math.tan(pitch):t*TAU*winding)+jitter*.008;";
 const DUST_CALL = "dust=createSpiralDust(THREE,username);";

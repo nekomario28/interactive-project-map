@@ -47,6 +47,8 @@ test("bounded Three.js repository labels attach with shared search and remain la
 
     assert.match(runtime, /x< -70\|\|x>rect\.width\+70\|\|y< -30\|\|y>rect\.height\+30/);
     assert.match(runtime, /clamp\(1\.18-temp\.z\*\.55,\.28,1\)/);
+    assert.match(runtime, /item\.mesh\.userData\.searchMatched===false/);
+    assert.match(runtime, /Math\.min\(c\.baseOp,\.16\)/);
     assert.match(runtime, /function projectRepositoryLabels\(rect,temp\)/);
     assert.match(runtime, /x< -90\|\|x>rect\.width\+90\|\|y< -50\|\|y>rect\.height\+50/);
 

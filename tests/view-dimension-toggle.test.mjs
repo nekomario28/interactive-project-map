@@ -60,6 +60,8 @@ test("view dimension runtime keeps 2D and 3D Style state separate", async () => 
   assert.match(source, /url\.searchParams\.delete\("render"\)/);
   assert.match(source, /valid2DStyle\(source\.searchParams\.get\("style2d"\)\)/);
   assert.match(source, /current3DStyle/);
+  assert.match(source, /window\.ProjectMapThreejsSetStyle/);
+  assert.match(source, /history\.replaceState/);
   assert.match(source, /ProjectMapTransferableState/);
   assert.match(source, /ProjectMapViewDimension/);
 });

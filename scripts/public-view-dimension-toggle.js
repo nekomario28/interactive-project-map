@@ -97,6 +97,12 @@
       const style = valid3DStyle(select.value) || "galaxy";
       const url = new URL(location.href);
       url.searchParams.set("style3d", style);
+      if (typeof window.ProjectMapThreejsSetStyle === "function") {
+        history.replaceState(null, "", url.toString());
+        window.ProjectMapThreejsSetStyle(style);
+        syncLinks();
+        return;
+      }
       location.assign(url.toString());
     });
   }
