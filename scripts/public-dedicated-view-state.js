@@ -128,23 +128,26 @@
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async function projectMapDedicatedFetch(input, init) {
     const response = await nativeFetch(input, init);
+    const rawUrl = typeof input === "string" || input instanceof URL ? input : input?.url;
+    let url;
     try {
-      const rawUrl = typeof input === "string" || input instanceof URL ? input : input?.url;
-      const url = new URL(rawUrl, location.href);
-      if (!response.ok || !url.pathname.endsWith("/project-map/graph.json")) return response;
-      const value = await response.clone().json();
-      const filtered = filterGraph(value);
-      const headers = new Headers(response.headers);
-      headers.delete("content-length");
-      headers.set("content-type", "application/json; charset=utf-8");
-      return new Response(JSON.stringify(filtered), {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
+      url = new URL(rawUrl, location.href);
     } catch {
       return response;
     }
+    if (!response.ok || !url.pathname.endsWith("/project-map/graph.json")) return response;
+    // Bound the original response before parsing. Never fall back to an
+    // unbounded response after a stream or JSON error.
+    const value = await window.ProjectMapDedicatedGraph.readBoundedGraph(response);
+    const filtered = filterGraph(value);
+    const headers = new Headers(response.headers);
+    headers.delete("content-length");
+    headers.set("content-type", "application/json; charset=utf-8");
+    return new Response(JSON.stringify(filtered), {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   };
 
   for (const button of buttons) {
@@ -174,6 +177,25 @@
     first.parentNode.insertBefore(group, first);
     group.append(label);
     for (const button of buttons) group.append(button);
+  }
+
+  const controls = document.querySelector(".controls");
+  if (controls) {
+    const copyLink = document.createElement("button");
+    copyLink.type = "button";
+    copyLink.id = "shareView";
+    copyLink.textContent = "Copy link";
+    copyLink.setAttribute("aria-label", "Copy a link to this view and its filters");
+    controls.insertBefore(copyLink, resultCount);
+    copyLink.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        copyLink.textContent = "Copied";
+      } catch {
+        copyLink.textContent = "Copy failed";
+      }
+      setTimeout(() => { copyLink.textContent = "Copy link"; }, 1600);
+    });
   }
 
   updateControls();

@@ -48,7 +48,10 @@ test("iPhone-sized WebKit keeps generator and Galaxy family route navigation usa
   await page.waitForURL(/\/u\/\?username=example&style=galaxy-hybrid/);
   await expect(page.locator("#status")).toBeHidden(); await expectNoHorizontalOverflow(page);
   await page.getByRole("button", { name: "Controls", exact: true }).tap();
-  await page.locator("#search").fill("robot"); await page.getByRole("button", { name: "Fit" }).click();
+  await page.locator("#search").fill("robot");
+  await page.locator(".view-options-menu summary").tap();
+  await expect(page.locator(".view-options-menu #fit")).toBeVisible();
+  await page.getByRole("button", { name: "Fit" }).click();
   await expect(page.locator("header .project-source-link")).toBeInViewport({ ratio: 1 });
   await page.screenshot({ path: ".tmp/playwright-visual/webkit/galaxy-hybrid.png", fullPage: true });
   expect(failures).toEqual([]);

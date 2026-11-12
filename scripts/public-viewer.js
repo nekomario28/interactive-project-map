@@ -561,10 +561,29 @@ function hitTest(screenX, screenY) {
   return null;
 }
 
+function revealSelectionOutsidePanel(node) {
+  if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+  const canvasRect = canvas.getBoundingClientRect();
+  if (canvasRect.width < 960) return;
+  const panelRect = details.getBoundingClientRect();
+  const navigatorRect = document.getElementById("categoryNavigator")?.getBoundingClientRect();
+  const left = navigatorRect && navigatorRect.width > 0 && navigatorRect.right > canvasRect.left
+    ? Math.max(24, navigatorRect.right - canvasRect.left + 20) : 24;
+  const right = Math.min(canvasRect.width - 24, panelRect.left - canvasRect.left - 20);
+  if (right - left < 180) return;
+  const screenX = worldToScreen(node.x, node.y).x;
+  if (screenX >= left && screenX <= right) return;
+  state.pan.x += (left + right) / 2 - screenX;
+  window.ProjectMapCameraCoherence?.constrainPan({ redraw: false });
+}
+
 function updateDetails(node) {
   state.selected = node;
   details.classList.toggle("has-selection", Boolean(node));
-  if (node) details.classList.remove("is-dismissed");
+  if (node) {
+    details.classList.remove("is-dismissed");
+    revealSelectionOutsidePanel(node);
+  }
   if (!node) {
     detailsTitle.textContent = "Project map";
     detailsDescription.textContent = state.style === "obsidian"

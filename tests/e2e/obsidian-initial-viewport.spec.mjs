@@ -78,6 +78,7 @@ test("Obsidian opens at neutral camera, explicit Fit still works, and Galaxy kee
     draw();
   });
   const spreadGeometry = await geometry(page);
+  await page.locator(".view-options-menu summary").click();
   await page.locator("#fit").click();
   const fitted = await camera(page);
   expect(fitted.style).toBe("obsidian");

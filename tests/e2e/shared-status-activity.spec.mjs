@@ -86,6 +86,7 @@ test("Activity changes final canvas output and OFF restores the base rendering",
   const baseCanvas = await canvasImage(page);
 
   const activity = page.locator("#activityToggle");
+  await page.locator(".view-options-menu summary").click();
   await activity.click();
   await expect(activity).toHaveAttribute("aria-pressed", "true");
   await expect.poll(async () => (await renderSnapshot(page))?.activityOverlayCount).toBe(4);

@@ -54,23 +54,6 @@ export function patchGeneratedHomeHtml(source) {
   return next;
 }
 
-export function patchGeneratedHomeApp(source) {
-  let next = source;
-  next = replaceRequired(
-    next,
-    "previewMessage.textContent='Checking for an existing generated SVG…';",
-    "previewMessage.textContent='Checking the currently published SVG…';",
-    "published SVG check copy",
-  );
-  next = replaceRequired(
-    next,
-    "previewMessage.textContent='Existing static SVG found in the profile repository.';",
-    "previewMessage.textContent='Current published SVG found. It may reflect previous settings until Step 2 runs.';",
-    "published SVG loaded copy",
-  );
-  return next;
-}
-
 export function patchViewerLegend(source) {
   if (!source.includes('<div class="legend">') || source.includes('<i class="contributed"></i>Contributed')) return source;
   const archived = '<span><i class="archived"></i>Archived</span>';
@@ -168,11 +151,6 @@ export async function applyUiContractFixes(outputDir = resolve(process.cwd(), "s
   const home = await readFile(homePath, "utf8");
   const patchedHome = patchGeneratedHomeHtml(home);
   if (patchedHome !== home) await writeFile(homePath, patchedHome);
-
-  const appPath = join(outputDir, "app.js");
-  const app = await readFile(appPath, "utf8");
-  const patchedApp = patchGeneratedHomeApp(app);
-  if (patchedApp !== app) await writeFile(appPath, patchedApp);
 
   const presetCssPath = join(outputDir, "presets.css");
   const presetCss = await readFile(presetCssPath, "utf8");

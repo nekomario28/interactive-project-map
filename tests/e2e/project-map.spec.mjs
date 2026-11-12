@@ -129,6 +129,7 @@ test("all twelve viewers load one sanitized graph without browser errors", async
       await expect(page.locator("#error")).not.toHaveClass(/visible/);
 
       await page.locator("#search").fill("robot");
+      await page.locator(".view-options-menu summary").click();
       await page.getByRole("button", { name: "Fit" }).click();
       await page.getByRole("button", { name: "Reset" }).click();
       await page.locator("#galaxy").focus();

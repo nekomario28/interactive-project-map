@@ -152,6 +152,9 @@ test.describe("touch source navigation", () => {
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await toggle.tap();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const options = page.locator(".view-options-menu summary");
+    await options.scrollIntoViewIfNeeded();
+    await options.tap();
     const copy = page.locator("#shareView");
     await copy.scrollIntoViewIfNeeded();
     await expect(copy).toBeInViewport({ ratio: 1 });

@@ -81,6 +81,7 @@ test("shared view controls visibly filter every repository status and compose wi
   await expect(page.locator("#resultCount")).toHaveText("3 / 4 repos");
   expect(new URL(page.url()).searchParams.get("status")).toBe("original,fork");
 
+  await page.locator(".view-options-menu summary").click();
   await page.getByRole("button", { name: "Motion On" }).click();
   expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().motionOff)).toBe(true);
   expect(new URL(page.url()).searchParams.get("motion")).toBe("off");
@@ -90,6 +91,7 @@ test("shared view controls visibly filter every repository status and compose wi
   expect(new URL(page.url()).searchParams.get("activity")).toBe("1");
 
   await page.locator("#search").fill("beta");
+  await expect(page.locator(".view-options-menu")).not.toHaveAttribute("open", "");
   await expect(page.locator("#resultCount")).toHaveText("1 matches · 3/4 repos");
   expect(new URL(page.url()).searchParams.get("q")).toBe("beta");
   await page.locator("#search").fill("");

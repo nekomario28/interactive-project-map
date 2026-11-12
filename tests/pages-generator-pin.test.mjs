@@ -48,11 +48,11 @@ test("Pages setup keeps stable v1 hidden by default and accepts only immutable S
   assert.equal(vm.runInContext(`normalizeGeneratorRef('${PINNED_REF.toUpperCase()}')`, context), PINNED_REF);
   assert.equal(vm.runInContext("normalizeGeneratorRef('main')", context), null);
 
-  const pinned = vm.runInContext(`workflowFor({theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,generatorRef:'${PINNED_REF}'})`, context);
+  const pinned = vm.runInContext(`workflowFor({username:'octocat',theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,generatorRef:'${PINNED_REF}'})`, context);
   assert.match(pinned, new RegExp(`generate-project-map\\.yml@${PINNED_REF}`));
   assert.match(pinned, new RegExp(`Project Map generator policy: pinned-${PINNED_REF}`));
 
-  const stable = vm.runInContext("workflowFor({theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,generatorRef:'v1'})", context);
+  const stable = vm.runInContext("workflowFor({username:'octocat',theme:'dark',style:'radial',maxRepos:100,forks:true,archived:false,generatorRef:'v1'})", context);
   assert.match(stable, /generate-project-map\.yml@v1/);
   assert.match(stable, /Project Map generator policy: stable-v1/);
 });
