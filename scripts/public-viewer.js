@@ -220,7 +220,7 @@ function ownerPlanetScale(stats) {
 }
 
 function nodeRadius(node) {
-  if (node.type === "owner") return state.style !== "obsidian" ? 24 : 18;
+  if (node.type === "owner") return (state.style !== "obsidian" ? 24 : 18) * ownerPlanetScale(node.profileStats);
   if (node.type === "group") return state.style !== "obsidian" ? 8 : 12;
   return clamp(5.5 + Math.log2((node.stars || 0) + 1) * 1.35, 5.5, 12);
 }

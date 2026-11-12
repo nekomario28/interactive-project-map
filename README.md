@@ -44,6 +44,13 @@
 
 ---
 
+
+### Owner metrics and duplicate Forks
+
+When **Contributed** is enabled, a personal Fork is collapsed into its upstream Contributed project only after GitHub's repository `parent.full_name` or `source.full_name` verifies they are the same project. The Contributed record retains the personal Fork URL; unverified same-name Forks remain visible. This does not change the underlying Contributed non-ownership relationship.
+
+The central owner planet reports Star totals and Original repository counts from the **included public repository slice**, not necessarily the entire account (see `max_repos`, `forks`, and `archived`). The profile follower count is fetched from the GitHub public user endpoint when available. Featured external project, merged-PR and commit totals only cover selected public Contributed records within the 365-day collection window and can be incomplete due to collection caps. Missing followers are shown as unavailable, not zero. Star-based planet sizing uses a capped logarithmic scale and does not mix followers with stars.
+
 ## What it does
 
 Project Galaxy turns public GitHub repositories into a reusable portfolio graph. Your profile repository owns the generated artifacts:

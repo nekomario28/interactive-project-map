@@ -197,12 +197,23 @@
       appendRow("Commits", String(value.contribution?.commits ?? 0) + (value.contribution?.commitsTruncated ? "+" : ""));
       appendRow("Pull requests", String(value.contribution?.pullRequests ?? 0) + (value.contribution?.pullRequestsTruncated ? "+" : ""));
       appendRow("Merged PRs", value.contribution?.mergedPullRequests ?? 0);
+      if (value.forkUrl) appendRow("Your verified fork", value.forkUrl);
       const sourceFlags = [value.fork ? "fork" : "", value.archived ? "archived" : ""].filter(Boolean).join(" · ");
       if (sourceFlags) appendRow("Source flags", sourceFlags);
       const windowValue = graph?.externalContributions?.window;
       if (validContributedIso(windowValue?.from) && validContributedIso(windowValue?.to)) {
         appendRow("Contribution window", windowValue.from.slice(0, 10) + " → " + windowValue.to.slice(0, 10));
       }
+      detailsMeta.hidden = false;
+    } else if (value?.type === "owner" && value.profileStats) {
+      const stats = value.profileStats;
+      appendRow("Stars (shown originals)", stats.ownedStars);
+      appendRow("Followers", stats.followers ?? "Unavailable");
+      appendRow("Original repos (shown)", stats.originalRepositories);
+      appendRow("Featured external projects (365d)", stats.contributedRepositories);
+      appendRow("Merged PRs (featured, 365d)", stats.mergedPullRequests);
+      appendRow("Commits (featured, 365d)", stats.commits);
+      if (stats.limitedRepositories || stats.limitedContributions) appendRow("Coverage", "Partial");
       detailsMeta.hidden = false;
     } else if (value?.counts && Number.isFinite(value.counts.contributed)) {
       appendRow("Contributed", value.counts.contributed);
