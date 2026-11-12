@@ -6,6 +6,20 @@
   const OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
   const REPO_RE = /^[A-Za-z0-9._-]{1,100}$/;
 
+  function safeOwnerProfileStats(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"];
+  if (keys.some((key) => !Number.isSafeInteger(raw[key]) || raw[key] < 0 || raw[key] > 1_000_000_000)) return null;
+  if (raw.followers != null && (!Number.isSafeInteger(raw.followers) || raw.followers < 0 || raw.followers > 1_000_000_000)) return null;
+  if (typeof raw.limitedRepositories !== "boolean" || typeof raw.limitedContributions !== "boolean") return null;
+  return {
+    ...Object.fromEntries(keys.map((key) => [key, raw[key]])),
+    followers: raw.followers == null ? null : raw.followers,
+    limitedRepositories: raw.limitedRepositories,
+    limitedContributions: raw.limitedContributions,
+  };
+}
+
   function cleanText(value, max) {
     return typeof value === "string" ? value.slice(0, max) : "";
   }
@@ -108,10 +122,21 @@
     };
     if (validContributedIso(raw.createdAt)) node.createdAt = raw.createdAt;
     if (validContributedIso(raw.updatedAt)) node.updatedAt = raw.updatedAt;
+    if (typeof raw.forkUrl === "string") {
+      const part = raw.forkUrl.split("/").pop();
+      if (part && safeGithubRepositoryUrl(raw.forkUrl, projectOwner, part) === raw.forkUrl) node.forkUrl = raw.forkUrl;
+    }
     return node;
   }
 
   function completeGraph(value, safe) {
+    const rawOwner = value.nodes.find((node) => node?.type === "owner");
+    if (rawOwner?.profileStats != null) {
+      const stats = safeOwnerProfileStats(rawOwner.profileStats);
+      if (!stats) return null;
+      const owner = safe.nodes.find((node) => node?.type === "owner");
+      if (owner) owner.profileStats = stats;
+    }
     const rawContributed = value.nodes.filter((node) => node?.type === "repository" && node?.relation === "contributed");
     if (!rawContributed.length) return safe;
     if (rawContributed.length > MAX_CONTRIBUTED_REPOSITORIES) return null;

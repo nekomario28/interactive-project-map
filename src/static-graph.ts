@@ -90,6 +90,22 @@ function safeSemanticEdges(value: unknown, repositoryIds: Set<string>): Semantic
   return [...byPair.values()].sort((a, b) => b.score - a.score || a.source.localeCompare(b.source) || a.target.localeCompare(b.target)).slice(0, MAX_SEMANTIC_EDGES);
 }
 
+function safeOwnerProfileStats(raw: unknown) {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"] as const;
+  const counts = keys.map((key) => safeBoundedInt(value[key], 1_000_000_000));
+  if (counts.some((n) => n === null)) return null;
+  const followers = value.followers == null ? null : safeBoundedInt(value.followers, 1_000_000_000);
+  if (value.followers != null && followers === null) return null;
+  if (typeof value.limitedRepositories !== "boolean" || typeof value.limitedContributions !== "boolean") return null;
+  return {
+    ownedStars: counts[0]!, originalRepositories: counts[1]!, contributedRepositories: counts[2]!,
+    mergedPullRequests: counts[3]!, commits: counts[4]!, followers,
+    limitedRepositories: value.limitedRepositories, limitedContributions: value.limitedContributions,
+  };
+}
+
 function safeExternalDiagnostics(value: unknown): ExternalContributionDiagnostics | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
@@ -124,6 +140,12 @@ function safeContributedRepository(node: GalaxyNode, username: string): Contribu
     stars: finiteNonNegative(node.stars), forks: finiteNonNegative(node.forks), fork: node.fork === true, archived: node.archived === true,
     ...(validIso(node.createdAt) ? { createdAt: node.createdAt } : {}), ...(validIso(node.updatedAt) ? { updatedAt: node.updatedAt } : {}),
     commits, pullRequests, mergedPullRequests, commitsTruncated: contribution.commitsTruncated, pullRequestsTruncated: contribution.pullRequestsTruncated,
+    ...(typeof node.forkUrl === "string" && (() => {
+      try {
+        const path = new URL(node.forkUrl).pathname.split("/").filter(Boolean);
+        return path.length === 2 && REPO_NAME_RE.test(path[1]) && validatedRepositoryUrl(node.forkUrl, username, path[1]);
+      } catch { return false; }
+    })() ? { forkUrl: node.forkUrl } : {}),
     ...(classification ? { classification } : {}),
   };
 }
@@ -165,6 +187,13 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
     graph.contributedRepositoryCount = 0;
   }
 
+  const originalOwner = candidate.nodes.find((node) => node?.type === "owner") as GalaxyNode | undefined;
+  if (originalOwner?.profileStats != null) {
+    const stats = safeOwnerProfileStats(originalOwner.profileStats);
+    if (!stats) return null;
+    const owner = graph.nodes.find((node) => node.type === "owner");
+    if (owner) owner.profileStats = stats;
+  }
   if (typeof candidate.generatedAt === "string" && Number.isFinite(Date.parse(candidate.generatedAt))) graph.generatedAt = candidate.generatedAt;
   if (typeof candidate.classificationVersion === "number" && Number.isInteger(candidate.classificationVersion) && candidate.classificationVersion >= 1 && candidate.classificationVersion <= 100) graph.classificationVersion = candidate.classificationVersion;
   const repositoryIds = new Set(graph.nodes.filter((node) => node.type === "repository").map((node) => node.id)); const semanticEdges = safeSemanticEdges(candidate.semanticEdges, repositoryIds); if (semanticEdges.length) graph.semanticEdges = semanticEdges;

@@ -42,20 +42,34 @@ function safeRepoUrl(value,owner,repository){if(typeof value!=="string"||!/^[A-Z
 
 async function readBoundedGraph(response){const maxBytes=8_000_000,declared=Number(response.headers?.get?.("content-length"));if(Number.isFinite(declared)&&declared>maxBytes)throw new Error("graph.json is larger than the 8 MB limit ("+declared+" bytes)");const reader=response.body?.getReader?.();if(!reader){const text=await response.text();if(new TextEncoder().encode(text).byteLength>maxBytes)throw new Error("graph.json is larger than the 8 MB limit");return JSON.parse(text);}const decoder=new TextDecoder();let bytes=0,text="";try{while(true){const {done,value}=await reader.read();if(done){text+=decoder.decode();break;}if(!value)continue;bytes+=value.byteLength;if(bytes>maxBytes){await reader.cancel().catch(()=>undefined);throw new Error("graph.json is larger than the 8 MB limit");}text+=decoder.decode(value,{stream:true});}}catch(error){await reader.cancel().catch(()=>undefined);throw error;}return JSON.parse(text);}
 
+function safeOwnerProfileStats(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"];
+  if (keys.some((key) => !Number.isSafeInteger(raw[key]) || raw[key] < 0 || raw[key] > 1_000_000_000)) return null;
+  if (raw.followers != null && (!Number.isSafeInteger(raw.followers) || raw.followers < 0 || raw.followers > 1_000_000_000)) return null;
+  if (typeof raw.limitedRepositories !== "boolean" || typeof raw.limitedContributions !== "boolean") return null;
+  return {
+    ...Object.fromEntries(keys.map((key) => [key, raw[key]])),
+    followers: raw.followers == null ? null : raw.followers,
+    limitedRepositories: raw.limitedRepositories,
+    limitedContributions: raw.limitedContributions,
+  };
+}
+
 function sanitizeGraph(value,username){
   if(!value||typeof value!=="object"||String(value.owner||"").toLowerCase()!==username||!Array.isArray(value.nodes)||value.nodes.length>MAX_NODES)return null;
   const nodes=[];const ids=new Set();
   for(const raw of value.nodes){
     if(!raw||typeof raw!=="object"||!["owner","group","repository"].includes(raw.type))continue;
     const id=cleanText(raw.id,180),label=cleanText(raw.label,120);if(!id||!label||ids.has(id))continue;const common={id,label,type:raw.type};
-    if(raw.type==="owner")nodes.push({...common,url:`https://github.com/${encodeURIComponent(username)}`});
+    if(raw.type==="owner"){const profileStats=raw.profileStats==null?null:safeOwnerProfileStats(raw.profileStats);if(raw.profileStats!=null&&!profileStats)return null;nodes.push({...common,url:`https://github.com/${encodeURIComponent(username)}`,...(profileStats?{profileStats}:{})});}
     else if(raw.type==="group")nodes.push({...common,repositoryCount:Math.max(0,Math.floor(safeNumber(raw.repositoryCount)))});
     else {
       const contributed=raw.relation==="contributed";const repositoryOwner=contributed?cleanText(raw.repositoryOwner,100):username;const repositoryName=contributed?cleanText(raw.repositoryName,100):label;
       if(!/^[A-Za-z0-9._-]{1,100}$/.test(repositoryOwner)||!/^[A-Za-z0-9._-]{1,100}$/.test(repositoryName))continue;
       if(contributed&&label.toLowerCase()!==`${repositoryOwner}/${repositoryName}`.toLowerCase())continue;if(!contributed&&label!==repositoryName)continue;
       const url=safeRepoUrl(raw.url,repositoryOwner,repositoryName);if(!url)continue;
-      nodes.push({...common,url,description:cleanText(raw.description,2000),language:cleanText(raw.language,100)||null,stars:Math.max(0,Math.floor(safeNumber(raw.stars))),forks:Math.max(0,Math.floor(safeNumber(raw.forks))),fork:raw.fork===true,archived:raw.archived===true,relation:contributed?"contributed":"owned",externalOwner:contributed?repositoryOwner:null,repositoryName,groupId:contributed?"":cleanText(raw.groupId,140),groupLabel:contributed?"":cleanText(raw.groupLabel,120),topics:Array.isArray(raw.topics)?raw.topics.filter((topic)=>typeof topic==="string").slice(0,18).map((topic)=>topic.slice(0,80)):[]});
+      nodes.push({...common,url,description:cleanText(raw.description,2000),language:cleanText(raw.language,100)||null,stars:Math.max(0,Math.floor(safeNumber(raw.stars))),forks:Math.max(0,Math.floor(safeNumber(raw.forks))),fork:raw.fork===true,archived:raw.archived===true,relation:contributed?"contributed":"owned",externalOwner:contributed?repositoryOwner:null,repositoryName,...(contributed&&typeof raw.forkUrl==="string"&&safeRepoUrl(raw.forkUrl,username,raw.forkUrl.split("/").pop()||"")===raw.forkUrl?{forkUrl:raw.forkUrl}:{}),groupId:contributed?"":cleanText(raw.groupId,140),groupLabel:contributed?"":cleanText(raw.groupLabel,120),topics:Array.isArray(raw.topics)?raw.topics.filter((topic)=>typeof topic==="string").slice(0,18).map((topic)=>topic.slice(0,80)):[]});
     }
     ids.add(id);
   }

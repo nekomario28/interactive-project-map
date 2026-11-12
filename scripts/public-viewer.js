@@ -86,6 +86,20 @@ function safeRepoUrl(value, name) {
   }
 }
 
+function safeOwnerProfileStats(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"];
+  if (keys.some((key) => !Number.isSafeInteger(raw[key]) || raw[key] < 0 || raw[key] > 1_000_000_000)) return null;
+  if (raw.followers != null && (!Number.isSafeInteger(raw.followers) || raw.followers < 0 || raw.followers > 1_000_000_000)) return null;
+  if (typeof raw.limitedRepositories !== "boolean" || typeof raw.limitedContributions !== "boolean") return null;
+  return {
+    ...Object.fromEntries(keys.map((key) => [key, raw[key]])),
+    followers: raw.followers == null ? null : raw.followers,
+    limitedRepositories: raw.limitedRepositories,
+    limitedContributions: raw.limitedContributions,
+  };
+}
+
 function sanitizeGraph(value) {
   if (!value || typeof value !== "object" || String(value.owner || "").toLowerCase() !== username || !Array.isArray(value.nodes) || value.nodes.length > 520) return null;
   const safeNodes = [];
@@ -98,6 +112,11 @@ function sanitizeGraph(value) {
     let node = { id, label, type: raw.type };
     if (raw.type === "owner") {
       node.url = `https://github.com/${encodeURIComponent(username)}`;
+      if (raw.profileStats != null) {
+        const stats = safeOwnerProfileStats(raw.profileStats);
+        if (!stats) return null;
+        node.profileStats = stats;
+      }
     } else if (raw.type === "group") {
       node.repositoryCount = Number.isFinite(raw.repositoryCount) ? Math.max(0, Math.floor(raw.repositoryCount)) : 0;
     } else {
