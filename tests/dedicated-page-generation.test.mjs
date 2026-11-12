@@ -22,6 +22,7 @@ test("dedicated pages ship status controls and their runtime without post-build 
       assert.equal(sources.filter((source) => source === "dedicated-graph.js").length, 1, route);
       assert.ok(sources.indexOf("dedicated-graph.js") < sources.indexOf(`${route}-viewer.js`), `${route} must load graph admission before its renderer`);
       assert.ok(sources.indexOf("dedicated-view-state.js") < sources.indexOf(`${route}-viewer.js`), `${route} must project status before graph loading`);
+      assert.ok(sources.indexOf("dedicated-graph.js") < sources.indexOf(`${route}-viewer.js`), `${route} must install bounded graph reader before loading`);
       for (const source of sources) new Script(await readFile(join(root, source), "utf8"), { filename: source });
     }
     assert.equal(

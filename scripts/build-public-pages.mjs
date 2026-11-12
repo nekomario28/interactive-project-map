@@ -104,7 +104,10 @@ function stylePresetGallery() {
 }
 
 function styleOptions(active = "radial") {
-  return PRESETS.map((preset) => `<option value="${preset.id}"${preset.id === active ? " selected" : ""}>${preset.id === "radial" ? "Radial Tree (Classic)" : preset.label}</option>`).join("");
+  const option = (preset) => `<option value="${preset.id}"${preset.id === active ? " selected" : ""}>${preset.id === "radial" ? "Radial Tree (Classic)" : preset.label}</option>`;
+  const exploratory = PRESETS.filter(({ id }) => id.startsWith("galaxy-") || id === "obsidian");
+  const structured = PRESETS.filter(({ id }) => !id.startsWith("galaxy-") && id !== "obsidian");
+  return `<optgroup label="Exploratory graph views">${exploratory.map(option).join("")}</optgroup><optgroup label="Structured analytical views">${structured.map(option).join("")}</optgroup>`;
 }
 
 function addHomeStylePreset(html) {

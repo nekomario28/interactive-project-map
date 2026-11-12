@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const FILES = ["scripts/public-viewer.js", "scripts/public-radial-viewer.js"];
+const FILES = ["scripts/public-viewer.js", "scripts/public-radial-viewer.js", "scripts/public-dedicated-graph.js"];
 
 function extractReadBoundedGraph(source) {
   const start = source.indexOf("async function readBoundedGraph(response) {");
