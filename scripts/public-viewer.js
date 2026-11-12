@@ -661,7 +661,6 @@ function updateDetails(node) {
     rows.push(["Forks", String(node.forks || 0)]);
     if (node.groupLabel) rows.push(["Category", node.groupLabel]);
     if (node.updatedAt) rows.push(["Updated", node.updatedAt.slice(0, 10)]);
-    if (node.forkUrl) rows.push(["Your verified fork", node.forkUrl]);
   }
   detailsMeta.replaceChildren();
   for (const [key, value] of rows) {
