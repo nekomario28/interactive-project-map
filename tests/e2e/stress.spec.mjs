@@ -38,7 +38,7 @@ test("expensive interactive presets initialize at the 300-repository limit", asy
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 }); const page = await context.newPage();
       await installGraph(page, graph); const failures = browserErrors(page); const started = Date.now();
       await page.goto(`${path}?username=example&style=${style}`); await expect(page.locator("#status")).toBeHidden({ timeout: 10_000 }); await expect(page.locator("#error")).not.toHaveClass(/visible/);
-      expect(Date.now() - started).toBeLessThan(10_000); await page.getByRole("button", { name: "Fit" }).click();
+      expect(Date.now() - started).toBeLessThan(10_000); await page.locator(".view-options-menu summary").click(); await page.getByRole("button", { name: "Fit" }).click();
 
       if (style.startsWith("galaxy-")) {
         const fitted = await page.evaluate(() => {

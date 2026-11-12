@@ -81,6 +81,7 @@ test("shared view controls visibly filter every repository status and compose wi
   await expect(page.locator("#resultCount")).toHaveText("3 / 4 repos");
   expect(new URL(page.url()).searchParams.get("status")).toBe("original,fork");
 
+  await page.locator(".view-options-menu summary").click();
   await page.getByRole("button", { name: "Motion On" }).click();
   expect(await page.evaluate(() => window.ProjectMapViewState.snapshot().motionOff)).toBe(true);
   expect(new URL(page.url()).searchParams.get("motion")).toBe("off");
