@@ -53,11 +53,13 @@ const SHARED_SCRIPT_ORDER = Object.freeze([
   "obsidian-hover.js",
   "adaptive-labels.js",
   "view-state.js",
+  "2d-toolbar.js",
 ]);
 const DEDICATED_SCRIPT_TAIL = Object.freeze([
   "spatial-core-runtime.js",
   "interaction-polish.js",
   "search-emphasis.js",
+  "2d-toolbar.js",
 ]);
 
 function scriptTags(sources) {
@@ -166,6 +168,7 @@ export async function buildPublicPages(outputDir = join(process.cwd(), "site")) 
   await writeFile(join(outputDir, "tree-nav.js"), navScript);
   await copyFile(join(sourceDir, "public-dedicated-view-state.js"), join(outputDir, "dedicated-view-state.js"));
   await copyFile(join(sourceDir, "public-dedicated-graph.js"), join(outputDir, "dedicated-graph.js"));
+  await copyFile(join(sourceDir, "public-2d-toolbar.js"), join(outputDir, "2d-toolbar.js"));
   await writeFile(join(outputDir, "viewer.css"), viewerCss);
   await writeFile(join(outputDir, "spatial-core-runtime.js"), spatialCoreRuntimeSource());
   await Promise.all(CANONICAL_RUNTIME_ASSETS.map(([source, target]) => copyFile(join(sourceDir, source), join(outputDir, target))));

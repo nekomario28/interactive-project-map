@@ -124,6 +124,57 @@ body[data-map-style="obsidian"] .legend {
   gap: 7px;
 }
 
+.view-options-menu {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: flex-end;
+}
+
+.view-options-menu > summary {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-elevated);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.view-options-menu > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.view-options-menu[open] > summary {
+  border-color: var(--accent);
+}
+
+.view-options-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  width: min(248px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px var(--shadow);
+}
+
+.view-options-panel > button,
+.view-options-panel .control-cluster {
+  width: 100%;
+  justify-content: center;
+}
+
 .field {
   display: grid;
   gap: 3px;
