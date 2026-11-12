@@ -35,6 +35,9 @@ test("Three.js search stage composes Local Graph, search, Category Navigator and
     assert.match(runtime, /window\.open\(node\.url,"_blank","noopener"\)/);
     assert.match(runtime, /appendSearchMatchReason/);
     assert.match(runtime, /lastSearchProjection/);
+    assert.match(runtime, /function applySearchVisuals\(mesh,matchesSearch,level\)/);
+    assert.match(runtime, /mesh\.visible=matchesScope/);
+    assert.match(runtime, /mesh\.userData\.searchMatched=matchesSearch/);
     assert.match(page, /id="focusButton"/);
     assert.match(page, /category-navigator\.css/);
     assert.match(page, /threejs-category-navigator\.js/);

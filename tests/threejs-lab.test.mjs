@@ -41,6 +41,12 @@ test("Three.js lab consumes shared semantic and transferable state runtimes", as
     assert.match(runtime, /canonicalGraphMutation\s*:\s*false/);
     assert.match(runtime, /relation\s*===\s*"contributed"/);
     assert.match(runtime, /raw\.githubusercontent\.com/);
+    assert.match(runtime, /function readBoundedGraph\(response\)/);
+    assert.match(runtime, /maxBytes=8_000_000/);
+    assert.match(runtime, /window\.ProjectMapThreejsSetStyle=/);
+    assert.match(runtime, /ui\.canvas\.__ipmRenderer/);
+    assert.match(runtime, /activePointers=new Map\(\)/);
+    assert.match(runtime, /event\.shiftKey/);
     assert.doesNotMatch(runtime, /api\.github\.com/);
     assert.doesNotMatch(runtime, /Quality Auto/);
     assert.match(css, /perspective: 1200px/);
