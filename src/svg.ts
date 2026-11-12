@@ -268,20 +268,16 @@ export function renderGalaxySvg(graph: GalaxyGraph, theme: Theme, width: number,
         : "";
 
       if (node.type === "owner") {
-        return `<g><title>${esc(node.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 2.1).toFixed(1)}" fill="${fill}" opacity="0.08"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 7).toFixed(1)}" fill="none" stroke="${fill}" stroke-width="1.1" opacity="0.32"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="0.98"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 0.38).toFixed(1)}" fill="#ffffff" opacity="0.65"/>${text}</g>`;
+        return `<g><title>${esc(node.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 7).toFixed(1)}" fill="none" stroke="${fill}" stroke-width="1.1" opacity="0.3"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="0.98"/>${text}</g>`;
       }
       if (node.type === "group") {
-        return `<g><title>${esc(node.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 2.2).toFixed(1)}" fill="${fill}" opacity="0.09"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 3.5).toFixed(1)}" fill="none" stroke="${fill}" stroke-width="0.9" opacity="0.38"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="0.96"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 0.35).toFixed(1)}" fill="#ffffff" opacity="0.55"/>${text}</g>`;
+        return `<g><title>${esc(node.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="0.96"/>${text}</g>`;
       }
       const opacity = isContributed(node) ? 0.96 : node.archived ? 0.72 : node.fork ? 0.82 : 0.95;
-      const halo = (node.stars ?? 0) >= 3 || isContributed(node)
-        ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 1.85).toFixed(1)}" fill="${fill}" opacity="0.14"/>`
-        : "";
-      const core = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.4, r * 0.32).toFixed(1)}" fill="#ffffff" opacity="0.55"/>`;
       const archivedRing = node.archived && !isContributed(node)
         ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 3.2).toFixed(1)}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3" opacity="0.88"/>`
         : "";
-      return `<g><title>${esc(node.label)}</title>${halo}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="${opacity.toFixed(2)}"/>${core}${archivedRing}${text}</g>`;
+      return `<g><title>${esc(node.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="${opacity.toFixed(2)}"/>${archivedRing}${text}</g>`;
     })
     .join("");
 

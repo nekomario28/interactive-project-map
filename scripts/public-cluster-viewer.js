@@ -172,13 +172,6 @@ function draw() {
     ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.strokeStyle = isContributed ? "rgba(230,159,0,.22)" : "rgba(106,167,255,.20)";
-    ctx.lineWidth = 0.8;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, radius * 0.65, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
     ctx.fillStyle = isContributed ? colors.contributed : colors.muted;
     ctx.font = `650 ${clamp(11 * Math.sqrt(state.zoom), 9, 14)}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
     ctx.textAlign = "center";
@@ -190,14 +183,10 @@ function draw() {
   for (const repo of state.nodes) {
     const point = worldToScreen(repo.x, repo.y);
     const selected = repo === state.selected || repo === state.hovered;
-    const radius = Math.max(4, repo.radius * state.zoom * (selected ? 1.15 : 1));
+    const radius = Math.max(3.5, repo.radius * state.zoom * (selected ? 1.15 : 1));
     const opacity = matches(repo) ? (repo.relation === "contributed" ? 0.96 : repo.archived ? 0.70 : repo.fork ? 0.82 : 0.96) : 0.10;
-    ctx.fillStyle = colors[statusOf(repo)];
-    ctx.globalAlpha = opacity * (selected ? 0.24 : 0.14);
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, radius * 1.85, 0, Math.PI * 2);
-    ctx.fill();
     ctx.globalAlpha = opacity;
+    ctx.fillStyle = colors[statusOf(repo)];
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();

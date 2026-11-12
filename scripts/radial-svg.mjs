@@ -207,12 +207,9 @@ export function renderRadialTreeSvg(graph, theme, width, height) {
       : "";
     const ownerRing = node.type === "owner"
       ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 7).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.28"/>`
-      : node.type === "group"
-        ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius + 3.2).toFixed(1)}" fill="none" stroke="${fill}" opacity="0.24"/>`
-        : "";
-    const core = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(1.2, radius * 0.34).toFixed(1)}" fill="#ffffff" opacity="${node.type === "owner" ? 0.62 : 0.45}"/>`;
+      : "";
     const opacity = node.type === "repository" ? repositoryOpacity(node, { archived: 0.72, contributed: 0.96 }) : 0.96;
-    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${core}${ownerRing}${archivedRing}${label}</g>`;
+    return `<g>${title}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${fill}" opacity="${opacity}"/>${ownerRing}${archivedRing}${label}</g>`;
   }).join("");
 
   const cx = (width / 2).toFixed(1);
