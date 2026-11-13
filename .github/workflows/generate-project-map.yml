@@ -29,9 +29,9 @@ on:
         default: false
         type: boolean
       svg_contributed_layout:
-        description: Galaxy Systems Contributed layout (rail or halo)
+        description: Galaxy Systems Contributed layout (rail or halo); omitted legacy workflow inputs keep Halo
         required: false
-        default: rail
+        default: halo
         type: string
       width:
         description: SVG width in pixels
@@ -59,7 +59,9 @@ permissions:
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
 # Immutable Action candidate: 293386179990d3ab3b2172e55ff1e934f988adeb. Both Halo and Rail share one renderer.
-# The profile can opt into Halo; existing reusable callers keep default Rail.
+# Backward compatibility: earlier v1 callers with no layout input used Halo for Galaxy Systems.
+# Reusable workflows default to Halo, while direct Action callers keep their existing Rail default.
+# Explicit halo/rail remains authoritative for new callers.
 # Verify exact caller behavior before promoting the stable v1 channel.
 jobs:
   generate:
