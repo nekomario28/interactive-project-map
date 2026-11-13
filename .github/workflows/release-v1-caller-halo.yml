@@ -1,0 +1,84 @@
+name: v1 candidate - exact reusable caller halo
+
+# Read-only release candidate proof, never publish or push generated artifacts.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-v1-caller-halo.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    permissions:
+      contents: read
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@0eb86cfbd06f8b86d184a81333ee8f58a1af24bf
+    with:
+      theme: dark
+      style: galaxy-systems
+      max_repos: "100"
+      forks: true
+      archived: true
+      contributed: true
+      # Deliberately omit svg_contributed_layout to verify legacy default.
+
+  verify:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download exact reusable caller output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: project-map-generated
+          path: project-map
+      - name: Inspect galaxy-systems output and privacy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s project-map/graph.json
+          test -s project-map/galaxy.svg
+          node <<'NODE'
+          const fs=require('node:fs');
+          const assert=(value,msg)=>{if(!value)throw new Error(msg);};
+          const graph=JSON.parse(fs.readFileSync('project-map/graph.json','utf8'));
+          const svg=fs.readFileSync('project-map/galaxy.svg','utf8');
+          const repositories=graph.nodes.filter(n=>n.type==='repository');
+          const owned=repositories.filter(n=>n.relation!=='contributed');
+          const contributed=repositories.filter(n=>n.relation==='contributed');
+          const banned=new Set(['private','isPrivate','restricted','isRestricted']);
+          const visit=(value)=>{if(!value||typeof value!=='object')return;for(const [key,child] of Object.entries(value)){assert(!banned.has(key),'private metadata serialized: '+key);visit(child);}};
+          visit(graph);
+          const total=owned.length+contributed.length;
+          assert(owned.length >= 24 && owned.length <= 100, 'owned count regressed: '+owned.length);
+          assert(contributed.length >= 8 && contributed.length <= 24, 'Contributed count regressed: '+contributed.length);
+          assert(graph.contributedRepositoryCount===contributed.length, 'Contributed metrics mismatch');
+          assert(graph.externalContributions?.includedRepositories===contributed.length, 'Contributed diagnostics mismatch');
+          const links=contributed.filter(n=>typeof n.forkUrl==='string');
+          assert(links.length >= 6, 'verified personal fork links missing: '+links.length);
+          const owners=new Set(owned.map(n=>String(n.label).toLowerCase()));
+          for(const n of contributed){
+            assert(n.repositoryOwner && n.repositoryOwner.toLowerCase()!=='nekomario28','invalid upstream ownership');
+            assert(!owners.has(String(n.label).toLowerCase()),'duplicate owned/upstream identity: '+n.label);
+            assert(!('groupId' in n) && !('groupLabel' in n), 'Contributed was categorized as Owned');
+            assert(n.contribution?.commits>0 || n.contribution?.mergedPullRequests>0, 'unaccepted Contributed');
+            if(n.forkUrl) {
+              const match=/^https:\/\/github\.com\/nekomario28\/([A-Za-z0-9._-]+)$/i.exec(n.forkUrl);
+              assert(match,'unsafe fork backlink '+n.forkUrl);
+              assert(!owners.has(match[1].toLowerCase()), 'verified personal fork not collapsed: '+match[1]);
+            }
+          }
+          const markers=[...svg.matchAll(/data-galaxy-orbit="contributed" data-galaxy-placement="external-halo-orbit"/g)];
+          assert(svg.includes('data-galaxy-external-layout="halo"'),'omitted workflow layout did not preserve Halo');
+          assert(!svg.includes('data-galaxy-external-layout="rail"'),'unexpected Rail layout');
+          assert(markers.length===contributed.length, 'Halo placement count mismatch');
+          assert(svg.includes('<animateTransform'),'Halo motion animation missing');
+          const stats=graph.nodes.find(n=>n.type==='owner')?.profileStats;
+          assert(Number.isFinite(stats?.ownedStars),'owner star summary unavailable');
+          assert(stats?.contributedRepositories===contributed.length, 'owner contributed summary mismatch');
+          console.log('EXACT_REUSABLE_HALO_PASS',JSON.stringify({owned:owned.length,contributed:contributed.length,verifiedForkLinks:links.length,orbitMarkers:markers.length,innerAction:'cb58ea19bb7f1d09778924a38949f0074108b234'}));
+          NODE
