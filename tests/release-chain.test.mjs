@@ -45,5 +45,8 @@ test("release chain treats outer reusable ref and inner Action SHA as separate r
     includeArchived: false,
   });
   assert.match(generated, /generate-project-map\.yml@v1/);
-  assert.match(generated, new RegExp(`Reviewed immutable inner Action baseline: nekomario28/interactive-project-map@${reusableInnerRef}`));
+  assert.match(generated, /@v1 chooses its own immutable Action/);
+  assert.doesNotMatch(generated, new RegExp(`# Reviewed immutable inner Action baseline: nekomario28/interactive-project-map@${reusableInnerRef}`));
+  const pinned = renderInstallWorkflow({ username: "octocat", theme: "dark", style: "radial", maxRepos: 100, includeForks: true, includeArchived: false, generatorRef: "1111111111111111111111111111111111111111" });
+  assert.match(pinned, /Pinned reusable workflow SHA chooses its own inner Action/);
 });

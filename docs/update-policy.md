@@ -10,7 +10,7 @@ Normal installs use the read-only reusable generator through:
 uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@v1
 ```
 
-`v1` is the reviewed outer compatibility channel. Moving that channel can deliver compatible fixes without asking every user to edit their profile workflow. The reusable workflow separately pins the Project Map Action and GitHub-maintained third-party Actions to reviewed immutable commit SHAs.
+`v1` is the reviewed **branch** used as the outer compatibility channel. Its inner Action may lag the candidate on `main`; the generated workflow deliberately does not claim those versions are equal. Audit the live branch with `node scripts/audit-release-channel.mjs` before release promotion. Moving that channel can deliver compatible fixes without asking every user to edit their profile workflow. The reusable workflow separately pins the Project Map Action and GitHub-maintained third-party Actions to reviewed immutable commit SHAs.
 
 This is the recommended mode for normal users.
 
