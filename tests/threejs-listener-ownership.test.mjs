@@ -1,10 +1,34 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { runInNewContext } from "node:vm";
+import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
+import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
+import { composeThreejsStyleRuntime } from "../scripts/public-threejs-style-presets.mjs";
+import { composeThreejsGalaxyMotionRuntime } from "../scripts/public-threejs-galaxy-motion.mjs";
+import { composeThreejsGalaxyPatternCouplingRuntime } from "../scripts/public-threejs-galaxy-pattern-coupling.mjs";
 
 const baseSource = readFileSync(new URL("../scripts/public-threejs-viewer.js", import.meta.url), "utf8");
-const builtSource = readFileSync(new URL("../site/threejs-viewer.js", import.meta.url), "utf8");
+let cachedBuiltSource = null;
+
+async function getBuiltSource() {
+  if (cachedBuiltSource !== null) return cachedBuiltSource;
+  const root = await mkdtemp(join(tmpdir(), "ipm-three-listener-ownership-"));
+  try {
+    await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
+    const searched = await readFile(join(root, "threejs-viewer.js"), "utf8");
+    cachedBuiltSource = composeThreejsGalaxyPatternCouplingRuntime(
+      composeThreejsGalaxyMotionRuntime(composeThreejsStyleRuntime(searched)),
+    );
+    return cachedBuiltSource;
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
 
 function makeEventTarget(name, registry) {
   const active = new Map();
@@ -145,7 +169,7 @@ function makeThreeMock() {
   };
 }
 
-function makeSandbox({ failOnResizeObserver = false } = {}) {
+async function makeSandbox({ failOnResizeObserver = false } = {}) {
   const registry = { added: 0, removed: 0 };
   const byId = new Map();
   const ids = [
@@ -191,6 +215,7 @@ function makeSandbox({ failOnResizeObserver = false } = {}) {
     ProjectMapThreejsGalaxyMotion: undefined,
   });
 
+  const builtSource = await getBuiltSource();
   const instrumented = `${builtSource.replace(/\bboot\(\);\s*$/, "")}\n;globalThis.__testExports = { createSceneRuntime, ui };`;
   const context = {
     window: windowObj,
@@ -256,15 +281,16 @@ const sampleGraph = {
   ],
 };
 
-test("generated and source Three.js runtimes never mutate EventTarget.prototype", () => {
+test("generated and source Three.js runtimes never mutate EventTarget.prototype", async () => {
+  const builtSource = await getBuiltSource();
   assert.doesNotMatch(baseSource, /EventTarget\.prototype/);
   assert.doesNotMatch(builtSource, /EventTarget\.prototype/);
   assert.match(baseSource, /function listen\(target,type,fn,opts\)/);
   assert.match(builtSource, /function listen\(target,type,fn,opts\)/);
 });
 
-test("repeated mount/unmount cycles remove all runtime listeners, captures, frames, observers and labels", () => {
-  const sandbox = makeSandbox();
+test("repeated mount/unmount cycles remove all runtime listeners, captures, frames, observers and labels", async () => {
+  const sandbox = await makeSandbox();
   assert.equal(sandbox.protoStillOriginal, true);
 
   const unrelatedHandler = () => {};
@@ -299,8 +325,8 @@ test("repeated mount/unmount cycles remove all runtime listeners, captures, fram
   assert.equal(sandbox.protoStillOriginal, true);
 });
 
-test("partial initialization failure rolls back already-registered listeners cleanly", () => {
-  const sandbox = makeSandbox({ failOnResizeObserver: true });
+test("partial initialization failure rolls back already-registered listeners cleanly", async () => {
+  const sandbox = await makeSandbox({ failOnResizeObserver: true });
   const THREE = makeThreeMock();
 
   assert.throws(
