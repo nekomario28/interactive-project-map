@@ -53,8 +53,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Exact Action candidate: 69ffe131013243db232aa09c4da4106912921d81.
-# Includes verified Fork/upstream deduplication and owner metrics (PR #454).
+# Exact Action candidate: 10a7be7ee1caad1eb0cac334365a7cbbb95d3660.
+# Captured Halo-layout SVG with verified Fork/upstream deduplication and owner metrics (PR #454).
+# The parent commit restores the default Rail renderer on this reusable workflow's own tree.
 # Validate the real profile with an explicit reusable-workflow SHA before promoting v1.
 jobs:
   generate:
@@ -66,7 +67,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@69ffe131013243db232aa09c4da4106912921d81
+        uses: nekomario28/interactive-project-map@10a7be7ee1caad1eb0cac334365a7cbbb95d3660
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
