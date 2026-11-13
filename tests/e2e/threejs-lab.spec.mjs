@@ -311,3 +311,38 @@ test.describe("mobile Three.js happy-path evidence", () => {
     await page.screenshot({ path: ".tmp/playwright-visual/threejs-lab-mobile-chromium.png", fullPage: true });
   });
 });
+
+
+test("GPU resource counts stay bounded across repeated 3D style cycles", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Measure WebGL allocations on the Chromium GPU happy path.");
+  await installGraph(page);
+  await page.goto("/three/?username=example&style3d=galaxy");
+  await expect(page.locator("#status")).toHaveClass(/ready/, { timeout: 20_000 });
+
+  const metrics = [];
+  for (let cycle = 0; cycle < 4; cycle += 1) {
+    for (const style of ["cosmic", "aurora", "wireframe", "galaxy"]) {
+      await page.locator("#threeStyle").selectOption(style);
+      await page.evaluate(() => new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      }));
+    }
+    metrics.push(await page.locator("#galaxy3d").evaluate((canvas) => {
+      const renderer = canvas.__ipmRenderer;
+      if (!renderer) return null;
+      return {
+        geometries: renderer.info.memory.geometries,
+        textures: renderer.info.memory.textures,
+      };
+    }));
+  }
+  for (const sample of metrics) {
+    expect(sample).not.toBeNull();
+    expect(sample.geometries).toBeGreaterThan(0);
+    expect(sample.textures).toBeGreaterThan(0);
+  }
+  const first = metrics[0], last = metrics.at(-1);
+  expect(last.geometries).toBeLessThanOrEqual(first.geometries + 1);
+  expect(last.textures).toBeLessThanOrEqual(first.textures + 1);
+  await expect(page.locator("body")).toHaveAttribute("data-map-style", "threejs-galaxy");
+});
