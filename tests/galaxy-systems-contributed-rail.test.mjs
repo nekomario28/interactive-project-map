@@ -78,3 +78,17 @@ test("Galaxy Systems keeps crowded Contributed repositories in a dedicated exter
   const externalSlice = svg.slice(externalStart);
   assert.doesNotMatch(externalSlice, /<animateTransform/u, "Contributed must not re-enter owned category motion through a global orbit");
 });
+
+
+test("Galaxy Systems Halo preserves external orbits without changing the Rail default", () => {
+  const graph = crowdedSystemsGraph();
+  const halo = renderGalaxySystemsSvg(graph, "dark", 740, 420, undefined, { contributedLayout: "halo" });
+  assert.match(halo, /data-galaxy-external-layout="halo"/);
+  assert.doesNotMatch(halo, /data-galaxy-external-layout="rail"|data-galaxy-external-backdrop="true"/);
+  assert.equal((halo.match(/data-galaxy-placement="external-halo-orbit"/g) || []).length, 12);
+  const placements = [...halo.matchAll(/data-galaxy-lane="([0-9]+)" data-galaxy-radius="([0-9.]+)"/g)].map((m) => ({ lane: Number(m[1]), radius: Number(m[2]) }));
+  assert.equal(placements.length, 12);
+  assert.ok(Math.min(...placements.filter((p) => p.lane === 1).map((p) => p.radius)) > Math.max(...placements.filter((p) => p.lane === 0).map((p) => p.radius)));
+  assert.match(halo.slice(halo.indexOf('data-galaxy-external-layout="halo"')), /<animateTransform/);
+  assert.throws(() => renderGalaxySystemsSvg(graph, "dark", 740, 420, undefined, { contributedLayout: "invalid" }), RangeError);
+});
