@@ -34,6 +34,6 @@
     "html-validate": "^11.21.0",
     "stylelint": "17.16.0",
     "typescript": "^7.0.2",
-    "wrangler": "^4.159.0"
+    "wrangler": "^4.160.0"
   }
 }
