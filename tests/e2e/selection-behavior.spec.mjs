@@ -41,6 +41,7 @@ async function clickEmptyCanvas(page) {
 
 for (const style of ["galaxy-classic", "galaxy-systems", "galaxy-hybrid", "obsidian"]) {
   test(`${style}: blank click clears selection and another node switches focus`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await installGraph(page);
     await page.goto(`/u/?username=example&style=${style}`);
     await expect(page.locator("#status")).toBeHidden();
