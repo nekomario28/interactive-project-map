@@ -1,0 +1,98 @@
+name: v1 post-promotion real caller and release audit
+
+# Read-only proof of the actual mutable stable branch after its guarded promotion.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-v1-post-promotion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    permissions:
+      contents: read
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@v1
+    with:
+      theme: dark
+      style: galaxy-systems
+      max_repos: "100"
+      forks: true
+      archived: true
+      contributed: true
+      # Deliberately omit svg_contributed_layout for actual stable-v1 proof.
+
+  audit:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout exact reviewed release commit R
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 4ebaaf58e9c63e53d91ae1d37d6c182adaba6bc2
+          persist-credentials: false
+      - name: Setup Node.js 24 for TypeScript metadata import
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Download generated stable-v1 graph and SVG
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: project-map-generated
+          path: project-map
+      - name: Verify live stable-v1 graph Halo default and privacy
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('node:fs');
+          const g=JSON.parse(fs.readFileSync('project-map/graph.json','utf8'));
+          const svg=fs.readFileSync('project-map/galaxy.svg','utf8');
+          const repos=g.nodes.filter(n=>n.type==='repository');
+          const owned=repos.filter(n=>n.relation!=='contributed');
+          const contributed=repos.filter(n=>n.relation==='contributed');
+          const backlinks=contributed.filter(n=>typeof n.forkUrl==='string');
+          const assert=(c,m)=>{if(!c)throw new Error(m)};
+          assert(owned.length>=24,'owned repositories missing');
+          assert(contributed.length>=8,'Contributed repositories missing');
+          assert(backlinks.length>=6,'verified Fork backlinks missing');
+          assert(g.contributedRepositoryCount===contributed.length,'Contributed count mismatch');
+          assert(svg.includes('data-galaxy-external-layout="halo"'),'legacy Halo default changed');
+          assert(!svg.includes('data-galaxy-external-layout="rail"'),'unexpected Rail');
+          const placements=[...svg.matchAll(/data-galaxy-orbit="contributed" data-galaxy-placement="external-halo-orbit"/g)];
+          assert(placements.length===contributed.length,'Halo placements mismatch');
+          assert(svg.includes('<animateTransform'),'Halo animation missing');
+          const ownedNames=new Set(owned.map(n=>String(n.label).toLowerCase()));
+          for(const n of contributed){
+            assert(!ownedNames.has(String(n.label).toLowerCase()),'duplicate Fork/upstream label');
+            if(n.forkUrl){const m=/^https:\/\/github\.com\/nekomario28\/([A-Za-z0-9._-]+)$/i.exec(n.forkUrl);
+              assert(m && !ownedNames.has(m[1].toLowerCase()),'unverified personal fork still present');
+            }
+          }
+          const visit=v=>{if(!v||typeof v!=='object')return;for(const [k,child] of Object.entries(v)){
+            assert(!['private','isPrivate','restricted','isRestricted'].includes(k),'private metadata key: '+k);
+            visit(child);
+          }};visit(g);
+          assert(Number.isFinite(g.nodes.find(n=>n.type==='owner')?.profileStats?.ownedStars),'owner stats missing');
+          console.log('STABLE_V1_GRAPH_PASS',JSON.stringify({owned:owned.length,contributed:contributed.length,verifiedForkBacklinks:backlinks.length,haloPlacements:placements.length}));
+          NODE
+      - name: Audit exact stable branch R and pinned Action F
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "4ebaaf58e9c63e53d91ae1d37d6c182adaba6bc2"
+          GITHUB_SHA="4ebaaf58e9c63e53d91ae1d37d6c182adaba6bc2" node scripts/audit-release-channel.mjs --require-current --output .tmp/stable-v1-promotion-audit.json
+          node -e 'const d=require("./.tmp/stable-v1-promotion-audit.json");if(!d.promotionVerified||d.candidate.commit!=="4ebaaf58e9c63e53d91ae1d37d6c182adaba6bc2"||d.candidate.innerAction!=="cb58ea19bb7f1d09778924a38949f0074108b234")process.exit(1);console.log("STABLE_V1_AUDIT_PASS",JSON.stringify(d));'
+      - name: Retain stable branch audit evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stable-v1-post-promotion-audit
+          path: .tmp/stable-v1-promotion-audit.json
+          if-no-files-found: error
+          retention-days: 14
