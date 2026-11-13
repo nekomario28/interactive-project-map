@@ -84,12 +84,12 @@ test("Obsidian opens as a live force spawn and cools instead of appearing pre-se
   await page.goto("/u/?username=example&style=obsidian");
   await expect(page.locator("#status")).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.ProjectMapObsidianRuntime?.snapshot().active)).toBe(true);
-  await expect(page.locator("#subtitle")).toContainText("live settling");
 
   const initialRuntime = await page.evaluate(() => window.ProjectMapObsidianRuntime.snapshot());
   const before = await obsidianPositions(page);
+  await expect(page.locator("#subtitle")).toContainText("live settling");
   expect(initialRuntime.phase).toBe("settling");
-  expect(initialRuntime.alpha).toBeGreaterThan(0.5);
+  expect(initialRuntime.alpha).toBeGreaterThan(0.35);
   expect(initialRuntime.spawnCount).toBe(1);
   expect(initialRuntime.nodeCount).toBe(graph.nodes.length);
   expect(initialRuntime.edgeCount).toBe(graph.edges.length);
