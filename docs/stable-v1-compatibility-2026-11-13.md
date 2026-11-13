@@ -24,6 +24,12 @@ The adoption census at `data/public-users.json` was checked 2026-11-12 and lists
 
 These are known *public* users only. They do not prove the absence of unknown/private v1 clients. The regression contract therefore favors backward compatibility for legacy omitted layout.
 
+## Existing public-profile render proof (inner Action only)
+
+The current public `nekomario28/nekomario28` profile graph, generated at `2026-11-13T05:32:06.276Z`, contains **30 owned repositories, 12 Contributed repositories and 8 verified personal-Fork backlinks**. There is no repeated owned/Contributed label. Its public SVG uses `data-galaxy-external-layout="halo"`, contains **12** Contributed halo-orbit placements and contains no Rail layout marker.
+
+The profile workflow currently invokes reusable commit `84395b4...` with `svg_contributed_layout: halo`, which uses the same reviewed inner Action `293386179990d3ab3b2172e55ff1e934f988adeb`. This is useful **existing inner-Action evidence**, but it is not proof of this new candidate reusable workflow's **omitted-input default**. The exact-SHA no-input reusable caller run is a separate remaining release gate.
+
 ## Release verification and rollback gates (not yet complete)
 
 1. Validate this candidate workflow (its exact head SHA and immutable inner Action `2933861...`) with full Verify + Chromium + WebKit checks.
