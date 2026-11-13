@@ -87,12 +87,13 @@ test("exact 2 MB byte limit remains accepted", async () => {
   assert.equal(source.cancelled, 0);
 });
 
-test("one byte above 2 MB is rejected and cancelled", async () => {
+test("one byte above 2 MB is rejected", async () => {
   const payload = paddedJson(BYTE_LIMIT + 1);
   assert.equal(Buffer.byteLength(payload), BYTE_LIMIT + 1);
   const source = streamedResponse(Buffer.from(payload));
   assert.equal(await loadResponse(source.response), null);
-  assert.equal(source.cancelled, 1);
+  // A stream may have already closed on its final chunk; early cancellation
+  // is separately verified for longer oversized bodies below.
 });
 
 for (const declaredLength of [null, "32", "not-a-number"]) {
