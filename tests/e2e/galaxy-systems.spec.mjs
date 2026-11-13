@@ -226,3 +226,108 @@ test("declarative Systems orbit animation advances in a normal browser image", a
   const second = await page.locator("#map").screenshot();
   assert.equal(first.equals(second), false, "a standards-compliant image context should advance the declarative SVG orbit animation");
 });
+
+test("static Galaxy Systems SVG keeps rendered Chromium labels collision-free across 740px, 390px and 320px", async ({ page }) => {
+  const crowdedCategories = ["Developer Tools", "Web Frontend", "Machine Learning", "Cloud Infra", "Systems Core", "Open Data"];
+  const crowdedGraph = {
+    owner: "nekomario28",
+    repositoryCount: 18,
+    groupCount: crowdedCategories.length,
+    contributedRepositoryCount: 12,
+    nodes: [
+      {
+        id: "user:nekomario28",
+        label: "nekomario28",
+        type: "owner",
+        url: "https://github.com/nekomario28",
+        profileStats: {
+          ownedStars: 120,
+          followers: 40,
+          originalRepositories: 18,
+          contributedRepositories: 12,
+          mergedPullRequests: 15,
+          commits: 60,
+          limitedRepositories: false,
+          limitedContributions: false,
+        },
+      },
+      ...crowdedCategories.map((label, index) => ({
+        id: `group:g${index}`,
+        label,
+        type: "group",
+        repositoryCount: 3,
+      })),
+      ...Array.from({ length: 18 }, (_, index) => ({
+        id: `repository:owned-${index}`,
+        label: index % 3 === 0 ? `interactive-project-map-extension-v${index}` : `project-${index}`,
+        type: "repository",
+        url: `https://github.com/nekomario28/${index % 3 === 0 ? `interactive-project-map-extension-v${index}` : `project-${index}`}`,
+        stars: 30 - index,
+        forks: 0,
+        fork: false,
+        archived: false,
+        groupId: `g${index % crowdedCategories.length}`,
+        groupLabel: crowdedCategories[index % crowdedCategories.length],
+      })),
+      ...Array.from({ length: 12 }, (_, index) => ({
+        id: `repository:org-${index}/very-long-contributed-repo-name-${index}`,
+        label: `org-${index}/very-long-contributed-repo-name-${index}`,
+        type: "repository",
+        relation: "contributed",
+        repositoryOwner: `org-${index}`,
+        repositoryName: `very-long-contributed-repo-name-${index}`,
+        url: `https://github.com/org-${index}/very-long-contributed-repo-name-${index}`,
+        stars: 500 - index * 20,
+        forks: 0,
+        fork: false,
+        archived: false,
+        contribution: { commits: 3, pullRequests: 1, mergedPullRequests: 1 },
+      })),
+    ],
+    edges: [],
+  };
+
+  for (const layout of ["rail", "halo"]) {
+    for (const [width, height] of [[740, 420], [390, 260], [320, 240]]) {
+      const svg = renderGalaxySystemsSvg(crowdedGraph, "dark", width, height, undefined, { contributedLayout: layout });
+      await page.setViewportSize({ width, height });
+      await page.setContent(`<body style="margin:0;background:#090b12;overflow:hidden">${svg}</body>`);
+      await page.waitForTimeout(80);
+      const measurement = await page.evaluate(({ viewWidth, viewHeight }) => {
+        const boxes = [];
+        for (const el of document.querySelectorAll("svg text")) {
+          const yAttr = Number(el.getAttribute("y") || "0");
+          const rect = el.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) continue;
+          if (rect.bottom >= viewHeight - 20 && yAttr >= 0) continue;
+          boxes.push({
+            text: el.textContent || "",
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+          });
+        }
+        const overlaps = [];
+        const clipped = [];
+        for (let i = 0; i < boxes.length; i += 1) {
+          const b = boxes[i];
+          if (b.left < 0 || b.right > viewWidth || b.top < 0 || b.bottom > viewHeight) clipped.push(b.text);
+          for (let j = i + 1; j < boxes.length; j += 1) {
+            const o = boxes[j];
+            if (!(b.right < o.left || o.right < b.left || b.bottom < o.top || o.bottom < b.top)) {
+              overlaps.push([b.text, o.text]);
+            }
+          }
+        }
+        return { count: boxes.length, overlaps, clipped };
+      }, { viewWidth: width, viewHeight: height });
+
+      expect(measurement.clipped, `${layout} ${width}x${height} clipped: ${measurement.clipped.join(", ")}`).toEqual([]);
+      expect(measurement.overlaps, `${layout} ${width}x${height} overlaps: ${JSON.stringify(measurement.overlaps)}`).toEqual([]);
+      expect(measurement.count).toBeGreaterThanOrEqual(10);
+      await page.screenshot({ path: `.tmp/playwright-visual/dark/galaxy-systems-static-${layout}-${width}x${height}.png` });
+    }
+  }
+});
+

@@ -64,7 +64,11 @@ export function legend(colors, width, height, label) {
     x += 17 + text.length * 5.8 + 15;
     return chunk;
   }).join("");
-  return `${status}<text x="${width - 18}" y="${height - 12.5}" text-anchor="end" fill="${colors.muted}" font-size="9.5">${esc(label)}</text>`;
+  const labelWidth = String(label || "").length * 6;
+  const presetLabel = x + 12 + labelWidth <= width - 18
+    ? `<text x="${width - 18}" y="${height - 12.5}" text-anchor="end" fill="${colors.muted}" font-size="9.5">${esc(label)}</text>`
+    : "";
+  return `${status}${presetLabel}`;
 }
 
 export function nodeMarkup(node, x, y, colors, options = {}) {
@@ -75,7 +79,7 @@ export function nodeMarkup(node, x, y, colors, options = {}) {
   const labelStrokeWidth = options.labelStrokeWidth ?? 2.3;
   const label = options.label === false ? "" : `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12)}" text-anchor="middle" fill="${node.type === "group" ? colors.muted : colors.fg}" font-size="${node.type === "owner" ? 13.5 : node.type === "group" ? 10.5 : 9.2}" font-weight="${node.type === "owner" ? 700 : node.type === "group" ? 650 : 500}" paint-order="stroke" stroke="${colors.bg}" stroke-width="${labelStrokeWidth}" stroke-linejoin="round">${esc(displayLabel(node))}</text>`;
   const ownerSummary = node.type === "owner" && node.profileStats
-    ? `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12) + 12}" text-anchor="middle" fill="${colors.muted}" font-size="8.4">F${esc(node.profileStats.followers ?? "—")} · R${esc(node.profileStats.originalRepositories)} · C${esc(node.profileStats.contributedRepositories)}</text>`
+    ? `<text x="${x}" y="${y + radius + (options.labelOffset ?? 12) + 15}" text-anchor="middle" fill="${colors.muted}" font-size="8.4">F${esc(node.profileStats.followers ?? "—")} · R${esc(node.profileStats.originalRepositories)} · C${esc(node.profileStats.contributedRepositories)}</text>`
     : "";
   const archived = shouldDecorateArchived(node) ? `<circle cx="${x}" cy="${y}" r="${radius + 3.3}" fill="none" stroke="${colors.archived}" stroke-width="1.1" stroke-dasharray="3 3"/>` : "";
   const core = node.type === "owner" && node.profileStats

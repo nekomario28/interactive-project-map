@@ -5,6 +5,49 @@ const ANIMATED_LIMIT = 80;
 const REPRESENTATIVE_LIMIT = 2;
 const STATIC_LABEL_STROKE_WIDTH = 1.4;
 const CONTRIBUTED_PER_LANE = 6;
+const REPO_LABEL_FONT_SIZE = 9.2;
+const EXTERNAL_LABEL_FONT_SIZE = 8.8;
+
+function systemsDisplayLabel(node, maxChars = 28) {
+  const label = String(node?.label || "");
+  if (maxChars < 4 || label.length <= maxChars) return label;
+  return `${label.slice(0, maxChars - 1)}…`;
+}
+
+function estimateTextBox(x, y, text, fontSize, anchor = "middle") {
+  const width = Math.max(8, String(text || "").length * fontSize * 0.58 + 4);
+  const left = anchor === "middle" ? x - width / 2 : anchor === "end" ? x - width : x - 2;
+  return {
+    left,
+    right: left + width,
+    top: y - fontSize * 0.88,
+    bottom: y + fontSize * 0.28,
+  };
+}
+
+function boxesOverlap(a, b, padding = 3) {
+  return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
+}
+
+function radialLabelOffset(angle, distance = 12) {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const anchor = dx > 0.3 ? "start" : dx < -0.3 ? "end" : "middle";
+  return { x: dx * distance, y: dy * distance + 3, anchor };
+}
+
+function placeLocalLabel(worldX, worldY, basePhase, text, fontSize, occupied, bounds, padding = 3) {
+  const candidateAngles = [basePhase, basePhase + Math.PI, basePhase + Math.PI / 2, basePhase - Math.PI / 2];
+  for (const angle of candidateAngles) {
+    const offset = radialLabelOffset(angle, 12);
+    const box = estimateTextBox(worldX + offset.x, worldY + offset.y, text, fontSize, offset.anchor);
+    if (box.left < bounds.left || box.right > bounds.right || box.top < bounds.top || box.bottom > bounds.bottom) continue;
+    if (occupied.some((other) => boxesOverlap(box, other, padding))) continue;
+    occupied.push(box);
+    return { ...offset, text };
+  }
+  return null;
+}
 
 function circleValues(radius, startAngle, direction = 1, centerX = 0, centerY = 0, samples = 16) {
   const values = [];
@@ -51,22 +94,17 @@ function compareRepresentativePriority(a, b) {
     || String(a.label).localeCompare(String(b.label));
 }
 
-function categoryMarkup(group, colors) {
-  return `<g data-static-category="${esc(group.id)}">${nodeMarkup(group, 0, 0, colors, { labelStrokeWidth: STATIC_LABEL_STROKE_WIDTH })}</g>`;
+function categoryMarkup(group, colors, showLabel = true) {
+  return `<g data-static-category="${esc(group.id)}">${nodeMarkup(group, 0, 0, colors, { label: showLabel, labelStrokeWidth: STATIC_LABEL_STROKE_WIDTH })}</g>`;
 }
 
-function representativeLabelMarkup(repo, phase, colors) {
-  const dx = Math.cos(phase);
-  const dy = Math.sin(phase);
-  const distance = 12;
-  const x = dx * distance;
-  const y = dy * distance + 3;
-  const anchor = dx > 0.3 ? "start" : dx < -0.3 ? "end" : "middle";
-  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${colors.fg}" font-size="9.2" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
+function placedLabelMarkup(placement, colors, fontSize = REPO_LABEL_FONT_SIZE) {
+  if (!placement) return "";
+  return `<text x="${placement.x.toFixed(1)}" y="${placement.y.toFixed(1)}" text-anchor="${placement.anchor}" fill="${colors.fg}" font-size="${fontSize}" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(placement.text)}</text>`;
 }
 
-function externalLabelMarkup(repo, colors) {
-  return `<text x="14" y="3.2" text-anchor="start" fill="${colors.fg}" font-size="8.8" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(displayLabel(repo))}</text>`;
+function externalLabelMarkup(repo, colors, maxChars = 24) {
+  return `<text x="14" y="3.2" text-anchor="start" fill="${colors.fg}" font-size="${EXTERNAL_LABEL_FONT_SIZE}" font-weight="500" paint-order="stroke" stroke="${colors.bg}" stroke-width="${STATIC_LABEL_STROKE_WIDTH}" stroke-linejoin="round">${esc(systemsDisplayLabel(repo, maxChars))}</text>`;
 }
 
 function contributedRailLayout(repositories, width, height) {
@@ -74,23 +112,31 @@ function contributedRailLayout(repositories, width, height) {
     .filter((node) => node?.type === "repository" && node?.relation === "contributed")
     .sort(compareLayoutOrder);
   if (!contributed.length) {
-    return { assignments: [], railWidth: 0, railLeft: width, fadeLeft: width, top: 0, bottom: 0 };
+    return { assignments: [], railWidth: 0, railLeft: width, fadeLeft: width, top: 0, bottom: 0, maxChars: 24 };
   }
 
-  const railWidth = clamp(width * 0.24, 152, 190);
+  const narrow = width < 560;
+  const railWidth = narrow
+    ? clamp(width * 0.36, 108, 152)
+    : clamp(width * 0.24, 152, 190);
   const railLeft = width - railWidth;
   const fadeLeft = railLeft - Math.min(30, railWidth * 0.18);
   const top = Math.max(54, Math.min(60, height * 0.18));
   const bottom = Math.max(top, height - 44);
   const span = Math.max(1, bottom - top);
   const anchorX = railLeft + Math.min(25, railWidth * 0.15);
+  const availablePx = Math.max(44, width - (anchorX + 14) - 8);
+  const maxChars = Math.min(24, Math.max(8, Math.floor(availablePx / (EXTERNAL_LABEL_FONT_SIZE * 0.6))));
+  const minRowGap = narrow ? 20 : 18;
+  const maxLabeledRows = Math.max(1, Math.floor(span / minRowGap) + 1);
   const denominator = Math.max(1, contributed.length - 1);
   const assignments = contributed.map((repo, index) => ({
     repo,
     x: anchorX,
     y: contributed.length === 1 ? top + span / 2 : top + span * index / denominator,
+    showLabel: index < maxLabeledRows,
   }));
-  return { assignments, railWidth, railLeft, fadeLeft, top, bottom };
+  return { assignments, railWidth, railLeft, fadeLeft, top, bottom, maxChars };
 }
 
 function contributedRailBackdrop(colors, width, height, layout) {
@@ -154,9 +200,9 @@ export function renderGalaxySystemsSvg(graph, theme, width, height, frameOptions
   const ownedRepos = repos.filter((node) => node.relation !== "contributed");
   const owner = graph.nodes.find((node) => node.type === "owner");
   const externalLayout = contributedLayout === "rail" ? contributedRailLayout(repos, width, height) : null;
-  const cx = externalLayout?.assignments.length
-    ? (width - externalLayout.railWidth * 0.52) / 2
-    : width / 2;
+  const ownedWidth = externalLayout?.assignments.length ? externalLayout.fadeLeft : width;
+  const ownedMinSize = Math.min(ownedWidth, height);
+  const cx = ownedWidth / 2;
   const cy = height / 2 - 8;
   const count = Math.max(1, groups.length);
   const prepared = groups.map((group) => ({
@@ -171,13 +217,99 @@ export function renderGalaxySystemsSvg(graph, theme, width, height, frameOptions
   const maxSystemRadius = Math.max(42, ...prepared.flatMap((system) => system.assignments.map((target) => target.radius)));
   const spacingRadius = ((maxSystemRadius * 2 + 34) * count) / TAU;
   const categoryRadius = count === 1
-    ? minSize * 0.22
-    : clamp(Math.max(minSize * 0.31, spacingRadius), minSize * 0.31, minSize * 0.43);
+    ? ownedMinSize * 0.22
+    : clamp(Math.max(ownedMinSize * 0.31, spacingRadius), ownedMinSize * 0.31, ownedMinSize * 0.43);
 
-  const systems = prepared.map((system, groupIndex) => {
+  const haloContributedTargets = contributedLayout === "halo"
+    ? contributedAssignments(repos, minSize, categoryRadius, maxSystemRadius)
+    : [];
+
+  const labelBounds = {
+    left: 6,
+    right: externalLayout?.assignments.length ? externalLayout.fadeLeft - 6 : width - 6,
+    top: 6,
+    bottom: height - 30,
+  };
+  const haloBounds = { left: 6, right: width - 6, top: 6, bottom: height - 30 };
+  const occupied = [];
+
+  if (owner) {
+    const ownerRadius = owner.profileStats ? 18 * (1 + Math.min(0.4, 0.06 * Math.log2(1 + owner.profileStats.ownedStars))) : 18;
+    occupied.push(estimateTextBox(cx, cy + ownerRadius + 12, displayLabel(owner), 13.5, "middle"));
+    if (owner.profileStats) {
+      const summary = `F${owner.profileStats.followers ?? "—"} · R${owner.profileStats.originalRepositories} · C${owner.profileStats.contributedRepositories}`;
+      occupied.push(estimateTextBox(cx, cy + ownerRadius + 27, summary, 8.4, "middle"));
+    }
+  }
+
+  if (externalLayout?.assignments.length) {
+    occupied.push({
+      left: externalLayout.fadeLeft - 2,
+      right: width,
+      top: 0,
+      bottom: height - 26,
+    });
+  }
+
+  const systemMeta = prepared.map((system, groupIndex) => {
     const baseAngle = -Math.PI / 2 + TAU * groupIndex / count;
     const gx = cx + Math.cos(baseAngle) * categoryRadius;
     const gy = cy + Math.sin(baseAngle) * categoryRadius;
+    const categoryBox = estimateTextBox(gx, gy + 7.5 + 12, displayLabel(system.group), 10.5, "middle");
+    const categoryOverlap = occupied.some((other) => boxesOverlap(categoryBox, other, 2));
+    const showCategoryLabel = !categoryOverlap;
+    if (showCategoryLabel) occupied.push(categoryBox);
+    return { system, baseAngle, gx, gy, showCategoryLabel };
+  });
+
+  const repoMaxChars = width <= 420 ? 15 : 20;
+  const maxVisibleRepoLabels = width <= 360 ? 4 : width <= 480 ? 6 : prepared.length * REPRESENTATIVE_LIMIT;
+  const maxVisibleHaloLabels = width <= 360 ? 3 : width <= 480 ? 5 : 8;
+
+  const haloPlacements = new Map();
+  let placedHaloLabels = 0;
+  for (const target of haloContributedTargets) {
+    if (placedHaloLabels >= maxVisibleHaloLabels) break;
+    const wx = cx + Math.cos(target.phase) * target.radius;
+    const wy = cy + Math.sin(target.phase) * target.radius;
+    const labelText = systemsDisplayLabel(target.repo, repoMaxChars);
+    const placement = placeLocalLabel(wx, wy, target.phase, labelText, REPO_LABEL_FONT_SIZE, occupied, haloBounds, 3);
+    if (placement) {
+      haloPlacements.set(target.repo.id, placement);
+      placedHaloLabels += 1;
+    }
+  }
+
+  const candidateReps = [];
+  for (const meta of systemMeta) {
+    for (const target of meta.system.assignments) {
+      if (!meta.system.representativeIds.has(target.repo.id)) continue;
+      candidateReps.push({ meta, target });
+    }
+  }
+  candidateReps.sort((a, b) => compareRepresentativePriority(a.target.repo, b.target.repo));
+
+  const repoPlacements = new Map();
+  let placedRepoLabels = 0;
+  for (const { meta, target } of candidateReps) {
+    if (placedRepoLabels >= maxVisibleRepoLabels) break;
+    const wx = meta.gx + Math.cos(target.phase) * target.radius;
+    const wy = meta.gy + Math.sin(target.phase) * target.radius;
+    const labelText = systemsDisplayLabel(target.repo, repoMaxChars);
+    const placement = placeLocalLabel(wx, wy, target.phase, labelText, REPO_LABEL_FONT_SIZE, occupied, labelBounds, 3);
+    if (placement) {
+      repoPlacements.set(target.repo.id, placement);
+      placedRepoLabels += 1;
+    }
+  }
+
+function repoMetadataAttr(repo) {
+  return typeof repo?.url === "string" && repo.url.startsWith("https://github.com/")
+    ? ` data-repo-url="${esc(repo.url)}"`
+    : "";
+}
+
+  const systems = systemMeta.map(({ system, baseAngle, gx, gy, showCategoryLabel }) => {
     const categoryMotion = circleValues(categoryRadius, baseAngle, 1, cx, cy);
     const rings = [...new Set(system.assignments.map((target) => target.radius))].sort((a, b) => a - b)
       .map((radius) => `<circle cx="0" cy="0" r="${radius.toFixed(1)}" fill="none" stroke="${colors.group}" stroke-width="0.7" opacity="0.14"/>`).join("");
@@ -185,22 +317,24 @@ export function renderGalaxySystemsSvg(graph, theme, width, height, frameOptions
       const localX = Math.cos(target.phase) * target.radius;
       const localY = Math.sin(target.phase) * target.radius;
       const motion = circleValues(target.radius, target.phase, target.direction);
-      const representative = system.representativeIds.has(target.repo.id);
-      const labelMarkup = representative ? representativeLabelMarkup(target.repo, target.phase, colors) : "";
-      return `<g data-galaxy-orbit="repository" data-static-representative="${representative}" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${labelMarkup}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
+      const placement = repoPlacements.get(target.repo.id) ?? null;
+      const representative = Boolean(placement);
+      const labelMarkup = placedLabelMarkup(placement, colors, REPO_LABEL_FONT_SIZE);
+      return `<g data-galaxy-orbit="repository" data-static-representative="${representative}" transform="translate(${localX.toFixed(2)} ${localY.toFixed(2)})"${repoMetadataAttr(target.repo)}>${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${labelMarkup}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
     }).join("");
-    return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
+    return `<g data-galaxy-system="${system.group.id}" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)})"><circle cx="0" cy="0" r="${(maxSystemRadius + 15).toFixed(1)}" fill="${colors.group}" opacity="0.025"/>${rings}${categoryMarkup(system.group, colors, showCategoryLabel)}${reposMarkup}<animateTransform attributeName="transform" type="translate" values="${categoryMotion}" dur="1800s" repeatCount="indefinite"/></g>`;
   }).join("");
 
   const contributed = contributedLayout === "halo"
-    ? contributedAssignments(repos, minSize, categoryRadius, maxSystemRadius).map((target) => {
+    ? haloContributedTargets.map((target) => {
       const x = cx + Math.cos(target.phase) * target.radius;
       const y = cy + Math.sin(target.phase) * target.radius;
       const motion = circleValues(target.radius, target.phase, target.direction, cx, cy);
-      return `<g data-galaxy-orbit="contributed" data-galaxy-placement="external-halo-orbit" data-galaxy-lane="${target.lane}" data-galaxy-radius="${target.radius.toFixed(1)}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${representativeLabelMarkup(target.repo, target.phase, colors)}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
+      const labelMarkup = placedLabelMarkup(haloPlacements.get(target.repo.id) ?? null, colors, REPO_LABEL_FONT_SIZE);
+      return `<g data-galaxy-orbit="contributed" data-galaxy-placement="external-halo-orbit" data-galaxy-lane="${target.lane}" data-galaxy-radius="${target.radius.toFixed(1)}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})"${repoMetadataAttr(target.repo)}>${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${labelMarkup}<animateTransform attributeName="transform" type="translate" values="${motion}" dur="${target.duration}s" repeatCount="indefinite"/></g>`;
     }).join("")
     : externalLayout.assignments.map((target) => (
-      `<g data-galaxy-orbit="contributed" data-galaxy-placement="external-rail" transform="translate(${target.x.toFixed(2)} ${target.y.toFixed(2)})">${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${externalLabelMarkup(target.repo, colors)}</g>`
+      `<g data-galaxy-orbit="contributed" data-galaxy-placement="external-rail" transform="translate(${target.x.toFixed(2)} ${target.y.toFixed(2)})"${repoMetadataAttr(target.repo)}>${nodeMarkup(target.repo, 0, 0, colors, { label: false })}${target.showLabel ? externalLabelMarkup(target.repo, colors, externalLayout.maxChars) : ""}</g>`
     )).join("");
 
   const nucleus = owner ? `<g transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)})"><circle cx="0" cy="0" r="42" fill="${colors.owner}" opacity="0.025"/>${nodeMarkup(owner, 0, 0, colors)}</g>` : "";
