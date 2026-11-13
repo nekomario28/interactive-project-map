@@ -7,7 +7,8 @@ const FIXED_RENDER_STATE = 'selectedMesh=null,motionEnabled=';
 const RENDER_RESIZE = 'function resize(){const rect=ui.canvas.getBoundingClientRect(),width=Math.max(1,rect.width),height=Math.max(1,rect.height);camera.aspect=width/height;camera.updateProjectionMatrix();const mobile=width<720,autoRatio=mobile?1:Math.min(devicePixelRatio||1,1.45),ratio=quality==="high"?Math.min(devicePixelRatio||1,mobile?1.25:1.8):quality==="low"?.85:autoRatio;renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);}';
 const FIXED_RENDER_RESIZE = 'function resize(){const rect=ui.canvas.getBoundingClientRect(),width=Math.max(1,rect.width),height=Math.max(1,rect.height);camera.aspect=width/height;camera.updateProjectionMatrix();const mobile=width<720,ratio=mobile?1:Math.min(devicePixelRatio||1,1.45);renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);}';
 const RENDER_SETTER = 'function setQuality(next){quality=next;ui.quality.dataset.renderDensity=next;ui.quality.textContent=`Render ${next[0].toUpperCase()}${next.slice(1)}`;const url=new URL(location.href);if(next==="auto")url.searchParams.delete("render");else url.searchParams.set("render",next);history.replaceState(null,"",url);resize();}';
-const RENDER_LISTENER = 'ui.quality.addEventListener("click",()=>setQuality(quality==="auto"?"high":quality==="high"?"low":"auto"));';
+const RENDER_LISTENER = 'listen(ui.quality,"click",()=>setQuality(quality==="auto"?"high":quality==="high"?"low":"auto"));';
+const LEGACY_RENDER_LISTENER = 'ui.quality.addEventListener("click",()=>setQuality(quality==="auto"?"high":quality==="high"?"low":"auto"));';
 const INITIAL_RENDER = 'rebuildEdges();applyVisibility();fitScene(true);setQuality(quality);ui.motion.setAttribute("aria-pressed",String(motionEnabled));';
 const FIXED_INITIAL_RENDER = 'rebuildEdges();applyVisibility();fitScene(true);resize();ui.motion.setAttribute("aria-pressed",String(motionEnabled));';
 const BASE_POSITIONS = 'const positions=layoutGraph(THREE,graph),';
@@ -97,6 +98,7 @@ export function composeThreejsStyleRuntime(source) {
   next = replaceRequired(next, RENDER_RESIZE, FIXED_RENDER_RESIZE, "Three.js automatic render-density policy");
   next = removeRequired(next, RENDER_SETTER);
   next = removeRequired(next, RENDER_LISTENER);
+  next = removeRequired(next, LEGACY_RENDER_LISTENER);
   next = replaceRequired(next, INITIAL_RENDER, FIXED_INITIAL_RENDER, "Three.js fixed render-density initialization");
   return next;
 }
