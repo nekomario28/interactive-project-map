@@ -80,6 +80,14 @@ test("exact 2 MB byte limit remains accepted", async () => {
   assert.equal(source.cancelled, 0);
 });
 
+test("one byte above 2 MB is rejected and cancelled", async () => {
+  const payload = graphJson().padEnd(BYTE_LIMIT + 1, " ");
+  assert.equal(Buffer.byteLength(payload), BYTE_LIMIT + 1);
+  const source = streamedResponse(Buffer.from(payload));
+  assert.equal(await loadResponse(source.response), null);
+  assert.equal(source.cancelled, 1);
+});
+
 for (const declaredLength of [null, "32", "not-a-number"]) {
   test(`streaming stops oversized input even with Content-Length=${declaredLength ?? "(missing)"}`, async () => {
     const oversized = Buffer.alloc(BYTE_LIMIT * 2, 0x20);
