@@ -1,16 +1,12 @@
 name: Build and deploy project galaxy
 
 on:
-  push:
+  # Only completed tests for the exact main commit can release Pages.
+  # Manual deploy is intentionally excluded: rerun Verify to re-request release.
+  workflow_run:
+    workflows: ["Verify"]
+    types: [completed]
     branches: [main]
-    paths:
-      - ".github/workflows/deploy-pages.yml"
-      - "action.yml"
-      - "packages/**"
-      - "scripts/**"
-      - "tests/**"
-      - "package.json"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,32 +17,64 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ github.repository == 'nekomario28/interactive-project-map' || vars.ENABLE_GITHUB_PAGES == 'true' }}
+    if: >-
+      (github.repository == 'nekomario28/interactive-project-map' || vars.ENABLE_GITHUB_PAGES == 'true') &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    outputs:
+      deployable: ${{ steps.guard.outputs.deployable }}
     permissions:
       contents: read
       actions: read
       pages: read
     steps:
+      - name: Check verified SHA is the current main head
+        id: guard
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${GITHUB_REPOSITORY}/branches/main" --jq '.commit.sha')"
+          if [[ "$current" == "$VERIFIED_SHA" ]]; then
+            echo "deployable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping stale verified revision $VERIFIED_SHA (main is $current)"
+            echo "deployable=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: ${{ steps.guard.outputs.deployable == 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
       - name: Setup Node.js
+        if: ${{ steps.guard.outputs.deployable == 'true' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Validate Pages code
+        if: ${{ steps.guard.outputs.deployable == 'true' }}
         run: npm run check:pages && npm test
 
       - name: Build static generator and universal viewer
+        if: ${{ steps.guard.outputs.deployable == 'true' }}
         run: npm run build:pages
 
       - name: Configure GitHub Pages
+        if: ${{ steps.guard.outputs.deployable == 'true' }}
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Upload Pages artifact
+        if: ${{ steps.guard.outputs.deployable == 'true' }}
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
@@ -54,6 +82,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ needs.build.outputs.deployable == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -63,6 +92,23 @@ jobs:
       id-token: write
       actions: read
     steps:
+      - name: Check main has not moved since the verified build
+        id: freshness
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${GITHUB_REPOSITORY}/branches/main" --jq '.commit.sha')"
+          if [[ "$current" == "$VERIFIED_SHA" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping deployment of stale revision $VERIFIED_SHA (main is $current)"
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy to GitHub Pages
+        if: ${{ steps.freshness.outputs.current == 'true' }}
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
