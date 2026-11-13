@@ -33,6 +33,8 @@ test("release chain treats outer reusable ref and inner Action SHA as separate r
   assert.match(reusable, /INNER release target:/);
   assert.match(reusable, /theme:\s*\n\s*description: Static profile SVG theme/, "reusable workflow must not describe the static SVG theme as a viewer-wide theme");
   assert.match(reusable, /contributed:\s*\$\{\{\s*inputs\.contributed\s*\}\}/, "reusable workflow must forward the Contributed opt-in to the immutable inner Action");
+  assert.match(reusable, /svg_contributed_layout:\s*\$\{\{\s*inputs\.svg_contributed_layout\s*\}\}/, "reusable workflow must forward the explicit SVG layout");
+  assert.match(reusable, /svg_contributed_layout:[\s\S]*?default: rail/, "existing reusable callers must retain Rail by default");
 
   const generated = renderInstallWorkflow({
     username: "octocat",
