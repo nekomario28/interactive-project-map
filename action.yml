@@ -36,6 +36,10 @@ inputs:
     description: Include a bounded public Contributed slice from repositories owned by other users or organizations.
     required: false
     default: "false"
+  svg_contributed_layout:
+    description: Galaxy Systems SVG external Contributed layout (rail or halo); ignored by other styles.
+    required: false
+    default: rail
   width:
     description: SVG width (420-1600).
     required: false

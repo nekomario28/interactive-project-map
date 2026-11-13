@@ -1,4 +1,4 @@
 // Reviewed immutable Action commit used by generated installation workflows.
-// Reviewed Fork/upstream deduplication with an immutable Halo-layout Action; exact caller proof precedes v1 promotion.
+// Reviewed Fork/upstream deduplication and both SVG layout variants; exact caller proof precedes v1 promotion.
 // Stable v1 moves only after the reusable-workflow release commit passes exact caller proof.
-export const PROJECT_MAP_ACTION_REF = "10a7be7ee1caad1eb0cac334365a7cbbb95d3660";
+export const PROJECT_MAP_ACTION_REF = "293386179990d3ab3b2172e55ff1e934f988adeb";

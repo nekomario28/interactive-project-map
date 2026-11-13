@@ -17,6 +17,9 @@ test("action config reads INPUT variables, normalizes and clamps inputs", () => 
   const config = actionConfigFromEnv({ INPUT_USERNAME: " OctoCat ", INPUT_THEME: "light", INPUT_STYLE: "obsidian", INPUT_MAX_REPOS: "999", INPUT_FORKS: "false", INPUT_ARCHIVED: "yes", INPUT_CONTRIBUTED: "true", INPUT_WIDTH: "200", INPUT_HEIGHT: "9999", INPUT_OUTPUT_DIR: "./project-map/custom" });
   assert.equal(config.username, "octocat"); assert.equal(config.theme, "light"); assert.equal(config.style, "obsidian"); assert.equal(config.maxRepos, 300); assert.equal(config.includeForks, false); assert.equal(config.includeArchived, true); assert.equal(config.includeContributed, true); assert.equal(config.width, 420); assert.equal(config.height, 1000); assert.equal(config.outputDir, "project-map/custom");
   assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "octocat" }).includeContributed, false);
+  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "octocat" }).svgContributedLayout, "rail");
+  assert.equal(actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "octocat", INPUT_SVG_CONTRIBUTED_LAYOUT: "halo" }).svgContributedLayout, "halo");
+  assert.throws(() => actionConfigFromEnv({ GITHUB_REPOSITORY_OWNER: "octocat", INPUT_SVG_CONTRIBUTED_LAYOUT: "oops" }), /Invalid svg_contributed_layout/);
 });
 
 test("action accepts twelve visible presets and maps legacy galaxy to systems", () => {
@@ -118,7 +121,7 @@ test("unchanged repository data preserves generatedAt so scheduled runs are comm
 test("generation suppresses an exact upstream fork, preserves linked-fork evidence, and emits owner stats", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "project-map-owner-stats-"));
   try {
-    const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_CONTRIBUTED: "true", INPUT_STYLE: "galaxy-systems", INPUT_OUTPUT_DIR: "project-map" });
+    const config = actionConfigFromEnv({ INPUT_USERNAME: "example", INPUT_CONTRIBUTED: "true", INPUT_STYLE: "galaxy-systems", INPUT_SVG_CONTRIBUTED_LAYOUT: "halo", INPUT_OUTPUT_DIR: "project-map" });
     const fetchedRepos = async () => [
       repo(1, "ruff", { fork: true, stargazers_count: 999 }),
       repo(2, "my-original", { fork: false, stargazers_count: 7 }),
@@ -154,6 +157,8 @@ test("generation suppresses an exact upstream fork, preserves linked-fork eviden
     assert.match(svg, /42 followers/);
     // The generated SVG itself must contain the upstream node, never the duplicate Fork.
     assert.match(svg, /<title>astral-sh\/ruff<\/title>/);
+    assert.match(svg, /data-galaxy-external-layout="halo"/);
+    assert.doesNotMatch(svg, /data-galaxy-external-layout="rail"/);
     assert.doesNotMatch(svg, /<title>ruff<\/title>/);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });

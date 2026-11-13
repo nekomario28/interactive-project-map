@@ -28,6 +28,11 @@ on:
         required: false
         default: false
         type: boolean
+      svg_contributed_layout:
+        description: Galaxy Systems Contributed layout (rail or halo)
+        required: false
+        default: rail
+        type: string
       width:
         description: SVG width in pixels
         required: false
@@ -53,10 +58,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Exact Action candidate: 10a7be7ee1caad1eb0cac334365a7cbbb95d3660.
-# Captured Halo-layout SVG with verified Fork/upstream deduplication and owner metrics (PR #454).
-# This reusable-workflow tree restores the default Rail renderer; the pinned Action retains Halo.
-# Validate the real profile with an explicit reusable-workflow SHA before promoting v1.
+# Immutable Action candidate: 293386179990d3ab3b2172e55ff1e934f988adeb. Both Halo and Rail share one renderer.
+# The profile can opt into Halo; existing reusable callers keep default Rail.
+# Verify exact caller behavior before promoting the stable v1 channel.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -67,7 +71,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@10a7be7ee1caad1eb0cac334365a7cbbb95d3660
+        uses: nekomario28/interactive-project-map@293386179990d3ab3b2172e55ff1e934f988adeb
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
@@ -77,6 +81,7 @@ jobs:
           forks: ${{ inputs.forks }}
           archived: ${{ inputs.archived }}
           contributed: ${{ inputs.contributed }}
+          svg_contributed_layout: ${{ inputs.svg_contributed_layout }}
           width: ${{ inputs.width }}
           height: ${{ inputs.height }}
           padding: ${{ inputs.padding }}
