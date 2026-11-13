@@ -58,7 +58,7 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Immutable Action candidate: 293386179990d3ab3b2172e55ff1e934f988adeb. Both Halo and Rail share one renderer.
+# Immutable Action candidate: cb58ea19bb7f1d09778924a38949f0074108b234. Both Halo and Rail share one renderer.
 # Backward compatibility: earlier v1 callers with no layout input used Halo for Galaxy Systems.
 # Reusable workflows default to Halo, while direct Action callers keep their existing Rail default.
 # Explicit halo/rail remains authoritative for new callers.
@@ -73,7 +73,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@293386179990d3ab3b2172e55ff1e934f988adeb
+        uses: nekomario28/interactive-project-map@cb58ea19bb7f1d09778924a38949f0074108b234
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
