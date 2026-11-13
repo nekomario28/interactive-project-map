@@ -1,0 +1,62 @@
+name: v1 candidate - exact reusable caller classic
+
+# Read-only release candidate proof, never publish or push generated artifacts.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-v1-caller-classic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    permissions:
+      contents: read
+    uses: nekomario28/interactive-project-map/.github/workflows/generate-project-map.yml@0eb86cfbd06f8b86d184a81333ee8f58a1af24bf
+    with:
+      theme: dark
+      style: galaxy-classic
+      max_repos: "100"
+      forks: true
+      archived: false
+      contributed: false
+      # Deliberately omit svg_contributed_layout to verify legacy default.
+
+  verify:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download exact reusable caller output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: project-map-generated
+          path: project-map
+      - name: Inspect galaxy-classic output and privacy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s project-map/graph.json
+          test -s project-map/galaxy.svg
+          node <<'NODE'
+          const fs=require('node:fs');
+          const assert=(value,msg)=>{if(!value)throw new Error(msg);};
+          const graph=JSON.parse(fs.readFileSync('project-map/graph.json','utf8'));
+          const svg=fs.readFileSync('project-map/galaxy.svg','utf8');
+          const repositories=graph.nodes.filter(n=>n.type==='repository');
+          const owned=repositories.filter(n=>n.relation!=='contributed');
+          const contributed=repositories.filter(n=>n.relation==='contributed');
+          const banned=new Set(['private','isPrivate','restricted','isRestricted']);
+          const visit=(value)=>{if(!value||typeof value!=='object')return;for(const [key,child] of Object.entries(value)){assert(!banned.has(key),'private metadata serialized: '+key);visit(child);}};
+          visit(graph);
+          assert(owned.length >= 15 && owned.length <= 100,'owned count regressed');
+          assert(contributed.length===0,'Contributed leaked when disabled');
+          assert(graph.contributedRepositoryCount===0 || graph.contributedRepositoryCount==null, 'contributed summary invalid');
+          assert(svg.includes('<svg') && svg.includes('</svg>'),'empty classic SVG');
+          assert(!svg.includes('data-galaxy-external-layout="halo"'),'Contributed Halo unexpectedly present');
+          console.log('EXACT_REUSABLE_CLASSIC_PASS',JSON.stringify({owned:owned.length,style:'galaxy-classic'}));
+          NODE
