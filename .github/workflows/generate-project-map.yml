@@ -55,7 +55,7 @@ permissions:
 #
 # Exact Action candidate: 10a7be7ee1caad1eb0cac334365a7cbbb95d3660.
 # Captured Halo-layout SVG with verified Fork/upstream deduplication and owner metrics (PR #454).
-# The parent commit restores the default Rail renderer on this reusable workflow's own tree.
+# This reusable-workflow tree restores the default Rail renderer; the pinned Action retains Halo.
 # Validate the real profile with an explicit reusable-workflow SHA before promoting v1.
 jobs:
   generate:
