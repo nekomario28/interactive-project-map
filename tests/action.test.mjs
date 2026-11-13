@@ -152,6 +152,9 @@ test("generation suppresses an exact upstream fork, preserves linked-fork eviden
     const svg = await readFile(join(cwd, result.svgPath), "utf8");
     assert.match(svg, /★7/);
     assert.match(svg, /42 followers/);
+    // The generated SVG itself must contain the upstream node, never the duplicate Fork.
+    assert.match(svg, /<title>astral-sh\/ruff · contributed<\/title>/);
+    assert.doesNotMatch(svg, /<title>ruff · fork<\/title>/);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 

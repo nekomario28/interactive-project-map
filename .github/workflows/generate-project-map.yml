@@ -53,9 +53,9 @@ permissions:
 # Advancing @v1 alone never advances the inner Action. Update and verify the inner pin first,
 # then promote @v1 to the reviewed reusable-workflow commit.
 #
-# Automatic SVG framing candidate: Action F f1688ba0811ea17455edbd9e51dd82c5e67a0f4a.
-# This implementation retains the current production Action taxonomy fixes.
-# Promote stable v1 only after the exact reusable caller validates the real profile.
+# Exact Action candidate: 69ffe131013243db232aa09c4da4106912921d81.
+# Includes verified Fork/upstream deduplication and owner metrics (PR #454).
+# Validate the real profile with an explicit reusable-workflow SHA before promoting v1.
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate project map
-        uses: nekomario28/interactive-project-map@f1688ba0811ea17455edbd9e51dd82c5e67a0f4a
+        uses: nekomario28/interactive-project-map@69ffe131013243db232aa09c4da4106912921d81
         with:
           github_token: ${{ github.token }}
           username: ${{ github.repository_owner }}
