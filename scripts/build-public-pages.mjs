@@ -101,8 +101,16 @@ function previewSvg(style) {
   return `<svg viewBox="0 0 240 120" aria-hidden="true" focusable="false">${galaxy || generic[style] || ""}</svg>`;
 }
 
+const FEATURED_PRESET_IDS = new Set(["radial", "galaxy-systems", "obsidian", "tree"]);
+
+function renderPresetCard(preset, isSelected) {
+  return `<button class="preset-card${isSelected ? " is-selected" : ""}" type="button" data-style-preset="${preset.id}" aria-pressed="${isSelected}"><span class="badge">${preset.badge}</span>${previewSvg(preset.id)}<strong>${preset.label}</strong><small>${preset.description}</small></button>`;
+}
+
 function stylePresetGallery() {
-  return `<div class="preset-title">Choose a visual language</div><div class="preset-gallery">${PRESETS.map((preset, index) => `<button class="preset-card${index === 0 ? " is-selected" : ""}" type="button" data-style-preset="${preset.id}" aria-pressed="${index === 0}"><span class="badge">${preset.badge}</span>${previewSvg(preset.id)}<strong>${preset.label}</strong><small>${preset.description}</small></button>`).join("")}</div>`;
+  const featured = PRESETS.filter((preset) => FEATURED_PRESET_IDS.has(preset.id));
+  const extra = PRESETS.filter((preset) => !FEATURED_PRESET_IDS.has(preset.id));
+  return `<div class="preset-title">Choose a visual style</div><div class="preset-gallery">${featured.map((preset) => renderPresetCard(preset, preset.id === "radial")).join("")}</div><details class="more-presets"><summary>More styles (Galaxy variants &amp; analytical charts)</summary><div class="preset-gallery more-presets-grid">${extra.map((preset) => renderPresetCard(preset, false)).join("")}</div></details>`;
 }
 
 function styleOptions(active = "radial") {

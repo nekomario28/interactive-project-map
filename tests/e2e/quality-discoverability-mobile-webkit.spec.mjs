@@ -18,7 +18,8 @@ test("iPhone WebKit keeps experimental Quality opt-in usable and frozen evidence
   await page.goto("/u/?username=example&style=galaxy-systems");
   await expect(page.locator("#status")).toBeHidden();
   await page.getByRole("button", { name: "Controls", exact: true }).tap();
-  await expect(page.locator("#qualityToggle")).toBeVisible();
+  await page.locator(".view-options-menu summary").tap();
+  await expect(page.locator(".view-options-menu #qualityToggle")).toBeVisible();
   await expect(page.locator("#qualityToggle")).toHaveAttribute("aria-pressed", "false");
   await expectNoHorizontalOverflow(page);
   expect(counters.presentation).toBe(0);
@@ -27,6 +28,7 @@ test("iPhone WebKit keeps experimental Quality opt-in usable and frozen evidence
   await page.waitForURL((url) => url.searchParams.get("quality") === "1");
   await expect(page.locator("#status")).toBeHidden();
   await page.getByRole("button", { name: "Controls", exact: true }).tap();
+  await page.locator(".view-options-menu summary").tap();
   await expect.poll(() => page.evaluate(() => window.ProjectMapQualityView?.snapshot().state)).toBe("active");
   await expect(page.locator("#qualityToggle")).toHaveAttribute("aria-pressed", "true");
   expect(counters.presentation).toBe(1);

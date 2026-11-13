@@ -85,6 +85,8 @@ test("generator exposes twelve visual presets and emits the selected stable setu
 
   const cards = page.locator("[data-style-preset]");
   await expect(cards).toHaveCount(12);
+  await expect(page.locator(".more-presets")).not.toHaveAttribute("open", "");
+  await page.locator(".more-presets > summary").click();
   for (const [style] of styles) {
     const card = page.locator(`[data-style-preset="${style}"]`);
     await card.click();
@@ -99,6 +101,8 @@ test("generator exposes twelve visual presets and emits the selected stable setu
   await page.getByRole("button", { name: "Generate setup" }).click();
 
   await expect(page.locator("#result")).toHaveClass(/visible/);
+  await expect(page.locator("#readmeHtml")).toBeVisible();
+  await page.locator(".advanced-snippets > summary").click();
   const workflow = await page.locator("#workflow").inputValue();
   expect(workflow).toContain("style: galaxy-hybrid");
   expect(workflow).toContain('max_repos: "300"');

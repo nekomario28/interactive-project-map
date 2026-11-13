@@ -33,6 +33,7 @@ test("iPhone-sized WebKit keeps generator and Galaxy family route navigation usa
   await page.goto("/");
   await expect(page.locator("[data-style-preset]")).toHaveCount(12);
   await expectNoHorizontalOverflow(page);
+  await page.locator(".more-presets > summary").tap();
   await page.locator('[data-style-preset="galaxy-hybrid"]').click();
   await expect(page.locator("#mapStyle")).toHaveValue("galaxy-hybrid");
   await page.screenshot({ path: ".tmp/playwright-visual/webkit/generator.png", fullPage: true });
