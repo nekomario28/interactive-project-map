@@ -68,7 +68,8 @@ test("generated workflow follows stable v1 generation, emits default-off Contrib
   assert.match(workflow, /generate:\n[\s\S]*permissions:\n      contents: read/);
   assert.match(workflow, /uses: nekomario28\/interactive-project-map\/\.github\/workflows\/generate-project-map\.yml@v1/);
   assert.match(workflow, /# Project Map generator policy: stable-v1/);
-  assert.match(workflow, new RegExp(`# Reviewed immutable inner Action baseline: nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
+  assert.match(workflow, /@v1 chooses its own immutable Action/);
+  assert.match(workflow, new RegExp(`Main candidate Action SHA \\(informational, not the selected reusable-workflow pin\\): nekomario28\\/interactive-project-map@${PROJECT_MAP_ACTION_REF}`));
   assert.match(workflow, /style: galaxy-hybrid/);
   assert.match(workflow, /max_repos: "100"/);
   assert.match(workflow, /contributed: false/);
