@@ -21,6 +21,13 @@ function graphJson() {
   }], true, true));
 }
 
+function paddedJson(byteCount) {
+  const json = graphJson();
+  const jsonBytes = Buffer.byteLength(json, "utf8");
+  assert.ok(jsonBytes <= byteCount);
+  return json + " ".repeat(byteCount - jsonBytes);
+}
+
 function streamedResponse(bytes, options = {}) {
   const { chunkSize = 64 * 1024, headers = {}, status = 200 } = options;
   let offset = 0;
@@ -72,7 +79,7 @@ test("streamed graph accepts UTF-8 sequences split across chunks", async () => {
 });
 
 test("exact 2 MB byte limit remains accepted", async () => {
-  const payload = graphJson().padEnd(BYTE_LIMIT, " ");
+  const payload = paddedJson(BYTE_LIMIT);
   assert.equal(Buffer.byteLength(payload), BYTE_LIMIT);
   const source = streamedResponse(Buffer.from(payload));
   const graph = await loadResponse(source.response);
@@ -81,7 +88,7 @@ test("exact 2 MB byte limit remains accepted", async () => {
 });
 
 test("one byte above 2 MB is rejected and cancelled", async () => {
-  const payload = graphJson().padEnd(BYTE_LIMIT + 1, " ");
+  const payload = paddedJson(BYTE_LIMIT + 1);
   assert.equal(Buffer.byteLength(payload), BYTE_LIMIT + 1);
   const source = streamedResponse(Buffer.from(payload));
   assert.equal(await loadResponse(source.response), null);
