@@ -84,7 +84,7 @@ export function renderInstallWorkflow(options: InstallOptions): string {
     : "Pinned reusable workflow SHA chooses its own inner Action; inspect that exact workflow ref before relying on current features.";
   return `name: Update project map
 # Project Map generator policy: ${generatorPolicy}
-# ${releaseNotice}
+# ${releaseNotice}\n# Main candidate Action SHA (informational, not the selected reusable-workflow pin): nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
 
 on:
   workflow_dispatch:
