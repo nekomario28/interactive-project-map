@@ -244,10 +244,17 @@
   }
 
   .category-navigator {
+    z-index: 5;
     top: 9px;
     left: 9px;
     width: min(292px, calc(100% - 18px));
-    max-height: 46%;
+    max-height: 44%;
     padding: 9px;
+  }
+
+  .workspace.has-category-navigator-open .details {
+    top: auto;
+    bottom: 54px;
+    max-height: 36%;
   }
 }

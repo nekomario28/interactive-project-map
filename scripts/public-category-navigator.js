@@ -146,6 +146,7 @@
   function setPanelOpen(open) {
     panelOpen = Boolean(open);
     panel.classList.toggle("is-open", panelOpen);
+    workspace.classList.toggle("has-category-navigator-open", panelOpen);
     toggleButton.setAttribute("aria-expanded", String(panelOpen));
   }
 

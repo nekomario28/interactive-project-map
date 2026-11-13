@@ -21,7 +21,8 @@ test("final Pages build keeps setup copy, legend semantics and Sunburst dense LO
     const home = await readFile(join(dir, "index.html"), "utf8");
     assert.match(home, /Profile SVG theme/);
     assert.match(home, /class="style-fallback"/);
-    assert.match(home, /Alternative style picker/);
+    assert.match(home, /Quick style/);
+    assert.doesNotMatch(home, /<details class="style-fallback">/);
     assert.match(home, /Last 12 months · up to 12 public external repositories/);
     for (const step of ["0 · Profile repo", "1 · Add workflow", "2 · Run first update", "3 · Add README embed"]) {
       assert.equal(home.split(step).length - 1, 1, `expected exactly one ${step}`);

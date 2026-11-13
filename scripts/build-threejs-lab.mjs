@@ -105,7 +105,7 @@ export function renderThreejsLabPage() {
       <a id="detailsLink" href="https://github.com/" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>
     </aside>
     <div class="legend three-legend">
-      <span><i class="owner"></i>Owner</span><span><i class="group"></i>Category</span><span><i class="original"></i>Original</span><span><i class="fork"></i>Fork</span><span><i class="archived"></i>Archived</span><span><i class="relation"></i>Contributed</span>
+      <span><i class="owner"></i>Owner</span><span><i class="group"></i>Category</span><span><i class="original"></i>Original</span><span><i class="fork"></i>Fork</span><span><i class="archived"></i>Archived</span><span><i class="contributed"></i>Contributed</span>
     </div>
     <div id="tip" class="tip three-tip" role="status" hidden></div>
     <div id="status" class="status three-status">Loading Three.js engine…</div>

@@ -34,8 +34,6 @@ export function renderPagesHome() {
 <div id="result" class="result">
 <div class="actions">
 <a id="openMap" class="button" target="_blank" rel="noopener">Open interactive map ↗</a>
-<button class="button" type="button" data-copy="workflow">Copy workflow</button>
-<button class="button" type="button" data-copy="readmeHtml">3 · Copy README HTML</button>
 </div>
 <div class="preview" style="margin-top:14px">
 <p class="preview-source-note">Published SVG from your profile repository — not a live preview of the selected settings. Compare styles in the gallery above.</p>
@@ -43,11 +41,11 @@ export function renderPagesHome() {
 <img id="preview" alt="Static project galaxy preview" />
 </div>
 <section class="panel" style="margin-top:14px"><h2>3. Paste into your profile README.md</h2><p>After Step 1 (Add workflow) and Step 2 (Run first update), paste this snippet into <code>USERNAME/USERNAME/README.md</code>.</p><textarea id="readmeHtml" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="readmeHtml">Copy README HTML</button></div></section>
-<details class="advanced-snippets"><summary>View generated Workflow YAML, Markdown &amp; raw URLs</summary>
+<details class="advanced-snippets"><summary>Manual workflow YAML, Markdown &amp; raw URLs</summary>
 <div class="grid">
-<section class="panel"><h2>1. GitHub Actions workflow</h2><p>Create <code>.github/workflows/project-map.yml</code> inside <code>USERNAME/USERNAME</code>.</p><textarea id="workflow" class="code workflow" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="workflow">Copy</button></div></section>
-<section class="panel"><h2>Markdown</h2><p>Compact alternative to the HTML snippet.</p><textarea id="readmeMarkdown" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="readmeMarkdown">Copy</button></div></section>
-<section class="panel"><h2>Static data</h2><p>These files are generated and owned by your profile repository.</p><textarea id="staticUrls" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="staticUrls">Copy</button></div></section>
+<section class="panel"><h2>Manual workflow YAML (Step 1)</h2><p>Create <code>.github/workflows/project-map.yml</code> inside <code>USERNAME/USERNAME</code> if you prefer pasting manually.</p><textarea id="workflow" class="code workflow" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="workflow">Copy workflow YAML</button></div></section>
+<section class="panel"><h2>Markdown embed alternative (Step 3)</h2><p>Compact alternative to the HTML snippet.</p><textarea id="readmeMarkdown" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="readmeMarkdown">Copy Markdown</button></div></section>
+<section class="panel"><h2>Generated static URLs</h2><p>These files are generated and owned by your profile repository.</p><textarea id="staticUrls" class="code" readonly></textarea><div class="copyrow"><button class="button" type="button" data-copy="staticUrls">Copy URLs</button></div></section>
 </div>
 </details>
 </div>

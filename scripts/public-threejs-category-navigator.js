@@ -95,7 +95,9 @@
     panelOpen = Boolean(open);
     const panel = document.getElementById("categoryNavigator");
     const toggle = document.getElementById("categoryNavigatorToggle");
+    const workspace = document.querySelector(".workspace");
     panel?.classList.toggle("is-open", panelOpen);
+    workspace?.classList.toggle("has-category-navigator-open", panelOpen);
     toggle?.setAttribute("aria-expanded", String(panelOpen));
   }
 
@@ -271,7 +273,16 @@
     toggle.textContent = "Categories";
     toggle.setAttribute("aria-controls", "categoryNavigator");
     toggle.setAttribute("aria-expanded", "false");
-    controls.prepend(toggle);
+    const toolbar = controls.closest(".toolbar");
+    const titleBlock = toolbar?.querySelector(".title-block");
+    if (toolbar && titleBlock && titleBlock.parentElement === toolbar) {
+      const primary = document.createElement("div");
+      primary.className = "category-navigator-primary";
+      toolbar.insertBefore(primary, titleBlock);
+      primary.append(toggle, titleBlock);
+    } else {
+      controls.prepend(toggle);
+    }
 
     const panel = document.createElement("aside");
     panel.id = "categoryNavigator";

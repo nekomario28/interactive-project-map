@@ -25,7 +25,7 @@ export function patchGeneratedHomeHtml(source) {
     if (!styleControl.test(next)) throw new Error("Could not locate duplicate Map style select");
     next = next.replace(
       styleControl,
-      '<details class="style-fallback"><summary>Alternative style picker</summary><label>Map style $1</label></details>',
+      '<label class="style-fallback">Quick style $1</label>',
     );
   }
 
@@ -76,16 +76,8 @@ export function patchHomePresetCss(source) {
   if (source.includes(UI_CSS_MARKER)) return source;
   return `${source}\n\n${UI_CSS_MARKER}
 .style-fallback {
-  flex: 1 1 100%;
   color: #8f9db2;
-}
-.style-fallback summary {
-  width: fit-content;
-  cursor: pointer;
-  font-size: .82rem;
-}
-.style-fallback[open] label {
-  margin-top: 8px;
+  font-size: .84rem;
 }
 .contributed-option {
   display: grid;

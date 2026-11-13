@@ -32,7 +32,7 @@ export function patchTwoDViewDimension(html) {
   if (!next.includes('id="view3D"')) {
     const styleField = '<label class="field"><span>Style</span><select id="style">';
     if (!next.includes(styleField)) throw new Error("Could not locate 2D Style control");
-    next = next.replace(styleField, `${TWO_D_TOGGLE}${styleField}`);
+    next = next.replace(styleField, `${TWO_D_TOGGLE}<label class="field view-style-field"><span>Style</span><select id="style">`);
   }
   return attachAssets(next);
 }

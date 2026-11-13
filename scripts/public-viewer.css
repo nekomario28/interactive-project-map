@@ -134,12 +134,13 @@ body[data-map-style="obsidian"] .legend {
   display: flex;
   align-items: center;
   min-height: 34px;
-  padding: 7px 12px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--panel-elevated);
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.2;
   cursor: pointer;
 }
 
@@ -195,16 +196,18 @@ body[data-map-style="obsidian"] .legend {
   outline: none;
   background: var(--panel-elevated);
   color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .field input {
   width: min(300px, 31vw);
-  padding: 7px 10px;
+  padding: 6px 10px;
 }
 
 .field select {
   min-width: 128px;
-  padding: 7px 28px 7px 9px;
+  padding: 6px 28px 6px 9px;
 }
 
 .field input:focus,
@@ -217,7 +220,7 @@ body[data-map-style="obsidian"] .legend {
 }
 
 .toolbar button {
-  padding: 7px 10px;
+  padding: 6px 10px;
   cursor: pointer;
 }
 
@@ -242,11 +245,18 @@ body[data-map-style="obsidian"] .legend {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 40px;
-  padding: 3px;
+  min-height: 34px;
+  padding: 2px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 9px;
   background: color-mix(in srgb, var(--panel) 84%, transparent);
+}
+
+.control-cluster button {
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 12.5px;
 }
 
 .control-cluster-label {
@@ -686,10 +696,12 @@ kbd {
 
   .field input {
     width: 100%;
+    font-size: 16px;
   }
 
   .field select {
     min-width: 120px;
+    font-size: 16px;
   }
 
   .details {
@@ -746,6 +758,10 @@ kbd {
   }
 
   .field:nth-child(2) {
+    flex: 1 1 150px;
+  }
+
+  .view-style-field {
     flex: 1 1 150px;
   }
 
