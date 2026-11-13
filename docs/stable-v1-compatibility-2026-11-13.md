@@ -39,3 +39,11 @@ The profile workflow currently invokes reusable commit `84395b4...` with `svg_co
 5. Only after these gates pass, advance **`refs/heads/v1` as a branch** from expected previous head (without force pushing) and run `scripts/audit-release-channel.mjs --require-current`. Verify the actual resolved inner Action, a generated public SVG and known callers. Roll back with the recorded previous SHA if needed.
 
 Do not auto-promote this candidate in a PR merge. Branch protection rules for `main` and `v1` remain a separate maintenance task.
+
+## 2026-11-13 pin-refresh candidate (subsequent to the historical baseline above)
+
+Before advancing `v1`, refresh the immutable inner Action from the original audited `293386179990d3ab3b2172e55ff1e934f988adeb` to **feature head F = `cb58ea19bb7f1d09778924a38949f0074108b234`**.
+
+This is required because F includes merged Three.js resource cleanup (#465), renamed-Fork verification (#466), static-graph byte cap (#463), event listener ownership (#467), SVG label corrections (#468), and the Halo-compatible reusable default (#462). A `v1` branch fast-forward without changing its independently pinned Action would otherwise omit the renamed-Fork fix from generation.
+
+**Do not confuse F with R.** The pin update changes the reusable workflow, so its reviewed merge commit becomes the outer candidate **R**. Exercise the exact reusable workflow at R through a real `workflow_call` **without** `svg_contributed_layout`, inspect the generated canonical profile and non-Contributed classic caller, and only then consider a non-forced, lease-guarded `v1 → R` move. Require green full Verify, Chromium and WebKit for the pin PR and caller PRs. Record R, pre-move `v1`, and post-move audit outputs.
