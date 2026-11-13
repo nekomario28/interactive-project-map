@@ -1,5 +1,5 @@
 "use strict";
-/* global state, clamp, hash, subtitle, detailsDescription, fitView, draw, drawBackground, worldToScreen, ctx, palette, performance, requestAnimationFrame */
+/* global state, clamp, hash, subtitle, detailsDescription, fitView, draw, drawBackground, worldToScreen, ctx, palette */
 
 window.addEventListener("DOMContentLoaded", () => {
   if (state.style !== "galaxy-hybrid" || !window.GalaxyCommon) return;

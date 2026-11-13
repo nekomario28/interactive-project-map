@@ -1,5 +1,5 @@
 "use strict";
-/* global state, searchInput, rebuildLayout, updateDetails, draw, nodeStatus */
+/* global state, searchInput, rebuildLayout, updateDetails, draw, nodeStatus, canvas */
 
 (() => {
   const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
