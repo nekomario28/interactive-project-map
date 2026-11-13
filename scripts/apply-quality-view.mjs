@@ -17,7 +17,7 @@ const BOOTSTRAP = `${MARKER}
 
   function installExperimentalControl() {
     if (document.getElementById("qualityToggle")) return;
-    const host = document.querySelector(".control-cluster.view-options") || document.querySelector(".controls");
+    const host = document.querySelector(".view-options-panel") || document.querySelector(".control-cluster.view-options") || document.querySelector(".controls");
     if (!host) return;
     const button = document.createElement("button");
     button.id = "qualityToggle";

@@ -58,6 +58,7 @@ export function attachContributedRepositories(graph, repositories, window, diagn
       createdAt: validIso(repository.createdAt) ? repository.createdAt : undefined,
       updatedAt: validIso(repository.updatedAt) ? repository.updatedAt : undefined,
       contribution,
+      ...(repository.forkUrl ? { forkUrl: repository.forkUrl } : {}),
       ...(repository.classification ? { classification: repository.classification } : {}),
     });
     edges.push({ source: ownerId, target: id, type: "contribution" });

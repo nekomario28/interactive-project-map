@@ -1,9 +1,11 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, posix, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { fetchPublicRepos } from "./github.mjs";
+import { fetchPublicFollowerCount, fetchPublicRepos } from "./github.mjs";
 import { buildGraph } from "./graph.mjs";
-import { attachSelectedContributions } from "./contributed-generation.mjs";
+import { attachSelectedContributions, collapseVerifiedContributionForks } from "./contributed-generation.mjs";
+import { fetchPublicExternalContributions } from "./external-contributions.mjs";
+import { selectContributedRepositories } from "./contributed-ranking.mjs";
 import { MemoryEmbeddingCache } from "./embedding.mjs";
 import { generateSemanticEdges } from "./semantic-edges.mjs";
 import { TAXONOMY_ASSIGNMENT_VERSION, assignRepositoriesToTaxonomy } from "./taxonomy-assignment.mjs";
@@ -72,8 +74,24 @@ export async function generateStaticMap(config, options = {}) {
   const fetchRepos = options.fetchRepos ?? fetchPublicRepos;
   const token = options.token ?? process.env.INPUT_GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
   const repos = await fetchRepos(config.username, token, config.maxRepos, { includeForks: config.includeForks, includeArchived: config.includeArchived });
-  const graph = buildGraph(config.username, repos, true, true);
-  const semanticRepos = semanticReposForGraph(repos, graph);
+  let presentedRepos = repos;
+  let preparedContributions;
+  let linkedForks;
+  if (config.includeContributed) {
+    const contributionOptions = options.contributionOptions ?? {};
+    const fetchContributions = contributionOptions.fetchContributions ?? fetchPublicExternalContributions;
+    const fetched = await fetchContributions(config.username, token, contributionOptions.fetchOptions ?? {});
+    const ownedCount = repos.filter((repo) => String(repo.name).toLowerCase() !== config.username).length;
+    const selected = selectContributedRepositories(fetched.repositories, ownedCount, contributionOptions.rankingOptions ?? {});
+    preparedContributions = { fetched, selected };
+    const overlap = await collapseVerifiedContributionForks(repos, selected.repositories, config.username, token, {
+      fetchImpl: contributionOptions.forkFetchImpl,
+    });
+    presentedRepos = overlap.repositories;
+    linkedForks = overlap.linkedForks;
+  }
+  const graph = buildGraph(config.username, presentedRepos, true, true);
+  const semanticRepos = semanticReposForGraph(presentedRepos, graph);
   const sharedEmbeddingCache = options.embeddingCache ?? (options.embeddingProvider ? new MemoryEmbeddingCache() : undefined);
 
   const semantic = await generateSemanticEdges(semanticRepos, options.embeddingProvider, sharedEmbeddingCache, options.semanticOptions);
@@ -105,9 +123,28 @@ export async function generateStaticMap(config, options = {}) {
   let outputGraph = graph;
   let contributed;
   if (config.includeContributed) {
-    contributed = await attachSelectedContributions(graph, config.username, token, options.contributionOptions);
+    contributed = await attachSelectedContributions(graph, config.username, token, {
+      ...options.contributionOptions, prepared: preparedContributions, linkedForks,
+    });
     outputGraph = contributed.graph;
   }
+
+  const followerFetch = options.fetchFollowers ?? fetchPublicFollowerCount;
+  const followers = options.fetchRepos && !options.fetchFollowers
+    ? null : await followerFetch(config.username, token);
+  const originalRepos = repos.filter((repo) => !repo.fork && String(repo.name).toLowerCase() !== config.username);
+  const contributingNodes = outputGraph.nodes.filter((node) => node.relation === "contributed");
+  const ownerNode = outputGraph.nodes.find((node) => node.type === "owner");
+  if (ownerNode) ownerNode.profileStats = {
+    ownedStars: originalRepos.reduce((sum, repo) => sum + (Number.isFinite(repo.stargazers_count) ? Math.max(0, Math.floor(repo.stargazers_count)) : 0), 0),
+    originalRepositories: originalRepos.length,
+    followers,
+    contributedRepositories: contributingNodes.length,
+    mergedPullRequests: contributingNodes.reduce((sum, node) => sum + (node.contribution?.mergedPullRequests ?? 0), 0),
+    commits: contributingNodes.reduce((sum, node) => sum + (node.contribution?.commits ?? 0), 0),
+    limitedRepositories: repos.length >= config.maxRepos,
+    limitedContributions: Boolean(preparedContributions && (preparedContributions.selected.diagnostics.omittedRepositories > 0 || preparedContributions.fetched.diagnostics?.truncatedRepositories > 0)),
+  };
 
   await mkdir(outputRoot, { recursive: true });
   const graphPath = posix.join(config.outputDir, "graph.json"); const svgPath = posix.join(config.outputDir, "galaxy.svg"); const taxonomyPath = taxonomy.taxonomy ? posix.join(config.outputDir, "taxonomy.json") : undefined;

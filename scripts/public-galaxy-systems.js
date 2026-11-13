@@ -220,7 +220,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   nodeRadius = function galaxySystemNodeRadius(node) {
     if (state.style !== "galaxy-systems") return baseNodeRadius(node);
-    if (node.type === "owner") return 13;
+    if (node.type === "owner") return 13 * ownerPlanetScale(node.profileStats);
     if (node.type === "group") return 8;
     return baseNodeRadius(node);
   };
@@ -301,11 +301,13 @@ window.addEventListener("DOMContentLoaded", () => {
       let opacity = node.archived ? 0.72 : 1;
       if (state.query && !matchesQuery(node)) opacity *= 0.12;
       if (state.selected && !connectedToFocus(node, state.selected)) opacity *= 0.2;
+
       ctx.globalAlpha = opacity;
       ctx.fillStyle = node.type === "owner" ? colors.owner : node.type === "group" ? colors.group : node.archived ? colors.archived : node.fork ? colors.fork : colors.original;
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius, 0, tau);
       ctx.fill();
+      drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
 
       if (node.type === "owner" || node.type === "group") {
         ctx.strokeStyle = node.type === "owner" ? rgba(colors.owner, 0.42) : rgba(colors.group, 0.46);
@@ -365,6 +367,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.strokeText(text, candidate.point.x, box.top + 2);
       ctx.fillStyle = candidate.node.type === "group" ? colors.group : colors.text;
       ctx.fillText(text, candidate.point.x, box.top + 2);
+      drawOwnerStatsSecondaryLabel(candidate, box, colors);
     }
     ctx.globalAlpha = 1;
   };

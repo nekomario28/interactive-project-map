@@ -16,6 +16,8 @@
     const button = document.getElementById(id);
     if (button) panel.append(button);
   }
+  const qualityToggle = document.getElementById("qualityToggle");
+  if (qualityToggle) panel.append(qualityToggle);
   if (!panel.children.length) return;
   menu.append(summary, panel);
   controls.append(menu);

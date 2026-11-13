@@ -17,6 +17,20 @@ export function createProjectMapViewModelApi(dependencies = {}) {
     return Number.isInteger(value) && value >= 0 && value <= max ? value : null;
   }
 
+  function safeOwnerProfileStats(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"];
+  if (keys.some((key) => !Number.isSafeInteger(raw[key]) || raw[key] < 0 || raw[key] > 1_000_000_000)) return null;
+  if (raw.followers != null && (!Number.isSafeInteger(raw.followers) || raw.followers < 0 || raw.followers > 1_000_000_000)) return null;
+  if (typeof raw.limitedRepositories !== "boolean" || typeof raw.limitedContributions !== "boolean") return null;
+  return {
+    ...Object.fromEntries(keys.map((key) => [key, raw[key]])),
+    followers: raw.followers == null ? null : raw.followers,
+    limitedRepositories: raw.limitedRepositories,
+    limitedContributions: raw.limitedContributions,
+  };
+}
+
   function validIso(value) {
     return typeof value === "string" && Number.isFinite(Date.parse(value));
   }
@@ -136,6 +150,11 @@ export function createProjectMapViewModelApi(dependencies = {}) {
       let node;
       if (raw.type === "owner") {
         node = { id, label: cleanText(label, 120), type: "owner", url: `https://github.com/${encodeURIComponent(username)}` };
+        if (raw.profileStats != null) {
+          const stats = safeOwnerProfileStats(raw.profileStats);
+          if (!stats) return null;
+          node.profileStats = stats;
+        }
       } else if (raw.type === "group") {
         node = {
           id,
@@ -174,6 +193,9 @@ export function createProjectMapViewModelApi(dependencies = {}) {
           createdAt: validIso(raw.createdAt) ? raw.createdAt : "",
           updatedAt: validIso(raw.updatedAt) ? raw.updatedAt : "",
           contribution,
+          ...(typeof raw.forkUrl === "string" && safeGithubRepositoryUrl(
+            raw.forkUrl, username, raw.forkUrl.split("/").pop() || ""
+          ) === raw.forkUrl ? { forkUrl: raw.forkUrl } : {}),
         };
       } else {
         const repositoryName = cleanText(raw.repositoryName, 100) || label;

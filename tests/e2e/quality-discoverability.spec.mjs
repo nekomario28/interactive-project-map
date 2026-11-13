@@ -10,7 +10,9 @@ test("experimental Quality control preserves zero-request Structure default and 
 
   await page.goto("/u/?username=example&style=galaxy-systems&q=alpha&motion=off");
   await expect(page.locator("#status")).toBeHidden();
-  await expect(page.locator("#qualityToggle")).toBeVisible();
+  await expect(page.locator(".view-options-menu #qualityToggle")).toBeHidden();
+  await page.locator(".view-options-menu summary").click();
+  await expect(page.locator(".view-options-menu #qualityToggle")).toBeVisible();
   await expect(page.locator("#qualityToggle")).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator("#qualityToggle")).toHaveText("Quality (experimental)");
   await expect.poll(() => page.evaluate(() => window.ProjectMapQualityView?.snapshot().state)).toBe("disabled");
@@ -22,7 +24,8 @@ test("experimental Quality control preserves zero-request Structure default and 
   expect(new URL(page.url()).searchParams.get("q")).toBe("alpha");
   expect(new URL(page.url()).searchParams.get("motion")).toBe("off");
   await expect(page.locator("#status")).toBeHidden();
-  await expect(page.locator("#qualityToggle")).toHaveAttribute("aria-pressed", "true");
+  await page.locator(".view-options-menu summary").click();
+  await expect(page.locator(".view-options-menu #qualityToggle")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#qualityToggle")).toHaveText("Quality On (experimental)");
   await expect.poll(() => page.evaluate(() => window.ProjectMapQualityView?.snapshot().state)).toBe("active");
   await expect.poll(() => page.evaluate(() => window.ProjectMapQualityView?.snapshot().lastDrawnRings)).toBe(1);
@@ -37,7 +40,8 @@ test("experimental Quality control preserves zero-request Structure default and 
 
   await page.locator("#qualityToggle").click();
   await page.waitForURL((url) => !url.searchParams.has("quality"));
-  await expect(page.locator("#qualityToggle")).toHaveAttribute("aria-pressed", "false");
+  await page.locator(".view-options-menu summary").click();
+  await expect(page.locator(".view-options-menu #qualityToggle")).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => page.evaluate(() => window.ProjectMapQualityView?.snapshot().state)).toBe("disabled");
   expect(counters.presentation).toBe(1);
   expect(counters.runtime).toBe(1);

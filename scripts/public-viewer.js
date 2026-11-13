@@ -86,6 +86,20 @@ function safeRepoUrl(value, name) {
   }
 }
 
+function safeOwnerProfileStats(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["ownedStars", "originalRepositories", "contributedRepositories", "mergedPullRequests", "commits"];
+  if (keys.some((key) => !Number.isSafeInteger(raw[key]) || raw[key] < 0 || raw[key] > 1_000_000_000)) return null;
+  if (raw.followers != null && (!Number.isSafeInteger(raw.followers) || raw.followers < 0 || raw.followers > 1_000_000_000)) return null;
+  if (typeof raw.limitedRepositories !== "boolean" || typeof raw.limitedContributions !== "boolean") return null;
+  return {
+    ...Object.fromEntries(keys.map((key) => [key, raw[key]])),
+    followers: raw.followers == null ? null : raw.followers,
+    limitedRepositories: raw.limitedRepositories,
+    limitedContributions: raw.limitedContributions,
+  };
+}
+
 function sanitizeGraph(value) {
   if (!value || typeof value !== "object" || String(value.owner || "").toLowerCase() !== username || !Array.isArray(value.nodes) || value.nodes.length > 520) return null;
   const safeNodes = [];
@@ -98,6 +112,11 @@ function sanitizeGraph(value) {
     let node = { id, label, type: raw.type };
     if (raw.type === "owner") {
       node.url = `https://github.com/${encodeURIComponent(username)}`;
+      if (raw.profileStats != null) {
+        const stats = safeOwnerProfileStats(raw.profileStats);
+        if (!stats) return null;
+        node.profileStats = stats;
+      }
     } else if (raw.type === "group") {
       node.repositoryCount = Number.isFinite(raw.repositoryCount) ? Math.max(0, Math.floor(raw.repositoryCount)) : 0;
     } else {
@@ -107,6 +126,7 @@ function sanitizeGraph(value) {
       node = {
         ...node,
         url,
+        ...(typeof raw.forkUrl === "string" && raw.forkUrl.startsWith(`https://github.com/${encodeURIComponent(username)}/`) && !/[?#]/.test(raw.forkUrl) ? { forkUrl: raw.forkUrl } : {}),
         description: cleanText(raw.description, 2000),
         language: typeof raw.language === "string" ? raw.language.slice(0, 100) : null,
         topics: Array.isArray(raw.topics) ? raw.topics.filter((item) => typeof item === "string").slice(0, 40).map((item) => item.slice(0, 80)) : [],
@@ -195,8 +215,12 @@ function estimateLabelWidth(node) {
   return clamp(18 + displayLabel(node).length * multiplier, 52, 205);
 }
 
+function ownerPlanetScale(stats) {
+  return stats ? 1 + Math.min(0.4, 0.06 * Math.log2(1 + stats.ownedStars)) : 1;
+}
+
 function nodeRadius(node) {
-  if (node.type === "owner") return state.style !== "obsidian" ? 24 : 18;
+  if (node.type === "owner") return (state.style !== "obsidian" ? 24 : 18) * ownerPlanetScale(node.profileStats);
   if (node.type === "group") return state.style !== "obsidian" ? 8 : 12;
   return clamp(5.5 + Math.log2((node.stars || 0) + 1) * 1.35, 5.5, 12);
 }
@@ -460,10 +484,41 @@ function boxesOverlap(a, b, padding = 3) {
   return !(a.right + padding < b.left || b.right + padding < a.left || a.bottom + padding < b.top || b.bottom + padding < a.top);
 }
 
+function ownerStatsShortLabel(node) {
+  const s = node?.profileStats;
+  if (!s) return "";
+  return `★${s.ownedStars} · F${s.followers ?? "—"} · R${s.originalRepositories} · C${s.contributedRepositories}`;
+}
+
+function drawOwnerPlanetCoreStats(node, point, radius, opacity, colors) {
+  if (node.type !== "owner" || !node.profileStats || radius < 9) return;
+  ctx.save();
+  ctx.fillStyle = colors.background;
+  ctx.globalAlpha = opacity;
+  ctx.font = `700 ${Math.min(11, Math.max(8, radius * 0.42))}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`★${node.profileStats.ownedStars}`, point.x, point.y, radius * 1.7);
+  ctx.restore();
+}
+
+function drawOwnerStatsSecondaryLabel(candidate, box, colors) {
+  const line = candidate.node.type === "owner" ? ownerStatsShortLabel(candidate.node) : "";
+  if (!line) return;
+  const fontSize = Math.max(9, candidate.fontSize * 0.8);
+  ctx.font = `600 ${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+  ctx.strokeStyle = colors.background;
+  ctx.lineWidth = 2.4;
+  ctx.strokeText(line, candidate.point.x, box.top + candidate.fontSize + 5);
+  ctx.fillStyle = colors.muted;
+  ctx.fillText(line, candidate.point.x, box.top + candidate.fontSize + 5);
+}
+
 function labelBox(node, point, radius, fontSize) {
   const text = displayLabel(node);
-  const width = clamp(text.length * fontSize * 0.58 + 10, 38, 215);
-  const height = fontSize + 8;
+  const summary = node.type === "owner" ? ownerStatsShortLabel(node) : "";
+  const width = clamp(Math.max(text.length * fontSize * 0.58, summary.length * fontSize * 0.45) + 10, 38, 245);
+  const height = fontSize + 8 + (summary ? fontSize + 3 : 0);
   const top = point.y + radius + 7;
   return { left: point.x - width / 2, right: point.x + width / 2, top, bottom: top + height, width, height, text };
 }
@@ -475,12 +530,15 @@ function drawNodesAndLabels(colors) {
     const highlighted = node === state.selected || node === state.hovered;
     const radius = Math.max(3.5, nodeRadius(node) * state.zoom * (highlighted ? 1.13 : 1));
     const opacity = nodeOpacity(node);
+
     ctx.globalAlpha = opacity;
     ctx.fillStyle = nodeColor(node, colors);
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, TAU);
     ctx.fill();
 
+
+    drawOwnerPlanetCoreStats(node, point, radius, opacity, colors);
     if (node.type === "repository" && node.archived) {
       ctx.strokeStyle = colors.archived;
       ctx.lineWidth = 1.4;
@@ -523,6 +581,7 @@ function drawNodesAndLabels(colors) {
     ctx.strokeText(box.text, candidate.point.x, box.top + 2);
     ctx.fillStyle = candidate.node.type === "group" ? colors.muted : colors.text;
     ctx.fillText(box.text, candidate.point.x, box.top + 2);
+    drawOwnerStatsSecondaryLabel(candidate, box, colors);
   }
   ctx.globalAlpha = 1;
 }
@@ -597,6 +656,16 @@ function updateDetails(node) {
   detailsTitle.textContent = node.label;
   detailsDescription.textContent = node.description || (node.type === "group" ? `${node.repositoryCount || 0} repositories` : node.type === "owner" ? `GitHub profile @${username}` : "No description provided.");
   const rows = [];
+  if (node.type === "owner" && node.profileStats) {
+    const stats = node.profileStats;
+    rows.push(["Stars (shown originals)", String(stats.ownedStars)]);
+    rows.push(["Followers", stats.followers == null ? "Unavailable" : String(stats.followers)]);
+    rows.push(["Original repos (shown)", String(stats.originalRepositories)]);
+    rows.push(["Featured external projects (365d)", String(stats.contributedRepositories)]);
+    rows.push(["Merged PRs (featured, 365d)", String(stats.mergedPullRequests)]);
+    rows.push(["Commits (featured, 365d)", String(stats.commits)]);
+    if (stats.limitedRepositories || stats.limitedContributions) rows.push(["Coverage", "Partial: generation or contribution limits apply"]);
+  }
   if (node.type === "repository") {
     rows.push(["Kind", node.archived ? "Archived" : node.fork ? "Fork" : "Original"]);
     if (node.language) rows.push(["Language", node.language]);
@@ -610,7 +679,13 @@ function updateDetails(node) {
     const dt = document.createElement("dt");
     dt.textContent = key;
     const dd = document.createElement("dd");
-    dd.textContent = value;
+    if (key === "Your verified fork" && typeof value === "string") {
+      const link = document.createElement("a");
+      link.href = value;
+      link.textContent = "Open your fork";
+      link.rel = "noopener noreferrer";
+      dd.append(link);
+    } else dd.textContent = value;
     detailsMeta.append(dt, dd);
   }
   detailsMeta.hidden = rows.length === 0;

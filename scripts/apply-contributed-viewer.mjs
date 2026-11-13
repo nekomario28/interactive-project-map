@@ -142,6 +142,10 @@ function contributedRuntime() {
     };
     if (validIso(raw.createdAt)) node.createdAt = raw.createdAt;
     if (validIso(raw.updatedAt)) node.updatedAt = raw.updatedAt;
+    if (typeof raw.forkUrl === "string") {
+      const forkName = raw.forkUrl.split("/").pop();
+      if (forkName && safeGithubRepositoryUrl(raw.forkUrl, projectOwner, forkName) === raw.forkUrl) node.forkUrl = raw.forkUrl;
+    }
     return node;
   }
 
@@ -204,7 +208,13 @@ function contributedRuntime() {
     const dt = document.createElement("dt");
     dt.textContent = key;
     const dd = document.createElement("dd");
-    dd.textContent = String(value);
+    if (key === "Your verified fork" && typeof value === "string" && value.startsWith("https://github.com/")) {
+      const link = document.createElement("a");
+      link.href = value;
+      link.textContent = "Open your fork";
+      link.rel = "noopener noreferrer";
+      dd.append(link);
+    } else dd.textContent = String(value);
     detailsMeta.append(dt, dd);
   }
 
@@ -219,6 +229,7 @@ function contributedRuntime() {
       appendDetailRow("Commits", \`\${node.contribution?.commits ?? 0}\${node.contribution?.commitsTruncated ? "+" : ""}\`);
       appendDetailRow("Pull requests", \`\${node.contribution?.pullRequests ?? 0}\${node.contribution?.pullRequestsTruncated ? "+" : ""}\`);
       appendDetailRow("Merged PRs", node.contribution?.mergedPullRequests ?? 0);
+      if (node.forkUrl) appendDetailRow("Your verified fork", node.forkUrl);
       const sourceFlags = [node.fork ? "fork" : "", node.archived ? "archived" : ""].filter(Boolean).join(" · ");
       if (sourceFlags) appendDetailRow("Source flags", sourceFlags);
       const windowValue = state.graph?.externalContributions?.window;
