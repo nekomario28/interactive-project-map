@@ -24,7 +24,13 @@ uses: nekomario28/interactive-project-map@<40-character Action SHA>
 
 That SHA selects the actual `action.yml` plus generator implementation. Moving `v1` does **not** change this SHA. Therefore a feature can be present on `main` and even in the reusable workflow source while production profiles still execute an older Action if the inner pin was not advanced.
 
-The same reviewed inner SHA is mirrored in `src/action-ref.ts` and `scripts/postprocess-public-pages.mjs` so Cloudflare and GitHub Pages setup output can tell users which immutable Action release the reusable workflow executes. `tests/release-chain.test.mjs` fails if those three inner references diverge or if the outer `v1` is confused with an immutable Action SHA.
+The reviewed **main candidate** inner SHA is mirrored in `src/action-ref.ts` and `scripts/postprocess-public-pages.mjs`. Those values do **not** identify the Action currently executed by the independently moving stable `v1` branch. Pages and Worker setup output therefore avoid claiming that the current candidate Action runs on `@v1`. `tests/release-chain.test.mjs` catches main-chain drift, while `scripts/audit-release-channel.mjs` resolves the actual `refs/heads/v1` and its inner Action through the GitHub API.
+
+## Audit the actual stable branch
+
+`v1` is a **release branch**, not a Git tag. An Action SHA in `main` or generated setup comments is not evidence that `v1` executes it.
+
+Use `GH_TOKEN=<read-only token> node scripts/audit-release-channel.mjs` to print a JSON report containing the exact current `v1` branch SHA, its nested Action SHA, the main candidate's Action SHA, and differences. Use `--require-current` only after the stable branch has deliberately been promoted to the exact candidate SHA; that mode fails closed on any difference. The manual GitHub Actions **Audit stable v1 release channel** workflow saves this report as an artifact.
 
 ## Promotion protocol
 
@@ -34,7 +40,7 @@ For a feature release, name the final implementation commit **F** and the later 
 2. For data-boundary features, run the real-profile/privacy proof directly against **F** (or another exact implementation SHA) so the proof cannot accidentally execute the old inner pin.
 3. Update the reusable workflow's **inner Action pin** to **F**. Update the two public installer metadata mirrors to the same SHA. The commit containing those release-chain edits becomes **R** after its gates pass.
 4. Validate an exact caller of the reusable workflow at **R** and prove that it resolves the inner Action at **F** and emits the intended artifact.
-5. Only then move the outer stable branch **`v1` → R**.
+5. Review the compatibility and rollback plan for every existing `@v1` caller. Only then move the **release branch `v1` → R** (never force-update it ahead of verification). Immediately run `node scripts/audit-release-channel.mjs --require-current` at R to confirm exact equality.
 6. Run the canonical production profile workflow through `@v1` and verify the generated `graph.json` / SVG. A `v1` move without the inner-pin proof is not a release.
 
 This ordering intentionally avoids a cycle: the inner Action points to the already-reviewed implementation commit F; the outer reusable workflow points to that Action and is released later as R.

@@ -79,9 +79,12 @@ export function renderInstallWorkflow(options: InstallOptions): string {
   const style = normalizeStyle(options.style);
   const includeContributed = options.includeContributed === true;
   const generatorPolicy = generatorRef === STABLE_REUSABLE_REF ? "stable-v1" : `pinned-${generatorRef}`;
+  const releaseNotice = generatorRef === STABLE_REUSABLE_REF
+    ? "@v1 chooses its own immutable Action; this installer cannot claim the current main Action runs at v1."
+    : "Pinned reusable workflow SHA chooses its own inner Action; inspect that exact workflow ref before relying on current features.";
   return `name: Update project map
 # Project Map generator policy: ${generatorPolicy}
-# Reviewed immutable inner Action baseline: nekomario28/interactive-project-map@${PROJECT_MAP_ACTION_REF}
+# ${releaseNotice}
 
 on:
   workflow_dispatch:
