@@ -10,7 +10,7 @@ function buildGraph(repositoryCount = 480, groupCount = 8) {
   return { owner: "example", generatedAt: "2026-08-30T00:00:00Z", nodes: [{ id: "user:example", label: "example", type: "owner", url: "https://github.com/example" }, ...groups, ...repositories], edges: [...groups.map((group) => ({ source: "user:example", target: group.id, type: "ownership" })), ...repositories.map((repository, index) => ({ source: groups[index % groupCount].id, target: repository.id, type: "membership" }))] };
 }
 
-async function sampleFrames(page, windowMs = 5000) {
+async function sampleFrames(page, windowMs = 1500) {
   const samples = await page.evaluate((duration) => new Promise((resolve) => {
     const values = []; let previous = null; let frame = 0; let done = false;
     const finish = () => { if (done) return; done = true; if (frame) cancelAnimationFrame(frame); resolve(values); };

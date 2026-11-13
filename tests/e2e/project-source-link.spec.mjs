@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 const graph = {
@@ -48,8 +47,6 @@ for (const [name, path] of views) {
     expect(box.y + box.height).toBeGreaterThan(850);
     expect(box.y + box.height).toBeLessThanOrEqual(900);
     expect(errors).toEqual([]);
-    await mkdir(".tmp/playwright-visual/project-source", { recursive: true });
-    await page.screenshot({ path: `.tmp/playwright-visual/project-source/${name}.png`, fullPage: true });
   });
 }
 
@@ -74,8 +71,6 @@ test("project source link stays inside intermediate and narrow viewports", async
         const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
         return hit === element || element.contains(hit);
       })).toBe(true);
-      await mkdir(".tmp/playwright-visual/project-source-responsive", { recursive: true });
-      await page.screenshot({ path: `.tmp/playwright-visual/project-source-responsive/${name}-${width}x${height}.png` });
     }
   }
 });
@@ -134,8 +129,6 @@ test.describe("touch source navigation", () => {
           const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
           return hit === element || element.contains(hit);
         })).toBe(true);
-        await mkdir(".tmp/playwright-visual/mobile-source", { recursive: true });
-        await page.screenshot({ path: `.tmp/playwright-visual/mobile-source/${name}-${width}x${height}.png` });
       }
     }
   });
@@ -164,7 +157,6 @@ test.describe("touch source navigation", () => {
     })).toBe(true);
     await expect(source).toBeInViewport({ ratio: 1 });
     expect((await source.boundingBox()).y).toBe(before.y);
-    await page.screenshot({ path: ".tmp/playwright-visual/mobile-source/shared-scrolled-393x420.png" });
     await toggle.tap();
     await expect(page.locator("header .controls")).toBeHidden();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");

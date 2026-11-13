@@ -6,7 +6,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI
     ? [["line"], ["html", { open: "never", outputFolder: ".tmp/playwright-report" }]]
     : "line",
@@ -28,7 +28,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run build:pages && node tests/e2e/server.mjs",
+    command: process.env.PREBUILT_SITE ? "node tests/e2e/server.mjs" : "npm run build:pages && node tests/e2e/server.mjs",
     url: "http://127.0.0.1:4173/",
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
