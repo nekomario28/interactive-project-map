@@ -213,9 +213,38 @@ export function sanitizeStaticGraph(value: unknown, username: string): GalaxyGra
 }
 
 async function graphFromResponse(response: Response, username: string): Promise<GalaxyGraph | null> {
-  if (!response.ok) return null; const length = Number(response.headers.get("Content-Length")); if (Number.isFinite(length) && length > MAX_STATIC_BYTES) return null;
-  const text = await response.text(); if (text.length > MAX_STATIC_BYTES) return null;
-  try { return sanitizeStaticGraph(JSON.parse(text), username); } catch { return null; }
+  if (!response.ok || !response.body) return null;
+
+  // Content-Length is only a fast rejection hint, never the size authority.
+  const declaredLength = response.headers.get("Content-Length");
+  if (declaredLength !== null && Number(declaredLength) > MAX_STATIC_BYTES) {
+    await response.body.cancel().catch(() => {});
+    return null;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const chunks: string[] = [];
+  let bytesRead = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytesRead += value.byteLength;
+      if (bytesRead > MAX_STATIC_BYTES) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(decoder.decode(value, { stream: true }));
+    }
+    chunks.push(decoder.decode());
+    return sanitizeStaticGraph(JSON.parse(chunks.join("")), username);
+  } catch {
+    await reader.cancel().catch(() => {});
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 export async function fetchStaticProfileGraph(username: string): Promise<GalaxyGraph | null> {
