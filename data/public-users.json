@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-17T07:51:54.525Z",
+  "checkedAt": "2026-11-20T07:10:27.600Z",
   "scope": "Verified public profile installations; a lower bound, including maintainers, not active users or total people.",
   "searchQueries": [
     "\"nekomario28.github.io/interactive-project-map\" filename:README.md",
@@ -9,12 +9,12 @@
     {
       "login": "nekomario28",
       "profileRepository": "nekomario28/nekomario28",
-      "commit": "fdc623ac9780fb78a0583e1f6a39fdb89e74dd10",
-      "readmeUrl": "https://github.com/nekomario28/nekomario28/blob/fdc623ac9780fb78a0583e1f6a39fdb89e74dd10/README.md",
-      "graphUrl": "https://github.com/nekomario28/nekomario28/blob/fdc623ac9780fb78a0583e1f6a39fdb89e74dd10/project-map/graph.json",
-      "svgUrl": "https://github.com/nekomario28/nekomario28/blob/fdc623ac9780fb78a0583e1f6a39fdb89e74dd10/project-map/galaxy.svg",
-      "embeddedSvgUrl": "https://github.com/nekomario28/nekomario28/blob/fdc623ac9780fb78a0583e1f6a39fdb89e74dd10/project-map/galaxy.svg",
-      "graphGeneratedAt": "2026-11-16T23:01:16.331Z"
+      "commit": "2e05ef1e0171ab87d1487bef89c0271aa004679f",
+      "readmeUrl": "https://github.com/nekomario28/nekomario28/blob/2e05ef1e0171ab87d1487bef89c0271aa004679f/README.md",
+      "graphUrl": "https://github.com/nekomario28/nekomario28/blob/2e05ef1e0171ab87d1487bef89c0271aa004679f/project-map/graph.json",
+      "svgUrl": "https://github.com/nekomario28/nekomario28/blob/2e05ef1e0171ab87d1487bef89c0271aa004679f/project-map/galaxy.svg",
+      "embeddedSvgUrl": "https://github.com/nekomario28/nekomario28/blob/2e05ef1e0171ab87d1487bef89c0271aa004679f/project-map/galaxy.svg",
+      "graphGeneratedAt": "2026-11-19T21:47:44.505Z"
     },
     {
       "login": "rotep",
@@ -29,22 +29,22 @@
     {
       "login": "RPG-478",
       "profileRepository": "RPG-478/RPG-478",
-      "commit": "10aab8d2782049cd93717f326fb2ba25ed862ef9",
-      "readmeUrl": "https://github.com/RPG-478/RPG-478/blob/10aab8d2782049cd93717f326fb2ba25ed862ef9/README.md",
-      "graphUrl": "https://github.com/RPG-478/RPG-478/blob/10aab8d2782049cd93717f326fb2ba25ed862ef9/project-map/graph.json",
-      "svgUrl": "https://github.com/RPG-478/RPG-478/blob/10aab8d2782049cd93717f326fb2ba25ed862ef9/project-map/galaxy.svg",
-      "embeddedSvgUrl": "https://github.com/RPG-478/RPG-478/blob/10aab8d2782049cd93717f326fb2ba25ed862ef9/project-map/galaxy.svg",
+      "commit": "e6d079a36aed3971d310e711337562c94505060c",
+      "readmeUrl": "https://github.com/RPG-478/RPG-478/blob/e6d079a36aed3971d310e711337562c94505060c/README.md",
+      "graphUrl": "https://github.com/RPG-478/RPG-478/blob/e6d079a36aed3971d310e711337562c94505060c/project-map/graph.json",
+      "svgUrl": "https://github.com/RPG-478/RPG-478/blob/e6d079a36aed3971d310e711337562c94505060c/project-map/galaxy.svg",
+      "embeddedSvgUrl": "https://github.com/RPG-478/RPG-478/blob/e6d079a36aed3971d310e711337562c94505060c/project-map/galaxy.svg",
       "graphGeneratedAt": "2026-11-17T03:38:48.185Z"
     },
     {
       "login": "syun88",
       "profileRepository": "syun88/syun88",
-      "commit": "1e973a29104cda6817cc336671b205603969fbc0",
-      "readmeUrl": "https://github.com/syun88/syun88/blob/1e973a29104cda6817cc336671b205603969fbc0/README.md",
-      "graphUrl": "https://github.com/syun88/syun88/blob/1e973a29104cda6817cc336671b205603969fbc0/project-map/graph.json",
-      "svgUrl": "https://github.com/syun88/syun88/blob/1e973a29104cda6817cc336671b205603969fbc0/project-map/galaxy.svg",
-      "embeddedSvgUrl": "https://github.com/syun88/syun88/blob/1e973a29104cda6817cc336671b205603969fbc0/project-map/galaxy.svg",
-      "graphGeneratedAt": "2026-11-15T03:38:20.637Z"
+      "commit": "7f150d056b49c366285b4cd3769a6010cf114169",
+      "readmeUrl": "https://github.com/syun88/syun88/blob/7f150d056b49c366285b4cd3769a6010cf114169/README.md",
+      "graphUrl": "https://github.com/syun88/syun88/blob/7f150d056b49c366285b4cd3769a6010cf114169/project-map/graph.json",
+      "svgUrl": "https://github.com/syun88/syun88/blob/7f150d056b49c366285b4cd3769a6010cf114169/project-map/galaxy.svg",
+      "embeddedSvgUrl": "https://github.com/syun88/syun88/blob/7f150d056b49c366285b4cd3769a6010cf114169/project-map/galaxy.svg",
+      "graphGeneratedAt": "2026-11-19T03:38:05.765Z"
     }
   ],
   "rejected": []
