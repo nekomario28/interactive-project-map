@@ -72,7 +72,6 @@ function buildCases(
   taxonomy: PortfolioTaxonomy,
   ambiguousNames: string[],
 ): TaxonomyAdjudicationCase[] {
-  const byName = new Map(repos.map((repo) => [repoKey(repo.name), repo]));
   const wanted = new Set(ambiguousNames.map(repoKey));
   const selected = repos.filter((repo) => wanted.has(repoKey(repo.name)));
   const documents = buildRepoSemanticDocuments(selected);

@@ -1,5 +1,5 @@
 "use strict";
-/* global state, clamp, hash, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, palette, console, ownerPlanetScale, drawOwnerPlanetCoreStats, drawOwnerStatsSecondaryLabel */
+/* global state, clamp, hash, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, ownerPlanetScale, drawOwnerPlanetCoreStats, drawOwnerStatsSecondaryLabel */
 
 window.addEventListener("DOMContentLoaded", () => {
   if (state.style !== "galaxy-systems") return;

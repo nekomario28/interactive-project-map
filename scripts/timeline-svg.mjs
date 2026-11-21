@@ -55,7 +55,7 @@ export function renderTimelineSvg(graph, theme, width, height) {
   const yForLane = (index) => top + laneHeight * (index + 0.5);
   const pieces = [];
 
-  lanes.forEach((lane, laneIndex) => {
+  lanes.forEach((_lane, laneIndex) => {
     if (laneIndex % 2 === 0) {
       pieces.push(`<rect x="${left}" y="${(top + laneHeight * laneIndex).toFixed(1)}" width="${(right - left).toFixed(1)}" height="${laneHeight.toFixed(1)}" fill="${colors.lane}" opacity="0.45"/>`);
     }

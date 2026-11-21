@@ -232,7 +232,7 @@ export function isGitHubAppInstallerConfigured(env: GitHubAppInstallerEnv): bool
   return Boolean(env.GITHUB_APP_CLIENT_ID && env.GITHUB_APP_CLIENT_SECRET && env.GITHUB_APP_SLUG && env.INSTALL_STATE_SECRET && encoder.encode(env.INSTALL_STATE_SECRET).byteLength >= 32);
 }
 
-export async function beginGitHubAppInstall(request: Request, env: GitHubAppInstallerEnv, options: InstallOptions, runtime: InstallerRuntime = {}): Promise<Response> {
+export async function beginGitHubAppInstall(_request: Request, env: GitHubAppInstallerEnv, options: InstallOptions, runtime: InstallerRuntime = {}): Promise<Response> {
   const slug = validateAppSlug(requireConfiguredValue(env.GITHUB_APP_SLUG, "GITHUB_APP_SLUG"));
   const secret = requireStateSecret(env.INSTALL_STATE_SECRET);
   const { state, nonce } = await createInstallState(options, secret, runtime);

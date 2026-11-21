@@ -38,7 +38,7 @@ test("category navigator is attached once to every interactive viewer", async ()
     assert.match(runtime, /not owned/);
     assert.match(css, /\.category-navigator-primary/);
     assert.match(css, /\.category-navigator/);
-    assert.match(css, /aria-pressed="true"\]\:\:after/);
+    assert.match(css, /aria-pressed="true"\]::after/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
