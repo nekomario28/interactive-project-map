@@ -4,24 +4,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generateStaticMap } from "../scripts/action.mjs";
-import { MemoryEmbeddingCache } from "../scripts/embedding.mjs";
-import {
-  assignRepositoriesToTaxonomy as assignScript,
-  canonicalTaxonomyCategory as canonicalScriptCategory,
-  taxonomyCategoryEmbeddingCacheKey as scriptCategoryKey,
-  taxonomyCategoryText as scriptCategoryText,
-} from "../scripts/taxonomy-assignment.mjs";
-import { normalizeTaxonomyRepositoryOverrides as normalizeScriptRepoOverrides } from "../scripts/taxonomy-overrides.mjs";
-import {
-  assignRepositoriesToTaxonomy as assignSource,
-  canonicalTaxonomyCategory as canonicalSourceCategory,
-  taxonomyCategoryEmbeddingCacheKey as sourceCategoryKey,
-  taxonomyCategoryText as sourceCategoryText,
-} from "../src/taxonomy-assignment.ts";
-import { normalizeTaxonomyRepositoryOverrides as normalizeSourceRepoOverrides } from "../src/taxonomy-overrides.ts";
+import { MemoryEmbeddingCache } from "../src/embedding.ts";
+import { assignRepositoriesToTaxonomy, canonicalTaxonomyCategory, taxonomyCategoryEmbeddingCacheKey, taxonomyCategoryText } from "../src/taxonomy-assignment.ts";
+import { normalizeTaxonomyRepositoryOverrides } from "../src/taxonomy-overrides.ts";
+
 import { buildGraph } from "../src/graph.ts";
 import { sanitizeStaticGraph } from "../src/static-graph.ts";
-import { resolvePortfolioTaxonomy } from "../scripts/taxonomy.mjs";
+import { resolvePortfolioTaxonomy } from "../src/taxonomy.ts";
 
 function repo(id, name, overrides = {}) {
   return {
@@ -66,34 +55,33 @@ function config() {
   return { username: "example", theme: "dark", style: "galaxy-systems", maxRepos: 100, includeForks: true, includeArchived: true, width: 740, height: 420, outputDir: "project-map" };
 }
 
-test("taxonomy category canonical text/cache identity is stable and source/script implementations match", async () => {
+test("taxonomy category canonical text/cache identity is stable", async () => {
   const category = { ...categories[0], aliases: ["Gazebo", "ROS2"] };
-  assert.equal(canonicalSourceCategory(category), canonicalScriptCategory(category));
-  assert.equal(sourceCategoryText(category), scriptCategoryText(category));
+  assert.equal(JSON.parse(canonicalTaxonomyCategory(category)).id, "robotics");
+  assert.match(taxonomyCategoryText(category), /^category: robotics/m);
   const provider = embeddingProvider();
-  const scriptKey = await scriptCategoryKey(category, provider);
-  assert.equal(await sourceCategoryKey(category, provider), scriptKey);
+  const scriptKey = await taxonomyCategoryEmbeddingCacheKey(category, provider);
+  assert.equal(await taxonomyCategoryEmbeddingCacheKey(category, provider), scriptKey);
   assert.match(scriptKey, /^embedding:taxonomy-category-v1:/);
-  assert.equal(await scriptCategoryKey({ ...category, aliases: ["ROS2", "Gazebo"] }, provider), scriptKey);
-  assert.notEqual(await scriptCategoryKey({ ...category, description: `${category.description} sim-to-real` }, provider), scriptKey);
-  assert.notEqual(await scriptCategoryKey(category, embeddingProvider("other-provider")), scriptKey);
-  assert.notEqual(await scriptCategoryKey(category, embeddingProvider("fake-embedding", "other-model")), scriptKey);
+  assert.equal(await taxonomyCategoryEmbeddingCacheKey({ ...category, aliases: ["ROS2", "Gazebo"] }, provider), scriptKey);
+  assert.notEqual(await taxonomyCategoryEmbeddingCacheKey({ ...category, description: `${category.description} sim-to-real` }, provider), scriptKey);
+  assert.notEqual(await taxonomyCategoryEmbeddingCacheKey(category, embeddingProvider("other-provider")), scriptKey);
+  assert.notEqual(await taxonomyCategoryEmbeddingCacheKey(category, embeddingProvider("fake-embedding", "other-model")), scriptKey);
 });
 
-test("repository assignment overrides are normalized strictly and source/script implementations match", () => {
+test("repository assignment overrides are normalized strictly", () => {
   const input = { Robot: { categoryId: "ROBOTICS", secondaryTags: ["sim-to-real", "SIM-TO-REAL", "manipulation"] } };
-  const script = normalizeScriptRepoOverrides(input);
-  assert.deepEqual(normalizeSourceRepoOverrides(input), script);
-  assert.deepEqual(script, { robot: { categoryId: "robotics", secondaryTags: ["sim-to-real", "manipulation"] } });
-  assert.throws(() => normalizeScriptRepoOverrides({ "bad repo!": { categoryId: "robotics" } }), /Invalid repository override name/);
-  assert.throws(() => normalizeScriptRepoOverrides({ robot: { categoryId: "../../bad" } }), /invalid categoryId/);
+  const result = normalizeTaxonomyRepositoryOverrides(input);
+  assert.deepEqual(result, { robot: { categoryId: "robotics", secondaryTags: ["sim-to-real", "manipulation"] } });
+  assert.throws(() => normalizeTaxonomyRepositoryOverrides({ "bad repo!": { categoryId: "robotics" } }), /Invalid repository override name/);
+  assert.throws(() => normalizeTaxonomyRepositoryOverrides({ robot: { categoryId: "../../bad" } }), /invalid categoryId/);
 });
 
 test("human repo override wins, while high-confidence exact P1 taxonomy match assigns deterministically without embedding", async () => {
   const repos = [repo(1, "robot", { classification: classification("robotics", 0.99, ["control"]) }), repo(2, "web", { classification: classification("uncategorized", 0.2) })];
   const taxonomy = await taxonomyFor(repos);
   const provider = embeddingProvider();
-  const result = await assignScript(repos, taxonomy, provider, undefined, { overrides: { version: 1, repositories: { web: { categoryId: "web-apps", secondaryTags: ["frontend"] } } } });
+  const result = await assignRepositoriesToTaxonomy(repos, taxonomy, provider, undefined, { overrides: { version: 1, repositories: { web: { categoryId: "web-apps", secondaryTags: ["frontend"] } } } });
   assert.equal(provider.state.calls, 0);
   assert.equal(result.assignments.robot.method, "deterministic");
   assert.equal(result.assignments.robot.categoryId, "robotics");
@@ -103,41 +91,38 @@ test("human repo override wins, while high-confidence exact P1 taxonomy match as
   assert.equal(result.diagnostics.deterministic, 1);
   assert.equal(result.diagnostics.overridden, 1);
   assert.deepEqual(result.ambiguous, []);
-  await assert.rejects(assignScript([repo(3, "bad")], taxonomy, provider, undefined, { overrides: { version: 1, repositories: { bad: { categoryId: "missing" } } } }), /unknown category/);
+  await assert.rejects(assignRepositoriesToTaxonomy([repo(3, "bad")], taxonomy, provider, undefined, { overrides: { version: 1, repositories: { bad: { categoryId: "missing" } } } }), /unknown category/);
 });
 
 test("semantic assignment uses absolute score plus top-vs-second margin and leaves weak/mixed repositories ambiguous", async () => {
   const repos = [repo(1, "robot"), repo(2, "web"), repo(3, "weak"), repo(4, "mixed")];
   const taxonomy = await taxonomyFor(repos);
-  const script = await assignScript(repos, taxonomy, embeddingProvider());
-  const source = await assignSource(repos, taxonomy, embeddingProvider());
-  assert.deepEqual(source.assignments, script.assignments);
-  assert.deepEqual(source.ambiguous, script.ambiguous);
-  assert.equal(script.assignments.robot.categoryId, "robotics");
-  assert.equal(script.assignments.web.categoryId, "web-apps");
-  assert.equal(script.assignments.robot.method, "semantic");
-  assert.ok(script.assignments.robot.score >= 0.62);
-  assert.ok(script.assignments.robot.margin >= 0.08);
-  assert.deepEqual(script.ambiguous, ["mixed", "weak"]);
-  assert.equal(script.diagnostics.semantic, 2);
-  assert.equal(script.diagnostics.ambiguous, 2);
+  const result = await assignRepositoriesToTaxonomy(repos, taxonomy, embeddingProvider());
+  assert.equal(result.assignments.robot.categoryId, "robotics");
+  assert.equal(result.assignments.web.categoryId, "web-apps");
+  assert.equal(result.assignments.robot.method, "semantic");
+  assert.ok(result.assignments.robot.score >= 0.62);
+  assert.ok(result.assignments.robot.margin >= 0.08);
+  assert.deepEqual(result.ambiguous, ["mixed", "weak"]);
+  assert.equal(result.diagnostics.semantic, 2);
+  assert.equal(result.diagnostics.ambiguous, 2);
 });
 
 test("lexicographic category tie-break is deterministic when margin gate is explicitly zero", async () => {
   const repos = [repo(1, "tie")]; const taxonomy = await taxonomyFor(repos);
-  const result = await assignScript(repos, taxonomy, embeddingProvider(), undefined, { minScore: 0.5, minMargin: 0 });
+  const result = await assignRepositoriesToTaxonomy(repos, taxonomy, embeddingProvider(), undefined, { minScore: 0.5, minMargin: 0 });
   assert.equal(result.assignments.tie.categoryId, "robotics");
-  const defaultGate = await assignScript(repos, taxonomy, embeddingProvider());
+  const defaultGate = await assignRepositoriesToTaxonomy(repos, taxonomy, embeddingProvider());
   assert.equal(defaultGate.assignments.tie, undefined);
   assert.deepEqual(defaultGate.ambiguous, ["tie"]);
 });
 
 test("embedding cache avoids repeated repository/category provider calls", async () => {
   const repos = [repo(1, "robot"), repo(2, "web")]; const taxonomy = await taxonomyFor(repos); const provider = embeddingProvider(); const cache = new MemoryEmbeddingCache();
-  const first = await assignScript(repos, taxonomy, provider, cache);
+  const first = await assignRepositoriesToTaxonomy(repos, taxonomy, provider, cache);
   assert.equal(first.diagnostics.repositoryEmbedded, 2); assert.equal(first.diagnostics.categoryEmbedded, 2);
   const calls = provider.state.calls;
-  const second = await assignScript(repos, taxonomy, provider, cache);
+  const second = await assignRepositoriesToTaxonomy(repos, taxonomy, provider, cache);
   assert.equal(provider.state.calls, calls);
   assert.equal(second.diagnostics.repositoryCacheHits, 2); assert.equal(second.diagnostics.categoryCacheHits, 2);
   assert.equal(second.diagnostics.repositoryEmbedded, 0); assert.equal(second.diagnostics.categoryEmbedded, 0);
@@ -145,7 +130,7 @@ test("embedding cache avoids repeated repository/category provider calls", async
 
 test("embedding provider failure preserves override/deterministic assignments and leaves unresolved repositories ambiguous", async () => {
   const repos = [repo(1, "robot", { classification: classification("robotics", 0.97) }), repo(2, "web")]; const taxonomy = await taxonomyFor(repos);
-  const result = await assignScript(repos, taxonomy, { id: "failing", model: "v1", async embed() { throw new Error("embedding unavailable"); } });
+  const result = await assignRepositoriesToTaxonomy(repos, taxonomy, { id: "failing", model: "v1", async embed() { throw new Error("embedding unavailable"); } });
   assert.equal(result.assignments.robot.categoryId, "robotics"); assert.equal(result.assignments.web, undefined); assert.deepEqual(result.ambiguous, ["web"]); assert.match(result.error ?? "", /embedding unavailable/);
 });
 

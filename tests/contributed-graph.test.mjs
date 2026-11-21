@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { attachContributedRepositories } from "../scripts/contributed-graph.mjs";
-import { buildGraph } from "../scripts/graph.mjs";
+import { attachContributedRepositories } from "../src/contributed-graph.ts";
+import { buildGraph } from "../src/graph.ts";
 
 function ownedRepo(name) {
   return {

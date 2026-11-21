@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGraph } from "../scripts/graph.mjs";
+import { buildGraph } from "../src/graph.ts";
 import { renderGalaxySystemsSvg } from "../scripts/galaxy-svg-systems.mjs";
 
 function repo(index) {

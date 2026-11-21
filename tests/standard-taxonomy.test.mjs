@@ -7,7 +7,7 @@ import {
   STANDARD_TAXONOMY_CATEGORIES,
   STANDARD_TAXONOMY_ID,
   STANDARD_TAXONOMY_SCHEMA_VERSION,
-} from "../scripts/standard-taxonomy.mjs";
+} from "../src/standard-taxonomy.ts";
 
 const CATEGORY_ID_RE = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 

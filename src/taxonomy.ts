@@ -10,7 +10,7 @@ import type {
   TaxonomyOverrideFile,
   TaxonomyRepositoryFingerprint,
   TaxonomyResolutionResult,
-} from "./types";
+} from "./types.ts";
 
 export const TAXONOMY_SCHEMA_VERSION = 1;
 export const TAXONOMY_OVERRIDE_VERSION = 1;

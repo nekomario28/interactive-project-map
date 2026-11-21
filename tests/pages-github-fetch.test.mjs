@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fetchPublicRepos } from "../scripts/github.mjs";
+import { fetchPublicRepos } from "../src/github.ts";
 
 function repo(id, overrides = {}) {
   return {

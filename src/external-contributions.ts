@@ -97,7 +97,7 @@ type ContributionConnection = {
 type ContributionRow = { repository?: RawRepository; contributions?: ContributionConnection };
 
 function safeRepository(raw: RawRepository | undefined, login: string): Omit<ExternalContributionRepository, "commits" | "pullRequests" | "mergedPullRequests" | "commitsTruncated" | "pullRequestsTruncated"> | null {
-  if (!raw || raw.isPrivate === true) return null;
+  if (!raw || typeof raw !== "object" || raw.isPrivate === true) return null;
   const owner = raw.owner?.login;
   const name = raw.name;
   const nameWithOwner = raw.nameWithOwner;

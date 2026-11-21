@@ -1,4 +1,4 @@
-import type { TaxonomyRepositoryOverride } from "./types";
+import type { TaxonomyRepositoryOverride } from "./types.ts";
 
 const REPO_NAME_RE = /^[A-Za-z0-9._-]{1,100}$/;
 const CATEGORY_ID_RE = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;

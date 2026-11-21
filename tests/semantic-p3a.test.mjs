@@ -4,22 +4,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generateStaticMap } from "../scripts/action.mjs";
-import {
-  DEFAULT_TAXONOMY_MAX_DRIFT_RATIO,
-  DISABLED_TAXONOMY_DISCOVERY_PROVIDER as SCRIPT_DISABLED,
-  MAX_TAXONOMY_CATEGORIES,
-  TAXONOMY_SCHEMA_VERSION,
-  buildTaxonomyDiscoveryInput as buildScriptInput,
-  parseTaxonomyOverrideFile,
-  resolvePortfolioTaxonomy as resolveScriptTaxonomy,
-  validateTaxonomyCategories as validateScriptCategories,
-} from "../scripts/taxonomy.mjs";
-import {
-  DISABLED_TAXONOMY_DISCOVERY_PROVIDER as SOURCE_DISABLED,
-  buildTaxonomyDiscoveryInput as buildSourceInput,
-  resolvePortfolioTaxonomy as resolveSourceTaxonomy,
-  validateTaxonomyCategories as validateSourceCategories,
-} from "../src/taxonomy.ts";
+import { DEFAULT_TAXONOMY_MAX_DRIFT_RATIO, DISABLED_TAXONOMY_DISCOVERY_PROVIDER, MAX_TAXONOMY_CATEGORIES, TAXONOMY_SCHEMA_VERSION, buildTaxonomyDiscoveryInput, parseTaxonomyOverrideFile, resolvePortfolioTaxonomy, validateTaxonomyCategories } from "../src/taxonomy.ts";
+
 import { buildGraph } from "../src/graph.ts";
 import { sanitizeStaticGraph } from "../src/static-graph.ts";
 
@@ -86,32 +72,30 @@ function config() {
   };
 }
 
-test("taxonomy corpus fingerprint is deterministic, order-independent, and source/static implementations match", async () => {
+test("taxonomy corpus fingerprint is deterministic and order-independent", async () => {
   const repos = [
     repo(2, "web-app", { topics: ["web", "react"], description: "  Web app  \n React " }),
     repo(1, "robot", { topics: ["robotics", "ros2"], description: "ROS2 robot" }),
   ];
-  const script = await buildScriptInput(repos);
-  const source = await buildSourceInput(repos);
-  assert.deepEqual(source, script);
-  assert.equal(script.input.schemaVersion, TAXONOMY_SCHEMA_VERSION);
-  assert.match(script.input.corpusFingerprint, /^[0-9a-f]{64}$/);
-  assert.deepEqual(script.repositories.map((item) => item.repoId), [1, 2]);
+  const result = await buildTaxonomyDiscoveryInput(repos);
+  assert.equal(result.input.schemaVersion, TAXONOMY_SCHEMA_VERSION);
+  assert.match(result.input.corpusFingerprint, /^[0-9a-f]{64}$/);
+  assert.deepEqual(result.repositories.map((item) => item.repoId), [1, 2]);
 
-  const reordered = await buildScriptInput([repos[1], repos[0]]);
-  assert.equal(reordered.input.corpusFingerprint, script.input.corpusFingerprint);
+  const reordered = await buildTaxonomyDiscoveryInput([repos[1], repos[0]]);
+  assert.equal(reordered.input.corpusFingerprint, result.input.corpusFingerprint);
 
-  const cosmetic = await buildScriptInput([
+  const cosmetic = await buildTaxonomyDiscoveryInput([
     repo(1, "robot", { topics: ["ros2", "robotics"], description: "ROS2 robot" }),
     repo(2, "web-app", { topics: ["react", "web"], description: "Web app React" }),
   ]);
-  assert.equal(cosmetic.input.corpusFingerprint, script.input.corpusFingerprint);
+  assert.equal(cosmetic.input.corpusFingerprint, result.input.corpusFingerprint);
 
-  const changed = await buildScriptInput([
+  const changed = await buildTaxonomyDiscoveryInput([
     repos[1],
     repo(2, "web-app", { topics: ["web", "react"], description: "Web app React", readmeExcerpt: "Now includes offline collaboration" }),
   ]);
-  assert.notEqual(changed.input.corpusFingerprint, script.input.corpusFingerprint);
+  assert.notEqual(changed.input.corpusFingerprint, result.input.corpusFingerprint);
 });
 
 test("taxonomy schema has stable ids, bounded categories, validated parents, and deterministic aliases", () => {
@@ -119,26 +103,24 @@ test("taxonomy schema has stable ids, bounded categories, validated parents, and
     { id: "ROBOTICS", label: " Robotics ", description: " Robot work ", aliases: ["ROS2", "ros2", "Gazebo"] },
     { id: "robot-sim", label: "Simulation", description: "Simulation projects", parentId: "ROBOTICS", aliases: [] },
   ];
-  const script = validateScriptCategories(input);
-  const source = validateSourceCategories(input);
-  assert.deepEqual(source, script);
-  assert.deepEqual(script, [
+  const result = validateTaxonomyCategories(input);
+  assert.deepEqual(result, [
     { id: "robot-sim", label: "Simulation", description: "Simulation projects", aliases: [], parentId: "robotics" },
     { id: "robotics", label: "Robotics", description: "Robot work", aliases: ["Gazebo", "ROS2"] },
   ]);
 
-  assert.throws(() => validateScriptCategories([
+  assert.throws(() => validateTaxonomyCategories([
     ...discoveredCategories,
     { ...discoveredCategories[0], label: "Duplicate" },
   ]), /Duplicate taxonomy category id/);
-  assert.throws(() => validateScriptCategories([
+  assert.throws(() => validateTaxonomyCategories([
     { id: "child", label: "Child", description: "Child", parentId: "missing" },
   ]), /Unknown parent taxonomy category/);
-  assert.throws(() => validateScriptCategories([
+  assert.throws(() => validateTaxonomyCategories([
     { id: "a", label: "A", description: "A", parentId: "b" },
     { id: "b", label: "B", description: "B", parentId: "a" },
   ]), /parent cycle/);
-  assert.throws(() => validateScriptCategories(Array.from({ length: MAX_TAXONOMY_CATEGORIES + 1 }, (_, index) => ({
+  assert.throws(() => validateTaxonomyCategories(Array.from({ length: MAX_TAXONOMY_CATEGORIES + 1 }, (_, index) => ({
     id: `category-${index}`,
     label: `Category ${index}`,
     description: `Category ${index}`,
@@ -153,7 +135,7 @@ test("taxonomy override file is strict, bounded, and provides authoritative cate
   }));
   assert.equal(parsed.version, 1);
   assert.equal(parsed.forceRediscovery, undefined);
-  assert.deepEqual(parsed.categories, validateScriptCategories(discoveredCategories));
+  assert.deepEqual(parsed.categories, validateTaxonomyCategories(discoveredCategories));
   assert.throws(() => parseTaxonomyOverrideFile("{"), /valid JSON/);
   assert.throws(() => parseTaxonomyOverrideFile(JSON.stringify({ version: 2, categories: discoveredCategories })), /version must be 1/);
 });
@@ -161,15 +143,12 @@ test("taxonomy override file is strict, bounded, and provides authoritative cate
 test("initial discovery freezes taxonomy and exact unchanged corpus avoids another provider call", async () => {
   const repos = [repo(1, "robot"), repo(2, "web")];
   const scriptProvider = discoveryProvider();
-  const sourceProvider = discoveryProvider();
-  const firstScript = await resolveScriptTaxonomy(repos, scriptProvider);
-  const firstSource = await resolveSourceTaxonomy(repos, sourceProvider);
-  assert.deepEqual(firstSource.taxonomy, firstScript.taxonomy);
+  const firstScript = await resolvePortfolioTaxonomy(repos, scriptProvider);
   assert.equal(firstScript.diagnostics.reason, "initial-discovery");
   assert.equal(scriptProvider.state.calls, 1);
   assert.equal(firstScript.taxonomy?.source.providerId, "fake-taxonomy");
 
-  const second = await resolveScriptTaxonomy(repos, scriptProvider, { previousTaxonomy: firstScript.taxonomy });
+  const second = await resolvePortfolioTaxonomy(repos, scriptProvider, { previousTaxonomy: firstScript.taxonomy });
   assert.equal(second.diagnostics.reason, "unchanged");
   assert.equal(second.diagnostics.reused, true);
   assert.equal(second.diagnostics.exactCorpusMatch, true);
@@ -180,12 +159,12 @@ test("initial discovery freezes taxonomy and exact unchanged corpus avoids anoth
 test("small corpus drift reuses discovery baseline while cumulative drift beyond threshold rediscovers", async () => {
   const baselineRepos = Array.from({ length: 10 }, (_, index) => repo(index + 1, `repo-${index}`));
   const provider = discoveryProvider();
-  const first = await resolveScriptTaxonomy(baselineRepos, provider);
+  const first = await resolvePortfolioTaxonomy(baselineRepos, provider);
   assert.equal(provider.state.calls, 1);
   const baselineFingerprint = first.taxonomy?.corpusFingerprint;
 
   const oneChanged = baselineRepos.map((item, index) => index === 0 ? { ...item, description: "meaningfully changed one" } : item);
-  const small = await resolveScriptTaxonomy(oneChanged, provider, { previousTaxonomy: first.taxonomy });
+  const small = await resolvePortfolioTaxonomy(oneChanged, provider, { previousTaxonomy: first.taxonomy });
   assert.equal(DEFAULT_TAXONOMY_MAX_DRIFT_RATIO, 0.15);
   assert.equal(small.diagnostics.changedRepositories, 1);
   assert.equal(small.diagnostics.driftRatio, 0.1);
@@ -195,7 +174,7 @@ test("small corpus drift reuses discovery baseline while cumulative drift beyond
   assert.equal(small.taxonomy?.corpusFingerprint, baselineFingerprint, "small drift must not move the frozen baseline");
 
   const twoChanged = baselineRepos.map((item, index) => index < 2 ? { ...item, description: `meaningfully changed ${index}` } : item);
-  const large = await resolveScriptTaxonomy(twoChanged, provider, { previousTaxonomy: small.taxonomy });
+  const large = await resolvePortfolioTaxonomy(twoChanged, provider, { previousTaxonomy: small.taxonomy });
   assert.equal(large.diagnostics.changedRepositories, 2);
   assert.equal(large.diagnostics.driftRatio, 0.2);
   assert.equal(large.diagnostics.reason, "drift-discovery");
@@ -207,8 +186,8 @@ test("small corpus drift reuses discovery baseline while cumulative drift beyond
 test("force rediscovery bypasses exact-corpus freeze", async () => {
   const repos = [repo(1, "one"), repo(2, "two")];
   const provider = discoveryProvider();
-  const first = await resolveScriptTaxonomy(repos, provider);
-  const forced = await resolveScriptTaxonomy(repos, provider, {
+  const first = await resolvePortfolioTaxonomy(repos, provider);
+  const forced = await resolvePortfolioTaxonomy(repos, provider, {
     previousTaxonomy: first.taxonomy,
     forceRediscovery: true,
   });
@@ -220,16 +199,14 @@ test("force rediscovery bypasses exact-corpus freeze", async () => {
 test("disabled/failing discovery never destroys an existing frozen taxonomy", async () => {
   const repos = [repo(1, "one"), repo(2, "two")];
   const provider = discoveryProvider();
-  const first = await resolveScriptTaxonomy(repos, provider);
+  const first = await resolvePortfolioTaxonomy(repos, provider);
 
-  const disabledWithoutPrevious = await resolveScriptTaxonomy(repos, SCRIPT_DISABLED);
-  const sourceDisabled = await resolveSourceTaxonomy(repos, SOURCE_DISABLED);
+  const disabledWithoutPrevious = await resolvePortfolioTaxonomy(repos, DISABLED_TAXONOMY_DISCOVERY_PROVIDER);
   assert.equal(disabledWithoutPrevious.taxonomy, undefined);
   assert.equal(disabledWithoutPrevious.diagnostics.reason, "provider-disabled");
-  assert.equal(sourceDisabled.diagnostics.reason, "provider-disabled");
 
   const changed = repos.map((item) => ({ ...item, description: `changed ${item.name}` }));
-  const disabledWithPrevious = await resolveScriptTaxonomy(changed, SCRIPT_DISABLED, {
+  const disabledWithPrevious = await resolvePortfolioTaxonomy(changed, DISABLED_TAXONOMY_DISCOVERY_PROVIDER, {
     previousTaxonomy: first.taxonomy,
     forceRediscovery: true,
   });
@@ -237,7 +214,7 @@ test("disabled/failing discovery never destroys an existing frozen taxonomy", as
   assert.equal(disabledWithPrevious.diagnostics.stale, true);
   assert.deepEqual(disabledWithPrevious.taxonomy, first.taxonomy);
 
-  const failed = await resolveScriptTaxonomy(changed, {
+  const failed = await resolvePortfolioTaxonomy(changed, {
     id: "failing",
     model: "fixture",
     async discover() { throw new Error("taxonomy service unavailable"); },
@@ -256,14 +233,14 @@ test("authoritative category override skips provider and refreshes taxonomy base
   const custom = [
     { id: "projects", label: "Projects", description: "All selected portfolio projects", aliases: ["Portfolio"] },
   ];
-  const result = await resolveScriptTaxonomy(repos, provider, {
+  const result = await resolvePortfolioTaxonomy(repos, provider, {
     overrides: { version: 1, categories: custom },
   });
   assert.equal(provider.state.calls, 0);
   assert.equal(result.diagnostics.reason, "override");
   assert.equal(result.diagnostics.overridden, true);
   assert.equal(result.taxonomy?.source.providerId, "override");
-  assert.deepEqual(result.taxonomy?.categories, validateScriptCategories(custom));
+  assert.deepEqual(result.taxonomy?.categories, validateTaxonomyCategories(custom));
   assert.match(result.taxonomy?.corpusFingerprint ?? "", /^[0-9a-f]{64}$/);
 });
 
@@ -341,7 +318,7 @@ test("static graph sanitizer preserves structurally valid taxonomy and discards 
     { ...repo(2, "beta"), html_url: "https://github.com/octocat/beta" },
   ];
   const provider = discoveryProvider();
-  const resolved = await resolveScriptTaxonomy(repos, provider);
+  const resolved = await resolvePortfolioTaxonomy(repos, provider);
   const input = buildGraph("octocat", repos, true, true);
   input.taxonomy = resolved.taxonomy;
   const valid = sanitizeStaticGraph(input, "octocat");

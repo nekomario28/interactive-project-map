@@ -1,23 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  buildGraph as buildScriptGraph,
-  normalizeSearch as normalizeScriptSearch,
-} from "../scripts/graph.mjs";
-import {
-  README_FETCH_CONCURRENCY,
-  README_RAW_BYTE_LIMIT,
-  README_TEXT_CHAR_LIMIT,
-  cleanReadmeExcerpt as cleanScriptReadme,
-  enrichReposWithReadmes as enrichScriptRepos,
-} from "../scripts/github.mjs";
-import {
-  buildGraph as buildSourceGraph,
-  normalizeSearch as normalizeSourceSearch,
-} from "../src/graph.ts";
-import {
-  cleanReadmeExcerpt as cleanSourceReadme,
-} from "../src/github.ts";
+import { buildGraph, normalizeSearch } from "../src/graph.ts";
+import { README_FETCH_CONCURRENCY, README_RAW_BYTE_LIMIT, README_TEXT_CHAR_LIMIT, cleanReadmeExcerpt, enrichReposWithReadmes } from "../src/github.ts";
+
 import {
   semanticP1AFixtures,
   unicodeNormalizationFixture,
@@ -31,32 +16,26 @@ function codePointLength(value) {
   return Array.from(value).length;
 }
 
-test("Unicode-safe normalization preserves Japanese and technology tokens in source and static paths", () => {
+test("Unicode-safe normalization preserves Japanese and technology tokens", () => {
   const { input, expected } = unicodeNormalizationFixture;
-  assert.equal(normalizeScriptSearch(input), expected);
-  assert.equal(normalizeSourceSearch(input), expected);
-  assert.match(normalizeScriptSearch("日本語の説明：ロボット制御"), /日本語の説明 ロボット制御/);
+  assert.equal(normalizeSearch(input), expected);
+  assert.match(normalizeSearch("日本語の説明：ロボット制御"), /日本語の説明 ロボット制御/);
 });
 
 test("README regression fixtures recover documented domains while language remains a separate facet", () => {
   for (const fixture of semanticP1AFixtures) {
-    for (const [name, buildGraph] of [["scripts", buildScriptGraph], ["src", buildSourceGraph]]) {
-      const readmeExcerpt = cleanScriptReadme(fixture.readme);
-      const node = repositoryNode(buildGraph("fixture-user", [{ ...fixture.repo, readmeExcerpt }], true, true));
-      assert.equal(node?.groupId, fixture.afterGroupId, `${name}/${fixture.id}: README evidence should recover the documented domain`);
-      assert.equal(node?.language, fixture.repo.language, `${name}/${fixture.id}: language remains a separate technical facet`);
-      assert.equal(Object.hasOwn(node ?? {}, "readmeExcerpt"), false, `${name}/${fixture.id}: raw README text must remain generation-only`);
-      assert.ok(node?.classification?.evidence.some((item) => item.source === "readme"), `${name}/${fixture.id}: README evidence should be inspectable`);
-    }
+    const readmeExcerpt = cleanReadmeExcerpt(fixture.readme);
+    const node = repositoryNode(buildGraph("fixture-user", [{ ...fixture.repo, readmeExcerpt }], true, true));
+    assert.equal(node?.groupId, fixture.afterGroupId, `${fixture.id}: README evidence should recover the documented domain`);
+    assert.equal(node?.language, fixture.repo.language, `${fixture.id}: language remains a separate technical facet`);
+    assert.equal(Object.hasOwn(node ?? {}, "readmeExcerpt"), false, `${fixture.id}: raw README text must remain generation-only`);
+    assert.ok(node?.classification?.evidence.some((item) => item.source === "readme"), `${fixture.id}: README evidence should be inspectable`);
   }
 });
 
 test("README cleaning removes generated noise, preserves Unicode evidence, and obeys the character cap", () => {
   const raw = `# 日本語 Robotics Tool\n\n[![build](https://img.shields.io/badge/build-passing-green)](https://example.invalid)\n<!-- generated comment -->\nUse [Nav2](https://docs.nav2.org/) with ROS2 and Raspberry Pi.\n\n\`\`\`sh\necho generated-code-noise\n\`\`\`\n\n${"🙂センサー".repeat(200)}`;
-  const scriptClean = cleanScriptReadme(raw, 96);
-  const sourceClean = cleanSourceReadme(raw, 96);
-
-  assert.equal(scriptClean, sourceClean);
+  const scriptClean = cleanReadmeExcerpt(raw, 96);
   assert.match(scriptClean, /日本語 Robotics Tool/);
   assert.match(scriptClean, /Nav2/);
   assert.doesNotMatch(scriptClean, /img\.shields|https?:\/\/|generated-code-noise|generated comment/);
@@ -82,7 +61,7 @@ test("bounded README enrichment uses canonical endpoints, bounded concurrency, b
     return new Response(`# README\n\nGazebo 日本語 ${"🙂".repeat(200)}`);
   };
 
-  const enriched = await enrichScriptRepos("fixture-user", repos, "token-123", {
+  const enriched = await enrichReposWithReadmes("fixture-user", repos, "token-123", {
     fetchImpl,
     rawByteLimit: 67,
     textCharLimit: 24,
@@ -115,7 +94,7 @@ test("README enrichment stops issuing new requests after upstream rate limiting"
     name: `rate-${index}`,
   }));
 
-  const enriched = await enrichScriptRepos("fixture-user", repos, undefined, { fetchImpl, concurrency: 1 });
+  const enriched = await enrichReposWithReadmes("fixture-user", repos, undefined, { fetchImpl, concurrency: 1 });
   assert.equal(calls, 1);
   assert.ok(enriched.every((repo) => repo.readmeExcerpt === undefined));
 });

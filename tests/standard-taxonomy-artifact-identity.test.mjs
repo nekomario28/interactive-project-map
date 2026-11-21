@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { standardizeRepositoryClassification as classifyAction } from "../scripts/standard-taxonomy-runtime.mjs";
-import { standardizeRepositoryClassification as classifyHosted } from "../src/standard-taxonomy-runtime.ts";
+import { standardizeRepositoryClassification } from "../src/standard-taxonomy-runtime.ts";
 
 function complete(raw) {
   return {
@@ -31,15 +30,12 @@ function complete(raw) {
   };
 }
 
-function assertRuntimeParity(repo) {
-  const action = classifyAction(repo).classification;
-  const hosted = classifyHosted(repo).classification;
-  assert.deepEqual(hosted, action);
-  return action;
+function classify(repo) {
+  return standardizeRepositoryClassification(repo).classification;
 }
 
 test("README documentation sections do not turn an executable robotics app into a documentation artifact", () => {
-  const classification = assertRuntimeParity(complete({
+  const classification = classify(complete({
     name: "robot-demo",
     description: "ROS 2 robot demo application for Gazebo simulation",
     readmeExcerpt: "Install with Docker, launch Gazebo, run the Behavior Tree, then read the mechanism documentation for details.",
@@ -53,7 +49,7 @@ test("README documentation sections do not turn an executable robotics app into 
 });
 
 test("documentation remains an artifact when repository identity explicitly says it is documentation", () => {
-  const classification = assertRuntimeParity(complete({
+  const classification = classify(complete({
     name: "robot-reference-docs",
     description: "Documentation site for ROS 2 robot integration",
     readmeExcerpt: "Reference pages include setup examples and runnable snippets.",

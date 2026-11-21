@@ -1,10 +1,10 @@
 import { CLASSIFICATION_VERSION, classifyRepository } from "./semantic.ts";
-import type { GalaxyEdge, GalaxyGraph, GalaxyNode, GitHubRepo, RepositoryClassification } from "./types";
+import type { GalaxyEdge, GalaxyGraph, GalaxyNode, GitHubRepo, RepositoryClassification } from "./types.ts";
 
 export { classifyRepository, normalizeSearch } from "./semantic.ts";
 
 function isProfileRepository(username: string, repo: GitHubRepo): boolean {
-  return repo.name.toLowerCase() === username.toLowerCase();
+  return String(repo?.name || "").toLowerCase() === String(username || "").toLowerCase();
 }
 
 type ClassifiedRepo = {
@@ -74,6 +74,7 @@ export function buildGraph(
           forks: repo.forks_count,
           fork: repo.fork,
           archived: repo.archived,
+          createdAt: repo.created_at ?? repo.updated_at,
           updatedAt: repo.updated_at,
           groupId,
           groupLabel: group.label,

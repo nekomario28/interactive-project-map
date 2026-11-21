@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { promoteStandardHierarchy as promoteScript } from "../scripts/standard-hierarchy.mjs";
+import { promoteStandardHierarchy as promoteScript } from "../src/standard-hierarchy.ts";
 import { promoteStandardHierarchy as promoteSource } from "../src/standard-hierarchy.ts";
 import { sanitizeStaticGraph } from "../src/static-graph.ts";
-import { STANDARD_TAXONOMY_ID } from "../scripts/standard-taxonomy.mjs";
+import { STANDARD_TAXONOMY_ID } from "../src/standard-taxonomy.ts";
 
 const categories = [
   { id: "robotics-automation", label: "Robotics & Automation", description: "Robotics, autonomous systems, robot control, and physical automation projects.", aliases: ["robotics"] },

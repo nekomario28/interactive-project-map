@@ -8,7 +8,7 @@ import type {
   TaxonomyAdjudicationProvider,
   TaxonomyAdjudicationResult,
   TaxonomyAssignmentResult,
-} from "./types";
+} from "./types.ts";
 
 export const TAXONOMY_ADJUDICATION_VERSION = 1;
 export const DEFAULT_TAXONOMY_ADJUDICATION_MIN_CONFIDENCE = 0.7;

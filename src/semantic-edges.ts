@@ -8,7 +8,7 @@ import type {
   SemanticEdge,
   SemanticEdgeDiagnostics,
   SemanticEdgeGenerationResult,
-} from "./types";
+} from "./types.ts";
 
 export const DEFAULT_SEMANTIC_TOP_K = 3;
 export const DEFAULT_SEMANTIC_MIN_SIMILARITY = 0.72;
@@ -41,7 +41,7 @@ function boundedMaxEdges(value: number | undefined, documents: number, topK: num
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length || a.length === 0) throw new Error("Semantic vectors must have one consistent non-zero dimension");
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) throw new Error("Semantic vectors must have one consistent non-zero dimension");
   let dot = 0;
   let normA = 0;
   let normB = 0;

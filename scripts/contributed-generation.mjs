@@ -1,7 +1,7 @@
 import { selectContributedRepositories } from "./contributed-ranking.mjs";
-import { attachContributedRepositories } from "./contributed-graph.mjs";
-import { fetchPublicExternalContributions } from "./external-contributions.mjs";
-import { classifyRepository } from "./semantic.mjs";
+import { attachContributedRepositories } from "../src/contributed-graph.ts";
+import { fetchPublicExternalContributions } from "../src/external-contributions.ts";
+import { classifyRepository } from "../src/semantic.ts";
 
 function classificationInput(repository) {
   return {

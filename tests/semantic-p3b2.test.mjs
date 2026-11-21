@@ -4,17 +4,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generateStaticMap } from "../scripts/action.mjs";
-import {
-  DEFAULT_TAXONOMY_ADJUDICATION_MAX_CASES,
-  DISABLED_TAXONOMY_ADJUDICATOR as SCRIPT_DISABLED,
-  HARD_TAXONOMY_ADJUDICATION_MAX_CASES,
-  adjudicateAmbiguousTaxonomyAssignments as adjudicateScript,
-} from "../scripts/taxonomy-adjudication.mjs";
-import {
-  DISABLED_TAXONOMY_ADJUDICATOR as SOURCE_DISABLED,
-  adjudicateAmbiguousTaxonomyAssignments as adjudicateSource,
-} from "../src/taxonomy-adjudication.ts";
-import { resolvePortfolioTaxonomy } from "../scripts/taxonomy.mjs";
+import { DEFAULT_TAXONOMY_ADJUDICATION_MAX_CASES, DISABLED_TAXONOMY_ADJUDICATOR, HARD_TAXONOMY_ADJUDICATION_MAX_CASES, adjudicateAmbiguousTaxonomyAssignments } from "../src/taxonomy-adjudication.ts";
+
+import { resolvePortfolioTaxonomy } from "../src/taxonomy.ts";
 import { buildGraph } from "../src/graph.ts";
 import { sanitizeStaticGraph } from "../src/static-graph.ts";
 
@@ -61,16 +53,14 @@ function accepted(cases) {
   return cases.map((item) => ({ repoName: item.repoName, categoryId: item.repoName.includes("web") ? "web-apps" : "robotics", confidence: 0.91, secondaryTags: ["judged"], reason: `Ambiguous evidence resolved for ${item.repoName}` }));
 }
 
-test("disabled adjudicator makes zero calls and source/script implementations match", async () => {
+test("disabled adjudicator makes zero calls", async () => {
   const repos = [repo(1, "mixed")]; const taxonomy = await taxonomyFor(repos); const base = baseAssignment(["mixed"]);
-  const script = await adjudicateScript(repos, taxonomy, base, SCRIPT_DISABLED);
-  const source = await adjudicateSource(repos, taxonomy, base, SOURCE_DISABLED);
-  assert.deepEqual(source, script);
-  assert.deepEqual(script.assignments, {});
-  assert.deepEqual(script.ambiguous, ["mixed"]);
-  assert.equal(script.diagnostics.attempted, 0);
-  assert.equal(script.diagnostics.calls, 0);
-  assert.equal(script.diagnostics.disabled, true);
+  const result = await adjudicateAmbiguousTaxonomyAssignments(repos, taxonomy, base, DISABLED_TAXONOMY_ADJUDICATOR);
+  assert.deepEqual(result.assignments, {});
+  assert.deepEqual(result.ambiguous, ["mixed"]);
+  assert.equal(result.diagnostics.attempted, 0);
+  assert.equal(result.diagnostics.calls, 0);
+  assert.equal(result.diagnostics.disabled, true);
 });
 
 test("only P3B1 ambiguous repositories are sent to adjudicator and accepted decisions become llm assignments", async () => {
@@ -79,7 +69,7 @@ test("only P3B1 ambiguous repositories are sent to adjudicator and accepted deci
   const existing = { already: { categoryId: "robotics", categoryLabel: "Robotics", secondaryTags: [], confidence: 0.95, method: "semantic", evidence: [] } };
   const base = baseAssignment(["mixed", "web-mixed"], existing);
   const provider = adjudicator(accepted);
-  const result = await adjudicateScript(repos, taxonomy, base, provider);
+  const result = await adjudicateAmbiguousTaxonomyAssignments(repos, taxonomy, base, provider);
   assert.equal(provider.state.calls, 1);
   assert.deepEqual(provider.state.cases.map((item) => item.repoName).sort(), ["mixed", "web-mixed"]);
   assert.equal(provider.state.cases.some((item) => item.repoName === "already"), false);
@@ -100,7 +90,7 @@ test("low-confidence/null decisions decline, malformed decisions stay ambiguous,
     if (item.repoName === "bad-category") return { repoName: item.repoName, categoryId: "invented", confidence: 0.95, reason: "invented" };
     return { repoName: item.repoName, categoryId: "robotics", categoryLabel: "SPOOF", confidence: 0.95, reason: "" };
   }));
-  const result = await adjudicateScript(repos, taxonomy, baseAssignment(repos.map((item) => item.name)), provider);
+  const result = await adjudicateAmbiguousTaxonomyAssignments(repos, taxonomy, baseAssignment(repos.map((item) => item.name)), provider);
   assert.deepEqual(result.assignments, {});
   assert.deepEqual(result.ambiguous, ["bad-category", "bad-reason", "low", "null"]);
   assert.equal(result.diagnostics.declined, 2);
@@ -111,7 +101,7 @@ test("adjudication has a hard 20-case cap and bounded batching", async () => {
   const repos = Array.from({ length: 35 }, (_, index) => repo(index + 1, `repo-${String(index).padStart(2, "0")}`));
   const taxonomy = await taxonomyFor(repos);
   const provider = adjudicator(accepted);
-  const result = await adjudicateScript(repos, taxonomy, baseAssignment(repos.map((item) => item.name)), provider, { maxCases: 999, batchSize: 5 });
+  const result = await adjudicateAmbiguousTaxonomyAssignments(repos, taxonomy, baseAssignment(repos.map((item) => item.name)), provider, { maxCases: 999, batchSize: 5 });
   assert.equal(DEFAULT_TAXONOMY_ADJUDICATION_MAX_CASES, 20);
   assert.equal(HARD_TAXONOMY_ADJUDICATION_MAX_CASES, 20);
   assert.equal(result.diagnostics.attempted, 20);
@@ -126,11 +116,11 @@ test("provider exception/cardinality mismatch preserve P3B1 assignments and ambi
   const repos = [repo(1, "already"), repo(2, "mixed")]; const taxonomy = await taxonomyFor(repos);
   const existing = { already: { categoryId: "robotics", categoryLabel: "Robotics", secondaryTags: [], confidence: 0.95, method: "deterministic", evidence: [] } };
   const base = baseAssignment(["mixed"], existing);
-  const failed = await adjudicateScript(repos, taxonomy, base, { id: "failing", model: "v1", async adjudicate() { throw new Error("judge unavailable"); } });
+  const failed = await adjudicateAmbiguousTaxonomyAssignments(repos, taxonomy, base, { id: "failing", model: "v1", async adjudicate() { throw new Error("judge unavailable"); } });
   assert.equal(failed.assignments.already.method, "deterministic");
   assert.deepEqual(failed.ambiguous, ["mixed"]);
   assert.match(failed.error ?? "", /judge unavailable/);
-  const wrong = await adjudicateScript(repos, taxonomy, base, { id: "wrong", model: "v1", async adjudicate() { return []; } });
+  const wrong = await adjudicateAmbiguousTaxonomyAssignments(repos, taxonomy, base, { id: "wrong", model: "v1", async adjudicate() { return []; } });
   assert.deepEqual(wrong.ambiguous, ["mixed"]);
   assert.match(wrong.error ?? "", /decisions for 1 cases/);
 });

@@ -1,5 +1,5 @@
 import { classifyRepository, extractFrameworkIdentifiers } from "./semantic.ts";
-import type { Env, GitHubRepo } from "./types";
+import type { Env, GitHubRepo } from "./types.ts";
 
 const API = "https://api.github.com";
 const MAX_PAGES = 5;
@@ -66,10 +66,14 @@ type GitHubContentEntry = {
   path?: unknown;
 };
 
-function githubHeaders(token: string | undefined, accept: string): Record<string, string> {
+type GitHubAuth = string | Pick<Env, "GITHUB_TOKEN"> | undefined;
+
+function githubHeaders(auth: GitHubAuth, accept: string): Record<string, string> {
+  const worker = typeof auth === "object" && auth !== null;
+  const token = worker ? auth.GITHUB_TOKEN : auth;
   const headers: Record<string, string> = {
     Accept: accept,
-    "User-Agent": "github-project-galaxy-api",
+    "User-Agent": worker ? "github-project-galaxy-api" : "interactive-project-map-pages",
     "X-GitHub-Api-Version": "2022-11-28",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -153,7 +157,7 @@ async function readBoundedUtf8(response: Response, maxBytes: number): Promise<st
 async function fetchReadmeOutcome(
   username: string,
   repoName: string,
-  token: string | undefined,
+  token: GitHubAuth,
   options: Required<Pick<ReadmeEnrichmentOptions, "rawByteLimit" | "textCharLimit">> & { fetchImpl: typeof fetch },
 ): Promise<ReadmeFetchOutcome> {
   const url = `${API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repoName)}/readme`;
@@ -174,7 +178,7 @@ async function fetchReadmeOutcome(
 export async function enrichReposWithReadmes(
   username: string,
   repos: GitHubRepo[],
-  env: Env,
+  env: GitHubAuth,
   options: ReadmeEnrichmentOptions = {},
 ): Promise<GitHubRepo[]> {
   if (!repos.length) return [];
@@ -192,7 +196,7 @@ export async function enrichReposWithReadmes(
       cursor += 1;
       if (index >= enriched.length) return;
       if (enriched[index].readmeExcerpt) continue;
-      const outcome = await fetchReadmeOutcome(username, enriched[index].name, env.GITHUB_TOKEN, {
+      const outcome = await fetchReadmeOutcome(username, enriched[index].name, env, {
         fetchImpl,
         rawByteLimit,
         textCharLimit,
@@ -207,7 +211,7 @@ export async function enrichReposWithReadmes(
 }
 
 function encodeGitHubPath(path: string): string {
-  return path.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+  return String(path).split("/").map((segment) => encodeURIComponent(segment)).join("/");
 }
 
 function rootManifestCandidates(value: unknown): string[] {
@@ -226,7 +230,7 @@ function rootManifestCandidates(value: unknown): string[] {
 async function fetchManifestOutcome(
   username: string,
   repoName: string,
-  token: string | undefined,
+  token: GitHubAuth,
   options: Required<Pick<ManifestEnrichmentOptions, "rawByteLimit" | "fileLimit">> & { fetchImpl: typeof fetch },
 ): Promise<ManifestFetchOutcome> {
   const rootUrl = `${API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repoName)}/contents`;
@@ -260,7 +264,7 @@ async function fetchManifestOutcome(
 export async function enrichReposWithManifests(
   username: string,
   repos: GitHubRepo[],
-  env: Env,
+  env: GitHubAuth,
   options: ManifestEnrichmentOptions = {},
 ): Promise<GitHubRepo[]> {
   if (!repos.length) return [];
@@ -283,7 +287,7 @@ export async function enrichReposWithManifests(
       if (index >= enriched.length) return;
       const target = enriched[index];
       if (Array.isArray(target.manifests) && Array.isArray(target.frameworks)) continue;
-      const outcome = await fetchManifestOutcome(username, target.name, env.GITHUB_TOKEN, { fetchImpl, rawByteLimit, fileLimit });
+      const outcome = await fetchManifestOutcome(username, target.name, env, { fetchImpl, rawByteLimit, fileLimit });
       if (outcome.manifests.length) target.manifests = [...new Set([...(target.manifests ?? []), ...outcome.manifests])];
       if (outcome.frameworks.length) target.frameworks = [...new Set([...(target.frameworks ?? []), ...outcome.frameworks])];
       if (outcome.stop) stop = true;
@@ -300,28 +304,47 @@ export function shouldProbeManifests(repo: GitHubRepo): boolean {
 }
 
 function mergeEnrichedByName(repos: GitHubRepo[], replacements: GitHubRepo[]): GitHubRepo[] {
-  const byName = new Map(replacements.map((repo) => [repo.name.toLowerCase(), repo]));
-  return repos.map((repo) => byName.get(repo.name.toLowerCase()) ?? repo);
+  const byName = new Map(replacements.map((repo) => [String(repo.name).toLowerCase(), repo]));
+  return repos.map((repo) => byName.get(String(repo.name).toLowerCase()) ?? repo);
+}
+
+export async function fetchPublicFollowerCount(
+  username: string,
+  token: string | undefined,
+  options: { fetchImpl?: typeof fetch } = {},
+): Promise<number | null> {
+  try {
+    const response = await (options.fetchImpl ?? fetch)(`${API}/users/${encodeURIComponent(username)}`, {
+      headers: githubHeaders(token, "application/vnd.github+json"),
+    });
+    if (!response.ok) return null;
+    const profile = await response.json() as { login?: unknown; followers?: unknown };
+    if (typeof profile.login !== "string" || profile.login.toLowerCase() !== username.toLowerCase()) return null;
+    return Number.isSafeInteger(profile.followers) && Number(profile.followers) >= 0 ? profile.followers as number : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchPublicRepos(
   username: string,
-  env: Env,
+  env: GitHubAuth,
   maxRepos: number,
   options: RepoFetchOptions = {},
 ): Promise<GitHubRepo[]> {
   const repos: GitHubRepo[] = [];
   const includeForks = options.includeForks ?? true;
   const includeArchived = options.includeArchived ?? true;
-  const headers = githubHeaders(env.GITHUB_TOKEN, "application/vnd.github+json");
+  const worker = typeof env === "object" && env !== null;
+  const headers = githubHeaders(env, "application/vnd.github+json");
 
   for (let page = 1; page <= MAX_PAGES && repos.length < maxRepos; page += 1) {
     const url = `${API}/users/${encodeURIComponent(username)}/repos?type=owner&sort=updated&direction=desc&per_page=100&page=${page}`;
     const response = await fetch(url, { headers });
 
-    if (response.status === 404) throw new Error("GitHub user not found");
+    if (response.status === 404) throw new Error(worker ? "GitHub user not found" : `GitHub user not found: ${username}`);
     if (response.status === 403 || response.status === 429) {
-      throw new Error("GitHub API rate limit reached. Configure GITHUB_TOKEN for production.");
+      throw new Error(worker ? "GitHub API rate limit reached. Configure GITHUB_TOKEN for production." : "GitHub API rate limit reached. Configure PROJECT_MAP_GITHUB_TOKEN if needed.");
     }
     if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
 

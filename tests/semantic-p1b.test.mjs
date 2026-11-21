@@ -1,18 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGraph as buildScriptGraph } from "../scripts/graph.mjs";
-import {
-  MANIFEST_FETCH_CONCURRENCY,
-  MANIFEST_FILE_LIMIT,
-  MANIFEST_PROBE_CONFIDENCE_THRESHOLD,
-  MANIFEST_RAW_BYTE_LIMIT,
-  enrichReposWithManifests as enrichScriptManifests,
-  shouldProbeManifests as shouldScriptProbeManifests,
-} from "../scripts/github.mjs";
-import { classifyRepository as classifyScriptRepository } from "../scripts/semantic.mjs";
-import { buildGraph as buildSourceGraph } from "../src/graph.ts";
-import { classifyRepository as classifySourceRepository } from "../src/semantic.ts";
-import { shouldProbeManifests as shouldSourceProbeManifests } from "../src/github.ts";
+import { buildGraph } from "../src/graph.ts";
+import { MANIFEST_FETCH_CONCURRENCY, MANIFEST_FILE_LIMIT, MANIFEST_PROBE_CONFIDENCE_THRESHOLD, MANIFEST_RAW_BYTE_LIMIT, enrichReposWithManifests, shouldProbeManifests } from "../src/github.ts";
+import { classifyRepository } from "../src/semantic.ts";
 
 function repo(name, language = "TypeScript", overrides = {}) {
   return {
@@ -35,7 +25,7 @@ function repositoryNode(graph) {
   return graph.nodes.find((node) => node.type === "repository");
 }
 
-test("source and static deterministic classifiers stay in exact parity", () => {
+test("deterministic classifiers preserve domain fixture expectations", () => {
   const fixtures = [
     repo("unknown-cpp", "C++"),
     repo("jp-robot", "Python", { description: "ROS2でロボット制御と自律走行を行う" }),
@@ -43,25 +33,24 @@ test("source and static deterministic classifiers stay in exact parity", () => {
     repo("mixed", "TypeScript", { topics: ["react"], frameworks: ["torch"] }),
   ];
 
-  for (const fixture of fixtures) {
-    assert.deepEqual(classifySourceRepository(fixture), classifyScriptRepository(fixture), fixture.name);
+  const expected = ["uncategorized", "robotics", "robotics", "web-apps"];
+  for (const [index, fixture] of fixtures.entries()) {
+    assert.equal(classifyRepository(fixture).categoryId, expected[index], fixture.name);
   }
 });
 
 test("unknown project becomes Uncategorized instead of its implementation language", () => {
-  for (const buildGraph of [buildScriptGraph, buildSourceGraph]) {
-    const node = repositoryNode(buildGraph("example", [repo("opaque-project", "C++")], true, true));
-    assert.equal(node?.groupId, "uncategorized");
-    assert.equal(node?.groupLabel, "Uncategorized");
-    assert.equal(node?.language, "C++");
-    assert.equal(node?.classification?.categoryId, "uncategorized");
-    assert.equal(node?.classification?.confidence, 0);
-    assert.deepEqual(node?.classification?.evidence, []);
-  }
+  const node = repositoryNode(buildGraph("example", [repo("opaque-project", "C++")], true, true));
+  assert.equal(node?.groupId, "uncategorized");
+  assert.equal(node?.groupLabel, "Uncategorized");
+  assert.equal(node?.language, "C++");
+  assert.equal(node?.classification?.categoryId, "uncategorized");
+  assert.equal(node?.classification?.confidence, 0);
+  assert.deepEqual(node?.classification?.evidence, []);
 });
 
 test("Japanese and ASCII aliases contribute structured description evidence without language evidence", () => {
-  const classification = classifyScriptRepository(repo("jp-robot", "Python", {
+  const classification = classifyRepository(repo("jp-robot", "Python", {
     description: "ROS2でロボット制御と自律走行を行う",
   }));
 
@@ -73,7 +62,7 @@ test("Japanese and ASCII aliases contribute structured description evidence with
 });
 
 test("manifest identity and dependency hints are high-weight deterministic evidence", () => {
-  const classification = classifyScriptRepository(repo("ros-package", "C++", {
+  const classification = classifyRepository(repo("ros-package", "C++", {
     manifests: ["package.xml"],
     frameworks: ["rclpy"],
   }));
@@ -86,11 +75,11 @@ test("manifest identity and dependency hints are high-weight deterministic evide
 });
 
 test("ambiguous evidence preserves the losing category and lowers confidence", () => {
-  const ambiguous = classifyScriptRepository(repo("mixed", "TypeScript", {
+  const ambiguous = classifyRepository(repo("mixed", "TypeScript", {
     topics: ["react"],
     frameworks: ["torch"],
   }));
-  const clear = classifyScriptRepository(repo("clear-web", "TypeScript", {
+  const clear = classifyRepository(repo("clear-web", "TypeScript", {
     topics: ["react"],
     description: "web frontend react application",
   }));
@@ -102,14 +91,12 @@ test("ambiguous evidence preserves the losing category and lowers confidence", (
 });
 
 test("graph emits classificationVersion and compatibility group fields while preserving language", () => {
-  for (const buildGraph of [buildScriptGraph, buildSourceGraph]) {
-    const graph = buildGraph("example", [repo("robot", "Python", { topics: ["robotics"] })], true, true);
-    const node = repositoryNode(graph);
-    assert.equal(graph.classificationVersion, 1);
-    assert.equal(node?.groupId, node?.classification?.categoryId);
-    assert.equal(node?.groupLabel, node?.classification?.categoryLabel);
-    assert.equal(node?.language, "Python");
-  }
+  const graph = buildGraph("example", [repo("robot", "Python", { topics: ["robotics"] })], true, true);
+  const node = repositoryNode(graph);
+  assert.equal(graph.classificationVersion, 1);
+  assert.equal(node?.groupId, node?.classification?.categoryId);
+  assert.equal(node?.groupLabel, node?.classification?.categoryLabel);
+  assert.equal(node?.language, "Python");
 });
 
 test("bounded manifest enrichment probes only root candidates and reads at most the file cap", async () => {
@@ -138,7 +125,7 @@ test("bounded manifest enrichment probes only root candidates and reads at most 
     throw new Error(`unexpected raw manifest: ${target}`);
   };
 
-  const [enriched] = await enrichScriptManifests("example", [repo("bounded")], "token-456", {
+  const [enriched] = await enrichReposWithManifests("example", [repo("bounded")], "token-456", {
     fetchImpl,
     fileLimit: 2,
     rawByteLimit: 128,
@@ -152,7 +139,7 @@ test("bounded manifest enrichment probes only root candidates and reads at most 
   assert.equal(calls[0].headers.get("Accept"), "application/vnd.github+json");
   assert.equal(calls[0].headers.get("Authorization"), "Bearer token-456");
   assert.equal(calls[1].headers.get("Accept"), "application/vnd.github.raw+json");
-  assert.equal(classifyScriptRepository(enriched).categoryId, "robotics");
+  assert.equal(classifyRepository(enriched).categoryId, "robotics");
 });
 
 test("manifest enrichment stops issuing new requests after upstream rate limiting", async () => {
@@ -162,7 +149,7 @@ test("manifest enrichment stops issuing new requests after upstream rate limitin
     return new Response("rate limited", { status: 429 });
   };
   const repos = Array.from({ length: 5 }, (_, index) => repo(`rate-${index}`));
-  const enriched = await enrichScriptManifests("example", repos, undefined, { fetchImpl, concurrency: 1 });
+  const enriched = await enrichReposWithManifests("example", repos, undefined, { fetchImpl, concurrency: 1 });
   assert.equal(calls, 1);
   assert.ok(enriched.every((item) => item.manifests === undefined && item.frameworks === undefined));
 });
@@ -173,10 +160,10 @@ test("manifest probing is adaptive and skips already high-confidence determinist
     topics: ["robotics"],
     description: "ROS2 Gazebo robot navigation with Nav2 and MoveIt2",
   });
-  assert.equal(shouldScriptProbeManifests(unknown), true);
-  assert.equal(shouldSourceProbeManifests(unknown), true);
-  assert.equal(shouldScriptProbeManifests(strong), false);
-  assert.equal(shouldSourceProbeManifests(strong), false);
+  assert.equal(shouldProbeManifests(unknown), true);
+  assert.equal(shouldProbeManifests(unknown), true);
+  assert.equal(shouldProbeManifests(strong), false);
+  assert.equal(shouldProbeManifests(strong), false);
   assert.equal(MANIFEST_PROBE_CONFIDENCE_THRESHOLD, 0.8);
 });
 
