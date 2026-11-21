@@ -107,7 +107,7 @@ test("bounded manifest enrichment probes only root candidates and reads at most 
     const target = String(url);
     active += 1;
     maxActive = Math.max(maxActive, active);
-    await new Promise((resolve) => setTimeout(resolve, 3));
+    await new Promise((resolve) => { setTimeout(resolve, 3); });
     active -= 1;
     calls.push({ target, headers: new Headers(init?.headers) });
     if (target.endsWith("/contents")) {

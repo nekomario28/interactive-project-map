@@ -9,6 +9,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
+    "lint": "eslint .",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
@@ -22,7 +23,7 @@
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:webkit": "playwright test --project=webkit",
     "evaluate:semantic": "node scripts/evaluate-semantic.mjs",
-    "validate:pages": "npm run build:pages && html-validate \"site/**/*.html\" && eslint site && node scripts/validate-pages.mjs",
+    "validate:pages": "npm run build:pages && html-validate \"site/**/*.html\" && npm run lint && node scripts/validate-pages.mjs",
     "validate:actions": "bash scripts/validate-actions.sh",
     "validate": "npm run validate:pages && npm run validate:actions",
     "verify": "npm run typecheck && npm run check:worker && npm run check:action && npm run check:pages && npm run check:users && npm run check:design && npm test && npm run validate",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@playwright/test": "1.65.0",
     "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "html-validate": "^11.21.0",
     "stylelint": "17.16.0",
     "typescript": "^7.0.2",

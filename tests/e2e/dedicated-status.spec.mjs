@@ -264,7 +264,7 @@ test("Radial and Tree render archived/fork Contributed repositories as the prima
       await page.goto(`/${style}/?username=example&style=${style}`);
       await expect(page.locator("#status")).toBeHidden();
 
-      const sample = await expect.poll(async () => page.evaluate((id) => {
+      await expect.poll(async () => page.evaluate((id) => {
         const node = state.nodes.find((item) => item.id === id);
         if (!node) return null;
         const point = worldToScreen(node.x, node.y);

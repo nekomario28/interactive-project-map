@@ -1,5 +1,5 @@
 "use strict";
-/* global state, canvas, ctx, hash, clamp, hitTest, nodeRadius, nodeOpacity, nodeColor, worldToScreen, screenToWorld, boxesOverlap, labelBox, matchesQuery, drawNodesAndLabels, updateDetails, draw, subtitle, detailsDescription, buildObsidianLayout */
+/* global state, canvas, ctx, hash, clamp, hitTest, nodeRadius, nodeOpacity, nodeColor, worldToScreen, screenToWorld, boxesOverlap, labelBox, drawNodesAndLabels, updateDetails, draw, subtitle, detailsDescription */
 
 (() => {
   // Obsidian-like runtime: one global force system with four user-facing
