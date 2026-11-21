@@ -16,7 +16,7 @@ test("Galaxy Classic owns its runtime identity canonically", () => {
 
 test("public builder emits canonical Galaxy Classic without postprocess identity or copy ownership", () => {
   assert.doesNotMatch(postprocess, /function isolateRuntime/);
-  assert.doesNotMatch(postprocess, /replaceAll\('\"galaxy\"'/);
+  assert.doesNotMatch(postprocess, /replaceAll\('"galaxy"'/);
   assert.match(builder, /\["public-galaxy-classic\.js", "galaxy-classic-runtime\.js"\]/);
   assert.doesNotMatch(postprocess, /public-galaxy-classic\.js|galaxy-classic-runtime\.js.*copyFile/);
   assert.doesNotMatch(postprocess, /classicTemplate/);

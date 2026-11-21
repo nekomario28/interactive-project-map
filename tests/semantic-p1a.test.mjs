@@ -75,7 +75,7 @@ test("bounded README enrichment uses canonical endpoints, bounded concurrency, b
   const fetchImpl = async (url, init) => {
     active += 1;
     maxActive = Math.max(maxActive, active);
-    await new Promise((resolve) => setTimeout(resolve, 4));
+    await new Promise((resolve) => { setTimeout(resolve, 4); });
     active -= 1;
     calls.push({ url: String(url), headers: new Headers(init?.headers) });
     if (String(url).endsWith("/missing/readme")) return new Response("", { status: 404 });

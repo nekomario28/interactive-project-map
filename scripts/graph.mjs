@@ -1,4 +1,4 @@
-import { CLASSIFICATION_VERSION, classifyRepository, normalizeSearch } from "./semantic.mjs";
+import { CLASSIFICATION_VERSION, classifyRepository } from "./semantic.mjs";
 
 export { classifyRepository, normalizeSearch } from "./semantic.mjs";
 

@@ -1,5 +1,5 @@
 "use strict";
-/* global state, canvas, ctx, hash, username, drawBackground, draw, canvasSize, worldToScreen */
+/* global state, ctx, hash, username, draw, canvasSize, worldToScreen */
 
 (() => {
   const TILE = { width: 960, height: 720 };
@@ -146,11 +146,7 @@
     return { width: TILE.width * transform.scale, height: TILE.height * transform.scale, scale: transform.scale, transform };
   }
 
-  function scaleAroundViewport(value, center, scale) {
-    return center + (value - center) * scale;
-  }
-
-  function starPoint(layer, index, width, height) {
+  function starPoint(layer, index, _width, _height) {
     const tile = layerTile(layer);
     const xSeed = hash(`${username}:cosmic:${layer.id}:x:${index}`);
     const ySeed = hash(`${username}:cosmic:${layer.id}:y:${index}`);
@@ -215,7 +211,7 @@
     return cameraDepthTransform(HAZE_DEPTH).scale;
   }
 
-  function hazePoint(index, transform, tile, width, height) {
+  function hazePoint(index, transform, tile, _width, _height) {
     const baseX = unit(hash(`${username}:haze:x:${index}`)) * HAZE_TILE.width;
     const baseY = unit(hash(`${username}:haze:y:${index}`)) * HAZE_TILE.height;
     return {

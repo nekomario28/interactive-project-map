@@ -20,7 +20,7 @@ const DUST_ANGLE = "angle=arm*TAU/4+t*TAU*2.1+jitter*.008;";
 const DUST_ANGLE_DYNAMIC = "angle=arm*TAU/armCount+(pitch>0?Math.log(Math.max(1,radius/42))/Math.tan(pitch):t*TAU*winding)+jitter*.008;";
 const DUST_CALL = "dust=createSpiralDust(THREE,username);";
 const DUST_CALL_GALAXY = "dust=createSpiralDust(THREE,username,threeStyle===\"galaxy\"?galaxyArmCount(graph):4,threeStyle===\"galaxy\"?1.35:2.1,threeStyle===\"galaxy\"?GALAXY_LOG_PITCH:0);";
-const DUST_CALL_GALAXY_ALIGNED = `${DUST_CALL_GALAXY}if(threeStyle===\"galaxy\")dust.rotation.x=0;`;
+const DUST_CALL_GALAXY_ALIGNED = `${DUST_CALL_GALAXY}if(threeStyle==="galaxy")dust.rotation.x=0;`;
 const MOTION_INIT_ANCHOR = "let edgeLines=null;const edgeMaterial=";
 const MOTION_INIT = "const galaxyMotion=threeStyle===\"galaxy\"?createGalaxyMotionModel(THREE,graph,positions,nodeMeshes):null;let edgeLines=null;if(galaxyMotion)window.ProjectMapThreejsGalaxyMotion=Object.freeze({snapshot:()=>({...galaxyMotion.snapshot(),armPlane:\"galactic-disc\",armPlaneTilt:dust.rotation.x,persistentEdgeObjects:edgeLines?1:0})});const edgeMaterial=";
 const EDGE_BUILD = 'const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.Float32BufferAttribute(values,3));edgeLines=new THREE.LineSegments(geometry,edgeMaterial);';

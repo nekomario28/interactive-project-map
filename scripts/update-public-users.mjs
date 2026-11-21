@@ -68,7 +68,7 @@ export async function retryCensusRequest(request, {
   // A Retry-After or x-ratelimit-reset hint replaces that step and is still capped at 120s.
   attempts = 7,
   maxDelayMs = MAX_CENSUS_DELAY_MS,
-  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); }),
   now = () => Date.now(),
   random = Math.random,
 } = {}) {
@@ -115,7 +115,7 @@ let nextCodeSearchAt = 0;
 async function githubApi(endpoint, accept = "application/vnd.github+json") {
   if (endpoint.startsWith("search/code?")) {
     const wait = Math.max(0, nextCodeSearchAt - Date.now());
-    if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+    if (wait) await new Promise((resolve) => { setTimeout(resolve, wait); });
     nextCodeSearchAt = Date.now() + codeSearchGapMs();
   }
   let stdout;

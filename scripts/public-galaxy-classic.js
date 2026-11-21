@@ -1,5 +1,5 @@
 "use strict";
-/* global state, clamp, hash, collisionRadius, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, palette, console, ownerPlanetScale, drawOwnerPlanetCoreStats, drawOwnerStatsSecondaryLabel */
+/* global state, clamp, hash, collisionRadius, subtitle, detailsDescription, fitView, draw, nodeRadius, drawBackground, drawEdges, drawNodesAndLabels, matchesQuery, worldToScreen, ctx, displayLabel, labelBox, boxesOverlap, ownerPlanetScale, drawOwnerPlanetCoreStats, drawOwnerStatsSecondaryLabel */
 
 window.addEventListener("DOMContentLoaded", () => {
   if (state.style !== "galaxy-classic") return;
@@ -518,7 +518,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const repoCount = state.graph?.repositoryCount ?? state.nodes.filter((node) => node.type === "repository").length;
     const forceRepositories = repoCount <= 48;
-    const focus = state.selected || state.hovered;
     const candidates = [];
 
     for (const node of state.nodes) {

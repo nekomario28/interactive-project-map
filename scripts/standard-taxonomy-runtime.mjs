@@ -25,7 +25,7 @@ function keywordMatches(text, keyword) {
   if (!needle) return false;
   if (/[^\x00-\x7F]/u.test(needle)) return haystack.includes(needle);
   if (needle.length <= 2) return haystack.split(" ").includes(needle);
-  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\ /g, "\\s+");
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
   return new RegExp(`(^|[^a-z0-9+#.-])${escaped}(?=$|[^a-z0-9+#.-])`, "u").test(haystack);
 }
 
