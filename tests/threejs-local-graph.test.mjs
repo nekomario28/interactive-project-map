@@ -6,14 +6,14 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
-import { applyThreejsLocalGraph } from "../scripts/apply-threejs-local-graph.mjs";
+import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
 import { patchThreejsLocalGraphPage, patchThreejsLocalGraphRuntime } from "../scripts/public-threejs-local-graph.mjs";
 
-test("Three.js Local Graph adapter uses the shared projection and remains idempotent", async () => {
+test("the active Three.js stage attaches Local Graph with the shared projection and remains idempotent", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-local-graph-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    const first = await applyThreejsLocalGraph({ siteDir: root });
+    const first = await applyThreejsSearchContext({ siteDir: root });
     assert.equal(first.injected, true);
 
     const [html, runtime] = await Promise.all([
@@ -36,7 +36,7 @@ test("Three.js Local Graph adapter uses the shared projection and remains idempo
     const syntax = spawnSync(process.execPath, ["--check", join(root, "threejs-viewer.js")], { encoding: "utf8" });
     assert.equal(syntax.status, 0, syntax.stderr);
 
-    const second = await applyThreejsLocalGraph({ siteDir: root });
+    const second = await applyThreejsSearchContext({ siteDir: root });
     assert.equal(second.injected, false);
     const twice = await readFile(join(root, "threejs-viewer.js"), "utf8");
     assert.equal((twice.match(/IPM_THREEJS_LOCAL_GRAPH_P2/g) || []).length, 1);
@@ -45,10 +45,10 @@ test("Three.js Local Graph adapter uses the shared projection and remains idempo
   }
 });
 
-test("canonical Local Graph composer owns semantics while apply stage stays I/O-only", async () => {
+test("canonical Local Graph composer owns semantics while the active stage composes it", async () => {
   const [canonical, adapter] = await Promise.all([
     readFile(new URL("../scripts/public-threejs-local-graph.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../scripts/apply-threejs-local-graph.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/apply-threejs-search-context.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(canonical, /IPM_THREEJS_LOCAL_GRAPH_P2/);
   assert.match(canonical, /projectLocalGraph/);
@@ -64,8 +64,8 @@ test("canonical Local Graph composer owns semantics while apply stage stays I/O-
   assert.throws(() => patchThreejsLocalGraphPage("drift"), /toolbar motion control/);
 });
 
-test("Three.js Local Graph canonical composer and I/O adapter pass Node syntax checks", () => {
-  for (const path of ["scripts/public-threejs-local-graph.mjs", "scripts/apply-threejs-local-graph.mjs"]) {
+test("Three.js Local Graph canonical composer and active stage pass Node syntax checks", () => {
+  for (const path of ["scripts/public-threejs-local-graph.mjs", "scripts/apply-threejs-search-context.mjs"]) {
     const result = spawnSync(process.execPath, ["--check", path], {
       cwd: process.cwd(),
       encoding: "utf8",
