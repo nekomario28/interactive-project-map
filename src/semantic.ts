@@ -3,7 +3,7 @@ import type {
   ClassificationEvidenceSource,
   GitHubRepo,
   RepositoryClassification,
-} from "./types";
+} from "./types.ts";
 
 export const CLASSIFICATION_VERSION = 1;
 export const UNCATEGORIZED_CATEGORY = Object.freeze({ id: "uncategorized", label: "Uncategorized" });
@@ -276,16 +276,16 @@ function evidenceSort(a: ClassificationEvidence, b: ClassificationEvidence): num
 }
 
 export function classifyRepository(repo: GitHubRepo): RepositoryClassification {
-  if (repo.classification) return repo.classification;
+  if (repo?.classification && typeof repo.classification === "object") return repo.classification;
 
   const evidence: ClassificationEvidence[] = [];
   const seen = new Set<string>();
-  matchTopics(repo.topics, evidence, seen);
-  matchManifests(repo.manifests, evidence, seen);
-  matchFrameworks(repo.frameworks, evidence, seen);
-  matchRuleAliases(repo.description ?? "", "description", evidence, seen);
-  matchRuleAliases(repo.readmeExcerpt ?? "", "readme", evidence, seen);
-  matchRuleAliases(repo.name ?? "", "name", evidence, seen);
+  matchTopics(repo?.topics, evidence, seen);
+  matchManifests(repo?.manifests, evidence, seen);
+  matchFrameworks(repo?.frameworks, evidence, seen);
+  matchRuleAliases(repo?.description ?? "", "description", evidence, seen);
+  matchRuleAliases(repo?.readmeExcerpt ?? "", "readme", evidence, seen);
+  matchRuleAliases(repo?.name ?? "", "name", evidence, seen);
 
   const scores = scoreEvidence(evidence);
   const ranked = GROUP_RULES

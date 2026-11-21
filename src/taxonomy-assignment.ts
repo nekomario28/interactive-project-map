@@ -10,7 +10,7 @@ import type {
   TaxonomyAssignmentResult,
   TaxonomyCategory,
   TaxonomyOverrideFile,
-} from "./types";
+} from "./types.ts";
 
 export const TAXONOMY_ASSIGNMENT_VERSION = 1;
 export const DEFAULT_TAXONOMY_ASSIGNMENT_MIN_SCORE = 0.62;

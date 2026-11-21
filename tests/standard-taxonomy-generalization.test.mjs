@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { standardizeRepositoryClassification as classifyAction } from "../scripts/standard-taxonomy-runtime.mjs";
-import { standardizeRepositoryClassification as classifyHosted } from "../src/standard-taxonomy-runtime.ts";
-import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../scripts/standard-taxonomy.mjs";
+import { standardizeRepositoryClassification } from "../src/standard-taxonomy-runtime.ts";
+
+import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../src/standard-taxonomy.ts";
 
 async function fixture() {
   return JSON.parse(await readFile(new URL("../data/standard-taxonomy-generalization.v1.json", import.meta.url), "utf8"));
@@ -30,7 +30,7 @@ function complete(raw, index = 0) {
 }
 
 function classify(entry, index = 0) {
-  return classifyAction(complete(entry.repo, index)).classification;
+  return standardizeRepositoryClassification(complete(entry.repo, index)).classification;
 }
 
 test("multilingual generalization corpus covers all 16 standard purposes outside English/Japanese", async () => {
@@ -75,16 +75,14 @@ test("technology, language, and balanced neighboring-domain hints remain ambiguo
   });
 });
 
-test("Action and hosted runtimes stay byte-for-byte equivalent on the generalization corpus", async () => {
+test("standard classifier does not mutate generalization inputs", async () => {
   const data = await fixture();
   const entries = [...data.multilingualCases, ...data.sparseCases, ...data.negativeCases];
   entries.forEach((entry, index) => {
     const repo = complete(entry.repo, index);
-    assert.deepEqual(
-      classifyHosted(repo).classification,
-      classifyAction(repo).classification,
-      `${entry.id} diverged between Action and hosted standard taxonomy`,
-    );
+    const before = structuredClone(repo);
+    standardizeRepositoryClassification(repo);
+    assert.deepEqual(repo, before, `${entry.id} input was mutated`);
   });
 });
 
@@ -96,7 +94,7 @@ test("standard signal profile remains single-source and includes multilingual vo
   assert.ok(profile.signals["robotics-automation"].includes("robótica"));
   assert.ok(profile.signals["business-productivity"].includes("projektmanagement"));
 
-  const actionSource = await readFile(new URL("../scripts/standard-taxonomy-runtime.mjs", import.meta.url), "utf8");
+  const actionSource = await readFile(new URL("../src/standard-taxonomy-runtime.ts", import.meta.url), "utf8");
   assert.match(actionSource, /standard-taxonomy-signals\.v1\.json/);
   assert.doesNotMatch(actionSource, /const STANDARD_SIGNALS = Object\.freeze/);
 });

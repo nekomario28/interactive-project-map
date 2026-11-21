@@ -2,12 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { buildGraph } from "../src/graph.ts";
-import {
-  attachStandardTaxonomyToGraph,
-  standardizeRepositoryClassification as classifySource,
-} from "../src/standard-taxonomy-runtime.ts";
-import { standardizeRepositoryClassification as classifyScript } from "../scripts/standard-taxonomy-runtime.mjs";
-import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../scripts/standard-taxonomy.mjs";
+import { attachStandardTaxonomyToGraph, resolveStandardTaxonomy, resolveStandardTaxonomyWithDiagnostics } from "../src/standard-taxonomy-runtime.ts";
+
+import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../src/standard-taxonomy.ts";
 
 async function fixture() {
   return JSON.parse(await readFile(new URL("../data/standard-taxonomy-boundaries.v1.json", import.meta.url), "utf8"));
@@ -33,14 +30,15 @@ function fullRepo(index, raw) {
   };
 }
 
-test("Node Action and TypeScript hosted mapper stay byte-for-byte equivalent on the complete boundary corpus", async () => {
+test("plain and diagnostic standard-taxonomy APIs return the same taxonomy", async () => {
   const data = await fixture();
   const entries = [...data.cases, ...data.confusableCases, ...data.ambiguousCases];
-  for (let index = 0; index < entries.length; index += 1) {
-    const repo = fullRepo(index, entries[index].repo);
-    const action = classifyScript(repo).classification;
-    const hosted = classifySource(repo).classification;
-    assert.deepEqual(hosted, action, `${entries[index].id} diverged between Action and hosted mapper`);
+  for (const repos of [[], entries.map((entry, index) => fullRepo(index, entry.repo))]) {
+    const result = await resolveStandardTaxonomyWithDiagnostics(repos);
+    assert.deepEqual(await resolveStandardTaxonomy(repos), result.taxonomy);
+    assert.equal(result.diagnostics.documents, repos.length);
+    assert.equal(result.diagnostics.reason, "standard-v1");
+    assert.equal(result.diagnostics.reused, true);
   }
 });
 

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { standardizeRepositoryClassification } from "../scripts/standard-taxonomy-runtime.mjs";
-import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../scripts/standard-taxonomy.mjs";
+import { standardizeRepositoryClassification } from "../src/standard-taxonomy-runtime.ts";
+import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../src/standard-taxonomy.ts";
 
 async function fixture() {
   return JSON.parse(await readFile(new URL("../data/standard-taxonomy-boundaries.v1.json", import.meta.url), "utf8"));

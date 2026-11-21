@@ -8,7 +8,7 @@ export interface RepositoryTaxonomyAssignment { categoryId: string; categoryLabe
 
 export interface GitHubRepo {
   id: number; name: string; html_url: string; description: string | null; language: string | null; topics?: string[];
-  stargazers_count: number; forks_count: number; fork: boolean; archived: boolean; updated_at: string; homepage?: string | null;
+  stargazers_count: number; forks_count: number; fork: boolean; archived: boolean; created_at?: string; updated_at: string; homepage?: string | null;
   readmeExcerpt?: string; manifests?: string[]; frameworks?: string[]; classification?: RepositoryClassification;
 }
 

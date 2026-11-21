@@ -3,7 +3,7 @@ import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "./standard-t
 import { promoteStandardHierarchy } from "./standard-hierarchy.ts";
 import { buildTaxonomyDiscoveryInput } from "./taxonomy.ts";
 import { assignRepositoriesToTaxonomy, TAXONOMY_ASSIGNMENT_VERSION } from "./taxonomy-assignment.ts";
-import type { GalaxyGraph, GitHubRepo, PortfolioTaxonomy, RepositoryClassification } from "./types";
+import type { GalaxyGraph, GitHubRepo, PortfolioTaxonomy, RepositoryClassification } from "./types.ts";
 
 const P1_STANDARD_PRIORS = standardSignalProfile.p1Priors as Record<string, string>;
 const STANDARD_SIGNALS = standardSignalProfile.signals as Record<string, string[]>;
@@ -28,7 +28,7 @@ function keywordMatches(text: unknown, keyword: unknown): boolean {
   if (!needle) return false;
   if (/[^\x00-\x7F]/u.test(needle)) return haystack.includes(needle);
   if (needle.length <= 2) return haystack.split(" ").includes(needle);
-  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\ /g, "\\s+");
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
   return new RegExp(`(^|[^a-z0-9+#.-])${escaped}(?=$|[^a-z0-9+#.-])`, "u").test(haystack);
 }
 
@@ -62,9 +62,9 @@ function signalScores(repo: GitHubRepo): Map<string, number> {
   const prior = P1_STANDARD_PRIORS[repo.classification?.categoryId ?? ""];
   if (prior) scores.set(prior, (scores.get(prior) ?? 0) + 4);
 
-  const name = repo.name;
-  const description = repo.description ?? "";
-  const readme = repo.readmeExcerpt ?? "";
+  const name = String(repo.name ?? "");
+  const description = String(repo.description ?? "");
+  const readme = String(repo.readmeExcerpt ?? "");
   const canonicalTopics = new Set((repo.topics ?? []).map(canonicalSignal).filter(Boolean));
   const frameworkText = [...(repo.frameworks ?? []), ...(repo.manifests ?? [])].join(" ");
 
@@ -168,13 +168,34 @@ export function standardizeRepositoriesForAssignment(repos: GitHubRepo[]): GitHu
 }
 
 export async function resolveStandardTaxonomy(repos: GitHubRepo[]): Promise<PortfolioTaxonomy> {
+  return (await resolveStandardTaxonomyWithDiagnostics(repos)).taxonomy;
+}
+
+export async function resolveStandardTaxonomyWithDiagnostics(repos: GitHubRepo[]) {
   const corpus = await buildTaxonomyDiscoveryInput(repos);
-  return {
+  const taxonomy: PortfolioTaxonomy = {
     schemaVersion: 1,
     corpusFingerprint: corpus.input.corpusFingerprint,
     repositories: corpus.repositories.map((item) => ({ ...item })),
     categories: STANDARD_TAXONOMY_CATEGORIES.map((category) => ({ ...category, aliases: [...category.aliases] })),
     source: { providerId: "standard", model: STANDARD_TAXONOMY_ID },
+  };
+  return {
+    taxonomy,
+    diagnostics: {
+      documents: repos.length,
+      providerId: "standard",
+      model: STANDARD_TAXONOMY_ID,
+      previousAvailable: false,
+      exactCorpusMatch: false,
+      changedRepositories: 0,
+      driftRatio: 0,
+      reused: true,
+      discovered: false,
+      overridden: false,
+      stale: false,
+      reason: "standard-v1",
+    },
   };
 }
 

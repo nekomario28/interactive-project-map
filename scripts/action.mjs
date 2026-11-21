@@ -1,19 +1,19 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, posix, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { fetchPublicFollowerCount, fetchPublicRepos } from "./github.mjs";
-import { buildGraph } from "./graph.mjs";
+import { fetchPublicFollowerCount, fetchPublicRepos } from "../src/github.ts";
+import { buildGraph } from "../src/graph.ts";
 import { attachSelectedContributions, collapseVerifiedContributionForks } from "./contributed-generation.mjs";
-import { fetchPublicExternalContributions } from "./external-contributions.mjs";
+import { fetchPublicExternalContributions } from "../src/external-contributions.ts";
 import { selectContributedRepositories } from "./contributed-ranking.mjs";
-import { MemoryEmbeddingCache } from "./embedding.mjs";
-import { generateSemanticEdges } from "./semantic-edges.mjs";
-import { TAXONOMY_ASSIGNMENT_VERSION, assignRepositoriesToTaxonomy } from "./taxonomy-assignment.mjs";
-import { adjudicateAmbiguousTaxonomyAssignments } from "./taxonomy-adjudication.mjs";
-import { parseTaxonomyOverrideFile, resolvePortfolioTaxonomy } from "./taxonomy.mjs";
-import { parseTaxonomyRepositoryOverridesFile } from "./taxonomy-overrides.mjs";
-import { resolveStandardTaxonomy, standardizeRepositoriesForAssignment } from "./standard-taxonomy-runtime.mjs";
-import { promoteStandardHierarchy } from "./standard-hierarchy.mjs";
+import { MemoryEmbeddingCache } from "../src/embedding.ts";
+import { generateSemanticEdges } from "../src/semantic-edges.ts";
+import { TAXONOMY_ASSIGNMENT_VERSION, assignRepositoriesToTaxonomy } from "../src/taxonomy-assignment.ts";
+import { adjudicateAmbiguousTaxonomyAssignments } from "../src/taxonomy-adjudication.ts";
+import { parseTaxonomyOverrideFile, resolvePortfolioTaxonomy } from "../src/taxonomy.ts";
+import { parseTaxonomyRepositoryOverridesFile } from "../src/taxonomy-overrides.ts";
+import { resolveStandardTaxonomyWithDiagnostics, standardizeRepositoriesForAssignment } from "../src/standard-taxonomy-runtime.ts";
+import { promoteStandardHierarchy } from "../src/standard-hierarchy.ts";
 import { renderGalaxySvg } from "./svg.mjs";
 import { renderGalaxyClassicSvg } from "./galaxy-svg-classic.mjs";
 import { renderGalaxySystemsSvg } from "./galaxy-svg-systems.mjs";
@@ -110,7 +110,7 @@ export async function generateStaticMap(config, options = {}) {
   const usePortfolioTaxonomy = options.taxonomyMode === "portfolio" || Boolean(options.taxonomyProvider) || Boolean(taxonomyOverrides?.categories?.length);
   const taxonomy = usePortfolioTaxonomy
     ? await resolvePortfolioTaxonomy(semanticRepos, options.taxonomyProvider, { previousTaxonomy, overrides: taxonomyOverrides, forceRediscovery: options.forceTaxonomyRediscovery, maxDriftRatio: options.taxonomyOptions?.maxDriftRatio })
-    : await resolveStandardTaxonomy(semanticRepos);
+    : await resolveStandardTaxonomyWithDiagnostics(semanticRepos);
   if (taxonomy.taxonomy) graph.taxonomy = taxonomy.taxonomy;
   if (taxonomy.error) console.warn(`Taxonomy discovery fallback: ${taxonomy.error}`);
 

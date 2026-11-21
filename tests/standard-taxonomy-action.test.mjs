@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generateStaticMap } from "../scripts/action.mjs";
-import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../scripts/standard-taxonomy.mjs";
+import { STANDARD_TAXONOMY_CATEGORIES, STANDARD_TAXONOMY_ID } from "../src/standard-taxonomy.ts";
 
 function repo(id, name, overrides = {}) {
   return {

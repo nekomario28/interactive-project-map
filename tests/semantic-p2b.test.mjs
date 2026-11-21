@@ -4,19 +4,9 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generateStaticMap } from "../scripts/action.mjs";
-import { buildRepoSemanticDocument as buildScriptDocument } from "../scripts/semantic-document.mjs";
-import {
-  DEFAULT_SEMANTIC_MIN_SIMILARITY,
-  DEFAULT_SEMANTIC_TOP_K,
-  MAX_SEMANTIC_EDGES,
-  buildSparseSemanticEdges as buildScriptEdges,
-  generateSemanticEdges as generateScriptEdges,
-} from "../scripts/semantic-edges.mjs";
-import { buildRepoSemanticDocument as buildSourceDocument } from "../src/semantic-document.ts";
-import {
-  buildSparseSemanticEdges as buildSourceEdges,
-  generateSemanticEdges as generateSourceEdges,
-} from "../src/semantic-edges.ts";
+import { buildRepoSemanticDocument } from "../src/semantic-document.ts";
+import { DEFAULT_SEMANTIC_MIN_SIMILARITY, DEFAULT_SEMANTIC_TOP_K, MAX_SEMANTIC_EDGES, buildSparseSemanticEdges, generateSemanticEdges } from "../src/semantic-edges.ts";
+
 import { buildGraph } from "../src/graph.ts";
 import { sanitizeStaticGraph } from "../src/static-graph.ts";
 
@@ -38,7 +28,7 @@ function repo(id, name, overrides = {}) {
 }
 
 function document(id, name) {
-  return buildScriptDocument(repo(id, name));
+  return buildRepoSemanticDocument(repo(id, name));
 }
 
 function semanticProvider() {
@@ -75,26 +65,24 @@ const smallVectors = [
 ];
 
 test("sparse semantic edges retain top-k neighbors, threshold, symmetrize and deduplicate deterministically", () => {
-  const script = buildScriptEdges(smallDocuments, smallVectors, { topK: 1, minSimilarity: 0.9 });
-  const source = buildSourceEdges(smallDocuments.map((item, index) => buildSourceDocument(repo(index + 1, item.name))), smallVectors, { topK: 1, minSimilarity: 0.9 });
-  assert.deepEqual(source, script);
-  assert.deepEqual(script.edges, [
+  const result = buildSparseSemanticEdges(smallDocuments, smallVectors, { topK: 1, minSimilarity: 0.9 });
+  assert.deepEqual(result.edges, [
     { source: "repository:alpha", target: "repository:beta", type: "semantic", score: 0.994937 },
     { source: "repository:charlie", target: "repository:delta", type: "semantic", score: 0.994937 },
   ]);
-  assert.equal(script.diagnostics.topK, 1);
-  assert.equal(script.diagnostics.comparisons, 10);
-  assert.ok(script.diagnostics.retainedCandidates <= smallDocuments.length);
-  assert.equal(new Set(script.edges.map((edge) => `${edge.source}\u0000${edge.target}`)).size, script.edges.length);
+  assert.equal(result.diagnostics.topK, 1);
+  assert.equal(result.diagnostics.comparisons, 10);
+  assert.ok(result.diagnostics.retainedCandidates <= smallDocuments.length);
+  assert.equal(new Set(result.edges.map((edge) => `${edge.source}\u0000${edge.target}`)).size, result.edges.length);
 
-  const strict = buildScriptEdges(smallDocuments, smallVectors, { topK: 1, minSimilarity: 0.9999 });
+  const strict = buildSparseSemanticEdges(smallDocuments, smallVectors, { topK: 1, minSimilarity: 0.9999 });
   assert.deepEqual(strict.edges, []);
 });
 
 test("semantic edge output is capped independently of pairwise comparison count", () => {
   const documents = Array.from({ length: 12 }, (_, index) => document(index + 1, `same-${index}`));
   const vectors = documents.map(() => [1, 0]);
-  const limited = buildScriptEdges(documents, vectors, { topK: 4, minSimilarity: 0.5, maxEdges: 5 });
+  const limited = buildSparseSemanticEdges(documents, vectors, { topK: 4, minSimilarity: 0.5, maxEdges: 5 });
   assert.equal(limited.edges.length, 5);
   assert.equal(limited.diagnostics.maxEdges, 5);
   assert.equal(limited.diagnostics.comparisons, 66);
@@ -110,7 +98,7 @@ test("300-repository semantic graph keeps retained/output state O(n*k)", () => {
     vector[index % 10] = 1;
     return vector;
   });
-  const result = buildScriptEdges(documents, vectors, { topK, minSimilarity: 0.9 });
+  const result = buildSparseSemanticEdges(documents, vectors, { topK, minSimilarity: 0.9 });
   assert.equal(result.diagnostics.comparisons, count * (count - 1) / 2);
   assert.ok(result.diagnostics.retainedCandidates <= count * topK);
   assert.ok(result.edges.length > 0);
@@ -126,13 +114,11 @@ test("semantic edge defaults are explicit and bounded", () => {
 
 test("disabled provider produces no semantic edges and no error", async () => {
   const repos = [repo(1, "robot-alpha"), repo(2, "robot-beta")];
-  for (const generate of [generateScriptEdges, generateSourceEdges]) {
-    const result = await generate(repos);
-    assert.deepEqual(result.edges, []);
-    assert.equal(result.embedding.disabled, true);
-    assert.equal(result.diagnostics.comparisons, 0);
-    assert.equal(result.error, undefined);
-  }
+  const result = await generateSemanticEdges(repos);
+  assert.deepEqual(result.edges, []);
+  assert.equal(result.embedding.disabled, true);
+  assert.equal(result.diagnostics.comparisons, 0);
+  assert.equal(result.error, undefined);
 });
 
 test("fake provider produces bounded semantic edges while provider failure degrades to deterministic-only graph", async () => {
@@ -142,14 +128,14 @@ test("fake provider produces bounded semantic edges while provider failure degra
     repo(3, "web-gamma", { description: "frontend app" }),
   ];
   const provider = semanticProvider();
-  const result = await generateScriptEdges(repos, provider, undefined, { topK: 2, minSimilarity: 0.8 });
+  const result = await generateSemanticEdges(repos, provider, undefined, { topK: 2, minSimilarity: 0.8 });
   assert.equal(provider.state.calls, 1);
   assert.deepEqual(result.edges, [
     { source: "repository:robot-alpha", target: "repository:robot-beta", type: "semantic", score: 0.994937 },
   ]);
   assert.equal(result.error, undefined);
 
-  const failed = await generateScriptEdges(repos, {
+  const failed = await generateSemanticEdges(repos, {
     id: "failing-provider",
     model: "failing-model",
     async embed() { throw new Error("provider unavailable"); },

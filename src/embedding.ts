@@ -4,7 +4,7 @@ import type {
   EmbeddingCache,
   EmbeddingProvider,
   RepoSemanticDocument,
-} from "./types";
+} from "./types.ts";
 
 export const DEFAULT_EMBEDDING_BATCH_SIZE = 32;
 
@@ -17,19 +17,19 @@ export const DISABLED_EMBEDDING_PROVIDER: EmbeddingProvider = Object.freeze({
 });
 
 export class MemoryEmbeddingCache implements EmbeddingCache {
-  private readonly values = new Map<string, number[]>();
+  readonly #values = new Map<string, number[]>();
 
   async get(key: string): Promise<number[] | null> {
-    const value = this.values.get(key);
+    const value = this.#values.get(key);
     return value ? [...value] : null;
   }
 
   async set(key: string, vector: number[]): Promise<void> {
-    this.values.set(key, [...vector]);
+    this.#values.set(key, [...vector]);
   }
 
   get size(): number {
-    return this.values.size;
+    return this.#values.size;
   }
 }
 

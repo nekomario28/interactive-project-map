@@ -31,26 +31,32 @@ function validIso(value: unknown): value is string {
   return typeof value === "string" && Number.isFinite(Date.parse(value));
 }
 
+export function contributedRepositoryId(nameWithOwner: string): string {
+  return `repository:${String(nameWithOwner).toLowerCase()}`;
+}
+
 export function attachContributedRepositories(
   graph: GalaxyGraph,
   repositories: ContributedRepositoryRecord[],
   window: ExternalContributionWindow,
   diagnostics: Partial<Omit<ExternalContributionDiagnostics, "window" | "includedRepositories">> = {},
 ): GalaxyGraph {
-  if (!validIso(window.from) || !validIso(window.to) || Date.parse(window.from) > Date.parse(window.to)) throw new Error("Invalid Contributed contribution window");
+  if (!graph || typeof graph !== "object" || typeof graph.owner !== "string") throw new Error("Contributed graph requires an owner");
+  if (!window || !validIso(window.from) || !validIso(window.to) || Date.parse(window.from) > Date.parse(window.to)) throw new Error("Invalid Contributed contribution window");
   const ownerId = `user:${graph.owner}`;
-  if (!graph.nodes.some((node) => node.id === ownerId && node.type === "owner")) throw new Error("Contributed graph owner node is missing");
-  const nodes = [...graph.nodes];
-  const edges = [...graph.edges];
-  const existingIds = new Set(nodes.map((node) => node.id));
+  if (!(graph.nodes ?? []).some((node) => node?.id === ownerId && node.type === "owner")) throw new Error("Contributed graph owner node is missing");
+  const nodes = [...(graph.nodes ?? [])];
+  const edges = [...(graph.edges ?? [])];
+  const existingIds = new Set(nodes.map((node) => node?.id).filter(Boolean));
   let attached = 0;
 
-  for (const repository of repositories) {
-    if (!repository || repository.owner.toLowerCase() === graph.owner.toLowerCase()) continue;
+  for (const repository of Array.isArray(repositories) ? repositories : []) {
+    if (!repository || typeof repository.nameWithOwner !== "string" || typeof repository.owner !== "string" || typeof repository.name !== "string") continue;
+    if (repository.owner.toLowerCase() === graph.owner.toLowerCase()) continue;
     const expectedFullName = `${repository.owner}/${repository.name}`;
     if (repository.nameWithOwner.toLowerCase() !== expectedFullName.toLowerCase()) continue;
-    if (repository.url.toLowerCase() !== `https://github.com/${expectedFullName}`.toLowerCase()) continue;
-    const id = `repository:${repository.nameWithOwner.toLowerCase()}`;
+    if (typeof repository.url !== "string" || repository.url.toLowerCase() !== `https://github.com/${expectedFullName}`.toLowerCase()) continue;
+    const id = contributedRepositoryId(repository.nameWithOwner);
     if (existingIds.has(id)) continue;
     const commits = nonNegativeInteger(repository.commits);
     const pullRequests = nonNegativeInteger(repository.pullRequests);
@@ -65,16 +71,15 @@ export function attachContributedRepositories(
       repositoryOwner: repository.owner,
       repositoryName: repository.name,
       url: repository.url,
-      description: repository.description ?? "",
-      language: repository.language ?? null,
-      topics: (repository.topics ?? []).slice(0, 20),
+      description: typeof repository.description === "string" ? repository.description : "",
+      language: typeof repository.language === "string" ? repository.language : null,
+      topics: Array.isArray(repository.topics) ? repository.topics.filter((topic) => typeof topic === "string").slice(0, 20) : [],
       stars: nonNegativeInteger(repository.stars),
       forks: nonNegativeInteger(repository.forks),
       fork: repository.fork === true,
       archived: repository.archived === true,
-      ...(validIso(repository.createdAt) ? { createdAt: repository.createdAt } : {}),
-      ...(validIso(repository.updatedAt) ? { updatedAt: repository.updatedAt } : {}),
-      ...(repository.forkUrl ? { forkUrl: repository.forkUrl } : {}),
+      createdAt: validIso(repository.createdAt) ? repository.createdAt : undefined,
+      updatedAt: validIso(repository.updatedAt) ? repository.updatedAt : undefined,
       contribution: {
         commits,
         pullRequests,
@@ -82,6 +87,7 @@ export function attachContributedRepositories(
         commitsTruncated: repository.commitsTruncated === true,
         pullRequestsTruncated: repository.pullRequestsTruncated === true,
       },
+      ...(repository.forkUrl ? { forkUrl: repository.forkUrl } : {}),
       ...(repository.classification ? { classification: repository.classification } : {}),
     });
     edges.push({ source: ownerId, target: id, type: "contribution" });

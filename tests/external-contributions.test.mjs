@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  fetchPublicExternalContributions as fetchSourceContributions,
-  externalContributionWindow as sourceWindow,
-} from "../src/external-contributions.ts";
-import {
-  fetchPublicExternalContributions as fetchStaticContributions,
-  externalContributionWindow as staticWindow,
-} from "../scripts/external-contributions.mjs";
+import { fetchPublicExternalContributions, externalContributionWindow } from "../src/external-contributions.ts";
 
 const NOW = Date.parse("2026-08-22T08:30:00Z");
 
@@ -101,17 +94,14 @@ async function run(fetcher) {
 }
 
 test("external contribution window is a bounded 365-day UTC range", () => {
-  assert.deepEqual(sourceWindow(NOW), staticWindow(NOW));
-  assert.deepEqual(sourceWindow(NOW), {
+  assert.deepEqual(externalContributionWindow(NOW), {
     from: "2025-08-22T08:30:00.000Z",
     to: "2026-08-22T08:30:00.000Z",
   });
 });
 
-test("public external contribution fetch excludes own/private/restricted data and source/static stay identical", async () => {
-  const source = await run(fetchSourceContributions);
-  const statik = await run(fetchStaticContributions);
-  assert.deepEqual(source.result, statik.result);
+test("public external contribution fetch excludes own/private/restricted data", async () => {
+  const source = await run(fetchPublicExternalContributions);
   assert.equal(source.calls.length, 1);
   assert.equal(source.calls[0].url, "https://api.github.com/graphql");
   const headers = new Headers(source.calls[0].init.headers);
@@ -153,9 +143,9 @@ test("public external contribution fetch excludes own/private/restricted data an
 });
 
 test("external contribution fetch fails closed without a token and on GraphQL errors", async () => {
-  await assert.rejects(() => fetchStaticContributions("example", undefined), /token is required/);
+  await assert.rejects(() => fetchPublicExternalContributions("example", undefined), /token is required/);
   await assert.rejects(
-    () => fetchStaticContributions("example", "token", {
+    () => fetchPublicExternalContributions("example", "token", {
       fetchImpl: async () => Response.json({ errors: [{ message: "denied" }] }, { status: 200 }),
       nowMs: NOW,
     }),

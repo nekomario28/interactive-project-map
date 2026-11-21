@@ -1,4 +1,4 @@
-import type { TaxonomyCategory } from "./types";
+import type { TaxonomyCategory } from "./types.ts";
 
 export const STANDARD_TAXONOMY_SCHEMA_VERSION = 1;
 export const STANDARD_TAXONOMY_ID = "ipm-standard-v1";

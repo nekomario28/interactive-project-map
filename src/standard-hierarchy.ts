@@ -4,7 +4,7 @@ import type { GalaxyEdge, GalaxyGraph, GalaxyNode } from "./types.ts";
 export const STANDARD_UNCATEGORIZED_GROUP = Object.freeze({ id: "uncategorized", label: "Uncategorized" });
 
 export function usesStandardTaxonomy(graph: GalaxyGraph): boolean {
-  return graph.taxonomy?.source.providerId === "standard" && graph.taxonomy?.source.model === STANDARD_TAXONOMY_ID;
+  return graph?.taxonomy?.source?.providerId === "standard" && graph?.taxonomy?.source?.model === STANDARD_TAXONOMY_ID;
 }
 
 function repoSort(a: GalaxyNode, b: GalaxyNode): number {
@@ -15,13 +15,13 @@ function repoSort(a: GalaxyNode, b: GalaxyNode): number {
 
 export function promoteStandardHierarchy(graph: GalaxyGraph): GalaxyGraph {
   if (!usesStandardTaxonomy(graph)) return graph;
-  const owner = graph.nodes.find((node) => node.type === "owner");
+  const owner = graph.nodes?.find((node) => node?.type === "owner");
   if (!owner) return graph;
 
   const categories = new Map((graph.taxonomy?.categories ?? []).map((category) => [category.id, category]));
   const groups = new Map<string, { label: string; repos: GalaxyNode[] }>();
-  for (const node of graph.nodes) {
-    if (node.type !== "repository") continue;
+  for (const node of graph.nodes ?? []) {
+    if (node?.type !== "repository") continue;
     const assigned = node.taxonomyAssignment ? categories.get(node.taxonomyAssignment.categoryId) : undefined;
     const groupId = assigned?.id ?? STANDARD_UNCATEGORIZED_GROUP.id;
     const groupLabel = assigned?.label ?? STANDARD_UNCATEGORIZED_GROUP.label;

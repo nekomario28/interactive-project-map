@@ -1,4 +1,4 @@
-import type { GitHubRepo, RepoSemanticDocument } from "./types";
+import type { GitHubRepo, RepoSemanticDocument } from "./types.ts";
 
 export const SEMANTIC_DOCUMENT_VERSION = 1;
 export const SEMANTIC_README_CHAR_LIMIT = 12 * 1024;
@@ -30,37 +30,37 @@ function normalizedList(value: unknown, maxItems: number, maxChars: number): str
 
 export function buildRepoSemanticDocument(repo: GitHubRepo): RepoSemanticDocument {
   return {
-    repoId: Number.isFinite(repo.id) ? Math.trunc(repo.id) : 0,
-    name: normalizedText(repo.name, 100),
-    description: normalizedText(repo.description, 2_000),
-    topics: normalizedList(repo.topics, 40, 80),
-    readmeExcerpt: normalizedText(repo.readmeExcerpt, SEMANTIC_README_CHAR_LIMIT),
-    language: repo.language ? normalizedText(repo.language, 100) || null : null,
-    frameworks: normalizedList(repo.frameworks, 64, 80),
-    manifests: normalizedList(repo.manifests, 32, 160),
-    fork: { isFork: repo.fork === true },
+    repoId: Number.isFinite(repo?.id) ? Math.trunc(repo.id) : 0,
+    name: normalizedText(repo?.name, 100),
+    description: normalizedText(repo?.description, 2_000),
+    topics: normalizedList(repo?.topics, 40, 80),
+    readmeExcerpt: normalizedText(repo?.readmeExcerpt, SEMANTIC_README_CHAR_LIMIT),
+    language: repo?.language ? normalizedText(repo.language, 100) || null : null,
+    frameworks: normalizedList(repo?.frameworks, 64, 80),
+    manifests: normalizedList(repo?.manifests, 32, 160),
+    fork: { isFork: repo?.fork === true },
   };
 }
 
 export function buildRepoSemanticDocuments(repos: GitHubRepo[]): RepoSemanticDocument[] {
-  return repos.map(buildRepoSemanticDocument);
+  return Array.isArray(repos) ? repos.map(buildRepoSemanticDocument) : [];
 }
 
 export function canonicalSemanticDocument(document: RepoSemanticDocument): string {
   return JSON.stringify({
-    repoId: Number.isFinite(document.repoId) ? Math.trunc(document.repoId) : 0,
-    name: normalizedText(document.name, 100),
-    description: normalizedText(document.description, 2_000),
-    topics: normalizedList(document.topics, 40, 80),
-    readmeExcerpt: normalizedText(document.readmeExcerpt, SEMANTIC_README_CHAR_LIMIT),
-    language: document.language ? normalizedText(document.language, 100) || null : null,
-    frameworks: normalizedList(document.frameworks, 64, 80),
-    manifests: normalizedList(document.manifests, 32, 160),
+    repoId: Number.isFinite(document?.repoId) ? Math.trunc(document.repoId) : 0,
+    name: normalizedText(document?.name, 100),
+    description: normalizedText(document?.description, 2_000),
+    topics: normalizedList(document?.topics, 40, 80),
+    readmeExcerpt: normalizedText(document?.readmeExcerpt, SEMANTIC_README_CHAR_LIMIT),
+    language: document?.language ? normalizedText(document.language, 100) || null : null,
+    frameworks: normalizedList(document?.frameworks, 64, 80),
+    manifests: normalizedList(document?.manifests, 32, 160),
     fork: {
-      isFork: document.fork?.isFork === true,
-      sourceName: normalizedText(document.fork?.sourceName, 100) || undefined,
-      sourceDescription: normalizedText(document.fork?.sourceDescription, 2_000) || undefined,
-      sourceTopics: normalizedList(document.fork?.sourceTopics, 40, 80),
+      isFork: document?.fork?.isFork === true,
+      sourceName: normalizedText(document?.fork?.sourceName, 100) || undefined,
+      sourceDescription: normalizedText(document?.fork?.sourceDescription, 2_000) || undefined,
+      sourceTopics: normalizedList(document?.fork?.sourceTopics, 40, 80),
     },
   });
 }
