@@ -30,12 +30,12 @@
     "build:pages": "node scripts/build-public-pages.mjs && node scripts/apply-contributed-render-sync.mjs && node scripts/apply-category-navigator.mjs && node scripts/apply-reactive-cosmic-background.mjs && node scripts/apply-quality-view.mjs && node scripts/apply-threejs-search-context.mjs && node scripts/apply-view-dimension-toggle.mjs && node scripts/apply-threejs-local-engine.mjs && node scripts/apply-2d-runtime-bootstrap-gate.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.0",
-    "eslint": "^10.14.0",
+    "@playwright/test": "1.65.1",
+    "eslint": "^10.15.0",
     "globals": "^17.14.0",
-    "html-validate": "^11.21.0",
+    "html-validate": "^11.21.1",
     "stylelint": "17.16.0",
     "typescript": "^7.0.2",
-    "wrangler": "^4.159.0"
+    "wrangler": "^4.164.0"
   }
 }
