@@ -34,7 +34,7 @@
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
     "html-validate": "^11.21.0",
-    "stylelint": "17.16.0",
+    "stylelint": "18.0.0",
     "typescript": "^7.0.2",
     "wrangler": "^4.159.0"
   }
