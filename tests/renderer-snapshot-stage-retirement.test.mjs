@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -20,6 +20,12 @@ test("renderer snapshot composes into the final bootstrap stage before 2D gating
   const gateIndex = bootstrapStage.indexOf("for (const file of TWO_D_VIEWER_FILES)");
   assert.ok(snapshotIndex >= 0 && gateIndex > snapshotIndex, "renderer snapshot must compose before the final 2D bootstrap gate");
 
-  // Keep the old adapter as a syntax-checked compatibility surface, not an active build stage.
-  assert.match(packageJson.scripts?.["check:pages"] || "", /node --check scripts\/apply-renderer-snapshot\.mjs/);
+  assert.doesNotMatch(packageJson.scripts?.["check:pages"] || "", /node --check scripts\/apply-renderer-snapshot\.mjs/);
+});
+
+test("retired renderer snapshot compatibility adapter stays absent", async () => {
+  await assert.rejects(
+    () => access(new URL("../scripts/apply-renderer-snapshot.mjs", import.meta.url)),
+    { code: "ENOENT" },
+  );
 });
