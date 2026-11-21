@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
-import { applyThreejsLocalGraph } from "../scripts/apply-threejs-local-graph.mjs";
 import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
+import { patchThreejsLocalGraphRuntime } from "../scripts/public-threejs-local-graph.mjs";
 import {
   composeThreejsRepositoryLabelsPage,
   composeThreejsRepositoryLabelsRuntime,
@@ -21,7 +21,6 @@ test("bounded Three.js repository labels attach with shared search and remain la
     const base = await readFile(join(root, "threejs-viewer.js"), "utf8");
     assert.doesNotMatch(base, /three-label-repository/);
 
-    await applyThreejsLocalGraph({ siteDir: root });
     const combined = await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     assert.equal(combined.injected, true);
 
@@ -68,10 +67,10 @@ test("bounded repository labels fail closed when Category Navigator has not run"
   const root = await mkdtemp(join(tmpdir(), "ipm-three-repo-label-order-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    await applyThreejsLocalGraph({ siteDir: root });
     const runtime = await readFile(join(root, "threejs-viewer.js"), "utf8");
+    const localRuntime = patchThreejsLocalGraphRuntime(runtime);
     assert.throws(
-      () => composeThreejsRepositoryLabelsRuntime(runtime),
+      () => composeThreejsRepositoryLabelsRuntime(localRuntime),
       /Category Navigator adapter must run before bounded repository labels/,
     );
   } finally {

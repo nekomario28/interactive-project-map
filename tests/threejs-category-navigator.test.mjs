@@ -6,18 +6,17 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { buildThreejsLab } from "../scripts/build-threejs-lab.mjs";
-import { applyThreejsLocalGraph } from "../scripts/apply-threejs-local-graph.mjs";
 import { applyThreejsSearchContext } from "../scripts/apply-threejs-search-context.mjs";
 import {
   composeThreejsCategoryNavigatorPage,
   composeThreejsCategoryNavigatorRuntime,
 } from "../scripts/public-threejs-category-navigator.mjs";
+import { patchThreejsLocalGraphRuntime } from "../scripts/public-threejs-local-graph.mjs";
 
 test("Three.js Category Navigator attaches with shared search and the active stage is idempotent", async () => {
   const root = await mkdtemp(join(tmpdir(), "ipm-three-category-nav-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    await applyThreejsLocalGraph({ siteDir: root });
     const combined = await applyThreejsSearchContext({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
     assert.equal(combined.injected, true);
 
@@ -56,10 +55,10 @@ test("canonical Category Navigator composer fails closed if shared search has no
   const root = await mkdtemp(join(tmpdir(), "ipm-three-category-nav-order-"));
   try {
     await buildThreejsLab({ siteDir: root, sourceDir: join(process.cwd(), "scripts") });
-    await applyThreejsLocalGraph({ siteDir: root });
     const runtime = await readFile(join(root, "threejs-viewer.js"), "utf8");
+    const localRuntime = patchThreejsLocalGraphRuntime(runtime);
     assert.throws(
-      () => composeThreejsCategoryNavigatorRuntime(runtime),
+      () => composeThreejsCategoryNavigatorRuntime(localRuntime),
       /Local Graph and shared search adapters must run before Category Navigator/,
     );
   } finally {

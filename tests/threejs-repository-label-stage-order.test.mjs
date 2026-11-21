@@ -49,13 +49,14 @@ test("Three.js search stage composes Local Graph, Category Navigator and reposit
 
   assert.match(searchAdapter, /public-threejs-category-navigator\.js/);
   assert.match(searchAdapter, /public-threejs-repository-labels\.css/);
-  assert.match(packageJson.scripts["check:pages"], /apply-threejs-local-graph\.mjs/);
+  assert.doesNotMatch(packageJson.scripts["check:pages"], /apply-threejs-local-graph\.mjs/);
   assert.doesNotMatch(packageJson.scripts["check:pages"], /apply-threejs-category-navigator\.mjs/);
   assert.doesNotMatch(packageJson.scripts["check:pages"], /apply-threejs-repository-labels\.mjs/);
 });
 
-test("retired Category Navigator and repository-label compatibility adapters stay absent", async () => {
+test("retired Local Graph, Category Navigator and repository-label compatibility adapters stay absent", async () => {
   for (const path of [
+    "../scripts/apply-threejs-local-graph.mjs",
     "../scripts/apply-threejs-category-navigator.mjs",
     "../scripts/apply-threejs-repository-labels.mjs",
   ]) {
